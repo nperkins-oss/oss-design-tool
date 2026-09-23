@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Security Networking Sizer & Hardware Selector</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff', 100: '#e0e7ff', 400: '#818cf8', 500: '#6366f1',
+              600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#1e1b4b'
+            },
+            slate: { 850: '#131b2e', 925: '#0b1120', 950: '#060913' }
+          }
+        }
+      }
+    };
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Master Global Containers -->
+  <script>
+    const SWITCH_DATABASE = [];
+    const FIREWALL_DATABASE = [];
+    const OPTICS_LIST = [];
+    const OPTICS_CATALOG = {};
+    const MODULAR_UPLINK_CATALOG = {};
+    const FEATURE_LICENSE_CATALOG = {};
+    const MGMT_SUBSCRIPTION_CATALOG = {};
+    const POWER_SUPPLY_CATALOG = {};
+  </script>
+
+  <!-- Modular Datasets -->
+  <script src="data/data_unifi.js"></script>
+  <script src="data/data_ruckus.js"></script>
+  <script src="data/data_meraki.js"></script>
+  <script src="data/data_juniper.js"></script>
+  <script src="data/data_amg.js"></script>
+  <script src="data/data_allied.js"></script>
+  <script src="data/data_firewalls.js"></script>
+  <script src="data/data_interconnects.js"></script>
+
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.6); }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.5); border-radius: 9999px; }
+    .badge-chip {
+      display: inline-flex; align-items: center; padding: 0.15rem 0.5rem;
+      border-radius: 9999px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+    }
+    .top-nav-btn.active {
+      background: linear-gradient(135deg, #4f46e5, #4338ca);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);
+      border-color: #818cf8;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-full flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- TOP HEADER -->
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-slate-900/95 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+          <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg tracking-tight text-white flex items-center gap-2">
+            NetSelect Security
+            <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Total Infrastructure Sizer</span>
+          </h1>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2.5">
+        <button onclick="toggleRackModal()" class="px-3.5 py-1.5 rounded-lg border border-indigo-500/50 bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
+          <i data-lucide="server" class="w-4 h-4 text-indigo-400"></i>
+          <span>Rack Visualizer</span>
+        </button>
+
+        <button id="compareBarBtn" onclick="toggleCompareModal()" class="relative px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all">
+          <i data-lucide="git-compare" class="w-4 h-4 text-brand-400"></i>
+          <span>Compare</span>
+          <span id="compareCountBadge" class="hidden bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+
+        <button onclick="toggleBomDrawer()" class="relative px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/20 transition-all">
+          <i data-lucide="shopping-cart" class="w-4 h-4"></i>
+          <span>Project BOM</span>
+          <span id="bomCountBadge" class="bg-emerald-950 text-emerald-200 text-[10px] font-bold px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- NAVIGATION TABS -->
+    <div class="border-t border-slate-800/80 bg-slate-900/60 px-4 sm:px-6 lg:px-8">
+      <div class="max-w-7xl mx-auto flex flex-wrap gap-2 py-2.5">
+        <button onclick="switchMode('access')" id="nav-access" class="top-nav-btn active px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
+          <i data-lucide="plug-zap" class="w-4 h-4 text-amber-400"></i>
+          <span>Access & Edge</span>
+        </button>
+        <button onclick="switchMode('backbone')" id="nav-backbone" class="top-nav-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
+          <i data-lucide="network" class="w-4 h-4 text-indigo-400"></i>
+          <span>Backbone & Core</span>
+        </button>
+        <button onclick="switchMode('firewalls')" id="nav-firewalls" class="top-nav-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
+          <i data-lucide="shield" class="w-4 h-4 text-rose-400"></i>
+          <span>Firewalls & Cellular</span>
+        </button>
+        <button onclick="switchMode('optics')" id="nav-optics" class="top-nav-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
+          <i data-lucide="cable" class="w-4 h-4 text-sky-400"></i>
+          <span>Optics & DACs</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div id="calculatorStripContainer"></div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <aside class="lg:col-span-1 space-y-4 bg-slate-900 border border-slate-800 rounded-2xl p-4 h-fit sticky top-28">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <span id="sidebarFilterTitle" class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Filters
+          </span>
+          <button onclick="resetCurrentFilters()" class="text-[11px] text-brand-400 font-medium">Reset</button>
+        </div>
+
+        <div>
+          <label class="text-[11px] font-semibold text-slate-300 block mb-1">Search Keywords or SKU</label>
+          <input type="text" id="filterSearch" oninput="updateSearchFilter(this.value)" placeholder="Search active catalog..." class="w-full bg-slate-950 border border-slate-700 rounded-lg text-xs py-2 px-3 text-white placeholder-slate-500 focus:outline-none focus:border-brand-500" />
+        </div>
+
+        <div id="dynamicSidebarContent" class="space-y-4"></div>
+      </aside>
+
+      <section class="lg:col-span-3 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-400">Matching Hardware Units:</span>
+            <span id="resultCount" class="text-sm font-bold text-white bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">0</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">Sort By:</span>
+            <select id="sortSelector" onchange="runActiveFilter()" class="bg-slate-950 border border-slate-700 text-xs rounded-lg px-2.5 py-1 text-white focus:outline-none focus:border-brand-500">
+              <option value="featured">Role & Port Hierarchy</option>
+              <option value="poe_desc">PoE Budget (High to Low)</option>
+              <option value="buffer_desc">VMS Buffer Size (High to Low)</option>
+              <option value="ports_desc">Chassis Port Count (High to Low)</option>
+              <option value="price_asc">MSRP (Low to High)</option>
+              <option value="price_desc">MSRP (High to Low)</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="hardwareCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+
+        <div id="noResultsState" class="hidden p-12 text-center bg-slate-900 border border-slate-800 rounded-2xl">
+          <i data-lucide="package-x" class="w-12 h-12 text-slate-600 mx-auto mb-3"></i>
+          <h3 class="text-base font-bold text-white">No hardware matches these parameters</h3>
+          <p class="text-xs text-slate-400 max-w-md mx-auto mt-1">Try clearing some specific filter criteria or relaxing requirements.</p>
+          <button onclick="resetCurrentFilters()" class="mt-4 px-4 py-2 text-xs font-semibold bg-brand-600 text-white rounded-lg">Reset Filters</button>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- LICENSES & TERMS MODAL -->
+  <div id="licenseModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-3 sm:p-6">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-purple-500/20 text-purple-400 border border-purple-500/30">
+            <i data-lucide="key" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-base text-white">Software Subscriptions & Management Terms</h2>
+            <p class="text-xs text-slate-400">Configure global subscription durations and management architectures</p>
+          </div>
+        </div>
+        <button onclick="toggleLicenseModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="p-6 overflow-y-auto flex-1 bg-slate-950/90" id="licenseManagerContent"></div>
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs">
+        <span class="text-slate-400 text-[11px]">Subscription pricing reflects per-chassis terms based on manufacturer price books.</span>
+        <button onclick="toggleLicenseModal()" class="px-4 py-1.5 text-xs font-semibold bg-slate-800 text-slate-200 rounded-lg hover:bg-slate-700">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RACK ELEVATION VISUALIZER MODAL -->
+  <div id="rackModal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden flex items-center justify-center p-2 sm:p-6">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-6xl w-full max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+            <i data-lucide="server" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="font-bold text-base text-white">Interactive Rack Elevation, Power & Thermal Sizer</h2>
+            <p class="text-xs text-slate-400">19" standardized equipment allocation with active cooling and circuit branch calculations</p>
+          </div>
+        </div>
+        <button onclick="toggleRackModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Controls & Location Filters -->
+      <div class="px-6 py-3 border-b border-slate-800/80 bg-slate-950/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400 font-medium">Closet:</span>
+            <select id="rackClosetSelector" onchange="renderRackVisualizer()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-bold"></select>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400 font-medium">Rack ID:</span>
+            <select id="rackIdSelector" onchange="renderRackVisualizer()" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-bold"></select>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-slate-400 font-medium">Size:</span>
+            <select id="rackHeightSelector" onchange="changeRackPresetHeight(this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-white font-mono font-bold">
+              <option value="42">42U (Floor Cabinet)</option>
+              <option value="24" selected>24U (Mid-Size IDF)</option>
+              <option value="12">12U (Wall-Mount Cabinet)</option>
+              <option value="6">6U (Low-Profile Box)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="printRackElevation()" class="px-3 py-1.5 rounded-lg bg-sky-700 hover:bg-sky-600 text-white font-semibold flex items-center gap-1.5 shadow-sm">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Export Elevation / Print
+          </button>
+          <button onclick="autoPackRackEquipment()" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold flex items-center gap-1.5">
+            <i data-lucide="arrow-down-narrow-wide" class="w-3.5 h-3.5"></i> Auto-Pack Top-Down
+          </button>
+          <button onclick="clearRackAssignments()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold">
+            Unmount All
+          </button>
+        </div>
+      </div>
+
+      <!-- Power & Thermal Metrics Strip -->
+      <div id="rackPowerMetricsContainer" class="px-6 py-2.5 bg-slate-900/80 border-b border-slate-800 text-xs grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+
+      <div class="p-4 sm:p-6 overflow-y-auto flex-1 bg-slate-950 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 flex flex-col items-center">
+          <div class="w-full flex items-center justify-between pb-2 text-xs border-b border-slate-800 max-w-xl">
+            <div class="flex items-center gap-2">
+              <span id="rackStatsU" class="font-mono text-indigo-300 font-bold">0/24 U Used</span>
+              <span class="text-slate-600">•</span>
+              <span id="rackStatsPoE" class="font-mono text-amber-400 font-bold">0 W PoE</span>
+            </div>
+            <span class="text-slate-400 text-[11px]">Click ▲/▼ arrows to nudge equipment</span>
+          </div>
+
+          <div class="mt-3 w-full max-w-xl bg-slate-900 border-4 border-slate-750 rounded-2xl p-2.5 shadow-2xl relative">
+            <div class="absolute top-2 left-2 text-[8px] font-mono text-slate-600 flex flex-col gap-3 select-none">
+              <span>•••</span><span>•••</span><span>•••</span>
+            </div>
+            <div class="absolute top-2 right-2 text-[8px] font-mono text-slate-600 flex flex-col gap-3 select-none">
+              <span>•••</span><span>•••</span><span>•••</span>
+            </div>
+            <div id="rackRailsContainer" class="space-y-1.5 font-mono text-xs px-4"></div>
+          </div>
+        </div>
+
+        <div class="space-y-5">
+          <div class="space-y-2">
+            <div class="pb-1 border-b border-slate-800 text-xs">
+              <span class="font-bold text-sky-400 uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="package" class="w-4 h-4"></i> Available 19" Gear in Closet
+              </span>
+              <p class="text-[11px] text-slate-400 mt-0.5">Click "Mount" to place into the highest free U slot.</p>
+            </div>
+            <div id="unmountedEquipmentList" class="space-y-2"></div>
+          </div>
+
+          <div class="space-y-2 pt-2 border-t border-slate-800">
+            <div class="pb-1 border-b border-slate-800 text-xs">
+              <span class="font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="box" class="w-4 h-4"></i> Enclosure & DIN-Rail Mounts
+              </span>
+              <p class="text-[11px] text-slate-400 mt-0.5">Non-rackmount items located in this closet (Option A: Exterior NEMA/Poles)</p>
+            </div>
+            <div id="dinEnclosureList" class="space-y-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs">
+        <span class="text-slate-400 text-[11px]">Notice: Depth clearances and cooling are audited against ASHRAE TC9.9 data center recommendations.</span>
+        <button onclick="toggleRackModal()" class="px-4 py-1.5 text-xs font-semibold bg-slate-800 text-slate-200 rounded-lg hover:bg-slate-700">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- COMPARISON MATRIX MODAL -->
+  <div id="compareModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-6xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div class="flex items-center gap-2">
+          <i data-lucide="git-compare" class="w-5 h-5 text-brand-400"></i>
+          <h2 class="font-bold text-base text-white">Hardware Comparison Matrix</h2>
+        </div>
+        <button onclick="toggleCompareModal()" class="p-1 rounded-lg text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-6 overflow-x-auto overflow-y-auto flex-1">
+        <div id="compareContent"></div>
+      </div>
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+        <button onclick="clearComparison()" class="text-xs text-rose-400 hover:text-rose-300 font-semibold">Clear Comparison</button>
+        <button onclick="toggleCompareModal()" class="px-4 py-1.5 text-xs font-semibold bg-slate-800 text-slate-200 rounded-lg">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECT BOM DRAWER -->
+  <div id="bomDrawer" class="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 border-b border-slate-800 bg-slate-850 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <i data-lucide="file-spreadsheet" class="w-5 h-5 text-emerald-400"></i>
+        <div>
+          <h2 class="font-bold text-sm text-white">Project Bill of Materials (BOM)</h2>
+          <p class="text-[11px] text-slate-400">Topology-aware racks, stacks & auto-uplinks</p>
+        </div>
+      </div>
+      <button onclick="toggleBomDrawer()" class="p-1 rounded-lg text-slate-400 hover:text-white"><i data-lucide="x" class="w-5 h-5"></i></button>
+    </div>
+
+    <!-- ACTION STRIP (UPLINKS + LICENSES) -->
+    <div class="p-3 bg-slate-950 border-b border-slate-800 grid grid-cols-2 gap-2">
+      <button onclick="autoResolveUplinks()" class="py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg transition-all">
+        <i data-lucide="zap" class="w-4 h-4 text-amber-300"></i>
+        <span>Auto Uplinks</span>
+      </button>
+      <button onclick="toggleLicenseModal()" class="py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg transition-all">
+        <i data-lucide="key" class="w-4 h-4 text-purple-200"></i>
+        <span>Licenses & Terms</span>
+      </button>
+    </div>
+
+    <!-- MERAKI COMPLIANCE AUDIT ALERT BANNER -->
+    <div id="merakiLicenseAlert" class="hidden mx-4 mt-3 p-3 bg-amber-950/70 border border-amber-500/80 rounded-xl space-y-1.5 text-xs text-amber-200 shadow-lg">
+      <div class="flex items-center gap-2 font-bold text-amber-300">
+        <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0"></i>
+        <span>Meraki Subscription Required</span>
+      </div>
+      <p class="text-[11px] text-slate-300">
+        Meraki hardware cannot pass traffic or boot without an active cloud dashboard subscription. Configure licensing terms before exporting.
+      </p>
+      <button onclick="autoFixMerakiLicenses()" class="w-full py-1.5 mt-1 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-lg text-[11px] transition-colors shadow">
+        Auto-Attach Meraki Licenses
+      </button>
+    </div>
+
+    <!-- VIEW MODE CONTROLS (GROUPED VS FLAT) -->
+    <div class="px-4 py-2 bg-slate-925 border-b border-slate-800/80 flex items-center justify-between text-xs">
+      <span class="text-[11px] text-slate-400 font-medium">BOM Display Format:</span>
+      <div class="flex items-center gap-1 bg-slate-950 p-0.5 rounded-lg border border-slate-800">
+        <button onclick="setBomViewMode('grouped')" id="bomViewMode-grouped" class="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-600 text-white">By Closet/Rack</button>
+        <button onclick="setBomViewMode('flat')" id="bomViewMode-flat" class="px-2 py-0.5 rounded text-[10px] font-bold text-slate-400 hover:text-white">Flat Order</button>
+      </div>
+    </div>
+
+    <div class="p-4 flex-1 overflow-y-auto space-y-3" id="bomItemsList"></div>
+
+    <div class="p-4 border-t border-slate-800 bg-slate-950/90 space-y-3">
+      <div id="bomPoEHeadroomAudit" class="p-2.5 rounded-xl border bg-slate-900 text-xs"></div>
+
+      <div class="space-y-1.5 text-xs">
+        <div class="flex justify-between text-slate-400"><span>Hardware Units:</span><span id="bomTotalUnits" class="font-mono text-white font-bold">0</span></div>
+        <div class="flex justify-between text-slate-400"><span>Combined PoE Capacity:</span><span id="bomTotalPoE" class="font-mono text-amber-400 font-bold">0 W</span></div>
+        <div class="pt-2 border-t border-slate-800 flex justify-between text-sm">
+          <span class="font-bold text-white">Estimated BOM MSRP:</span>
+          <span id="bomTotalMSRP" class="font-mono text-emerald-400 font-bold">$0</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-2">
+        <button onclick="copyBomSummary()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5"><i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy Quote</button>
+        <button onclick="exportBomCSV()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5"><i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV</button>
+      </div>
+      <button onclick="clearBom()" class="w-full text-center text-[11px] text-rose-400 hover:text-rose-300 font-medium">Clear All BOM Items</button>
+    </div>
+  </div>
+
+  <div id="toastNotification" class="fixed bottom-5 right-5 z-50 bg-slate-850 border border-brand-500/50 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs flex items-center gap-2 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <i data-lucide="info" class="w-4 h-4 text-brand-400"></i>
+    <span id="toastMessage">Notification message</span>
+  </div>
+
+  <!-- MODULAR APPLICATION ENGINE SCRIPTS -->
+  <script src="js/app.js"></script>
+  <script src="js/bom.js"></script>
+  <script src="js/rack.js"></script>
+</body>
+</html>
