@@ -182,7 +182,6 @@ function applyManagementSubscription(instanceId, profileKey, term) {
   if (!sw) return;
 
   projectBOM = projectBOM.filter(i => !(i.parentInstanceId === instanceId && (i.role === "Mgmt License" || i.role === "Security License")));
-
   sw.selectedMgmtProfile = profileKey;
 
   if (!profileKey || profileKey === "standalone") return;
@@ -212,7 +211,7 @@ function updateClosetName(instanceId, name) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (item) item.closetName = name.trim() || "Closet";
   updateBOMView();
-  if (!document.getElementById("rackModal").classList.contains("hidden")) {
+  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
 }
@@ -221,7 +220,7 @@ function updateRackId(instanceId, rack) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (item) item.rackId = rack;
   updateBOMView();
-  if (!document.getElementById("rackModal").classList.contains("hidden")) {
+  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
 }
@@ -380,7 +379,6 @@ function addFirewallToBOM(sku) {
     depthInches: 17.5,
     shallowDepth: false,
     qty: qtyToAdd,
-    uHeight: 1,
     closetName: "MDF",
     rackId: "Rack-1",
     rackU: null,
@@ -411,6 +409,111 @@ function addOpticsToBOM(sku, name, msrp, qty, vendor) {
   showToast(`Added ${qty}x ${sku} to Project BOM.`);
 }
 
+// ==========================================
+// WIRELESS LINK & ACCESSORY SIZING
+// ==========================================
+function addWirelessToBOM(radioId, isMatchedPair = false) {
+  const radio = WIRELESS_DATABASE.find(r => r.id === radioId);
+  if (!radio) return;
+
+  const qty = isMatchedPair ? 2 : 1;
+  const instanceId = `wl-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+  const title = isMatchedPair ? `Matched Link Pair: ${radio.model} (2x Radios)` : radio.model;
+
+  projectBOM.push({
+    instanceId: instanceId,
+    id: radio.sku,
+    model: title,
+    sku: radio.sku,
+    role: "Wireless Bridge",
+    vendor: radio.vendor,
+    msrp: radio.msrp,
+    poeBudget: 0,
+    baseWatts: radio.powerWatts,
+    depthInches: 4,
+    shallowDepth: true,
+    qty: qty,
+    closetName: "Exterior Pole",
+    rackId: "NEMA-Box",
+    isDinMounted: true
+  });
+
+  const precChecked = document.getElementById(`wl-prec-${radio.id}`)?.checked;
+  if (precChecked && radio.precisionMountSku && WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku]) {
+    const acc = WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku];
+    projectBOM.push({
+      instanceId: `mnt-${instanceId}`,
+      parentInstanceId: instanceId,
+      id: acc.sku,
+      model: acc.name,
+      sku: acc.sku,
+      role: "Mounting Bracket",
+      vendor: radio.vendor,
+      msrp: acc.msrp,
+      poeBudget: 0,
+      baseWatts: 0,
+      qty: qty
+    });
+  }
+
+  const surgeChecked = document.getElementById(`wl-surge-${radio.id}`)?.checked;
+  if (surgeChecked && radio.surgeSku && WIRELESS_ACCESSORY_CATALOG[radio.surgeSku]) {
+    const acc = WIRELESS_ACCESSORY_CATALOG[radio.surgeSku];
+    projectBOM.push({
+      instanceId: `srg-${instanceId}`,
+      parentInstanceId: instanceId,
+      id: acc.sku,
+      model: acc.name,
+      sku: acc.sku,
+      role: "Surge Protection",
+      vendor: radio.vendor,
+      msrp: acc.msrp,
+      poeBudget: 0,
+      baseWatts: 0,
+      qty: qty
+    });
+  }
+
+  const antSelect = document.getElementById(`wl-ant-${radio.id}`);
+  if (antSelect && WIRELESS_ACCESSORY_CATALOG[antSelect.value]) {
+    const ant = WIRELESS_ACCESSORY_CATALOG[antSelect.value];
+    projectBOM.push({
+      instanceId: `ant-${instanceId}`,
+      parentInstanceId: instanceId,
+      id: ant.sku,
+      model: ant.name,
+      sku: ant.sku,
+      role: "Antenna Assembly",
+      vendor: radio.vendor,
+      msrp: ant.msrp,
+      poeBudget: 0,
+      baseWatts: 0,
+      qty: qty
+    });
+  }
+
+  const licChecked = document.getElementById(`wl-lic-${radio.id}`)?.checked;
+  if (licChecked && radio.licenseSku && WIRELESS_LICENSE_CATALOG[radio.licenseSku]) {
+    const lic = WIRELESS_LICENSE_CATALOG[radio.licenseSku];
+    projectBOM.push({
+      instanceId: `lic-${instanceId}`,
+      parentInstanceId: instanceId,
+      id: lic.sku,
+      model: lic.name,
+      sku: lic.sku,
+      role: "Feature License",
+      vendor: radio.vendor,
+      msrp: lic.msrp,
+      poeBudget: 0,
+      baseWatts: 0,
+      qty: qty
+    });
+  }
+
+  updateBOMView();
+  showToast(isMatchedPair ? `Added complete 2-radio ${radio.model} link pair to BOM.` : `Added ${radio.model} to BOM.`);
+}
+
 function changeBomQty(instanceId, delta) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
@@ -430,7 +533,7 @@ function changeBomQty(instanceId, delta) {
   }
 
   updateBOMView();
-  if (!document.getElementById("rackModal").classList.contains("hidden")) {
+  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
 }
@@ -438,7 +541,7 @@ function changeBomQty(instanceId, delta) {
 function removeBomItem(instanceId) {
   projectBOM = projectBOM.filter(i => i.instanceId !== instanceId && i.parentInstanceId !== instanceId);
   updateBOMView();
-  if (!document.getElementById("rackModal").classList.contains("hidden")) {
+  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
   showToast("Item removed from BOM.");
@@ -447,7 +550,7 @@ function removeBomItem(instanceId) {
 function clearBom() {
   projectBOM = [];
   updateBOMView();
-  if (!document.getElementById("rackModal").classList.contains("hidden")) {
+  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
   showToast("Project BOM cleared.");
@@ -475,7 +578,7 @@ function updateBOMView() {
     totalMSRP += (item.msrp * item.qty);
   });
 
-  const { budgetWithHeadroom, raw, totalCameras } = calculatePoETarget();
+  const { budgetWithHeadroom, totalCameras } = typeof calculatePoETarget === "function" ? calculatePoETarget() : { budgetWithHeadroom: 0, totalCameras: 0 };
   const auditContainer = document.getElementById("bomPoEHeadroomAudit");
   if (auditContainer) {
     if (totalCameras === 0) {
@@ -571,7 +674,8 @@ function updateBOMView() {
   if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
-  if (typeof queueAutoSave === 'function') queueAutoSave();
+
+  if (typeof queueAutoSave === "function") queueAutoSave();
 }
 
 function renderBomSingleItemHtml(item) {
@@ -600,9 +704,10 @@ function renderBomSingleItemHtml(item) {
             <option value="Rack-2" ${item.rackId === 'Rack-2' ? 'selected' : ''}>Rack 2</option>
             <option value="Rack-3" ${item.rackId === 'Rack-3' ? 'selected' : ''}>Rack 3</option>
             <option value="Wall-Box" ${item.rackId === 'Wall-Box' ? 'selected' : ''}>Wall Box</option>
+            <option value="NEMA-Box" ${item.rackId === 'NEMA-Box' ? 'selected' : ''}>NEMA Box</option>
           </select>
         </div>
-        <span class="text-[10px] ${item.isDinMounted ? 'text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded' : 'text-slate-500 font-mono'} uppercase">${item.isDinMounted ? 'DIN Rail' : item.role}</span>
+        <span class="text-[10px] ${item.isDinMounted ? 'text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded' : 'text-slate-500 font-mono'} uppercase">${item.isDinMounted ? 'Pole/DIN' : item.role}</span>
       </div>
 
       <div class="flex items-center justify-between gap-3">

@@ -11,7 +11,7 @@ let comparisonList = [];
 // Global Persistent Filter State
 const filterState = {
   search: "",
-  vendors: ["Meraki", "Juniper", "Ruckus", "UniFi", "AMG", "Allied Telesis"],
+  vendors: ["Meraki", "Juniper", "Ruckus", "UniFi", "AMG", "Allied Telesis", "Ubiquiti", "Siklu", "Cambium"],
   mgmts: ["standalone", "free_central", "paid_onprem", "paid_cloud"],
   industrialOnly: false,
   stackingOnly: false,
@@ -25,12 +25,17 @@ const filterState = {
   evpn: false,
   minClients: 0,
   opticsFormFactor: "all",
-  opticsMedium: "all"
+  opticsMedium: "all",
+  // Wireless Filters
+  wirelessTopology: "all",
+  wirelessBand: "all",
+  wirelessTargetKm: 1.5,
+  wirelessRequire5gBackup: false
 };
 
 function switchMode(mode) {
   activeMode = mode;
-  ['access', 'backbone', 'firewalls', 'optics'].forEach(m => {
+  ['access', 'backbone', 'firewalls', 'optics', 'wireless'].forEach(m => {
     const btn = document.getElementById(`nav-${m}`);
     if (btn) btn.classList.remove('active');
   });
@@ -94,6 +99,31 @@ function renderTopCalculatorStrip(mode) {
         </div>
       </div>
     `;
+  } else if (mode === "wireless") {
+    container.innerHTML = `
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-lg space-y-3">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400"><i data-lucide="radio" class="w-5 h-5"></i></div>
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">RF Distance & Rain-Fade Advisor</h3>
+              <p class="text-xs text-slate-400">Simulate link distance across mmWave and sub-6 frequencies to audit rain-fade limits.</p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-3 bg-slate-950 px-4 py-2 rounded-xl border border-slate-800">
+            <div class="flex items-center gap-2">
+              <label class="text-[11px] font-semibold text-slate-400">Target Distance:</label>
+              <input type="range" id="wirelessDistanceSlider" min="0.1" max="25" step="0.1" value="${filterState.wirelessTargetKm}" oninput="updateWirelessDistance(this.value)" class="w-32 accent-emerald-500 cursor-pointer" />
+              <span id="wirelessDistanceLabel" class="font-mono font-bold text-emerald-400 text-xs w-24">${filterState.wirelessTargetKm} km</span>
+            </div>
+          </div>
+        </div>
+        <div id="wirelessRainFadeAlert" class="p-3 bg-slate-950/70 border border-slate-800 rounded-xl flex items-center justify-between text-xs">
+          <span id="wirelessAdvisorText" class="text-slate-300">Evaluating RF conditions...</span>
+        </div>
+      </div>
+    `;
+    updateWirelessDistance(filterState.wirelessTargetKm, false);
   } else {
     container.innerHTML = "";
   }
@@ -101,6 +131,30 @@ function renderTopCalculatorStrip(mode) {
   if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
+}
+
+function updateWirelessDistance(kmVal, reFilter = true) {
+  filterState.wirelessTargetKm = parseFloat(kmVal);
+  const lbl = document.getElementById("wirelessDistanceLabel");
+  const alertText = document.getElementById("wirelessAdvisorText");
+  const alertContainer = document.getElementById("wirelessRainFadeAlert");
+
+  if (lbl) lbl.innerText = `${filterState.wirelessTargetKm} km (${(filterState.wirelessTargetKm * 0.621371).toFixed(1)} mi)`;
+
+  if (alertText && alertContainer) {
+    if (filterState.wirelessTargetKm > 5.0) {
+      alertContainer.className = "p-3 bg-amber-950/40 border border-amber-800/80 rounded-xl flex items-center gap-2 text-xs text-amber-300";
+      alertText.innerHTML = `<strong>Heavy Rain-Fade Advisory:</strong> At ${filterState.wirelessTargetKm} km, standalone 60GHz/80GHz links will suffer severe rain attenuation (>25 mm/hr). Sub-6GHz (5GHz) or integrated backup radios are strictly required.`;
+    } else if (filterState.wirelessTargetKm > 2.0) {
+      alertContainer.className = "p-3 bg-sky-950/40 border border-sky-800/80 rounded-xl flex items-center gap-2 text-xs text-sky-300";
+      alertText.innerHTML = `<strong>Medium Range:</strong> High-gain 60GHz dishes (e.g., Wave Pro) or 70/80GHz E-Band units with 2ft antennas recommended.`;
+    } else {
+      alertContainer.className = "p-3 bg-emerald-950/40 border border-emerald-800/80 rounded-xl flex items-center gap-2 text-xs text-emerald-300";
+      alertText.innerHTML = `<strong>Clear Line of Sight (Short Range):</strong> 60GHz mmWave provides maximum 2Gbps–10Gbps capacity with zero channel congestion.`;
+    }
+  }
+
+  if (reFilter) runActiveFilter();
 }
 
 function updateSearchFilter(val) {
@@ -131,10 +185,8 @@ function renderSidebarFilters(mode) {
   const title = document.getElementById("sidebarFilterTitle");
   if (!container || !title) return;
 
-  const isAccess = mode === "access";
-  title.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> ${isAccess ? 'Access & Edge Specs' : 'Core & Agg Specs'}`;
-
-  if (isAccess) {
+  if (mode === "access") {
+    title.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Access & Edge Specs`;
     container.innerHTML = `
       <div>
         <label class="text-[11px] font-semibold text-slate-300 block mb-1">Chassis Port Count</label>
@@ -192,6 +244,7 @@ function renderSidebarFilters(mode) {
       </div>
     `;
   } else if (mode === "backbone") {
+    title.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Core & Agg Specs`;
     container.innerHTML = `
       <div>
         <label class="text-[11px] font-semibold text-slate-300 block mb-1.5">Layer Role</label>
@@ -244,6 +297,7 @@ function renderSidebarFilters(mode) {
       </div>
     `;
   } else if (mode === "firewalls") {
+    title.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Gateway & WAN Specs`;
     container.innerHTML = `
       <div class="space-y-1.5">
         <label class="text-[11px] font-semibold text-slate-300 block">Manufacturer</label>
@@ -274,6 +328,7 @@ function renderSidebarFilters(mode) {
       </div>
     `;
   } else if (mode === "optics") {
+    title.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Optics & Interconnects`;
     container.innerHTML = `
       <div>
         <label class="text-[11px] font-semibold text-slate-300 block mb-1">Form Factor</label>
@@ -304,11 +359,66 @@ function renderSidebarFilters(mode) {
         ${renderPersistentVendorCheckboxes()}
       </div>
     `;
+  } else if (mode === "wireless") {
+    title.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Wireless PtP & PtMP Specs`;
+    container.innerHTML = `
+      <div>
+        <label class="text-[11px] font-semibold text-slate-300 block mb-1.5">Topology Architecture</label>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="setWirelessTopology('all')" id="wlTop-all" class="px-2 py-1 text-xs rounded ${filterState.wirelessTopology === 'all' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'} font-medium">All Topologies</button>
+          <button onclick="setWirelessTopology('PtP')" id="wlTop-PtP" class="px-2 py-1 text-xs rounded ${filterState.wirelessTopology === 'PtP' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'} font-medium">Point-to-Point (PtP)</button>
+          <button onclick="setWirelessTopology('PtMP-AP')" id="wlTop-PtMP-AP" class="px-2 py-1 text-xs rounded ${filterState.wirelessTopology === 'PtMP-AP' ? 'bg-brand-600 text-white' : 'bg-slate-800 text-slate-300'} font-medium col-span-2">BaseStation / AP (PtMP)</button>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-semibold text-slate-300 block mb-1">Frequency Spectrum</label>
+        <select onchange="filterState.wirelessBand = this.value; runActiveFilter()" class="w-full bg-slate-950 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-white">
+          <option value="all" ${filterState.wirelessBand === 'all' ? 'selected' : ''}>All Frequency Bands</option>
+          <option value="60 GHz mmWave" ${filterState.wirelessBand === '60 GHz mmWave' ? 'selected' : ''}>60 GHz mmWave (High Capacity)</option>
+          <option value="70/80 GHz E-Band" ${filterState.wirelessBand === '70/80 GHz E-Band' ? 'selected' : ''}>70/80 GHz E-Band (10G Dedicated)</option>
+          <option value="5 GHz Sub-6" ${filterState.wirelessBand === '5 GHz Sub-6' ? 'selected' : ''}>5 GHz Sub-6 (Rain Resilient)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-2">
+        <label class="text-[11px] font-semibold text-slate-300 block">Link Reliability</label>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+          <input type="checkbox" id="filterWl5gBackup" onchange="filterState.wirelessRequire5gBackup = this.checked; runActiveFilter()" ${filterState.wirelessRequire5gBackup ? 'checked' : ''} class="rounded border-slate-700 text-brand-600 bg-slate-800" />
+          <span class="text-amber-300 font-medium">Integrated 5GHz Backup Radio</span>
+        </label>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="text-[11px] font-semibold text-slate-300 block">Manufacturer</label>
+        ${['Ubiquiti', 'Siklu', 'Cambium', 'AMG'].map(v => `
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input type="checkbox" value="${v}" onchange="togglePersistentVendor('${v}', this.checked)" ${filterState.vendors.includes(v) ? 'checked' : ''} class="rounded border-slate-700 text-brand-600 bg-slate-800" />
+            <span>${v}</span>
+          </label>
+        `).join('')}
+      </div>
+    `;
   }
 
   if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
+}
+
+function setWirelessTopology(val) {
+  filterState.wirelessTopology = val;
+  ['all', 'PtP', 'PtMP-AP'].forEach(v => {
+    const btn = document.getElementById(`wlTop-${v}`);
+    if (btn) {
+      btn.classList.remove('bg-brand-600', 'text-white');
+      btn.classList.add('bg-slate-800', 'text-slate-300');
+    }
+  });
+  const activeBtn = document.getElementById(`wlTop-${val}`);
+  activeBtn?.classList.remove('bg-slate-800', 'text-slate-300');
+  activeBtn?.classList.add('bg-brand-600', 'text-white');
+  runActiveFilter();
 }
 
 function renderPersistentVendorCheckboxes() {
@@ -484,6 +594,19 @@ function runActiveFilter() {
     });
 
     renderOpticsCards(filtered);
+  } else if (activeMode === "wireless") {
+    const targetKm = filterState.wirelessTargetKm || 1.0;
+    const filtered = WIRELESS_DATABASE.filter(r => {
+      if (search && !r.model.toLowerCase().includes(search) && !r.sku.toLowerCase().includes(search) && !r.vendor.toLowerCase().includes(search)) return false;
+      if (!filterState.vendors.includes(r.vendor)) return false;
+      if (filterState.wirelessTopology !== "all" && r.topology !== filterState.wirelessTopology) return false;
+      if (filterState.wirelessBand !== "all" && r.band !== filterState.wirelessBand) return false;
+      if (filterState.wirelessRequire5gBackup && !r.integrated5gBackup) return false;
+      if (targetKm > r.maxRangeKm) return false;
+      return true;
+    });
+
+    renderWirelessCards(filtered);
   }
 }
 
@@ -739,9 +862,121 @@ function renderOpticsCards(list) {
   }
 }
 
+function renderWirelessCards(list) {
+  const container = document.getElementById("hardwareCardsContainer");
+  const noResults = document.getElementById("noResultsState");
+  const countBadge = document.getElementById("resultCount");
+  if (countBadge) countBadge.innerText = list.length;
+  if (!container) return;
+
+  if (list.length === 0) {
+    container.innerHTML = "";
+    noResults?.classList.remove("hidden");
+    return;
+  }
+
+  noResults?.classList.add("hidden");
+  container.innerHTML = list.map(r => {
+    let vendorColor = "bg-slate-800 text-slate-300 border-slate-700";
+    if (r.vendor === "Ubiquiti") vendorColor = "bg-sky-500/10 text-sky-400 border-sky-500/30";
+    if (r.vendor === "Siklu") vendorColor = "bg-purple-500/10 text-purple-400 border-purple-500/30";
+    if (r.vendor === "Cambium") vendorColor = "bg-orange-500/10 text-orange-400 border-orange-500/30";
+    if (r.vendor === "AMG") vendorColor = "bg-rose-500/10 text-rose-400 border-rose-500/30";
+
+    const hasPrecisionMount = r.precisionMountSku && WIRELESS_ACCESSORY_CATALOG[r.precisionMountSku];
+    const hasAntennaOptions = r.needsExternalAntenna && r.supportedAntennaSkus;
+    const hasLicense = r.licenseSku && WIRELESS_LICENSE_CATALOG[r.licenseSku];
+
+    return `
+      <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
+        <div>
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <div class="flex flex-wrap items-center gap-1.5 mb-1.5">
+                <span class="badge-chip border ${vendorColor}">${r.vendor}</span>
+                <span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">${r.topology === 'PtP' ? 'Point-to-Point' : 'BaseStation AP'}</span>
+                <span class="badge-chip border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">${r.band}</span>
+                ${r.integrated5gBackup ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300">5G Failover</span>' : ''}
+              </div>
+              <h3 class="font-bold text-base text-white">${r.model}</h3>
+              <span class="text-[11px] font-mono text-slate-400">SKU: ${r.sku}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-xs text-slate-400 block">Unit MSRP</span>
+              <span class="font-mono text-base font-bold text-emerald-400">$${r.msrp.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 bg-slate-950 p-2.5 rounded-xl border border-slate-800 my-2.5 text-xs">
+            <div><span class="text-[10px] text-slate-500 block uppercase">Max Capacity</span><span class="font-bold text-white">${r.maxThroughput}</span></div>
+            <div><span class="text-[10px] text-slate-500 block uppercase">Max RF Range</span><span class="font-bold text-emerald-400">${r.maxRangeKm} km</span></div>
+            <div><span class="text-[10px] text-slate-500 block uppercase">Antenna</span><span class="font-semibold text-slate-300 truncate block">${r.integratedAntenna}</span></div>
+            <div><span class="text-[10px] text-slate-500 block uppercase">Power Draw</span><span class="font-mono text-amber-300">${r.powerWatts}W (${r.poeRequired})</span></div>
+          </div>
+
+          <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-800 mb-3 space-y-2 text-xs">
+            ${hasAntennaOptions ? `
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 font-medium">Antenna Assembly:</span>
+                <select id="wl-ant-${r.id}" class="bg-slate-900 border border-slate-700 text-white text-[11px] rounded px-2 py-0.5">
+                  ${r.supportedAntennaSkus.map(aSku => {
+                    const a = WIRELESS_ACCESSORY_CATALOG[aSku];
+                    return `<option value="${aSku}">${a.name} (+$${a.msrp})</option>`;
+                  }).join('')}
+                </select>
+              </div>
+            ` : ''}
+
+            ${hasPrecisionMount ? `
+              <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-1.5">
+                  <input type="checkbox" id="wl-prec-${r.id}" class="rounded border-slate-700 bg-slate-950 text-indigo-500 cursor-pointer" />                   <span>Add Precision Alignment Bracket</span>                 </div>                 <span class="font-mono text-emerald-400">+$${WIRELESS_ACCESSORY_CATALOG[r.precisionMountSku].msrp}</span>
+              </label>
+            ` : ''}
+
+            ${r.surgeSku && WIRELESS_ACCESSORY_CATALOG[r.surgeSku] ? `
+              <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-1.5">
+                  <input type="checkbox" id="wl-surge-${r.id}" checked class="rounded border-slate-700 bg-slate-950 text-indigo-500 cursor-pointer" />                   <span>Outdoor Surge Protector (ETH-SP)</span>                 </div>                 <span class="font-mono text-emerald-400">+$${WIRELESS_ACCESSORY_CATALOG[r.surgeSku].msrp}</span>
+              </label>
+            ` : ''}
+
+            ${hasLicense ? `
+              <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white pt-1 border-t border-slate-800">
+                <div class="flex items-center gap-1.5">
+                  <input type="checkbox" id="wl-lic-${r.id}" class="rounded border-slate-700 bg-slate-950 text-purple-500 cursor-pointer" />
+                  <span>${WIRELESS_LICENSE_CATALOG[r.licenseSku].name}</span>                 </div>                 <span class="font-mono text-emerald-400">+$${WIRELESS_LICENSE_CATALOG[r.licenseSku].msrp}</span>
+              </label>
+            ` : ''}
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
+          ${r.topology === 'PtP' ? `
+            <button onclick="addWirelessToBOM('${r.id}', true)" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5">
+              <i data-lucide="link" class="w-3.5 h-3.5"></i> Add Matched 2-Radio Link Pair
+            </button>
+            <button onclick="addWirelessToBOM('${r.id}', false)" title="Add single standalone radio" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl">
+              1x Only
+            </button>
+          ` : `
+            <button onclick="addWirelessToBOM('${r.id}', false)" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow flex items-center justify-center gap-1.5">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add BaseStation AP to BOM
+            </button>
+          `}
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if (window.lucide) {
+    try { lucide.createIcons(); } catch(e) {}
+  }
+}
+
 function resetCurrentFilters() {
   filterState.search = "";
-  filterState.vendors = ["Meraki", "Juniper", "Ruckus", "UniFi", "AMG", "Allied Telesis"];
+  filterState.vendors = ["Meraki", "Juniper", "Ruckus", "UniFi", "AMG", "Allied Telesis", "Ubiquiti", "Siklu", "Cambium"];
   filterState.mgmts = ["standalone", "free_central", "paid_onprem", "paid_cloud"];
   filterState.industrialOnly = false;
   filterState.stackingOnly = false;
@@ -756,6 +991,10 @@ function resetCurrentFilters() {
   filterState.minClients = 0;
   filterState.opticsFormFactor = "all";
   filterState.opticsMedium = "all";
+  filterState.wirelessTopology = "all";
+  filterState.wirelessBand = "all";
+  filterState.wirelessTargetKm = 1.5;
+  filterState.wirelessRequire5gBackup = false;
 
   accessPortSelection = "any";
   backboneRoleSelection = "all";
@@ -848,10 +1087,6 @@ function showToast(msg) {
   }, 3000);
 }
 
-window.addEventListener("DOMContentLoaded", () => {
-  switchMode('access');
-  updateBOMView();
-});
 // ==========================================
 // LOCALSTORAGE PERSISTENCE & PROJECT MANAGER
 // ==========================================
@@ -876,11 +1111,11 @@ function saveStateToLocalStorage() {
       accessPortSelection,
       backboneRoleSelection,
       lockPoEBudget,
-      currentRackHeight,
-      globalSelectedTerm,
-      bomViewMode,
+      currentRackHeight: typeof currentRackHeight !== "undefined" ? currentRackHeight : 24,
+      globalSelectedTerm: typeof globalSelectedTerm !== "undefined" ? globalSelectedTerm : "1YR",
+      bomViewMode: typeof bomViewMode !== "undefined" ? bomViewMode : "grouped",
       filterState,
-      projectBOM,
+      projectBOM: typeof projectBOM !== "undefined" ? projectBOM : [],
       calcValues: {
         calcPoE: document.getElementById("calcPoE")?.value || 0,
         calcPoEPlus: document.getElementById("calcPoEPlus")?.value || 0,
@@ -903,24 +1138,27 @@ function restoreStateFromLocalStorage() {
     const parsed = JSON.parse(raw);
     if (!parsed || !parsed.projectBOM) return false;
 
-    projectBOM = parsed.projectBOM || [];
+    if (typeof projectBOM !== "undefined") projectBOM = parsed.projectBOM || [];
     activeProjectName = parsed.activeProjectName || "Default Project";
     activeMode = parsed.activeMode || "access";
     accessPortSelection = parsed.accessPortSelection || "any";
     backboneRoleSelection = parsed.backboneRoleSelection || "all";
     lockPoEBudget = parsed.lockPoEBudget || false;
-    currentRackHeight = parsed.currentRackHeight || 24;
-    globalSelectedTerm = parsed.globalSelectedTerm || "1YR";
-    bomViewMode = parsed.bomViewMode || "grouped";
+    if (typeof currentRackHeight !== "undefined") currentRackHeight = parsed.currentRackHeight || 24;
+    if (typeof globalSelectedTerm !== "undefined") globalSelectedTerm = parsed.globalSelectedTerm || "1YR";
+    if (typeof bomViewMode !== "undefined") bomViewMode = parsed.bomViewMode || "grouped";
 
     if (parsed.filterState) {
       Object.assign(filterState, parsed.filterState);
+      // Ensure wireless vendors are present even if restored from an older saved session:
+      ['Ubiquiti', 'Siklu', 'Cambium', 'AMG'].forEach(v => {
+        if (!filterState.vendors.includes(v)) filterState.vendors.push(v);
+      });
     }
 
     const label = document.getElementById("activeProjectLabel");
     if (label) label.innerText = activeProjectName;
 
-    // Restore calculator values if on access mode
     if (parsed.calcValues) {
       setTimeout(() => {
         if (document.getElementById("calcPoE")) document.getElementById("calcPoE").value = parsed.calcValues.calcPoE;
@@ -968,15 +1206,16 @@ function saveCurrentAsNewProject() {
   const projects = getSavedProjectsIndex();
   projects[name] = {
     name,
-    projectBOM,
-    globalSelectedTerm,
-    currentRackHeight,
+    projectBOM: typeof projectBOM !== "undefined" ? projectBOM : [],
+    globalSelectedTerm: typeof globalSelectedTerm !== "undefined" ? globalSelectedTerm : "1YR",
+    currentRackHeight: typeof currentRackHeight !== "undefined" ? currentRackHeight : 24,
     savedAt: new Date().toISOString()
   };
 
   localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
   activeProjectName = name;
-  document.getElementById("activeProjectLabel").innerText = name;
+  const lbl = document.getElementById("activeProjectLabel");
+  if (lbl) lbl.innerText = name;
   if (input) input.value = "";
 
   saveStateToLocalStorage();
@@ -989,14 +1228,15 @@ function loadSavedProject(name) {
   const proj = projects[name];
   if (!proj) return;
 
-  projectBOM = proj.projectBOM || [];
+  if (typeof projectBOM !== "undefined") projectBOM = proj.projectBOM || [];
   activeProjectName = proj.name || name;
-  globalSelectedTerm = proj.globalSelectedTerm || "1YR";
-  currentRackHeight = proj.currentRackHeight || 24;
+  if (typeof globalSelectedTerm !== "undefined") globalSelectedTerm = proj.globalSelectedTerm || "1YR";
+  if (typeof currentRackHeight !== "undefined") currentRackHeight = proj.currentRackHeight || 24;
 
-  document.getElementById("activeProjectLabel").innerText = activeProjectName;
+  const lbl = document.getElementById("activeProjectLabel");
+  if (lbl) lbl.innerText = activeProjectName;
   saveStateToLocalStorage();
-  updateBOMView();
+  if (typeof updateBOMView === "function") updateBOMView();
   renderSavedProjectsList();
   toggleProjectModal();
   showToast(`Loaded project: ${name}`);
@@ -1065,9 +1305,9 @@ function exportCurrentProjectJSON() {
   const payload = {
     projectName: activeProjectName,
     exportedAt: new Date().toISOString(),
-    projectBOM,
-    globalSelectedTerm,
-    currentRackHeight
+    projectBOM: typeof projectBOM !== "undefined" ? projectBOM : [],
+    globalSelectedTerm: typeof globalSelectedTerm !== "undefined" ? globalSelectedTerm : "1YR",
+    currentRackHeight: typeof currentRackHeight !== "undefined" ? currentRackHeight : 24
   };
 
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -1093,14 +1333,15 @@ function importProjectJSON(event) {
         return;
       }
 
-      projectBOM = data.projectBOM;
+      if (typeof projectBOM !== "undefined") projectBOM = data.projectBOM;
       activeProjectName = data.projectName || file.name.replace(".json", "");
-      globalSelectedTerm = data.globalSelectedTerm || "1YR";
-      currentRackHeight = data.currentRackHeight || 24;
+      if (typeof globalSelectedTerm !== "undefined") globalSelectedTerm = data.globalSelectedTerm || "1YR";
+      if (typeof currentRackHeight !== "undefined") currentRackHeight = data.currentRackHeight || 24;
 
-      document.getElementById("activeProjectLabel").innerText = activeProjectName;
+      const lbl = document.getElementById("activeProjectLabel");
+      if (lbl) lbl.innerText = activeProjectName;
       saveStateToLocalStorage();
-      updateBOMView();
+      if (typeof updateBOMView === "function") updateBOMView();
       renderSavedProjectsList();
       toggleProjectModal();
       showToast(`Imported ${activeProjectName} successfully.`);
@@ -1111,11 +1352,10 @@ function importProjectJSON(event) {
   reader.readAsText(file);
 }
 
-// Modify window.addEventListener("DOMContentLoaded") in js/app.js:
 window.addEventListener("DOMContentLoaded", () => {
   const restored = restoreStateFromLocalStorage();
   switchMode(activeMode);
-  updateBOMView();
+  if (typeof updateBOMView === "function") updateBOMView();
   if (restored) {
     showToast(`Restored active session: ${activeProjectName}`);
   }

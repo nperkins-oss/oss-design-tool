@@ -44,6 +44,7 @@
   <script src="data/data_allied.js"></script>
   <script src="data/data_firewalls.js"></script>
   <script src="data/data_interconnects.js"></script>
+  <script src="data/data_wireless.js"></script>
 
   <style>
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -136,6 +137,14 @@
         <button onclick="switchMode('optics')" id="nav-optics" class="top-nav-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
           <i data-lucide="cable" class="w-4 h-4 text-sky-400"></i>
           <span>Optics & DACs</span>
+        </button>
+		<button onclick="switchMode('optics')" id="nav-optics" class="top-nav-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
+          <i data-lucide="cable" class="w-4 h-4 text-sky-400"></i>
+          <span>Optics & DACs</span>
+        </button>
+        <button onclick="switchMode('wireless')" id="nav-wireless" class="top-nav-btn px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
+          <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
+          <span>Wireless PtP & PtMP</span>
         </button>
       </div>
     </div>
