@@ -102,5 +102,40 @@ const ACCESSORY_DATABASE = [
       "-20°C to +70°C Operating Temperature",
       "Overload, Over-Voltage & Thermal Protection"
     ]
+  },
+  {
+    id: "unifi-usp-pdu-pro",
+    sku: "USP-PDU-Pro",
+    model: "UniFi SmartPower PDU Pro (16-Port Managed Power)",
+    vendor: "UniFi",
+    category: "power_distribution",
+    mounting: "19\" Rackmount (1U)",
+    rackUnits: 1,
+    msrp: 342,
+    description: "1U rack-mountable power distribution unit with 16 individually switchable and energy-monitored AC outlets and 4 USB-C power ports.",
+    baseWatts: 15,
+    keyFeatures: [
+      "16x individually controllable 120V AC outlets (1875W total capacity)",
+      "4x 5V USB-C ports for charging or powering peripheral equipment",
+      "Per-outlet power metering and remote reboot over UniFi Network",
+      "Integrated 1.3\" status touchscreen"
+    ]
+  },
+  {
+    id: "unifi-usw-flex-utility",
+    sku: "USW-Flex-Utility",
+    model: "UniFi Switch Flex Outdoor Weatherproof Enclosure",
+    vendor: "UniFi",
+    category: "outdoor_enclosure",
+    mounting: "Pole / Wall",
+    rackUnits: 0,
+    msrp: 58,
+    description: "Outdoor weatherproof enclosure for the USW-Flex switch. Includes an internal 60W PoE adapter providing up to a 46W PoE budget.",
+    baseWatts: 0,
+    keyFeatures: [
+      "Weatherproof IPX5 enclosure for light poles and exterior walls",
+      "Includes 60W internal power injector delivering 46W PoE output",
+      "Tamper-resistant screw lock housing and cable management glands"
+    ]
   }
 ];

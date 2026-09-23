@@ -1,5 +1,6 @@
 // ==========================================
 // APPLICATION CORE CONTROLLER (NetSelect Enterprise)
+// Integrated with FacilityStore & Project-Scoped State Isolation
 // ==========================================
 
 let currentMode = "access"; // "access" | "backbone" | "firewalls" | "optics" | "wireless" | "accessories"
@@ -167,16 +168,13 @@ function calculatePoETarget() {
 function updateDemandInput(field, val) {
   demandCounts[field] = Math.max(0, parseInt(val) || 0);
   buildCalculatorStrip();
-  updateBOMView();
-  runActiveFilter();
-  queueAutoSave();
+  FacilityStore.notifyWorkspaceChange();
 }
 
 function updateHeadroom(val) {
   extraHeadroomPercent = parseInt(val) || 20;
   buildCalculatorStrip();
-  updateBOMView();
-  queueAutoSave();
+  FacilityStore.notifyWorkspaceChange();
 }
 
 function buildCalculatorStrip() {
@@ -730,7 +728,7 @@ function renderSwitchCard(sw) {
 
   const hasModularBay = sw.modularUplink && sw.modularUplink.hasSlot;
   const hasLicenseOption = sw.featureLicense && sw.featureLicense.hasOptions;
-  const allLocations = typeof getAllDefinedLocations === "function" ? getAllDefinedLocations() : ["MDF • Rack-1", "IDF-1 • Rack-1"];
+  const allLocations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(true) : ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1"];
   const defaultLoc = (sw.role === "Core" || sw.role === "Aggregation") ? "MDF • Rack-1" : "IDF-1 • Rack-1";
 
   let allocationHtml = "";
@@ -743,11 +741,13 @@ function renderSwitchCard(sw) {
         if (!a) return "";
         const portOverload = a.usedDownlinkPorts > a.totalPorts;
         const poeOverload = a.totalPoEBudget > 0 && a.consumedPoEWatts > a.totalPoEBudget;
+        const rawLoc = inst.closetName || inst.rackId || FacilityStore.UNASSIGNED;
+        const displayLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
 
         return `
           <div class="bg-slate-950/90 border ${portOverload || poeOverload ? 'border-rose-500/50' : 'border-slate-800'} rounded-lg p-2 text-[11px] space-y-1">
             <div class="flex justify-between items-center text-slate-400">
-              <span class="font-bold text-white">${inst.closetName || 'IDF-1'} / ${inst.rackId || 'Rack-1'}</span>
+              <span class="font-bold text-white">${displayLoc}</span>
               <span class="font-mono text-[10px] ${portOverload ? 'text-rose-400 font-bold' : 'text-slate-400'}">
                 ${a.usedDownlinkPorts}/${a.totalPorts} Ports
               </span>
@@ -833,7 +833,7 @@ function renderSwitchCard(sw) {
           ${hasLicenseOption ? `
             <div class="pt-2 border-t border-slate-800/80 space-y-1">
               <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">Add Feature Licenses:</span>
-              <div class="space-y-1 bg-slate-900/60 p-2 rounded-lg border border-slate-850">
+              <div class="space-y-1 bg-slate-900/60 p-2 rounded-lg border border-slate-855">
                 ${sw.featureLicense.supportedLicenses.map(lSku => {
                   const lic = FEATURE_LICENSE_CATALOG[lSku];
                   if (!lic) return '';
@@ -860,7 +860,7 @@ function renderSwitchCard(sw) {
         </div>
 
         ${sw.role === 'Access' ? `
-          <div class="grid grid-cols-4 gap-1.5 bg-slate-950 p-2 rounded-xl border border-slate-850 mb-2 text-center text-xs">
+          <div class="grid grid-cols-4 gap-1.5 bg-slate-950 p-2 rounded-xl border border-slate-855 mb-2 text-center text-xs">
             <div><span class="text-[9px] text-slate-500 block uppercase">PoE (af)</span><span class="font-mono font-bold text-white">${sw.poeAfPorts || 0}p</span></div>
             <div><span class="text-[9px] text-slate-500 block uppercase">PoE+ (at)</span><span class="font-mono font-bold text-sky-300">${sw.poeAtPorts || 0}p</span></div>
             <div><span class="text-[9px] text-slate-500 block uppercase">PoE++ (60W)</span><span class="font-mono font-bold text-indigo-300">${sw.poeBt60Ports || 0}p</span></div>
@@ -868,7 +868,7 @@ function renderSwitchCard(sw) {
           </div>
         ` : ''}
 
-        <div class="grid grid-cols-3 gap-2 bg-slate-950/70 p-2 rounded-xl border border-slate-850 mb-3 text-xs">
+        <div class="grid grid-cols-3 gap-2 bg-slate-950/70 p-2 rounded-xl border border-slate-855 mb-3 text-xs">
           <div><span class="text-[10px] text-slate-500 block uppercase font-medium">${sw.role === 'Access' ? 'PoE Budget' : 'Fabric'}</span><span class="font-mono font-bold text-amber-400">${sw.role === 'Access' ? `${sw.poeBudget}W` : sw.switchingCapacity}</span></div>
           <div><span class="text-[10px] text-slate-500 block uppercase font-medium">VMS Buffer</span><span class="font-mono font-bold ${sw.packetBufferMb >= 4 ? 'text-cyan-300' : 'text-slate-400'}">${sw.packetBufferMb} MB</span></div>
           <div><span class="text-[10px] text-slate-500 block uppercase font-medium">Depth</span><span class="font-mono font-semibold ${sw.shallowDepth ? 'text-sky-300' : 'text-slate-400'}">${sw.depthInches}"</span></div>
@@ -909,7 +909,7 @@ function renderSwitchCard(sw) {
 
 function renderFirewallCard(fw) {
   const isCompared = comparisonList.includes(fw.sku);
-  const allLocations = typeof getAllDefinedLocations === "function" ? getAllDefinedLocations() : ["MDF • Rack-1"];
+  const allLocations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(true) : ["Unassigned", "MDF • Rack-1"];
 
   return `
     <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
@@ -999,7 +999,6 @@ function renderOpticCard(opt) {
   `;
 }
 
-// Fixed Wireless Card Property Mapping (prevents "undefined" throughput and distance)
 function renderWirelessCard(radio) {
   const isCompared = comparisonList.includes(radio.id);
   const throughput = radio.maxThroughputGbps || radio.throughputGbps || (radio.throughputMbps ? `${radio.throughputMbps / 1000} Gbps` : '1.0+ Gbps');
@@ -1033,7 +1032,7 @@ function renderWirelessCard(radio) {
           <div class="flex justify-between"><span class="text-slate-500">Power Consumption:</span><span class="text-amber-300 font-bold">${watts} W (${watts > 30 ? '802.3bt' : '802.3at'})</span></div>
         </div>
 
-        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-850 mb-3 space-y-1.5 text-xs">
+        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-855 mb-3 space-y-1.5 text-xs">
           ${radio.precisionMountSku ? `
             <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white">
               <div class="flex items-center gap-1.5">
@@ -1073,7 +1072,7 @@ function renderWirelessCard(radio) {
 }
 
 function renderAccessoryCard(acc) {
-  const allLocations = typeof getAllDefinedLocations === "function" ? getAllDefinedLocations() : ["MDF • Rack-1"];
+  const allLocations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(true) : ["Unassigned", "MDF • Rack-1"];
 
   return `
     <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
@@ -1217,7 +1216,7 @@ function renderCompareModalContent() {
 }
 
 // -----------------------------------------------------------
-// State Persistence & JSON Import/Export
+// Multi-Project State Persistence & Project Synchronization (Item B)
 // -----------------------------------------------------------
 let autoSaveDebounce = null;
 function queueAutoSave() {
@@ -1227,22 +1226,21 @@ function queueAutoSave() {
 
 function saveStateToLocalStorage() {
   try {
+    const projId = FacilityStore.getProjectId();
     const state = {
       projectBOM: projectBOM || [],
       demandCounts,
       extraHeadroomPercent,
-      globalSelectedTerm: typeof globalSelectedTerm !== "undefined" ? globalSelectedTerm : "1YR",
-      activeViewingRackKey: typeof activeViewingRackKey !== "undefined" ? activeViewingRackKey : null,
-      rackHeightsByRack: typeof rackHeightsByRack !== "undefined" ? rackHeightsByRack : {},
-      topologyNodePositions: typeof topologyNodePositions !== "undefined" ? topologyNodePositions : {}
+      globalSelectedTerm: typeof globalSelectedTerm !== "undefined" ? globalSelectedTerm : "1YR"
     };
-    localStorage.setItem("netselect_active_state_v1", JSON.stringify(state));
+    localStorage.setItem(`netselect_active_state_${projId}`, JSON.stringify(state));
   } catch (e) {}
 }
 
 function restoreStateFromLocalStorage() {
   try {
-    const raw = localStorage.getItem("netselect_active_state_v1");
+    const projId = FacilityStore.getProjectId();
+    const raw = localStorage.getItem(`netselect_active_state_${projId}`) || localStorage.getItem("netselect_active_state_v1");
     if (!raw) return;
     const parsed = JSON.parse(raw);
 
@@ -1250,9 +1248,6 @@ function restoreStateFromLocalStorage() {
     if (parsed.demandCounts) demandCounts = parsed.demandCounts;
     if (parsed.extraHeadroomPercent) extraHeadroomPercent = parsed.extraHeadroomPercent;
     if (parsed.globalSelectedTerm && typeof globalSelectedTerm !== "undefined") globalSelectedTerm = parsed.globalSelectedTerm;
-    if (parsed.activeViewingRackKey && typeof activeViewingRackKey !== "undefined") activeViewingRackKey = parsed.activeViewingRackKey;
-    if (parsed.rackHeightsByRack && typeof rackHeightsByRack !== "undefined") rackHeightsByRack = parsed.rackHeightsByRack;
-    if (parsed.topologyNodePositions && typeof topologyNodePositions !== "undefined") topologyNodePositions = parsed.topologyNodePositions;
   } catch (e) {}
 }
 
@@ -1302,6 +1297,9 @@ function saveCurrentAsNewProject() {
   const name = nameInput ? nameInput.value.trim() : null;
   if (!name) { showToast("Please enter a project name."); return; }
 
+  const projId = `proj-${Date.now()}`;
+  FacilityStore.setProjectId(projId);
+
   let saved = [];
   try {
     saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
@@ -1310,21 +1308,32 @@ function saveCurrentAsNewProject() {
   let totalMsrp = 0;
   projectBOM.forEach(i => totalMsrp += (i.msrp * i.qty));
 
+  // Retrieve project-specific facility floors
+  let facilityFloors = [];
+  try {
+    const rawFac = localStorage.getItem(`netselect_facility_${projId}`);
+    if (rawFac) facilityFloors = JSON.parse(rawFac);
+  } catch (e) {}
+
   saved.push({
+    id: projId,
     name,
     date: new Date().toLocaleDateString(),
     itemsCount: projectBOM.reduce((acc, i) => acc + i.qty, 0),
     totalMsrp,
     bom: projectBOM,
     demandCounts,
-    rackHeightsByRack: typeof rackHeightsByRack !== "undefined" ? rackHeightsByRack : {},
-    topologyNodePositions: typeof topologyNodePositions !== "undefined" ? topologyNodePositions : {}
+    facilityFloors
   });
 
   localStorage.setItem("netselect_saved_quotes", JSON.stringify(saved));
   if (nameInput) nameInput.value = "";
   const label = document.getElementById("activeProjectLabel");
   if (label) label.innerText = name;
+
+  // Persist state under new project ID
+  saveStateToLocalStorage();
+  if (typeof saveFacilityState === "function") saveFacilityState();
 
   renderSavedProjectsList();
   showToast(`Saved project: ${name}`);
@@ -1339,19 +1348,24 @@ function loadProjectSnapshot(idx) {
   const proj = saved[idx];
   if (!proj) return;
 
+  const projId = proj.id || `proj-${idx}`;
+  FacilityStore.setProjectId(projId);
+
   projectBOM = proj.bom || [];
   if (proj.demandCounts) demandCounts = proj.demandCounts;
-  if (proj.rackHeightsByRack && typeof rackHeightsByRack !== "undefined") rackHeightsByRack = proj.rackHeightsByRack;
-  if (proj.topologyNodePositions && typeof topologyNodePositions !== "undefined") topologyNodePositions = proj.topologyNodePositions;
 
   const label = document.getElementById("activeProjectLabel");
   if (label) label.innerText = proj.name;
 
-  updateBOMView();
+  // Sync Facility Layout State to this project
+  if (typeof loadFacilityState === "function") {
+    loadFacilityState();
+  }
+
+  // Refresh All Application Views
+  FacilityStore.notifyWorkspaceChange();
   buildCalculatorStrip();
   runActiveFilter();
-  if (typeof renderRackVisualizer === "function") renderRackVisualizer();
-  if (typeof renderTopologyCanvas === "function") renderTopologyCanvas();
 
   toggleProjectModal();
   showToast(`Loaded snapshot: ${proj.name}`);
@@ -1363,6 +1377,13 @@ function deleteProjectSnapshot(idx) {
     saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
   } catch (e) { return; }
 
+  const proj = saved[idx];
+  if (proj && proj.id) {
+    localStorage.removeItem(`netselect_facility_${proj.id}`);
+    localStorage.removeItem(`netselect_active_state_${proj.id}`);
+    localStorage.removeItem(`netselect_topo_pos_${proj.id}`);
+  }
+
   saved.splice(idx, 1);
   localStorage.setItem("netselect_saved_quotes", JSON.stringify(saved));
   renderSavedProjectsList();
@@ -1370,12 +1391,20 @@ function deleteProjectSnapshot(idx) {
 }
 
 function exportCurrentProjectJSON() {
+  const projId = FacilityStore.getProjectId();
+  let facilityData = null;
+  try {
+    const rawFac = localStorage.getItem(`netselect_facility_${projId}`);
+    if (rawFac) facilityData = JSON.parse(rawFac);
+  } catch (e) {}
+
   const data = {
+    projectId: projId,
+    projectName: document.getElementById("activeProjectLabel")?.innerText || "Project",
     projectBOM,
     demandCounts,
     extraHeadroomPercent,
-    rackHeightsByRack: typeof rackHeightsByRack !== "undefined" ? rackHeightsByRack : {},
-    topologyNodePositions: typeof topologyNodePositions !== "undefined" ? topologyNodePositions : {},
+    facilityData,
     exportDate: new Date().toISOString()
   };
 
@@ -1383,7 +1412,7 @@ function exportCurrentProjectJSON() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `NetSelect_Project_${new Date().toISOString().slice(0, 10)}.json`;
+  a.download = `NetSelect_${data.projectName.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
   showToast("Exported project JSON.");
@@ -1398,17 +1427,25 @@ function importProjectJSON(event) {
     try {
       const parsed = JSON.parse(e.target.result);
       if (Array.isArray(parsed.projectBOM)) {
+        const projId = parsed.projectId || `proj-${Date.now()}`;
+        FacilityStore.setProjectId(projId);
+
         projectBOM = parsed.projectBOM;
         if (parsed.demandCounts) demandCounts = parsed.demandCounts;
         extraHeadroomPercent = parsed.extraHeadroomPercent || 20;
-        if (parsed.rackHeightsByRack && typeof rackHeightsByRack !== "undefined") rackHeightsByRack = parsed.rackHeightsByRack;
-        if (parsed.topologyNodePositions && typeof topologyNodePositions !== "undefined") topologyNodePositions = parsed.topologyNodePositions;
 
-        updateBOMView();
+        if (parsed.facilityData) {
+          localStorage.setItem(`netselect_facility_${projId}`, JSON.stringify(parsed.facilityData));
+        }
+
+        const label = document.getElementById("activeProjectLabel");
+        if (label && parsed.projectName) label.innerText = parsed.projectName;
+
+        if (typeof loadFacilityState === "function") loadFacilityState();
+
+        FacilityStore.notifyWorkspaceChange();
         buildCalculatorStrip();
         runActiveFilter();
-        if (typeof renderRackVisualizer === "function") renderRackVisualizer();
-        if (typeof renderTopologyCanvas === "function") renderTopologyCanvas();
 
         toggleProjectModal();
         showToast("Project JSON successfully loaded!");

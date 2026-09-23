@@ -44,6 +44,14 @@
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <!-- PDF.js CDN (Client-side architectural PDF rendering) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+  </script>
+
   <style>
     /* Custom Scrollbars */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -113,6 +121,7 @@
   <script src="data/data_interconnects.js"></script>
   <script src="data/data_wireless.js"></script>
   <script src="data/data_accessories.js"></script>
+  <script src="data/data_cabling.js"></script>
 </head>
 
 <body class="h-full flex flex-col overflow-hidden">
@@ -166,7 +175,7 @@
         </button>
       </div>
 
-      <!-- Action Tools: Topology, Rack, Compare, BOM -->
+      <!-- Action Tools: Topology, Rack, Cable Paths, Compare, BOM -->
       <div class="flex items-center gap-2">
         <button onclick="toggleTopologyModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
           <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
@@ -175,6 +184,10 @@
         <button onclick="toggleRackModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
           <i data-lucide="server" class="w-4 h-4 text-indigo-400"></i>
           <span class="hidden sm:inline">Rack Elevations</span>
+        </button>
+        <button onclick="toggleCableLayoutModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
+          <i data-lucide="map" class="w-4 h-4 text-amber-400"></i>
+          <span class="hidden sm:inline">Physical Layout Canvas</span>
         </button>
         <button onclick="toggleCompareModal()" class="relative px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
           <i data-lucide="columns-3" class="w-4 h-4 text-purple-400"></i>
@@ -366,7 +379,7 @@
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Auto-Route
           </button>
           <button onclick="toggleTopologyModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
-            <i data-lucide="x" class="w-5 h-5"></i>
+            <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
@@ -392,30 +405,51 @@
   <div id="rackModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
       
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+      <!-- Modal Header with Rack Selector & Quick Tools -->
+      <div class="px-6 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0 gap-3">
         <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+          <div class="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
             <i data-lucide="server" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-base font-bold text-white flex items-center gap-2">Rack Elevation & Power Sizing Visualizer</h2>
-            <p class="text-xs text-slate-400">Real-time rack density, depth compliance, collision bumping, and UPS battery load.</p>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">Rack Elevation & Power Sizing Visualizer</h2>
+            <p class="text-xs text-slate-400">Density audit, depth compliance, and UPS battery load sizing.</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
-            <span class="text-slate-400">Height:</span>
-            <select id="rackHeightSelector" onchange="setRackHeight(this.value)" class="bg-slate-950 border border-slate-700 text-white rounded px-2 py-0.5 font-mono">
+        <div class="flex items-center gap-2">
+          <!-- Cabinet / Location Selector -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
+            <span class="text-slate-400 font-medium">Cabinet:</span>
+            <select id="rackLocationSelector" onchange="switchActiveRackElevation(this.value)" class="bg-slate-950 border border-slate-700 text-indigo-300 font-bold rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500">
+              <!-- Dynamically populated -->
+            </select>
+            <button onclick="promptCreateNewRack()" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-bold" title="Add New Cabinet">+ Rack</button>
+            <button onclick="deleteActiveRackElevation()" class="p-1 text-slate-500 hover:text-rose-400" title="Delete This Cabinet"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+          </div>
+
+          <!-- Rail Height Selector -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
+            <span class="text-slate-400 font-medium">Height:</span>
+            <select id="rackHeightSelector" onchange="setRackHeight(this.value)" class="bg-slate-950 border border-slate-700 text-white font-mono rounded px-2 py-0.5">
               <option value="12">12U Wallbox</option>
               <option value="18">18U Wallbox</option>
-              <option value="24" selected>24U Half-Rack</option>
+              <option value="24">24U Half-Rack</option>
               <option value="42">42U Full-Rack</option>
               <option value="48">48U Enterprise</option>
             </select>
           </div>
-          <button onclick="toggleRackModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
-            <i data-lucide="x" class="w-5 h-5"></i>
+
+          <!-- Auto-Mount & Unmount All Action Buttons -->
+          <button onclick="autoMountAllToActiveRack()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow" title="Automatically slot all unmounted equipment into available units">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Auto-Mount
+          </button>
+          <button onclick="unmountAllFromActiveRack()" class="px-3 py-1.5 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors" title="Clear all equipment slots in this cabinet">
+            <i data-lucide="eraser" class="w-3.5 h-3.5"></i> Unmount All
+          </button>
+
+          <button onclick="toggleRackModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 ml-1">
+            <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
@@ -475,6 +509,171 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Physical Layout & Cable Pathways Modal -->
+  <div id="cableLayoutModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-2 transition-all">
+    <div id="cableModalCard" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-7xl h-[95vh] flex flex-col shadow-2xl overflow-hidden transition-all">
+      
+      <!-- Toolbar Header -->
+      <div class="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-slate-950/90 gap-3 shrink-0">
+        
+        <!-- Left: Level Navigation & Blueprint Picker -->
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
+            <i data-lucide="map" class="w-4 h-4"></i>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <select id="floorSelector" onchange="switchActiveFloor(this.value)" class="bg-slate-900 border border-slate-700 text-amber-300 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500">
+            </select>
+            <button onclick="promptAddNewFloor()" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold" title="Add Floor Level">+ Level</button>
+          </div>
+          <label class="cursor-pointer px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm">
+            <i data-lucide="file-up" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span>Upload Plan</span>
+            <input type="file" id="floorPlanFileInput" accept="application/pdf,image/png,image/jpeg,image/svg+xml" onchange="handleUniversalPlanUpload(event)" class="hidden" />
+          </label>
+        </div>
+
+        <!-- Center: Tool Selector & 90-Deg Snap -->
+        <div class="flex items-center gap-2">
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs">
+            <button id="tool-select" onclick="setCableTool('select')" class="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-medium flex items-center gap-1 shadow">
+              <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i> Select & Route
+            </button>
+            <button id="tool-device" onclick="setCableTool('device')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1">
+              <i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i> Drop
+            </button>
+            <button id="tool-mdf" onclick="setCableTool('mdf')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1">
+              <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Closet
+            </button>
+            <button id="tool-fiber" onclick="setCableTool('fiber')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1" title="Connect closets with fiber backbone">
+              <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i> Fiber Backbone
+            </button>
+          </div>
+
+          <button id="btnOrthogonalToggle" onclick="toggleOrthogonalMode()" class="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
+            <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span id="orthoLabel">90° Bends: OFF</span>
+          </button>
+        </div>
+
+        <!-- Right: Zoom, Cable Spec, Add to BOM & Close -->
+        <div class="flex items-center gap-2 shrink-0">
+          <div class="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+            <button onclick="adjustCanvasZoom(-0.15)" class="px-2 py-1 text-slate-400 hover:text-white text-xs font-bold" title="Zoom Out">-</button>
+            <span id="canvasZoomLabel" class="text-[10px] font-mono text-slate-400 px-1">100%</span>
+            <button onclick="adjustCanvasZoom(0.15)" class="px-2 py-1 text-slate-400 hover:text-white text-xs font-bold" title="Zoom In">+</button>
+            <button onclick="resetCanvasZoom()" class="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-[10px]" title="Reset Zoom">
+              <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+            </button>
+          </div>
+
+          <button onclick="toggleModalFullscreen()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-slate-700" title="Expand Fullscreen">
+            <i data-lucide="maximize-2" id="iconFullscreen" class="w-4 h-4"></i>
+          </button>
+
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs">
+            <span class="text-slate-400 text-[10px]">Spec:</span>
+            <select id="cableTypeSelector" onchange="updateSelectedCableSpec(this.value)" class="bg-transparent text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer max-w-[125px] truncate">
+              <option value="C6A-CMP-1K-BL">Cat6A Plenum</option>
+              <option value="C6A-CMR-1K-BL">Cat6A Riser</option>
+              <option value="C6-CMP-1K-BL">Cat6 Plenum</option>
+              <option value="C6A-OUTDOOR-1K">Cat6A Outdoor</option>
+            </select>
+          </div>
+
+          <button onclick="commitCablingToBOM()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+            <i data-lucide="package-plus" class="w-3.5 h-3.5"></i> Add to Quote
+          </button>
+
+          <button onclick="toggleCableLayoutModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-300 rounded-lg border border-slate-700 text-xs font-bold flex items-center gap-1 transition-colors" title="Close (Esc)">
+            <i data-lucide="x" class="w-4 h-4"></i>
+            <span>Close</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Workspace -->
+      <div class="flex-1 flex overflow-hidden relative">
+        <div class="flex-1 relative overflow-auto bg-slate-950 select-none" id="cableCanvasViewport">
+          <div id="pdfRenderSpinner" class="hidden absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
+            <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+            <span class="text-xs font-mono text-amber-300">Rasterizing Architectural PDF...</span>
+          </div>
+          <svg id="cableSvgCanvas" class="absolute inset-0" style="min-width: 2800px; min-height: 2000px;"></svg>
+        </div>
+
+        <aside class="w-84 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-20 overflow-hidden">
+          <div id="inspectorPanel" class="p-3.5 border-b border-slate-800 bg-slate-950/80 space-y-3 max-h-80 overflow-y-auto shrink-0">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-brand-400"></i> Inspector & Cabinet Peek
+              </span>
+              <button onclick="deselectNode()" class="text-[10px] text-slate-500 hover:text-slate-300">Deselect</button>
+            </div>
+            <div id="inspectorContent" class="space-y-2 text-xs">
+              <span class="text-slate-500 text-[11px] block text-center py-2">Select a camera drop or closet to view properties or rack contents.</span>
+            </div>
+          </div>
+
+          <div class="p-3.5 border-b border-slate-800 bg-slate-950/40 shrink-0">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <i data-lucide="ruler" class="w-4 h-4 text-amber-400"></i> Cabling & Pathway Telemetry
+            </h3>
+            <div class="space-y-1.5 text-xs">
+              <div class="flex justify-between text-slate-400">
+                <span>Selected Cable Spec:</span>
+                <span id="activeCableLabel" class="font-mono text-amber-300 font-bold">Cat6A CMP</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Gross Linear Footage:</span>
+                <span id="cableTotalFootage" class="font-mono text-white font-bold">0 ft</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Required 1,000ft Spool Boxes:</span>
+                <span id="cableSpoolCount" class="font-mono text-emerald-400 font-bold">0 Boxes</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center border-b border-slate-800 bg-slate-950 text-[11px]">
+            <button id="tab-btn-runs" onclick="switchSidebarTab('runs')" class="flex-1 py-1.5 text-center font-bold text-white border-b-2 border-brand-500">
+              Active Drops (<span id="countActiveDrops">0</span>)
+            </button>
+            <button id="tab-btn-unplaced" onclick="switchSidebarTab('unplaced')" class="flex-1 py-1.5 text-center font-bold text-slate-400 hover:text-white border-b-2 border-transparent">
+              Unplaced Devices (<span id="countUnplacedDevices">0</span>)
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-3 space-y-2" id="sidebarTabContent"></div>
+
+          <div class="p-3 bg-slate-950 border-t border-slate-800 space-y-2 text-xs shrink-0">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Scale (100px =):</span>
+              <div class="flex items-center gap-1">
+                <input type="number" id="cableScaleFt" value="25" onchange="recalculateCurrentFloorCables()" class="w-12 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-right font-mono text-white text-xs" />
+                <span class="text-slate-500 font-mono text-[10px]">ft</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Vertical Slack:</span>
+              <div class="flex items-center gap-1">
+                <input type="number" id="cableSlackFt" value="15" onchange="recalculateCurrentFloorCables()" class="w-12 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-right font-mono text-white text-xs" />
+                <span class="text-slate-500 font-mono text-[10px]">ft</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Floor-to-Floor Slab:</span>
+              <div class="flex items-center gap-1">
+                <input type="number" id="cableSlabFt" value="14" onchange="recalculateCurrentFloorCables()" class="w-12 bg-slate-900 border border-slate-700 rounded px-1 py-0.5 text-right font-mono text-white text-xs" />
+                <span class="text-slate-500 font-mono text-[10px]">ft</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
     </div>
   </div>
 
@@ -559,9 +758,50 @@
   </div>
 
   <!-- Application Modules -->
+  <script src="js/facility.js"></script>
   <script src="js/bom.js"></script>
   <script src="js/rack.js"></script>
   <script src="js/topology.js"></script>
+  <script src="js/physical_layout.js"></script>
   <script src="js/app.js"></script>
+  
+  <script>
+    // Universal Master ESC Listener (Closes the active modal or drawer)
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        const modals = [
+          { id: "cableLayoutModal", closeFn: () => toggleCableLayoutModal() },
+          { id: "topologyModal", closeFn: () => toggleTopologyModal() },
+          { id: "rackModal", closeFn: () => toggleRackModal() },
+          { id: "compareModal", closeFn: () => toggleCompareModal() },
+          { id: "projectModal", closeFn: () => toggleProjectModal() },
+          { id: "licenseModal", closeFn: () => toggleLicenseModal() },
+          { id: "bomDrawer", closeFn: () => toggleBomDrawer() }
+        ];
+
+        for (const m of modals) {
+          const el = document.getElementById(m.id);
+          // Checks if modal is open (either not hidden or not translated off-screen)
+          if (el && !el.classList.contains("hidden") && !el.classList.contains("translate-x-full")) {
+            m.closeFn();
+            break;
+          }
+        }
+      }
+    });
+
+    // Notify physical canvas when switching projects so blueprints reload
+    const originalSwitchProject = window.switchActiveProject;
+    if (typeof originalSwitchProject === "function") {
+      window.switchActiveProject = function(projectId) {
+        originalSwitchProject(projectId);
+        if (typeof loadFacilityState === "function") {
+          loadFacilityState();
+          if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
+          if (typeof renderCableCanvas === "function") renderCableCanvas();
+        }
+      };
+    }
+  </script>
 </body>
 </html>

@@ -1,215 +1,15 @@
-// ==========================================
-// RACK ELEVATION, THERMAL & COLLISION ENGINE
-// ==========================================
+// =========================================================================
+// RACK ELEVATION & POWER SIZING VISUALIZER (NetSelect Enterprise)
+// Integrated with FacilityStore & Interactive Unassigned Staging Area
+// =========================================================================
 
-let rackHeightsByRack = {}; // Map of "ClosetName • RackId" -> height number (12, 18, 24, 42, 48)
-let activeViewingRackKey = null; // format: "ClosetName • RackId"
+let activeRackId = "MDF • Rack-1";
+let activeRackHeight = 24;
 let draggedRackItemInstanceId = null;
 
-function getCurrentRackHeight() {
-  const key = activeViewingRackKey || "MDF • Rack-1";
-  return rackHeightsByRack[key] || 24;
-}
-
-function setRackHeight(val) {
-  const newHeight = parseInt(val) || 24;
-  const key = activeViewingRackKey || "MDF • Rack-1";
-  rackHeightsByRack[key] = newHeight;
-
-  clampAndDownscaleSlots(key, newHeight);
-
-  const badge = document.getElementById("rackUtilizationBadge");
-  if (badge) {
-    const usedU = getRackOccupiedUCount(key);
-    badge.innerText = `${usedU} / ${newHeight} U Used`;
-  }
-
-  renderRackElevationGrid();
-  renderRackAnalytics();
-  if (typeof queueAutoSave === "function") queueAutoSave();
-}
-
-function clampAndDownscaleSlots(rackKey, maxHeight) {
-  if (!rackKey) return;
-  const [closet, rack] = rackKey.split(" • ");
-  const rackItems = projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack
-  );
-
-  const outOfBounds = rackItems.filter(i => i.rackU && i.rackU > maxHeight);
-  if (outOfBounds.length === 0) return;
-
-  const occupiedSlots = new Set();
-  rackItems.filter(i => i.rackU && i.rackU <= maxHeight).forEach(it => {
-    const uSpan = it.rackUnitHeight || (it.qty || 1);
-    for (let s = 0; s < uSpan; s++) {
-      occupiedSlots.add(it.rackU + s);
-    }
-  });
-
-  outOfBounds.forEach(item => {
-    item.rackU = null;
-    const uSpan = item.rackUnitHeight || (item.qty || 1);
-    for (let s = 1; s <= (maxHeight - uSpan + 1); s++) {
-      let canFit = true;
-      for (let span = 0; span < uSpan; span++) {
-        if (occupiedSlots.has(s + span)) {
-          canFit = false;
-          break;
-        }
-      }
-      if (canFit) {
-        item.rackU = s;
-        for (let span = 0; span < uSpan; span++) {
-          occupiedSlots.add(s + span);
-        }
-        break;
-      }
-    }
-  });
-
-  showToast(`Adjusted rack height to ${maxHeight}U for ${rackKey}.`);
-}
-
-function setActiveViewingRack(rackKey) {
-  activeViewingRackKey = rackKey;
-  renderRackVisualizer();
-}
-
-function getRackKeysInProject() {
-  const rackKeys = new Set();
-  projectBOM.filter(i => !i.parentInstanceId && !i.isDinMounted).forEach(item => {
-    const cName = (item.closetName || "MDF").trim();
-    const rName = (item.rackId || "Rack-1").trim();
-    rackKeys.add(`${cName} • ${rName}`);
-  });
-
-  try {
-    const customRacks = JSON.parse(localStorage.getItem("netselect_custom_racks") || "[]");
-    customRacks.forEach(rk => rackKeys.add(rk));
-  } catch(e) {}
-
-  return Array.from(rackKeys);
-}
-
-function getRackOccupiedUCount(rackKey) {
-  if (!rackKey) return 0;
-  const [closet, rack] = rackKey.split(" • ");
-  const items = projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack
-  );
-
-  let totalU = 0;
-  items.forEach(it => {
-    if (it.rackU) {
-      const uSpan = it.rackUnitHeight || (it.qty || 1);
-      totalU += uSpan;
-    }
-  });
-  return totalU;
-}
-
-// ==========================================
-// TOP-TO-BOTTOM HIERARCHICAL AUTO-POPULATE
-// ==========================================
-function autoPopulateRackSlots() {
-  if (!activeViewingRackKey) return;
-  const [closet, rack] = activeViewingRackKey.split(" • ");
-  const items = projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack
-  );
-
-  if (items.length === 0) {
-    showToast("No equipment assigned to this cabinet to slot.");
-    return;
-  }
-
-  items.sort((a, b) => {
-    const roleRank = {
-      "Security WAN": 1,
-      "Core": 2,
-      "Aggregation": 3,
-      "Access": 4
-    };
-
-    const rankA = roleRank[a.role] || 5;
-    const rankB = roleRank[b.role] || 5;
-
-    if (rankA !== rankB) return rankA - rankB;
-    return (b.ports || 0) - (a.ports || 0);
-  });
-
-  const rackHeight = getCurrentRackHeight();
-  let currentTopU = rackHeight;
-  items.forEach(it => {
-    const uSpan = it.rackUnitHeight || (it.qty || 1);
-    const targetBaseU = currentTopU - uSpan + 1;
-
-    if (targetBaseU >= 1) {
-      it.rackU = targetBaseU;
-      currentTopU = targetBaseU - 1;
-    } else {
-      it.rackU = null;
-    }
-  });
-
-  renderRackElevationGrid();
-  renderRackAnalytics();
-  if (typeof queueAutoSave === "function") queueAutoSave();
-  showToast("Auto-populated top-down: Gateway > Core > Agg > Access.");
-}
-
-function unrackAllItems() {
-  if (!activeViewingRackKey) return;
-  const [closet, rack] = activeViewingRackKey.split(" • ");
-  projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack
-  ).forEach(it => {
-    it.rackU = null;
-  });
-
-  renderRackElevationGrid();
-  renderRackAnalytics();
-  if (typeof queueAutoSave === "function") queueAutoSave();
-  showToast("Unslotted all items from this rack.");
-}
-
-function promptCreateNewRack() {
-  const closetName = prompt("Enter Room / Location Name (e.g., IDF-2, Guard Shack, Server Room):", "IDF-2");
-  if (!closetName || !closetName.trim()) return;
-
-  const rackId = prompt("Enter Cabinet Identifier (e.g., Rack-1, Wall-Box, 2-Post):", "Rack-1");
-  if (!rackId || !rackId.trim()) return;
-
-  const newKey = `${closetName.trim()} • ${rackId.trim()}`;
-
-  try {
-    const customRacks = JSON.parse(localStorage.getItem("netselect_custom_racks") || "[]");
-    if (!customRacks.includes(newKey)) {
-      customRacks.push(newKey);
-      localStorage.setItem("netselect_custom_racks", JSON.stringify(customRacks));
-    }
-  } catch(e) {}
-
-  activeViewingRackKey = newKey;
-  if (!rackHeightsByRack[newKey]) {
-    rackHeightsByRack[newKey] = 24;
-  }
-  renderRackVisualizer();
-  if (typeof updateBOMView === "function") updateBOMView();
-  showToast(`Created new cabinet: ${newKey}`);
+function isRackModalVisible() {
+  const modal = document.getElementById("rackModal");
+  return modal && !modal.classList.contains("hidden");
 }
 
 function toggleRackModal() {
@@ -218,286 +18,483 @@ function toggleRackModal() {
 
   if (modal.classList.contains("hidden")) {
     modal.classList.remove("hidden");
+    syncRackSelectorOptions();
+    loadRackSettings();
     renderRackVisualizer();
+    if (window.lucide) lucide.createIcons();
   } else {
     modal.classList.add("hidden");
+    draggedRackItemInstanceId = null;
   }
 }
 
+// -----------------------------------------------------------
+// Rack Selector & Location Sync
+// -----------------------------------------------------------
+function syncRackSelectorOptions() {
+  const sel = document.getElementById("rackLocationSelector");
+  const racks = FacilityStore.getLocationNames(false); // Racks only (excludes Unassigned)
+
+  activeRackId = FacilityStore.normalize(activeRackId);
+  if (activeRackId === FacilityStore.UNASSIGNED || !racks.includes(activeRackId)) {
+    activeRackId = racks[0] || "MDF • Rack-1";
+  }
+
+  if (sel) {
+    sel.innerHTML = racks.map(r => `
+      <option value="${r}" ${r === activeRackId ? 'selected' : ''}>${r}</option>
+    `).join('');
+  }
+
+  const heightSel = document.getElementById("rackHeightSelector");
+  if (heightSel) heightSel.value = activeRackHeight.toString();
+}
+
+function switchActiveRackElevation(rackName) {
+  activeRackId = FacilityStore.normalize(rackName);
+  loadRackSettings();
+  syncRackSelectorOptions();
+  renderRackVisualizer();
+}
+
+function setRackHeight(heightVal) {
+  activeRackHeight = parseInt(heightVal) || 24;
+  saveRackSettings();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Set ${activeRackId} height to ${activeRackHeight}U`);
+  }
+}
+
+function promptCreateNewRack() {
+  const name = prompt("Enter new Location & Enclosure (e.g., IDF-2 • Rack-1):", `IDF-${FacilityStore.getLocations().length} • Rack-1`);
+  if (!name || !name.trim()) return;
+
+  const createdName = FacilityStore.addLocation(name);
+  activeRackId = createdName;
+  syncRackSelectorOptions();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Created ${createdName}`);
+  }
+}
+
+function deleteActiveRackElevation() {
+  const racks = FacilityStore.getLocationNames(false);
+  if (racks.length <= 1) {
+    alert("You must retain at least one cabinet / closet in the project.");
+    return;
+  }
+
+  const fallbackRack = racks.find(r => r !== activeRackId) || "MDF • Rack-1";
+
+  if (!confirm(`Delete "${activeRackId}"? All assigned equipment will be moved to "${fallbackRack}".`)) {
+    return;
+  }
+
+  const success = FacilityStore.deleteLocation(activeRackId, fallbackRack);
+  if (success) {
+    activeRackId = fallbackRack;
+    syncRackSelectorOptions();
+    renderRackVisualizer();
+    if (typeof showToast === "function") {
+      showToast(`Cabinet removed. Hardware moved to ${fallbackRack}.`);
+    }
+  }
+}
+
+// -----------------------------------------------------------
+// Auto-Mount & Unmount Actions
+// -----------------------------------------------------------
+function autoMountAllToActiveRack() {
+  if (typeof projectBOM === "undefined") return;
+
+  // Grab both items assigned to this rack AND unassigned items
+  const mountableItems = projectBOM.filter(item => {
+    if (item.parentInstanceId) return false;
+    if (item.role === "Optics & DAC" || item.role === "Mgmt License" || item.role === "Security License") return false;
+    const isField = item.isDinMounted || (item.model && item.model.includes("DIN")) || item.role === "Wireless Bridge" || item.role === "Accessory";
+    if (isField) return false;
+
+    const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+    return itemLoc === activeRackId || itemLoc === FacilityStore.UNASSIGNED;
+  });
+
+  const slots = {};
+  for (let u = 1; u <= activeRackHeight; u++) slots[u] = null;
+
+  // Clear slots for items we are mounting
+  mountableItems.forEach(i => i.rackSlot = null);
+
+  let mountedCount = 0;
+  mountableItems.forEach(item => {
+    const itemHeight = parseInt(item.rackUnits || 1);
+    const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
+    if (slot) {
+      item.rackSlot = slot;
+      item.closetName = activeRackId;
+      item.rackId = activeRackId;
+      for (let offset = 0; offset < itemHeight; offset++) {
+        slots[slot + offset] = item.instanceId;
+      }
+      mountedCount++;
+    }
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Auto-mounted ${mountedCount} unit${mountedCount === 1 ? '' : 's'} into ${activeRackId}.`);
+  }
+}
+
+function unmountAllFromActiveRack() {
+  if (typeof projectBOM === "undefined") return;
+
+  let clearedCount = 0;
+  projectBOM.forEach(item => {
+    const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+    if (itemLoc === activeRackId && item.rackSlot) {
+      item.rackSlot = null;
+      item.closetName = FacilityStore.UNASSIGNED;
+      item.rackId = FacilityStore.UNASSIGNED;
+      clearedCount++;
+    }
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Unmounted ${clearedCount} unit${clearedCount === 1 ? '' : 's'} to Unassigned Staging.`);
+  }
+}
+
+// -----------------------------------------------------------
+// 19" Equipment Rail & Unassigned Staging Renderer
+// -----------------------------------------------------------
 function renderRackVisualizer() {
-  const availableRacks = getRackKeysInProject();
-
-  if (!activeViewingRackKey || (!availableRacks.includes(activeViewingRackKey) && availableRacks.length > 0)) {
-    activeViewingRackKey = availableRacks[0] || "MDF • Rack-1";
-  }
-
-  const [closet, rack] = (activeViewingRackKey || "MDF • Rack-1").split(" • ");
-  const unslotted = projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack && 
-    !i.rackU
-  );
-
-  if (unslotted.length > 0) {
-    autoPopulateRackSlots();
-  }
-
-  renderRackToolbar(availableRacks);
-  renderRackElevationGrid();
-  renderRackAnalytics();
-  renderRackDinList();
-
-  if (window.lucide) {
-    try { lucide.createIcons(); } catch(e) {}
-  }
-}
-
-function renderRackToolbar(availableRacks) {
-  const heightSelector = document.getElementById("rackHeightSelector");
-  if (!heightSelector) return;
-  const headerContainer = heightSelector.parentElement;
-  if (!headerContainer) return;
-
-  // Sync the height dropdown with THIS specific rack's saved height
-  const currentHeight = getCurrentRackHeight();
-  heightSelector.value = currentHeight.toString();
-
-  let toolbarEl = document.getElementById("rackLocationPicker");
-  if (!toolbarEl) {
-    toolbarEl = document.createElement("div");
-    toolbarEl.id = "rackLocationPicker";
-    toolbarEl.className = "flex flex-wrap items-center gap-2";
-    headerContainer.parentElement.insertBefore(toolbarEl, headerContainer);
-  }
-
-  toolbarEl.innerHTML = `
-    <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
-      <span class="text-slate-400 font-medium">Cabinet:</span>
-      <select onchange="setActiveViewingRack(this.value)" class="bg-slate-900 border border-slate-700 text-white font-bold rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500">
-        ${availableRacks.length === 0 ? '<option value="MDF • Rack-1">MDF • Rack-1 (Empty)</option>' : ''}
-        ${availableRacks.map(rk => `
-          <option value="${rk}" ${rk === activeViewingRackKey ? 'selected' : ''}>${rk}</option>
-        `).join('')}
-      </select>
-      <button onclick="promptCreateNewRack()" class="ml-1 px-2 py-0.5 bg-brand-600 hover:bg-brand-500 text-white rounded font-bold text-[11px] shadow flex items-center gap-1" title="Create new Room/Rack location">
-        <i data-lucide="plus" class="w-3 h-3"></i> Add Rack
-      </button>
-    </div>
-    <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 p-1 rounded-xl">
-      <button onclick="autoPopulateRackSlots()" class="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center gap-1 transition-all" title="Auto-place top-down: Gateway > Core > Agg > Access">
-        <i data-lucide="arrow-down-narrow-wide" class="w-3.5 h-3.5"></i> Auto-Populate (Top-Down)
-      </button>
-      <button onclick="unrackAllItems()" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-rose-300 rounded-lg text-xs font-medium transition-all" title="Remove all units from slots">
-        <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Unrack All
-      </button>
-    </div>
-  `;
-}
-
-function renderRackElevationGrid() {
   const frame = document.getElementById("rackElevationFrame");
-  const badge = document.getElementById("rackUtilizationBadge");
   if (!frame) return;
 
-  const [closet, rack] = (activeViewingRackKey || "MDF • Rack-1").split(" • ");
-  const rackItems = projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack
-  );
+  syncRackSelectorOptions();
 
-  const rackHeight = getCurrentRackHeight();
-  const usedU = getRackOccupiedUCount(activeViewingRackKey);
-  if (badge) badge.innerText = `${usedU} / ${rackHeight} U Used`;
+  const rackItems = [];
+  const fieldItems = [];
+  const unassignedItems = [];
 
-  const slotMap = {};
+  if (typeof projectBOM !== "undefined") {
+    projectBOM.forEach(item => {
+      if (item.parentInstanceId) return;
+      if (item.role === "Optics & DAC" || item.role === "Mgmt License" || item.role === "Security License") return;
+
+      const rawLoc = item.closetName || item.rackId;
+      const itemLoc = FacilityStore.normalize(rawLoc);
+
+      const isField = item.isDinMounted || (item.model && item.model.includes("DIN")) || item.role === "Wireless Bridge" || item.role === "Accessory";
+
+      if (itemLoc === FacilityStore.UNASSIGNED) {
+        unassignedItems.push(item);
+      } else if (itemLoc === activeRackId) {
+        if (isField) {
+          fieldItems.push(item);
+        } else {
+          rackItems.push(item);
+        }
+      }
+    });
+  }
+
+  // Occupancy map for 1U to activeRackHeight
+  const slots = {};
+  for (let u = 1; u <= activeRackHeight; u++) {
+    slots[u] = null;
+  }
+
+  // Position items that have assigned slots
   rackItems.forEach(item => {
-    if (item.rackU) {
-      const uSpan = item.rackUnitHeight || (item.qty || 1);
-      for (let s = 0; s < uSpan; s++) {
-        slotMap[item.rackU + s] = {
-          item: item,
-          unitIndex: s + 1,
-          totalUnits: uSpan,
-          isBase: s === 0
-        };
+    const itemHeight = parseInt(item.rackUnits || 1);
+    let assignedU = parseInt(item.rackSlot);
+
+    if (assignedU && assignedU >= 1 && (assignedU + itemHeight - 1) <= activeRackHeight) {
+      if (!isCollision(slots, assignedU, itemHeight, item.instanceId)) {
+        for (let offset = 0; offset < itemHeight; offset++) {
+          slots[assignedU + offset] = {
+            item: item,
+            isBase: offset === 0,
+            span: itemHeight
+          };
+        }
       }
     }
   });
 
-  let html = "";
-  for (let u = rackHeight; u >= 1; u--) {
-    const slot = slotMap[u];
+  // Render 19" Equipment Rail Slots (Descending from Top U down to 1U)
+  let railHTML = "";
 
-    if (slot) {
-      const { item, unitIndex, totalUnits } = slot;
-      const isStacked = item.stackedUnits >= 2;
-      const label = totalUnits > 1 ? `${item.model} (Unit ${unitIndex}/${totalUnits})` : item.model;
+  for (let u = activeRackHeight; u >= 1; u--) {
+    const slotData = slots[u];
 
-      let borderTheme = "border-indigo-500/60";
-      if (item.role === "Security WAN") borderTheme = "border-rose-500/70";
-      else if (item.role === "Core") borderTheme = "border-purple-500/70";
-      else if (item.role === "Aggregation") borderTheme = "border-cyan-500/70";
-
-      html += `
-        <div class="h-10 bg-slate-900 border-2 ${borderTheme} rounded-lg flex items-center justify-between px-3 text-xs shadow-md group relative"
-             draggable="true" 
-             ondragstart="handleRackDragStart(event, '${item.instanceId}')"
-             ondragover="handleRackDragOver(event)"
-             ondrop="handleRackDrop(event, ${u})">
-          <div class="flex items-center gap-2 min-w-0">
-            <span class="font-mono text-[10px] font-bold text-indigo-400 bg-slate-950 px-1.5 py-0.5 rounded border border-indigo-500/30">U${u}</span>
-            <span class="font-bold text-white truncate text-[11px]">${label}</span>
-            ${isStacked ? `<span class="badge-chip border border-indigo-500/40 bg-indigo-500/20 text-indigo-300 text-[9px]">${item.stackedUnits}x Stack</span>` : ''}
+    if (slotData) {
+      if (slotData.isBase) {
+        const it = slotData.item;
+        railHTML += `
+          <div 
+            class="group relative bg-slate-900 border border-indigo-500/60 hover:border-indigo-400 rounded-lg px-3 py-2 flex items-center justify-between cursor-move shadow-md transition-all select-none"
+            draggable="true"
+            ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+            ondragover="handleRackSlotDragOver(event)"
+            ondrop="handleRackSlotDrop(event, ${u})"
+            style="min-height: ${Math.max(40, slotData.span * 42)}px;"
+          >
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="text-[11px] font-mono font-bold text-indigo-400 w-7 shrink-0">U${u}</span>
+              <div class="min-w-0">
+                <span class="text-xs font-bold text-white block truncate">${it.model}</span>
+                <span class="text-[10px] text-slate-400 font-mono block truncate">${it.vendor || 'Generic'} &bull; ${slotData.span}U &bull; ${it.baseWatts || 0}W Base</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 ${getRoleColor(it.role)}">${it.role}</span>
+              <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-amber-300 transition-opacity" title="Unmount to Staging">
+                <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
           </div>
-          <div class="flex items-center gap-3 shrink-0">
-            <span class="text-[10px] font-mono text-slate-400">${item.depthInches || 12}"</span>
-            <span class="text-[10px] font-mono text-amber-300 font-semibold">${Math.round(((item.poeBudget || 0) + (item.baseWatts || 0)) / totalUnits)}W</span>
-            <button onclick="unslotRackItem('${item.instanceId}')" class="text-slate-500 hover:text-rose-400 p-0.5" title="Unseat unit">
-              <i data-lucide="x" class="w-3.5 h-3.5"></i>
-            </button>
-          </div>
-        </div>
-      `;
+        `;
+      }
     } else {
-      html += `
-        <div class="h-8 border border-dashed border-slate-800/80 rounded-lg flex items-center justify-between px-3 text-[10px] text-slate-600 hover:border-slate-700 transition-colors"
-             ondragover="handleRackDragOver(event)"
-             ondrop="handleRackDrop(event, ${u})">
-          <span class="font-mono font-semibold">U${u}</span>
-          <span class="text-[9px] uppercase tracking-wider text-slate-700">Empty Slot</span>
+      railHTML += `
+        <div 
+          class="h-8 border border-dashed border-slate-800/80 hover:border-indigo-500/50 hover:bg-indigo-950/10 rounded-lg px-3 flex items-center justify-between transition-colors select-none"
+          ondragover="handleRackSlotDragOver(event)"
+          ondrop="handleRackSlotDrop(event, ${u})"
+        >
+          <span class="text-[10px] font-mono text-slate-600 font-bold">U${u}</span>
+          <span class="text-[9px] font-mono text-slate-700 uppercase tracking-wider">Empty Slot</span>
         </div>
       `;
     }
   }
 
-  frame.innerHTML = html;
+  // Append Interactive Unassigned Staging Tray at the bottom of the rack rail column
+  railHTML += `
+    <div class="pt-3 mt-3 border-t border-slate-800">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          <i data-lucide="inbox" class="w-3.5 h-3.5"></i> Unassigned Staging Area (${unassignedItems.length})
+        </span>
+        <span class="text-[9px] text-slate-500 font-mono">Drag into empty U-slot above</span>
+      </div>
+      <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+        ${unassignedItems.length === 0 ? `
+          <div class="p-2.5 rounded-lg border border-dashed border-slate-800 text-center text-[10px] text-slate-500">
+            No unassigned items. All hardware is currently mounted or mapped.
+          </div>
+        ` : unassignedItems.map(it => `
+          <div 
+            class="bg-slate-900/90 border border-amber-500/40 hover:border-amber-400 p-2 rounded-lg flex items-center justify-between cursor-move shadow-sm select-none"
+            draggable="true"
+            ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+          >
+            <div class="min-w-0 flex items-center gap-2">
+              <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/40 px-1 py-0.5 rounded border border-amber-800/60">${it.rackUnits || 1}U</span>
+              <span class="text-xs font-bold text-slate-200 truncate block">${it.model}</span>
+            </div>
+            <span class="text-[10px] font-mono text-slate-400 shrink-0">${it.vendor}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  frame.innerHTML = railHTML;
+
+  renderRackTelemetry(rackItems, activeRackHeight);
+  renderFieldDevices(fieldItems);
+
+  if (window.lucide) lucide.createIcons();
 }
 
-function handleRackDragStart(e, instanceId) {
+function findNextAvailableSlot(slots, heightU, maxU) {
+  for (let u = 1; u <= maxU - heightU + 1; u++) {
+    let available = true;
+    for (let offset = 0; offset < heightU; offset++) {
+      if (slots[u + offset] !== null) {
+        available = false;
+        break;
+      }
+    }
+    if (available) return u;
+  }
+  return null;
+}
+
+function isCollision(slots, startU, heightU, ignoreInstanceId) {
+  for (let offset = 0; offset < heightU; offset++) {
+    const slot = slots[startU + offset];
+    if (slot && slot.item.instanceId !== ignoreInstanceId) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function getRoleColor(role) {
+  switch (role) {
+    case "Core":
+    case "Core & Agg":
+    case "Aggregation":
+      return "text-purple-400";
+    case "Access":
+      return "text-emerald-400";
+    case "Structured Cabling":
+      return "text-amber-300";
+    case "Gateways & WAN":
+    case "Security WAN":
+      return "text-rose-400";
+    default:
+      return "text-slate-300";
+  }
+}
+
+// -----------------------------------------------------------
+// Drag & Drop
+// -----------------------------------------------------------
+function handleRackItemDragStart(e, instanceId) {
   draggedRackItemInstanceId = instanceId;
+  e.dataTransfer.setData("text/plain", instanceId);
   e.dataTransfer.effectAllowed = "move";
 }
 
-function handleRackDragOver(e) {
+function handleRackSlotDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = "move";
 }
 
-function handleRackDrop(e, targetU) {
+function handleRackSlotDrop(e, targetU) {
   e.preventDefault();
-  if (!draggedRackItemInstanceId) return;
+  const instanceId = draggedRackItemInstanceId || e.dataTransfer.getData("text/plain");
+  if (!instanceId || typeof projectBOM === "undefined") return;
 
-  const item = projectBOM.find(i => i.instanceId === draggedRackItemInstanceId);
+  const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
-  const rackHeight = getCurrentRackHeight();
-  const uSpan = item.rackUnitHeight || (item.qty || 1);
-  if (targetU + uSpan - 1 > rackHeight) {
-    showToast(`Device requires ${uSpan}U and will exceed top of rack.`);
+  const itemHeight = parseInt(item.rackUnits || 1);
+  if ((targetU + itemHeight - 1) > activeRackHeight) {
+    if (typeof showToast === "function") {
+      showToast(`Cannot place ${itemHeight}U device at U${targetU}: exceeds cabinet top.`);
+    }
     return;
   }
 
-  const [closet, rack] = (activeViewingRackKey || "MDF • Rack-1").split(" • ");
-  const occupant = projectBOM.find(i => 
-    !i.parentInstanceId && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack && 
-    i.rackU === targetU && 
-    i.instanceId !== item.instanceId
-  );
+  // Assign to active rack and slot
+  item.rackSlot = targetU;
+  item.closetName = activeRackId;
+  item.rackId = activeRackId;
 
-  if (occupant) {
-    occupant.rackU = item.rackU;
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Mounted ${item.model} into ${activeRackId} at U${targetU}`);
   }
-
-  item.rackU = targetU;
   draggedRackItemInstanceId = null;
-
-  renderRackElevationGrid();
-  renderRackAnalytics();
-  if (typeof queueAutoSave === "function") queueAutoSave();
 }
 
-function unslotRackItem(instanceId) {
+function unmountRackItem(instanceId) {
+  if (typeof projectBOM === "undefined") return;
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (item) {
-    item.rackU = null;
-    renderRackElevationGrid();
-    renderRackAnalytics();
-    if (typeof queueAutoSave === "function") queueAutoSave();
-  }
-}
-
-function renderRackAnalytics() {
-  const [closet, rack] = (activeViewingRackKey || "MDF • Rack-1").split(" • ");
-  const items = projectBOM.filter(i => 
-    !i.parentInstanceId && 
-    !i.isDinMounted && 
-    (i.closetName || "MDF").trim() === closet && 
-    (i.rackId || "Rack-1").trim() === rack
-  );
-
-  let totalPoE = 0;
-  let totalBaseWatts = 0;
-
-  items.forEach(it => {
-    totalPoE += (it.poeBudget || 0) * (it.qty || 1);
-    totalBaseWatts += (it.baseWatts || 0) * (it.qty || 1);
-  });
-
-  const worstCaseLoad = totalPoE + totalBaseWatts;
-  const btu = Math.round(worstCaseLoad * 3.412142);
-
-  const poeEl = document.getElementById("rackTotalPoE");
-  const baseEl = document.getElementById("rackTotalBaseWatts");
-  const worstEl = document.getElementById("rackTotalWorstCase");
-  const btuEl = document.getElementById("rackTotalBTU");
-  const upsAdvisor = document.getElementById("rackUpsAdvisor");
-
-  if (poeEl) poeEl.innerText = `${totalPoE.toLocaleString()} W`;
-  if (baseEl) baseEl.innerText = `${totalBaseWatts.toLocaleString()} W`;
-  if (worstEl) worstEl.innerText = `${worstCaseLoad.toLocaleString()} W`;
-  if (btuEl) btuEl.innerText = `${btu.toLocaleString()} BTU/hr`;
-
-  if (upsAdvisor) {
-    if (worstCaseLoad === 0) {
-      upsAdvisor.innerHTML = `<span class="text-slate-500">No active electrical load in this rack.</span>`;
-    } else {
-      const minVa = Math.ceil((worstCaseLoad * 1.25) / 100) * 100;
-      const recModel = minVa > 2200 ? "3000VA 2U Online Double-Conversion (L5-30P)" : (minVa > 1400 ? "2200VA 2U Line-Interactive" : "1500VA 2U Line-Interactive (5-15P)");
-      upsAdvisor.innerHTML = `
-        <div class="flex items-center justify-between text-white font-bold">
-          <span>Minimum UPS VA:</span>
-          <span class="font-mono text-emerald-400">${minVa} VA</span>
-        </div>
-        <div class="text-[11px] text-slate-400">Recommendation: <strong class="text-indigo-300">${recModel}</strong></div>
-      `;
+    item.rackSlot = null;
+    item.closetName = FacilityStore.UNASSIGNED;
+    item.rackId = FacilityStore.UNASSIGNED;
+    FacilityStore.notifyWorkspaceChange();
+    renderRackVisualizer();
+    if (typeof showToast === "function") {
+      showToast(`Unmounted ${item.model} to Unassigned Staging.`);
     }
   }
 }
 
-function renderRackDinList() {
+// -----------------------------------------------------------
+// Telemetry & Field Devices
+// -----------------------------------------------------------
+function renderRackTelemetry(rackItems, totalU) {
+  let occupiedU = 0;
+  let totalPoE = 0;
+  let totalBaseWatts = 0;
+
+  rackItems.forEach(it => {
+    if (it.rackSlot) {
+      occupiedU += parseInt(it.rackUnits || 1);
+    }
+    totalPoE += parseFloat(it.poeBudget || 0);
+    totalBaseWatts += parseFloat(it.baseWatts || 0);
+  });
+
+  const totalWorstCaseWatts = Math.round(totalBaseWatts + totalPoE);
+  const totalBTU = Math.round(totalWorstCaseWatts * 3.412142);
+
+  let recommendedUPS = "1000VA 1U Line-Interactive";
+  if (totalWorstCaseWatts > 2200) recommendedUPS = "3000VA 2U / 3U Online Double-Conversion";
+  else if (totalWorstCaseWatts > 1200) recommendedUPS = "2200VA 2U Line-Interactive";
+  else if (totalWorstCaseWatts > 600) recommendedUPS = "1500VA 2U Line-Interactive";
+
+  const badgeEl = document.getElementById("rackUtilizationBadge");
+  const poeEl = document.getElementById("rackTotalPoE");
+  const baseEl = document.getElementById("rackTotalBaseWatts");
+  const worstEl = document.getElementById("rackTotalWorstCase");
+  const btuEl = document.getElementById("rackTotalBTU");
+  const upsEl = document.getElementById("rackUpsAdvisor");
+
+  if (badgeEl) badgeEl.innerText = `${occupiedU} / ${totalU} U Used`;
+  if (poeEl) poeEl.innerText = `${Math.round(totalPoE)} W`;
+  if (baseEl) baseEl.innerText = `${Math.round(totalBaseWatts)} W`;
+  if (worstEl) worstEl.innerText = `${totalWorstCaseWatts} W`;
+  if (btuEl) btuEl.innerText = `${totalBTU.toLocaleString()} BTU/hr`;
+  if (upsEl) {
+    upsEl.innerHTML = `
+      <div class="font-bold text-emerald-400">${recommendedUPS}</div>
+      <div class="text-[11px] text-slate-400">Covers ${totalWorstCaseWatts}W load + 20% runtime buffer.</div>
+    `;
+  }
+}
+
+function renderFieldDevices(fieldItems) {
   const container = document.getElementById("rackDinList");
   if (!container) return;
 
-  const dinItems = projectBOM.filter(i => !i.parentInstanceId && i.isDinMounted);
-
-  if (dinItems.length === 0) {
-    container.innerHTML = `<span class="text-slate-500 text-[11px]">No DIN or pole-mount equipment in quote.</span>`;
+  if (fieldItems.length === 0) {
+    container.innerHTML = `<span class="text-slate-500 text-[11px] block py-1">No field or DIN-rail hardware in ${activeRackId}.</span>`;
     return;
   }
 
-  container.innerHTML = dinItems.map(d => `
-    <div class="bg-slate-950 p-2 rounded-lg border border-slate-800/80 flex items-center justify-between text-xs">
+  container.innerHTML = fieldItems.map(it => `
+    <div class="bg-slate-950 p-2 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
       <div>
-        <span class="font-bold text-white text-[11px] block">${d.model}</span>
-        <span class="text-[10px] text-slate-400 font-mono">${d.closetName || 'Pole'} &bull; ${d.rackId || 'NEMA-Box'}</span>
+        <span class="font-bold text-white block truncate max-w-[200px]">${it.model}</span>
+        <span class="text-[10px] text-amber-400 font-mono">${it.closetName || 'Field'} &bull; ${it.isDinMounted || (it.model && it.model.includes('DIN')) ? 'DIN-Rail Mount' : 'Exterior Pole'}</span>
       </div>
-      <span class="text-[10px] font-mono text-amber-400 font-bold">${d.baseWatts || 15}W</span>
+      <span class="font-mono text-[11px] text-slate-400 font-bold">${it.qty || 1}x</span>
     </div>
-  `).join("");
+  `).join('');
+}
+
+// -----------------------------------------------------------
+// Persistence
+// -----------------------------------------------------------
+function saveRackSettings() {
+  try {
+    const projKey = FacilityStore.getProjectId();
+    localStorage.setItem(`netselect_rack_height_${projKey}_${activeRackId}`, activeRackHeight.toString());
+  } catch (e) {}
+}
+
+function loadRackSettings() {
+  try {
+    const projKey = FacilityStore.getProjectId();
+    const val = localStorage.getItem(`netselect_rack_height_${projKey}_${activeRackId}`);
+    activeRackHeight = val ? parseInt(val) : 24;
+  } catch (e) {
+    activeRackHeight = 24;
+  }
 }
