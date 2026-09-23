@@ -362,6 +362,7 @@ function renderRackVisualizer() {
   if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
+  if (typeof queueAutoSave === 'function') queueAutoSave();
 }
 
 function printRackElevation() {

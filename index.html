@@ -65,31 +65,42 @@
 
   <!-- TOP HEADER -->
   <header class="sticky top-0 z-40 backdrop-blur-md bg-slate-900/95 border-b border-slate-800">
+    <!-- Row 1: Brand & Project Controls -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
       <div class="flex items-center space-x-3">
         <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
           <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
         </div>
-        <div>
-          <h1 class="font-bold text-base sm:text-lg tracking-tight text-white flex items-center gap-2">
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base sm:text-lg tracking-tight text-white">
             NetSelect Security
-            <span class="text-xs font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Total Infrastructure Sizer</span>
           </h1>
+          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Total Infrastructure Sizer</span>
         </div>
       </div>
 
-      <div class="flex items-center space-x-2.5">
-        <button onclick="toggleRackModal()" class="px-3.5 py-1.5 rounded-lg border border-indigo-500/50 bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
+      <!-- Actions: Project Selector -> Visualizer -> Compare -> Project BOM -->
+      <div class="flex items-center space-x-2">
+        <!-- Project Snapshot Selector -->
+        <button onclick="toggleProjectModal()" class="px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all">
+          <i data-lucide="folder-git-2" class="w-4 h-4 text-emerald-400"></i>
+          <span id="activeProjectLabel">Default Project</span>
+        </button>
+
+        <!-- Single Rack Visualizer Button -->
+        <button onclick="toggleRackModal()" class="px-3 py-1.5 rounded-lg border border-indigo-500/50 bg-indigo-950/50 hover:bg-indigo-900/60 text-indigo-300 text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all">
           <i data-lucide="server" class="w-4 h-4 text-indigo-400"></i>
           <span>Rack Visualizer</span>
         </button>
 
+        <!-- Compare Trigger -->
         <button id="compareBarBtn" onclick="toggleCompareModal()" class="relative px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-medium flex items-center gap-1.5 transition-all">
           <i data-lucide="git-compare" class="w-4 h-4 text-brand-400"></i>
           <span>Compare</span>
           <span id="compareCountBadge" class="hidden bg-brand-500 text-white text-[10px] font-bold px-1.5 py-0.2 rounded-full">0</span>
         </button>
 
+        <!-- Project BOM Drawer Trigger -->
         <button onclick="toggleBomDrawer()" class="relative px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-emerald-900/20 transition-all">
           <i data-lucide="shopping-cart" class="w-4 h-4"></i>
           <span>Project BOM</span>
@@ -98,9 +109,9 @@
       </div>
     </div>
 
-    <!-- NAVIGATION TABS -->
+    <!-- Row 2: Category Navigation Tabs -->
     <div class="border-t border-slate-800/80 bg-slate-900/60 px-4 sm:px-6 lg:px-8">
-      <div class="max-w-7xl mx-auto flex flex-wrap gap-2 py-2.5">
+      <div class="max-w-7xl mx-auto flex flex-wrap gap-2 py-2">
         <button onclick="switchMode('access')" id="nav-access" class="top-nav-btn active px-4 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
           <i data-lucide="plug-zap" class="w-4 h-4 text-amber-400"></i>
           <span>Access & Edge</span>
@@ -406,5 +417,55 @@
   <script src="js/app.js"></script>
   <script src="js/bom.js"></script>
   <script src="js/rack.js"></script>
+  <!-- PROJECT SNAPSHOT & STORAGE MODAL -->
+  <div id="projectModal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-850">
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="folder-git-2" class="w-5 h-5 text-emerald-400"></i>
+          <div>
+            <h2 class="font-bold text-base text-white">Project Quotes & Storage Profiles</h2>
+            <p class="text-xs text-slate-400">Manage saved designs, auto-save state, and JSON exports</p>
+          </div>
+        </div>
+        <button onclick="toggleProjectModal()" class="p-1 rounded-lg text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-4 text-xs">
+        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+          <span class="font-bold text-slate-300 text-xs uppercase tracking-wider block">Save Active Quote as New Project</span>
+          <div class="flex items-center gap-2">
+            <input type="text" id="newProjectNameInput" placeholder="e.g., Downtown Campus - Phase 1" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-brand-500" />
+            <button onclick="saveCurrentAsNewProject()" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors">
+              Save Snapshot
+            </button>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-400 uppercase tracking-wider text-[11px]">Saved Local Projects</span>
+            <div class="flex items-center gap-2">
+              <label class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded cursor-pointer font-semibold flex items-center gap-1">
+                <i data-lucide="upload" class="w-3.5 h-3.5"></i> Import JSON
+                <input type="file" id="importProjectFile" accept=".json" onchange="importProjectJSON(event)" class="hidden" />
+              </label>
+              <button onclick="exportCurrentProjectJSON()" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-semibold flex items-center gap-1">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> Export JSON
+              </button>
+            </div>
+          </div>
+          <div id="savedProjectsList" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between">
+        <span class="text-[11px] text-slate-500">Auto-save writes to browser localStorage in real time.</span>
+        <button onclick="toggleProjectModal()" class="px-4 py-1.5 text-xs font-semibold bg-slate-800 text-slate-200 rounded-lg">Close</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

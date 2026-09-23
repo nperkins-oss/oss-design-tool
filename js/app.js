@@ -852,3 +852,271 @@ window.addEventListener("DOMContentLoaded", () => {
   switchMode('access');
   updateBOMView();
 });
+// ==========================================
+// LOCALSTORAGE PERSISTENCE & PROJECT MANAGER
+// ==========================================
+const STORAGE_KEY_CURRENT = "netselect_active_state_v1";
+const STORAGE_KEY_PROJECTS = "netselect_saved_projects_v1";
+
+let activeProjectName = "Default Project";
+let autoSaveDebounceTimeout = null;
+
+function queueAutoSave() {
+  if (autoSaveDebounceTimeout) clearTimeout(autoSaveDebounceTimeout);
+  autoSaveDebounceTimeout = setTimeout(() => {
+    saveStateToLocalStorage();
+  }, 300);
+}
+
+function saveStateToLocalStorage() {
+  try {
+    const statePayload = {
+      activeProjectName,
+      activeMode,
+      accessPortSelection,
+      backboneRoleSelection,
+      lockPoEBudget,
+      currentRackHeight,
+      globalSelectedTerm,
+      bomViewMode,
+      filterState,
+      projectBOM,
+      calcValues: {
+        calcPoE: document.getElementById("calcPoE")?.value || 0,
+        calcPoEPlus: document.getElementById("calcPoEPlus")?.value || 0,
+        calcPoEPlusPlus: document.getElementById("calcPoEPlusPlus")?.value || 0,
+        calcPoEPlusPlusPlus: document.getElementById("calcPoEPlusPlusPlus")?.value || 0
+      },
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(STORAGE_KEY_CURRENT, JSON.stringify(statePayload));
+  } catch (err) {
+    console.error("Failed to auto-save state:", err);
+  }
+}
+
+function restoreStateFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_CURRENT);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.projectBOM) return false;
+
+    projectBOM = parsed.projectBOM || [];
+    activeProjectName = parsed.activeProjectName || "Default Project";
+    activeMode = parsed.activeMode || "access";
+    accessPortSelection = parsed.accessPortSelection || "any";
+    backboneRoleSelection = parsed.backboneRoleSelection || "all";
+    lockPoEBudget = parsed.lockPoEBudget || false;
+    currentRackHeight = parsed.currentRackHeight || 24;
+    globalSelectedTerm = parsed.globalSelectedTerm || "1YR";
+    bomViewMode = parsed.bomViewMode || "grouped";
+
+    if (parsed.filterState) {
+      Object.assign(filterState, parsed.filterState);
+    }
+
+    const label = document.getElementById("activeProjectLabel");
+    if (label) label.innerText = activeProjectName;
+
+    // Restore calculator values if on access mode
+    if (parsed.calcValues) {
+      setTimeout(() => {
+        if (document.getElementById("calcPoE")) document.getElementById("calcPoE").value = parsed.calcValues.calcPoE;
+        if (document.getElementById("calcPoEPlus")) document.getElementById("calcPoEPlus").value = parsed.calcValues.calcPoEPlus;
+        if (document.getElementById("calcPoEPlusPlus")) document.getElementById("calcPoEPlusPlus").value = parsed.calcValues.calcPoEPlusPlus;
+        if (document.getElementById("calcPoEPlusPlusPlus")) document.getElementById("calcPoEPlusPlusPlus").value = parsed.calcValues.calcPoEPlusPlusPlus;
+        calculatePoETarget();
+      }, 50);
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Failed to load local state:", err);
+    return false;
+  }
+}
+
+function toggleProjectModal() {
+  const modal = document.getElementById("projectModal");
+  if (!modal) return;
+  if (modal.classList.contains("hidden")) {
+    modal.classList.remove("hidden");
+    renderSavedProjectsList();
+  } else {
+    modal.classList.add("hidden");
+  }
+}
+
+function getSavedProjectsIndex() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY_PROJECTS)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveCurrentAsNewProject() {
+  const input = document.getElementById("newProjectNameInput");
+  const name = (input ? input.value : "").trim();
+  if (!name) {
+    showToast("Please enter a project name.");
+    return;
+  }
+
+  const projects = getSavedProjectsIndex();
+  projects[name] = {
+    name,
+    projectBOM,
+    globalSelectedTerm,
+    currentRackHeight,
+    savedAt: new Date().toISOString()
+  };
+
+  localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
+  activeProjectName = name;
+  document.getElementById("activeProjectLabel").innerText = name;
+  if (input) input.value = "";
+
+  saveStateToLocalStorage();
+  renderSavedProjectsList();
+  showToast(`Saved project: ${name}`);
+}
+
+function loadSavedProject(name) {
+  const projects = getSavedProjectsIndex();
+  const proj = projects[name];
+  if (!proj) return;
+
+  projectBOM = proj.projectBOM || [];
+  activeProjectName = proj.name || name;
+  globalSelectedTerm = proj.globalSelectedTerm || "1YR";
+  currentRackHeight = proj.currentRackHeight || 24;
+
+  document.getElementById("activeProjectLabel").innerText = activeProjectName;
+  saveStateToLocalStorage();
+  updateBOMView();
+  renderSavedProjectsList();
+  toggleProjectModal();
+  showToast(`Loaded project: ${name}`);
+}
+
+function deleteSavedProject(name) {
+  if (!confirm(`Delete project "${name}"?`)) return;
+  const projects = getSavedProjectsIndex();
+  delete projects[name];
+  localStorage.setItem(STORAGE_KEY_PROJECTS, JSON.stringify(projects));
+  renderSavedProjectsList();
+  showToast(`Deleted project: ${name}`);
+}
+
+function renderSavedProjectsList() {
+  const container = document.getElementById("savedProjectsList");
+  if (!container) return;
+
+  const projects = getSavedProjectsIndex();
+  const names = Object.keys(projects);
+
+  if (names.length === 0) {
+    container.innerHTML = `
+      <div class="p-4 bg-slate-950/60 border border-slate-800 rounded-xl text-center text-slate-500 text-xs">
+        No custom snapshots saved yet. Current work auto-saves continuously.
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = names.map(n => {
+    const p = projects[n];
+    const isCurrent = n === activeProjectName;
+    const unitCount = (p.projectBOM || []).reduce((acc, i) => acc + (i.qty || 1), 0);
+    const dateStr = p.savedAt ? new Date(p.savedAt).toLocaleDateString() : 'N/A';
+
+    return `
+      <div class="p-3 bg-slate-950 border ${isCurrent ? 'border-emerald-500/60 bg-emerald-950/20' : 'border-slate-800'} rounded-xl flex items-center justify-between gap-3 shadow-sm">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="font-bold text-white text-xs">${p.name}</span>
+            ${isCurrent ? '<span class="text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-1.5 rounded font-bold">ACTIVE</span>' : ''}
+          </div>
+          <span class="text-[10px] text-slate-400 font-mono">${unitCount} total units &bull; Saved ${dateStr}</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+          ${!isCurrent ? `
+            <button onclick="loadSavedProject('${p.name}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded font-semibold text-xs">
+              Load
+            </button>
+          ` : ''}
+          <button onclick="deleteSavedProject('${p.name}')" class="p-1 hover:text-rose-400 text-slate-500">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  if (window.lucide) {
+    try { lucide.createIcons(); } catch(e) {}
+  }
+}
+
+function exportCurrentProjectJSON() {
+  const payload = {
+    projectName: activeProjectName,
+    exportedAt: new Date().toISOString(),
+    projectBOM,
+    globalSelectedTerm,
+    currentRackHeight
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${activeProjectName.replace(/[^a-z0-9_-]/gi, '_')}_BOM.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("Project exported as JSON.");
+}
+
+function importProjectJSON(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.projectBOM) {
+        showToast("Invalid project JSON file.");
+        return;
+      }
+
+      projectBOM = data.projectBOM;
+      activeProjectName = data.projectName || file.name.replace(".json", "");
+      globalSelectedTerm = data.globalSelectedTerm || "1YR";
+      currentRackHeight = data.currentRackHeight || 24;
+
+      document.getElementById("activeProjectLabel").innerText = activeProjectName;
+      saveStateToLocalStorage();
+      updateBOMView();
+      renderSavedProjectsList();
+      toggleProjectModal();
+      showToast(`Imported ${activeProjectName} successfully.`);
+    } catch (err) {
+      showToast("Error parsing project JSON.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Modify window.addEventListener("DOMContentLoaded") in js/app.js:
+window.addEventListener("DOMContentLoaded", () => {
+  const restored = restoreStateFromLocalStorage();
+  switchMode(activeMode);
+  updateBOMView();
+  if (restored) {
+    showToast(`Restored active session: ${activeProjectName}`);
+  }
+});
