@@ -40,21 +40,103 @@ function setBomViewMode(mode) {
   const fltBtn = document.getElementById("bomViewMode-flat");
 
   if (mode === "grouped") {
-    grpBtn.classList.replace("text-slate-400", "text-white");
-    grpBtn.classList.replace("bg-slate-950", "bg-brand-600");
-    fltBtn.classList.replace("text-white", "text-slate-400");
-    fltBtn.classList.replace("bg-brand-600", "bg-slate-950");
+    if (grpBtn) {
+      grpBtn.classList.replace("text-slate-400", "text-white");
+      grpBtn.classList.replace("bg-slate-950", "bg-brand-600");
+    }
+    if (fltBtn) {
+      fltBtn.classList.replace("text-white", "text-slate-400");
+      fltBtn.classList.replace("bg-brand-600", "bg-slate-950");
+    }
   } else {
-    fltBtn.classList.replace("text-slate-400", "text-white");
-    fltBtn.classList.replace("bg-slate-950", "bg-brand-600");
-    grpBtn.classList.replace("text-white", "text-slate-400");
-    grpBtn.classList.replace("bg-brand-600", "bg-slate-950");
+    if (fltBtn) {
+      fltBtn.classList.replace("text-slate-400", "text-white");
+      fltBtn.classList.replace("bg-slate-950", "bg-brand-600");
+    }
+    if (grpBtn) {
+      grpBtn.classList.replace("text-white", "text-slate-400");
+      grpBtn.classList.replace("bg-brand-600", "bg-slate-950");
+    }
   }
 
   updateBOMView();
 }
 
-function addToProjectBOM(id) {
+function getAllDefinedLocations() {
+  const locations = new Set(["MDF • Rack-1", "IDF-1 • Rack-1", "Exterior Pole • NEMA-Box"]);
+  projectBOM.filter(i => !i.parentInstanceId).forEach(item => {
+    const c = (item.closetName || "MDF").trim();
+    const r = (item.rackId || "Rack-1").trim();
+    locations.add(`${c} • ${r}`);
+  });
+
+  try {
+    const custom = JSON.parse(localStorage.getItem("netselect_custom_racks") || "[]");
+    custom.forEach(k => locations.add(k));
+  } catch(e) {}
+
+  return Array.from(locations);
+}
+
+function handleLocationDropdownChange(selectEl, callback) {
+  if (!selectEl) return;
+  if (selectEl.value === "new_location") {
+    const c = prompt("Enter New Room / Location Name (e.g. IDF-2, Gate Pole, Server Room):", "IDF-2");
+    if (!c || !c.trim()) {
+      selectEl.value = selectEl.getAttribute("data-previous-val") || "MDF • Rack-1";
+      return;
+    }
+    const r = prompt("Enter Cabinet / Enclosure (e.g. Rack-1, NEMA-Box, Wall-Box):", "Rack-1");
+    if (!r || !r.trim()) {
+      selectEl.value = selectEl.getAttribute("data-previous-val") || "MDF • Rack-1";
+      return;
+    }
+
+    const newKey = `${c.trim()} • ${r.trim()}`;
+    try {
+      const custom = JSON.parse(localStorage.getItem("netselect_custom_racks") || "[]");
+      if (!custom.includes(newKey)) {
+        custom.push(newKey);
+        localStorage.setItem("netselect_custom_racks", JSON.stringify(custom));
+      }
+    } catch(e) {}
+
+    const opt = document.createElement("option");
+    opt.value = newKey;
+    opt.text = newKey;
+    selectEl.insertBefore(opt, selectEl.lastElementChild);
+    selectEl.value = newKey;
+    selectEl.setAttribute("data-previous-val", newKey);
+
+    if (typeof callback === "function") callback(newKey);
+    showToast(`Created new location: ${newKey}`);
+  } else {
+    selectEl.setAttribute("data-previous-val", selectEl.value);
+    if (typeof callback === "function") callback(selectEl.value);
+  }
+}
+
+function setItemLocation(instanceId, combinedKey) {
+  if (combinedKey === "new_location") return;
+
+  const [closet, rack] = combinedKey.split(" • ");
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (item) {
+    item.closetName = closet;
+    item.rackId = rack;
+    item.rackU = null;
+    updateBOMView();
+    if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
+      renderRackVisualizer();
+    }
+    if (typeof renderTopologyCanvas === "function" && !document.getElementById("topologyModal")?.classList.contains("hidden")) {
+      renderTopologyCanvas();
+    }
+    showToast(`Moved ${item.model} to ${combinedKey}`);
+  }
+}
+
+function addToProjectBOM(id, targetLocation = null) {
   const sw = SWITCH_DATABASE.find(s => s.id === id);
   if (!sw) return;
 
@@ -63,7 +145,16 @@ function addToProjectBOM(id) {
   const selectedSledSku = sledSelect ? sledSelect.value : (sw.modularUplink ? sw.modularUplink.defaultModuleSku : null);
 
   const instanceId = `inst-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-  const defaultCloset = (sw.role === "Core" || sw.role === "Aggregation") ? "MDF" : "IDF-1";
+  
+  let defaultCloset = (sw.role === "Core" || sw.role === "Aggregation") ? "MDF" : "IDF-1";
+  let defaultRack = "Rack-1";
+
+  if (targetLocation && targetLocation !== "new_location" && targetLocation.includes(" • ")) {
+    const parts = targetLocation.split(" • ");
+    defaultCloset = parts[0];
+    defaultRack = parts[1];
+  }
+
   const isDinOnly = sw.mounting && sw.mounting.includes("DIN") && !sw.mounting.includes("19\"");
 
   let initialMgmtProfile = sw.defaultMgmtProfile || (sw.vendor === "Meraki" ? "cloud" : "standalone");
@@ -77,21 +168,26 @@ function addToProjectBOM(id) {
     role: sw.role,
     vendor: sw.vendor,
     msrp: sw.msrp,
-    poeBudget: sw.poeBudget || 0,
+    ports: parseInt(sw.ports) || 0,
+    poeStandard: sw.poeStandard || "802.3at",
+    poeBudget: parseInt(sw.poeBudget) || 0,
     baseWatts: baseWatts,
     depthInches: sw.depthInches || 12,
     shallowDepth: sw.shallowDepth || false,
     qty: qtyToAdd,
     canStack: sw.stacking || false,
     closetName: defaultCloset,
-    rackId: "Rack-1",
+    rackId: defaultRack,
     rackU: null,
     isDinMounted: isDinOnly,
     stackedUnits: 0,
     stackCableSku: sw.stackCableSku || null,
     portSpeed: sw.portSpeed || "10G",
     maxBackboneSpeed: sw.maxBackboneSpeed || "10G",
-    selectedMgmtProfile: initialMgmtProfile
+    selectedMgmtProfile: initialMgmtProfile,
+    uplinkTargetId: null,
+    uplinkMode: "single",
+    powerSource: "internal_psu"
   };
 
   projectBOM.push(newParent);
@@ -174,7 +270,8 @@ function addToProjectBOM(id) {
   }
 
   updateBOMView();
-  showToast(`Added ${sw.model} to Project BOM.`);
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  showToast(`Added ${sw.model} to ${defaultCloset} • ${defaultRack}`);
 }
 
 function applyManagementSubscription(instanceId, profileKey, term) {
@@ -207,24 +304,6 @@ function applyManagementSubscription(instanceId, profileKey, term) {
   }
 }
 
-function updateClosetName(instanceId, name) {
-  const item = projectBOM.find(i => i.instanceId === instanceId);
-  if (item) item.closetName = name.trim() || "Closet";
-  updateBOMView();
-  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
-    renderRackVisualizer();
-  }
-}
-
-function updateRackId(instanceId, rack) {
-  const item = projectBOM.find(i => i.instanceId === instanceId);
-  if (item) item.rackId = rack;
-  updateBOMView();
-  if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
-    renderRackVisualizer();
-  }
-}
-
 function updateStackedCount(instanceId, count) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
@@ -233,8 +312,15 @@ function updateStackedCount(instanceId, count) {
   item.stackedUnits = Math.min(item.qty, Math.max(0, val));
   if (item.stackedUnits === 1) item.stackedUnits = 0;
 
+  if (item.stackedUnits >= 2) {
+    item.uplinkMode = "lag_dual";
+  }
+
   applyStackCabling(item);
   updateBOMView();
+  if (typeof renderTopologyCanvas === "function" && !document.getElementById("topologyModal")?.classList.contains("hidden")) {
+    renderTopologyCanvas();
+  }
 }
 
 function applyStackCabling(item) {
@@ -246,7 +332,7 @@ function applyStackCabling(item) {
       instanceId: `cable-${item.instanceId}`,
       parentInstanceId: item.instanceId,
       id: `${item.id}-stack-cable`,
-      model: `${item.vendor} Stacking Cable (${item.closetName})`,
+      model: `${item.vendor} Dedicated Hardware Stacking Cable (${item.closetName})`,
       sku: cableSku,
       role: "Stacking Cable",
       vendor: item.vendor,
@@ -258,20 +344,24 @@ function applyStackCabling(item) {
   }
 }
 
+// ==========================================
+// DYNAMIC AUTO-UPLINK SIZING (LAG & MEDIA AWARE)
+// ==========================================
 function autoResolveUplinks() {
   const coreSwitches = projectBOM.filter(i => (i.role === "Core" || i.role === "Aggregation") && !i.parentInstanceId);
-  const accessSwitches = projectBOM.filter(i => i.role === "Access" && !i.parentInstanceId);
+  const accessSwitches = projectBOM.filter(i => i.role === "Access" && !i.parentInstanceId && !i.isDinMounted);
 
   if (coreSwitches.length === 0) {
     showToast("Please add at least one Core or Aggregation switch to the BOM first.");
     return;
   }
   if (accessSwitches.length === 0) {
-    showToast("No Access switches found in BOM to calculate uplinks for.");
+    showToast("No standard Access switches found in BOM to calculate uplinks for.");
     return;
   }
 
   const core = coreSwitches[0];
+  // Remove previously auto-generated uplinks ONLY (leaving stacking cables intact)
   projectBOM = projectBOM.filter(i => i.role !== "Uplink Interconnect");
 
   let dacCount = 0;
@@ -279,18 +369,23 @@ function autoResolveUplinks() {
   let highestSpeedResolved = "10G";
 
   accessSwitches.forEach(sw => {
-    const linksNeeded = sw.stackedUnits >= 2 ? 2 : (sw.qty * 1);
+    sw.uplinkTargetId = core.instanceId;
 
+    const isDual = sw.uplinkMode === "lag_dual" || sw.stackedUnits >= 2;
+    const linksNeeded = isDual ? 2 : 1;
+
+    let accessUplinkSpeed = "10G";
     const attachedSled = projectBOM.find(i => i.parentInstanceId === sw.instanceId && i.role === "Uplink Module");
     const sledData = attachedSled ? (MODULAR_UPLINK_CATALOG[attachedSled.id] || MODULAR_UPLINK_CATALOG[attachedSled.sku]) : null;
 
-    let accessUplinkSpeed = "10G";
     if (sledData) {
       accessUplinkSpeed = sledData.speed;
-    } else if (sw.maxBackboneSpeed) {
+    } else if (sw.portSpeed === "25G" || (sw.uplinksSummary && sw.uplinksSummary.includes("25G"))) {
+      accessUplinkSpeed = "25G";
+    } else if (sw.portSpeed === "100G" || (sw.uplinksSummary && sw.uplinksSummary.includes("100G"))) {
+      accessUplinkSpeed = "100G";
+    } else if (sw.maxBackboneSpeed && sw.maxBackboneSpeed !== "100G") {
       accessUplinkSpeed = sw.maxBackboneSpeed;
-    } else if (sw.portSpeed === "100G" || sw.portSpeed === "25G" || sw.portSpeed === "40G") {
-      accessUplinkSpeed = sw.portSpeed;
     }
 
     const coreSpeed = core.maxBackboneSpeed || "10G";
@@ -300,8 +395,6 @@ function autoResolveUplinks() {
       linkSpeed = "100G";
     } else if ((accessUplinkSpeed === "25G" || accessUplinkSpeed === "100G") && (coreSpeed === "25G" || coreSpeed === "100G")) {
       linkSpeed = "25G";
-    } else if (accessUplinkSpeed === "40G" && coreSpeed === "40G") {
-      linkSpeed = "40G";
     } else if (accessUplinkSpeed === "1G" || coreSpeed === "1G") {
       linkSpeed = "1G";
     }
@@ -311,13 +404,14 @@ function autoResolveUplinks() {
     const isSameRack = isSameCloset && ((sw.rackId || "Rack-1") === (core.rackId || "Rack-1"));
 
     if (isSameRack) {
-      const dacData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.["dac"] || OPTICS_CATALOG["Meraki"]?.[linkSpeed]?.["dac"];
+      // Intra-rack: 1 DAC Cable per physical link
+      const dacData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.["dac"] || OPTICS_CATALOG["Meraki"]?.[linkSpeed]?.["dac"] || OPTICS_CATALOG["UniFi"]?.[linkSpeed]?.["dac"];
       if (dacData) {
         projectBOM.push({
           instanceId: `uplink-dac-${sw.instanceId}`,
           parentInstanceId: sw.instanceId,
           id: dacData.sku,
-          model: `${sw.vendor} ${linkSpeed} 1M DAC (${sw.closetName} / ${sw.rackId})`,
+          model: `${sw.vendor} ${linkSpeed} Direct Attach Copper (DAC) Cable ${isDual ? '(2x LACP Bundle)' : '(Single Link)'}`,
           sku: dacData.sku,
           role: "Uplink Interconnect",
           vendor: sw.vendor,
@@ -329,11 +423,9 @@ function autoResolveUplinks() {
         dacCount += linksNeeded;
       }
     } else {
+      // Inter-closet: Fiber Transceivers (2 per physical link)
       const medium = isSameCloset ? "mmf" : "smf";
-      let opticData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.[medium];
-      if (!opticData) {
-        opticData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.["mmf"] || OPTICS_CATALOG["Meraki"]?.[linkSpeed]?.[medium];
-      }
+      let opticData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.[medium] || OPTICS_CATALOG["Meraki"]?.[linkSpeed]?.[medium] || OPTICS_CATALOG["UniFi"]?.[linkSpeed]?.[medium];
 
       if (opticData) {
         const transceiversQty = linksNeeded * 2;
@@ -341,7 +433,7 @@ function autoResolveUplinks() {
           instanceId: `uplink-opt-${sw.instanceId}`,
           parentInstanceId: sw.instanceId,
           id: opticData.sku,
-          model: `${sw.vendor} ${linkSpeed} ${medium.toUpperCase()} Optic Pair (${sw.closetName} -> ${core.closetName})`,
+          model: `${sw.vendor} ${linkSpeed} ${medium.toUpperCase()} Optical Transceiver Pair ${isDual ? '(2x LAG)' : ''} (${sw.closetName} -> ${core.closetName})`,
           sku: opticData.sku,
           role: "Uplink Interconnect",
           vendor: sw.vendor,
@@ -356,15 +448,23 @@ function autoResolveUplinks() {
   });
 
   updateBOMView();
-  showToast(`Auto Uplinks resolved at ${highestSpeedResolved}: Added ${dacCount}x DACs and ${opticPairsCount * 2}x transceivers.`);
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  showToast(`Auto Uplinks resolved at ${highestSpeedResolved}: Added ${dacCount}x DAC cables and ${opticPairsCount * 2}x transceivers.`);
 }
 
-function addFirewallToBOM(sku) {
+function addFirewallToBOM(sku, targetLocation = null) {
   const fw = FIREWALL_DATABASE.find(f => f.sku === sku);
   if (!fw) return;
 
   const qtyToAdd = 1;
   const instanceId = `fw-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+
+  let c = "MDF", r = "Rack-1";
+  if (targetLocation && targetLocation.includes(" • ")) {
+    const parts = targetLocation.split(" • ");
+    c = parts[0];
+    r = parts[1];
+  }
 
   projectBOM.push({
     instanceId: instanceId,
@@ -374,20 +474,24 @@ function addFirewallToBOM(sku) {
     role: "Security WAN",
     vendor: fw.vendor,
     msrp: fw.msrp,
+    ports: fw.ports || 4,
     poeBudget: 0,
     baseWatts: 45,
     depthInches: 17.5,
     shallowDepth: false,
     qty: qtyToAdd,
-    closetName: "MDF",
-    rackId: "Rack-1",
+    closetName: c,
+    rackId: r,
     rackU: null,
     isDinMounted: fw.category === "cellular",
-    selectedMgmtProfile: fw.category === "cellular" ? "standalone" : (fw.vendor === "Meraki" ? "cloud" : "standalone")
+    selectedMgmtProfile: fw.category === "cellular" ? "standalone" : (fw.vendor === "Meraki" ? "cloud" : "standalone"),
+    uplinkTargetId: null,
+    powerSource: "internal_psu"
   });
 
   updateBOMView();
-  showToast(`Added ${fw.model} Gateway to Project BOM.`);
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  showToast(`Added ${fw.model} Gateway to ${c} • ${r}`);
 }
 
 function addOpticsToBOM(sku, name, msrp, qty, vendor) {
@@ -416,102 +520,122 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
   const radio = WIRELESS_DATABASE.find(r => r.id === radioId);
   if (!radio) return;
 
-  const qty = isMatchedPair ? 2 : 1;
-  const instanceId = `wl-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
-  const title = isMatchedPair ? `Matched Link Pair: ${radio.model} (2x Radios)` : radio.model;
+  const precChecked = document.getElementById(`wl-prec-${radio.id}`)?.checked;
+  const surgeChecked = document.getElementById(`wl-surge-${radio.id}`)?.checked;
+  const antSelect = document.getElementById(`wl-ant-${radio.id}`);
+  const licChecked = document.getElementById(`wl-lic-${radio.id}`)?.checked;
 
-  projectBOM.push({
-    instanceId: instanceId,
-    id: radio.sku,
-    model: title,
-    sku: radio.sku,
-    role: "Wireless Bridge",
-    vendor: radio.vendor,
-    msrp: radio.msrp,
-    poeBudget: 0,
-    baseWatts: radio.powerWatts,
-    depthInches: 4,
-    shallowDepth: true,
-    qty: qty,
-    closetName: "Exterior Pole",
-    rackId: "NEMA-Box",
-    isDinMounted: true
+  const rolesToCreate = isMatchedPair 
+    ? [
+        { label: "PtP Local Master", defaultCloset: "MDF", defaultRack: "Roof-Mast", defaultPower: "poe_switch" },
+        { label: "PtP Remote Substation", defaultCloset: "Exterior Pole", defaultRack: "NEMA-Box", defaultPower: "local_injector" }
+      ]
+    : [
+        { label: radio.topology === "PtMP-AP" ? "PtMP BaseStation AP" : "Wireless Radio", defaultCloset: "Exterior Pole", defaultRack: "NEMA-Box", defaultPower: "poe_switch" }
+      ];
+
+  const linkPairId = `link-${Date.now()}`;
+
+  rolesToCreate.forEach(roleConfig => {
+    const instanceId = `wl-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+
+    projectBOM.push({
+      instanceId: instanceId,
+      linkPairId: isMatchedPair ? linkPairId : null,
+      id: radio.sku,
+      model: `${radio.model} (${roleConfig.label})`,
+      sku: radio.sku,
+      role: "Wireless Bridge",
+      vendor: radio.vendor,
+      msrp: radio.msrp,
+      ports: 1,
+      poeBudget: 0,
+      baseWatts: radio.powerWatts,
+      poeWattsDrawn: radio.powerWatts,
+      poeStandardRequired: radio.powerWatts > 30 ? "802.3bt-60" : "802.3at",
+      powerSource: roleConfig.defaultPower,
+      uplinkTargetId: null,
+      uplinkMode: "single",
+      depthInches: 4,
+      shallowDepth: true,
+      qty: 1,
+      closetName: roleConfig.defaultCloset,
+      rackId: roleConfig.defaultRack,
+      isDinMounted: true
+    });
+
+    if (precChecked && radio.precisionMountSku && WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku]) {
+      const acc = WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku];
+      projectBOM.push({
+        instanceId: `mnt-${instanceId}`,
+        parentInstanceId: instanceId,
+        id: acc.sku,
+        model: acc.name,
+        sku: acc.sku,
+        role: "Mounting Bracket",
+        vendor: radio.vendor,
+        msrp: acc.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: 1
+      });
+    }
+
+    if (surgeChecked && radio.surgeSku && WIRELESS_ACCESSORY_CATALOG[radio.surgeSku]) {
+      const acc = WIRELESS_ACCESSORY_CATALOG[radio.surgeSku];
+      projectBOM.push({
+        instanceId: `srg-${instanceId}`,
+        parentInstanceId: instanceId,
+        id: acc.sku,
+        model: acc.name,
+        sku: acc.sku,
+        role: "Surge Protection",
+        vendor: radio.vendor,
+        msrp: acc.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: 1
+      });
+    }
+
+    if (antSelect && WIRELESS_ACCESSORY_CATALOG[antSelect.value]) {
+      const ant = WIRELESS_ACCESSORY_CATALOG[antSelect.value];
+      projectBOM.push({
+        instanceId: `ant-${instanceId}`,
+        parentInstanceId: instanceId,
+        id: ant.sku,
+        model: ant.name,
+        sku: ant.sku,
+        role: "Antenna Assembly",
+        vendor: radio.vendor,
+        msrp: ant.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: 1
+      });
+    }
+
+    if (licChecked && radio.licenseSku && WIRELESS_LICENSE_CATALOG[radio.licenseSku]) {
+      const lic = WIRELESS_LICENSE_CATALOG[radio.licenseSku];
+      projectBOM.push({
+        instanceId: `lic-${instanceId}`,
+        parentInstanceId: instanceId,
+        id: lic.sku,
+        model: lic.name,
+        sku: lic.sku,
+        role: "Feature License",
+        vendor: radio.vendor,
+        msrp: lic.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: 1
+      });
+    }
   });
 
-  const precChecked = document.getElementById(`wl-prec-${radio.id}`)?.checked;
-  if (precChecked && radio.precisionMountSku && WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku]) {
-    const acc = WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku];
-    projectBOM.push({
-      instanceId: `mnt-${instanceId}`,
-      parentInstanceId: instanceId,
-      id: acc.sku,
-      model: acc.name,
-      sku: acc.sku,
-      role: "Mounting Bracket",
-      vendor: radio.vendor,
-      msrp: acc.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: qty
-    });
-  }
-
-  const surgeChecked = document.getElementById(`wl-surge-${radio.id}`)?.checked;
-  if (surgeChecked && radio.surgeSku && WIRELESS_ACCESSORY_CATALOG[radio.surgeSku]) {
-    const acc = WIRELESS_ACCESSORY_CATALOG[radio.surgeSku];
-    projectBOM.push({
-      instanceId: `srg-${instanceId}`,
-      parentInstanceId: instanceId,
-      id: acc.sku,
-      model: acc.name,
-      sku: acc.sku,
-      role: "Surge Protection",
-      vendor: radio.vendor,
-      msrp: acc.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: qty
-    });
-  }
-
-  const antSelect = document.getElementById(`wl-ant-${radio.id}`);
-  if (antSelect && WIRELESS_ACCESSORY_CATALOG[antSelect.value]) {
-    const ant = WIRELESS_ACCESSORY_CATALOG[antSelect.value];
-    projectBOM.push({
-      instanceId: `ant-${instanceId}`,
-      parentInstanceId: instanceId,
-      id: ant.sku,
-      model: ant.name,
-      sku: ant.sku,
-      role: "Antenna Assembly",
-      vendor: radio.vendor,
-      msrp: ant.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: qty
-    });
-  }
-
-  const licChecked = document.getElementById(`wl-lic-${radio.id}`)?.checked;
-  if (licChecked && radio.licenseSku && WIRELESS_LICENSE_CATALOG[radio.licenseSku]) {
-    const lic = WIRELESS_LICENSE_CATALOG[radio.licenseSku];
-    projectBOM.push({
-      instanceId: `lic-${instanceId}`,
-      parentInstanceId: instanceId,
-      id: lic.sku,
-      model: lic.name,
-      sku: lic.sku,
-      role: "Feature License",
-      vendor: radio.vendor,
-      msrp: lic.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: qty
-    });
-  }
-
   updateBOMView();
-  showToast(isMatchedPair ? `Added complete 2-radio ${radio.model} link pair to BOM.` : `Added ${radio.model} to BOM.`);
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  showToast(isMatchedPair ? `Added 2-Radio Link Pair (${radio.model}) with split endpoints.` : `Added ${radio.model} to BOM.`);
 }
 
 function changeBomQty(instanceId, delta) {
@@ -533,6 +657,7 @@ function changeBomQty(instanceId, delta) {
   }
 
   updateBOMView();
+  if (typeof runActiveFilter === "function") runActiveFilter();
   if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
@@ -541,6 +666,7 @@ function changeBomQty(instanceId, delta) {
 function removeBomItem(instanceId) {
   projectBOM = projectBOM.filter(i => i.instanceId !== instanceId && i.parentInstanceId !== instanceId);
   updateBOMView();
+  if (typeof runActiveFilter === "function") runActiveFilter();
   if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
@@ -548,16 +674,126 @@ function removeBomItem(instanceId) {
 }
 
 function clearBom() {
+  if (projectBOM.length === 0) return;
+  if (!confirm("Are you sure you want to clear the entire Project BOM?")) return;
   projectBOM = [];
   updateBOMView();
+  if (typeof runActiveFilter === "function") runActiveFilter();
   if (typeof renderRackVisualizer === "function" && !document.getElementById("rackModal")?.classList.contains("hidden")) {
     renderRackVisualizer();
   }
-  showToast("Project BOM cleared.");
+  if (typeof renderTopologyCanvas === "function" && !document.getElementById("topologyModal")?.classList.contains("hidden")) {
+    renderTopologyCanvas();
+  }
+  showToast("Project BOM reset.");
 }
 
 function toggleBomDrawer() {
-  document.getElementById("bomDrawer").classList.toggle("translate-x-full");
+  const drawer = document.getElementById("bomDrawer");
+  if (drawer) drawer.classList.toggle("translate-x-full");
+}
+
+// ==========================================
+// DYNAMIC SWITCH CAPACITY & POE AUDITING
+// ==========================================
+function auditSwitchCapacities() {
+  const switchAudits = {};
+
+  if (!Array.isArray(projectBOM)) return switchAudits;
+
+  projectBOM.filter(i => i && !i.parentInstanceId && (i.role === "Access" || i.role === "Core" || i.role === "Aggregation")).forEach(sw => {
+    let switchPorts = parseInt(sw.ports);
+    if (!switchPorts || isNaN(switchPorts)) {
+      const dbEntry = SWITCH_DATABASE.find(s => s.id === sw.id || s.sku === sw.sku);
+      switchPorts = dbEntry ? dbEntry.ports : 24;
+      sw.ports = switchPorts;
+    }
+
+    let switchPoE = parseInt(sw.poeBudget);
+    if (isNaN(switchPoE)) {
+      const dbEntry = SWITCH_DATABASE.find(s => s.id === sw.id || s.sku === sw.sku);
+      switchPoE = dbEntry ? dbEntry.poeBudget : 0;
+      sw.poeBudget = switchPoE;
+    }
+
+    switchAudits[sw.instanceId] = {
+      instanceId: sw.instanceId,
+      model: sw.model || "Unknown Switch",
+      totalPorts: switchPorts * (sw.qty || 1),
+      usedDownlinkPorts: 0,
+      totalPoEBudget: switchPoE * (sw.qty || 1),
+      consumedPoEWatts: 0,
+      poeStandard: sw.poeStandard || "802.3at",
+      uplinkPortsTotal: (sw.uplinkPortCount || 4) * (sw.qty || 1),
+      uplinkPortsUsed: 0,
+      connectedDevices: [],
+      alerts: []
+    };
+  });
+
+  projectBOM.forEach(item => {
+    if (!item || item.parentInstanceId || !item.uplinkTargetId) return;
+
+    const host = switchAudits[item.uplinkTargetId];
+    if (!host) return;
+
+    const qty = item.qty || 1;
+
+    if (item.role === "Access") {
+      const isDual = item.uplinkMode === "lag_dual" || item.stackedUnits >= 2;
+      const linksUsed = isDual ? 2 : 1;
+
+      host.usedDownlinkPorts += linksUsed;
+      host.connectedDevices.push(`${item.model} (${linksUsed}x ${isDual ? 'LAG Uplinks' : 'Uplink'})`);
+    } else {
+      host.usedDownlinkPorts += qty;
+
+      if (item.powerSource === "poe_switch") {
+        const itemWatts = (item.baseWatts || item.poeWattsDrawn || 15) * qty;
+        host.consumedPoEWatts += Math.ceil(itemWatts * 1.2);
+
+        if (item.poeStandardRequired === "802.3bt-60" && host.poeStandard === "802.3at") {
+          host.alerts.push(`Device "${item.model}" requires 60W bt, but switch only supports 30W at.`);
+        }
+      }
+      host.connectedDevices.push(`${item.model} (${qty}x port)`);
+    }
+  });
+
+  Object.values(switchAudits).forEach(audit => {
+    if (audit.totalPorts > 0 && audit.usedDownlinkPorts > audit.totalPorts) {
+      audit.alerts.push(`Port Exhaustion: ${audit.usedDownlinkPorts}/${audit.totalPorts} ports assigned!`);
+    }
+    if (audit.consumedPoEWatts > audit.totalPoEBudget && audit.totalPoEBudget > 0) {
+      audit.alerts.push(`PoE Overload: ${audit.consumedPoEWatts}W required, budget is ${audit.totalPoEBudget}W!`);
+    }
+  });
+
+  return switchAudits;
+}
+
+function setUplinkTarget(childInstanceId, targetSwitchId) {
+  const child = projectBOM.find(i => i.instanceId === childInstanceId);
+  if (!child) return;
+
+  child.uplinkTargetId = targetSwitchId === "none" ? null : targetSwitchId;
+  updateBOMView();
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  if (typeof renderTopologyCanvas === "function" && !document.getElementById("topologyModal")?.classList.contains("hidden")) {
+    renderTopologyCanvas();
+  }
+}
+
+function setPowerSource(childInstanceId, powerType) {
+  const child = projectBOM.find(i => i.instanceId === childInstanceId);
+  if (!child) return;
+
+  child.powerSource = powerType;
+  updateBOMView();
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  if (typeof renderTopologyCanvas === "function" && !document.getElementById("topologyModal")?.classList.contains("hidden")) {
+    renderTopologyCanvas();
+  }
 }
 
 function updateBOMView() {
@@ -578,13 +814,13 @@ function updateBOMView() {
     totalMSRP += (item.msrp * item.qty);
   });
 
-  const { budgetWithHeadroom, totalCameras } = typeof calculatePoETarget === "function" ? calculatePoETarget() : { budgetWithHeadroom: 0, totalCameras: 0 };
+  const { budgetWithHeadroom, totalCameras, demandCounts } = typeof calculatePoETarget === "function" ? calculatePoETarget() : { budgetWithHeadroom: 0, totalCameras: 0, demandCounts: {} };
   const auditContainer = document.getElementById("bomPoEHeadroomAudit");
   if (auditContainer) {
     if (totalCameras === 0) {
       auditContainer.innerHTML = `
         <div class="flex items-center justify-between text-slate-400">
-          <span>Calculator Demand: <strong class="text-white">0 Cameras</strong></span>
+          <span>Calculator Demand: <strong class="text-white">0 Devices</strong></span>
           <span class="font-mono text-slate-500">No Target Specified</span>
         </div>
       `;
@@ -594,7 +830,7 @@ function updateBOMView() {
       auditContainer.innerHTML = `
         <div class="space-y-1">
           <div class="flex items-center justify-between">
-            <span class="text-slate-400">Camera Target (+20% Headroom):</span>
+            <span class="text-slate-400">Security Demand (${totalCameras} Ports, +${extraHeadroomPercent}%):</span>
             <span class="font-mono font-bold text-white">${budgetWithHeadroom} W</span>
           </div>
           <div class="flex items-center justify-between pt-1 border-t border-slate-800">
@@ -634,7 +870,7 @@ function updateBOMView() {
     const groups = {};
     projectBOM.forEach(item => {
       if (item.parentInstanceId) return;
-      const cName = (item.closetName || "IDF-1").trim();
+      const cName = (item.closetName || "MDF").trim();
       const rName = (item.rackId || "Rack-1").trim();
       const key = `${cName} • ${rName}`;
       if (!groups[key]) groups[key] = [];
@@ -694,22 +930,34 @@ function renderBomSingleItemHtml(item) {
     `;
   }
 
+  const isSwitch = item.role === "Access" || item.role === "Core" || item.role === "Aggregation";
+  const switchAudits = auditSwitchCapacities();
+  const myAudit = switchAudits[item.instanceId];
+  const uplinkParent = item.uplinkTargetId ? projectBOM.find(i => i.instanceId === item.uplinkTargetId) : null;
+  const allLocations = getAllDefinedLocations();
+  const currentLocationKey = `${(item.closetName || 'MDF').trim()} • ${(item.rackId || 'Rack-1').trim()}`;
+  const isDualLag = item.uplinkMode === "lag_dual" || item.stackedUnits >= 2;
+
   return `
     <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm">
-      <div class="flex items-center justify-between gap-2 pb-1.5 border-b border-slate-800/80">
-        <div class="flex items-center gap-1.5">
-          <input type="text" value="${item.closetName || 'IDF-1'}" onchange="updateClosetName('${item.instanceId}', this.value)" class="bg-slate-900 border border-slate-700 text-white text-[11px] font-bold px-2 py-0.5 rounded w-20 focus:outline-none focus:border-brand-500" title="Closet name / ID" />
-          <select onchange="updateRackId('${item.instanceId}', this.value)" class="bg-slate-900 border border-slate-700 text-[10px] text-slate-300 font-mono rounded px-1.5 py-0.5 focus:outline-none focus:border-brand-500">
-            <option value="Rack-1" ${item.rackId === 'Rack-1' ? 'selected' : ''}>Rack 1</option>
-            <option value="Rack-2" ${item.rackId === 'Rack-2' ? 'selected' : ''}>Rack 2</option>
-            <option value="Rack-3" ${item.rackId === 'Rack-3' ? 'selected' : ''}>Rack 3</option>
-            <option value="Wall-Box" ${item.rackId === 'Wall-Box' ? 'selected' : ''}>Wall Box</option>
-            <option value="NEMA-Box" ${item.rackId === 'NEMA-Box' ? 'selected' : ''}>NEMA Box</option>
+      
+      <!-- Location & Rack Fast-Move Header -->
+      <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+        <div class="flex items-center gap-1.5 flex-1 min-w-0">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+          <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[220px] truncate">
+            ${allLocations.map(loc => `
+              <option value="${loc}" ${loc === currentLocationKey ? 'selected' : ''}>${loc}</option>
+            `).join('')}
+            <option value="new_location">+ Create New Location...</option>
           </select>
         </div>
-        <span class="text-[10px] ${item.isDinMounted ? 'text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded' : 'text-slate-500 font-mono'} uppercase">${item.isDinMounted ? 'Pole/DIN' : item.role}</span>
+        <span class="text-[10px] ${item.isDinMounted ? 'text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded' : 'text-slate-500 font-mono'} uppercase shrink-0">
+          ${item.isDinMounted ? 'Field/DIN' : item.role}
+        </span>
       </div>
 
+      <!-- Device Info & Quantity Controls -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex-1 min-w-0">
           <span class="text-xs font-bold text-white truncate block">${item.model}</span>
@@ -724,6 +972,55 @@ function renderBomSingleItemHtml(item) {
           </div>
           <button onclick="removeBomItem('${item.instanceId}')" class="text-slate-500 hover:text-rose-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
         </div>
+      </div>
+
+      <!-- Real-Time Switch Port & PoE Capacity Audit Display -->
+      ${isSwitch && myAudit ? `
+        <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-slate-400 font-medium">Downlink Port Utilization:</span>
+            <span class="font-mono font-bold ${myAudit.usedDownlinkPorts > myAudit.totalPorts ? 'text-rose-400' : 'text-slate-200'}">
+              ${myAudit.usedDownlinkPorts} /${myAudit.totalPorts} Ports
+            </span>
+          </div>
+          ${myAudit.totalPoEBudget > 0 ? `
+            <div class="flex items-center justify-between text-[11px]">
+              <span class="text-slate-400 font-medium">PoE Consumption (+20% Headroom):</span>
+              <span class="font-mono font-bold ${myAudit.consumedPoEWatts > myAudit.totalPoEBudget ? 'text-rose-400' : 'text-amber-400'}">
+                ${myAudit.consumedPoEWatts} W / ${myAudit.totalPoEBudget} W
+              </span>
+            </div>
+          ` : ''}
+          ${myAudit.alerts.map(al => `
+            <div class="text-[10px] text-rose-400 bg-rose-950/30 border border-rose-800/40 p-1 rounded font-medium flex items-center gap-1">
+              <i data-lucide="alert-triangle" class="w-3 h-3 shrink-0"></i>
+              <span>${al}</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : ''}
+
+      <!-- Clean Upstream & Topology Routing Tag -->
+      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-1.5 text-slate-400">
+          <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span class="text-[10px]">Uplink:</span>
+          <span class="font-bold text-slate-200 text-[11px] truncate max-w-[150px]">
+            ${uplinkParent ? `${uplinkParent.model} (${uplinkParent.closetName || 'Closet'})` : 'Standalone / Core'}
+          </span>
+          ${isDualLag && uplinkParent ? `
+            <span class="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-1 py-0.2 rounded font-mono font-bold">2x LAG</span>
+          ` : ''}
+        </div>
+        ${item.powerSource === 'poe_switch' ? `
+          <span class="text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold">
+            PoE (${item.baseWatts || item.poeWattsDrawn || 15}W)
+          </span>
+        ` : item.powerSource === 'local_injector' ? `
+          <span class="text-[9px] bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded font-mono">
+            Injector
+          </span>
+        ` : ''}
       </div>
 
       ${item.canStack ? `
@@ -861,7 +1158,7 @@ function renderLicenseManagerContent() {
 
           const activeProfile = vendorProfiles[activeKey];
           const deviceSupportedTerms = (activeProfile && activeProfile.terms) ? Object.keys(activeProfile.terms).filter(t => t !== "PERP") : [];
-          const locationLabel = (dev.closetName || 'General') + ' / ' + (dev.rackId || 'Rack-1');
+          const locationLabel = (dev.closetName || 'General') + ' • ' + (dev.rackId || 'Rack-1');
 
           return `
             <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
@@ -991,8 +1288,9 @@ function copyBomSummary() {
   let totalMSRP = 0;
   projectBOM.forEach(i => {
     totalMSRP += (i.msrp * i.qty);
-    const loc = i.closetName ? `[${i.closetName} / ${i.rackId || 'Rack-1'}] ` : '';
-    txt += `${loc}[${i.qty}x] ${i.vendor} ${i.model} (SKU: ${i.sku}) - $${(i.msrp * i.qty).toLocaleString()}\n`;
+    const loc = i.closetName ? `[${i.closetName} • ${i.rackId || 'Rack-1'}] ` : '';
+    const lagStr = i.uplinkMode === 'lag_dual' ? ' (2x LAG Uplink)' : '';
+    txt += `${loc}[${i.qty}x] ${i.vendor} ${i.model}${lagStr} (SKU: ${i.sku}) - $${(i.msrp * i.qty).toLocaleString()}\n`;
   });
   txt += `\nTotal Estimated Hardware MSRP: $${totalMSRP.toLocaleString()}\n`;
   navigator.clipboard.writeText(txt).then(() => showToast("BOM copied to clipboard!"));
@@ -1008,10 +1306,10 @@ function exportBomCSV() {
     return;
   }
 
-  let csv = "Location,Rack,Role,Vendor,Model,SKU,Quantity,Unit MSRP,Total MSRP,PoE Budget,Power Watts\n";
+  let csv = "Location,Rack,Role,Vendor,Model,SKU,Quantity,Uplink Mode,Unit MSRP,Total MSRP,PoE Budget,Power Watts\n";
   projectBOM.forEach(i => {
     const totalW = ((i.poeBudget || 0) + (i.baseWatts || 0)) * i.qty;
-    csv += `"${i.closetName || 'General'}","${i.rackId || 'General'}","${i.role || 'Accessory'}","${i.vendor}","${i.model}","${i.sku}",${i.qty},${i.msrp},${i.msrp * i.qty},${i.poeBudget || 0},${totalW}\n`;
+    csv += `"${i.closetName || 'General'}","${i.rackId || 'General'}","${i.role || 'Accessory'}","${i.vendor}","${i.model}","${i.sku}",${i.qty},"${i.uplinkMode || 'single'}",${i.msrp},${i.msrp * i.qty},${i.poeBudget || 0},${totalW}\n`;
   });
   const link = document.createElement("a");
   link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
