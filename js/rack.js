@@ -1,8 +1,10 @@
 // ==========================================
 // RACK ELEVATION, POWER & THERMAL ENGINE
+// (With Native HTML5 Drag-and-Drop Support)
 // ==========================================
 
 let currentRackHeight = 24;
+let draggedRackItemData = null; // { instanceId: string, fromU: number | null }
 
 function toggleRackModal() {
   const modal = document.getElementById("rackModal");
@@ -184,6 +186,184 @@ function nudgeSlot(instanceId, currentU, direction) {
   renderRackVisualizer();
 }
 
+// ==========================================
+// HTML5 DRAG & DROP HANDLERS
+// ==========================================
+
+function handleRackDragStart(e, instanceId, fromU = null) {
+  draggedRackItemData = { instanceId, fromU };
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", instanceId);
+  e.currentTarget.classList.add("dragging-gear");
+}
+
+function handleRackDragEnd(e) {
+  e.currentTarget.classList.remove("dragging-gear");
+  document.querySelectorAll(".rack-slot-hover").forEach(el => el.classList.remove("rack-slot-hover"));
+  draggedRackItemData = null;
+}
+
+function handleRackDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const slotEl = e.currentTarget;
+  if (!slotEl.classList.contains("rack-slot-hover")) {
+    slotEl.classList.add("rack-slot-hover");
+  }
+}
+
+function handleRackDragLeave(e) {
+  e.currentTarget.classList.remove("rack-slot-hover");
+}
+
+function handleRackDrop(e, targetU) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("rack-slot-hover");
+
+  if (!draggedRackItemData) return;
+  const { instanceId, fromU } = draggedRackItemData;
+  const draggedItem = projectBOM.find(i => i.instanceId === instanceId);
+  if (!draggedItem) return;
+
+  if (!draggedItem.assignedSlots) draggedItem.assignedSlots = [];
+
+  const closetEl = document.getElementById("rackClosetSelector");
+  const rackEl = document.getElementById("rackIdSelector");
+  const selectedCloset = closetEl && closetEl.value ? closetEl.value : "IDF-1";
+  const selectedRack = rackEl && rackEl.value ? rackEl.value : "Rack-1";
+
+  // If dragged onto its own current position, no-op
+  if (fromU === targetU) {
+    draggedRackItemData = null;
+    return;
+  }
+
+  // Find all equipment currently mounted in this rack (excluding the active slot of the dragged item)
+  const rackable = projectBOM.filter(i => 
+    !i.parentInstanceId &&
+    !i.isDinMounted &&
+    (i.closetName || "IDF-1") === selectedCloset &&
+    (i.rackId || "Rack-1") === selectedRack
+  );
+
+  // Map each occupied U to its item: { [u]: item }
+  const occupiedMap = {};
+  rackable.forEach(item => {
+    (item.assignedSlots || []).forEach(slotU => {
+      // Ignore the slot we are currently moving away from
+      if (!(item.instanceId === instanceId && slotU === fromU)) {
+        occupiedMap[slotU] = item;
+      }
+    });
+  });
+
+  // Check if target slot is occupied by another unit
+  if (occupiedMap[targetU]) {
+    // Determine bump direction: 'up' or 'down'
+    let bumpDirection = null;
+
+    if (targetU === currentRackHeight) {
+      // Top of rack: must bump down
+      bumpDirection = "down";
+    } else if (targetU === 1) {
+      // Bottom of rack: must bump up
+      bumpDirection = "up";
+    } else {
+      // Middle of rack: check nearest open clearance
+      let freeSlotUp = null;
+      for (let u = targetU + 1; u <= currentRackHeight; u++) {
+        if (!occupiedMap[u]) { freeSlotUp = u; break; }
+      }
+
+      let freeSlotDown = null;
+      for (let u = targetU - 1; u >= 1; u--) {
+        if (!occupiedMap[u]) { freeSlotDown = u; break; }
+      }
+
+      if (freeSlotDown !== null && freeSlotUp !== null) {
+        // Prefer bumping towards whichever free slot is closest
+        bumpDirection = (freeSlotDown - targetU >= targetU - freeSlotUp) ? "down" : "up";
+      } else if (freeSlotDown !== null) {
+        bumpDirection = "down";
+      } else if (freeSlotUp !== null) {
+        bumpDirection = "up";
+      } else {
+        showToast("Cabinet is completely full! Cannot bump equipment.");
+        draggedRackItemData = null;
+        return;
+      }
+    }
+
+    // Execute cascade shift for all contiguous items in the chosen direction
+    if (bumpDirection === "up") {
+      // Verify we have room above
+      let hasRoomAbove = false;
+      for (let u = targetU; u <= currentRackHeight; u++) {
+        if (!occupiedMap[u]) { hasRoomAbove = true; break; }
+      }
+      if (!hasRoomAbove) {
+        // Fall back to shifting down if top is capped
+        bumpDirection = "down";
+      }
+    }
+
+    if (bumpDirection === "down") {
+      let hasRoomBelow = false;
+      for (let u = targetU; u >= 1; u--) {
+        if (!occupiedMap[u]) { hasRoomBelow = true; break; }
+      }
+      if (!hasRoomBelow) {
+        showToast("No clearance to bump equipment in this direction.");
+        draggedRackItemData = null;
+        return;
+      }
+    }
+
+    // Shift contiguous blocks
+    if (bumpDirection === "up") {
+      // Shift from top down to targetU
+      for (let u = currentRackHeight - 1; u >= targetU; u--) {
+        const itemToShift = occupiedMap[u];
+        if (itemToShift) {
+          const sIdx = itemToShift.assignedSlots.indexOf(u);
+          if (sIdx > -1) {
+            itemToShift.assignedSlots[sIdx] = u + 1;
+            occupiedMap[u + 1] = itemToShift;
+            delete occupiedMap[u];
+          }
+        }
+      }
+    } else {
+      // Shift from bottom up to targetU
+      for (let u = 2; u <= targetU; u++) {
+        const itemToShift = occupiedMap[u];
+        if (itemToShift) {
+          const sIdx = itemToShift.assignedSlots.indexOf(u);
+          if (sIdx > -1) {
+            itemToShift.assignedSlots[sIdx] = u - 1;
+            occupiedMap[u - 1] = itemToShift;
+            delete occupiedMap[u];
+          }
+        }
+      }
+    }
+  }
+
+  // Now place the dragged item into the vacated target slot
+  if (fromU !== null) {
+    const fromIdx = draggedItem.assignedSlots.indexOf(fromU);
+    if (fromIdx > -1) {
+      draggedItem.assignedSlots[fromIdx] = targetU;
+    }
+  } else {
+    draggedItem.assignedSlots.push(targetU);
+  }
+
+  showToast(`Placed ${draggedItem.model} at U${targetU}.`);
+  draggedRackItemData = null;
+  renderRackVisualizer();
+}
+
 function renderRackVisualizer() {
   const closetEl = document.getElementById("rackClosetSelector");
   const rackEl = document.getElementById("rackIdSelector");
@@ -273,7 +453,14 @@ function renderRackVisualizer() {
       else if (item.vendor === "Ruckus") borderTone = "border-amber-500/70";
 
       railsHtml += `
-        <div class="h-10 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-2 ${borderTone} rounded-lg flex items-center justify-between px-3 text-xs shadow-md relative group">
+        <div 
+          draggable="true"
+          ondragstart="handleRackDragStart(event, '${item.instanceId}', ${u})"
+          ondragend="handleRackDragEnd(event)"
+          ondragover="handleRackDragOver(event)"
+          ondragleave="handleRackDragLeave(event)"
+          ondrop="handleRackDrop(event, ${u})"
+          class="h-10 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border-2 ${borderTone} rounded-lg flex items-center justify-between px-3 text-xs shadow-md relative group cursor-grab active:cursor-grabbing transition-all">
           <div class="flex items-center gap-2.5 min-w-0">
             <span class="w-7 font-bold text-slate-400 font-mono text-[11px] bg-slate-950 px-1 py-0.5 rounded border border-slate-800 text-center">U${u}</span>
             <div class="truncate">
@@ -295,7 +482,11 @@ function renderRackVisualizer() {
       `;
     } else {
       railsHtml += `
-        <div class="h-8 border border-dashed border-slate-800/90 rounded-md flex items-center justify-between px-3 text-[11px] text-slate-600 hover:border-slate-700 hover:bg-slate-900/30 transition-colors">
+        <div 
+          ondragover="handleRackDragOver(event)"
+          ondragleave="handleRackDragLeave(event)"
+          ondrop="handleRackDrop(event, ${u})"
+          class="h-8 border border-dashed border-slate-800/90 rounded-md flex items-center justify-between px-3 text-[11px] text-slate-600 hover:border-slate-700 hover:bg-slate-900/30 transition-colors">
           <span class="w-7 font-mono text-slate-700 text-center">U${u}</span>
           <span class="text-[10px] text-slate-700 font-mono tracking-widest uppercase select-none">— Open Rack Unit —</span>
           <span></span>
@@ -306,6 +497,7 @@ function renderRackVisualizer() {
 
   railsContainer.innerHTML = railsHtml;
 
+  // Unmounted items list (Draggable)
   const unmountedItems = [];
   rackEquipment.forEach(item => {
     const assignedCount = item.assignedSlots ? item.assignedSlots.length : 0;
@@ -323,10 +515,17 @@ function renderRackVisualizer() {
       </div>`;
   } else {
     unmountedContainer.innerHTML = unmountedItems.map(({ item, unmountedCount }) => `
-      <div class="p-2.5 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-between gap-2 shadow-sm">
+      <div 
+        draggable="true"
+        ondragstart="handleRackDragStart(event, '${item.instanceId}', null)"
+        ondragend="handleRackDragEnd(event)"
+        class="p-2.5 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl flex items-center justify-between gap-2 shadow-sm cursor-grab active:cursor-grabbing transition-all">
         <div class="min-w-0">
-          <span class="font-bold text-xs text-white truncate block">${item.model}</span>
-          <div class="text-[10px] font-mono text-slate-400">${unmountedCount}x unmounted (${item.role})</div>
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-500"></i>
+            <span class="font-bold text-xs text-white truncate block">${item.model}</span>
+          </div>
+          <div class="text-[10px] font-mono text-slate-400 pl-5">${unmountedCount}x of ${item.qty}x unmounted</div>
         </div>
         <button onclick="mountToHighestSlot('${item.instanceId}')" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow shrink-0">
           Mount
@@ -335,6 +534,7 @@ function renderRackVisualizer() {
     `).join("");
   }
 
+  // DIN shelf
   if (dinEquipment.length === 0) {
     dinContainer.innerHTML = `
       <div class="p-4 bg-slate-900/50 border border-slate-800/80 rounded-xl text-center text-slate-500 text-xs">
@@ -362,7 +562,8 @@ function renderRackVisualizer() {
   if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
-  if (typeof queueAutoSave === 'function') queueAutoSave();
+
+  if (typeof queueAutoSave === "function") queueAutoSave();
 }
 
 function printRackElevation() {
