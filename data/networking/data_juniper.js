@@ -3,7 +3,7 @@
 // Fully Calibrated Against Official Juniper Networks Documentation
 // =========================================================================
 
-SWITCH_DATABASE.push(
+const JUNIPER_SWITCHES = [
   // ==========================================
   // 1. QFX5120 & EX4650 (SPINE, CORE & AGGREGATION)
   // ==========================================
@@ -805,4 +805,4 @@ SWITCH_DATABASE.push(
       "Compact 5.3\" depth fits shallow exterior enclosures"
     ]
   }
-);
+];

@@ -673,20 +673,27 @@ function toggleBomDrawer() {
 // Real-Time Capacity & PoE Auditing
 // -----------------------------------------------------------
 function auditSwitchCapacities() {
+  if (typeof NetworkSizer !== "undefined" && typeof NetworkSizer.auditBOMCapacities === "function") {
+    return NetworkSizer.auditBOMCapacities(projectBOM, {
+      extraHeadroomPercent: typeof extraHeadroomPercent !== "undefined" ? extraHeadroomPercent : 20
+    });
+  }
+
+  // Graceful fallback
   const switchAudits = {};
   if (!Array.isArray(projectBOM)) return switchAudits;
 
   projectBOM.filter(i => i && !i.parentInstanceId && (i.role === "Access" || i.role === "Core" || i.role === "Aggregation")).forEach(sw => {
-    let switchPorts = parseInt(sw.ports);
+    let switchPorts = parseInt(sw.ports, 10);
     if (!switchPorts || isNaN(switchPorts)) {
-      const dbEntry = SWITCH_DATABASE.find(s => s.id === sw.id || s.sku === sw.sku);
+      const dbEntry = typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE.find(s => s.id === sw.id || s.sku === sw.sku) : null;
       switchPorts = dbEntry ? dbEntry.ports : 24;
       sw.ports = switchPorts;
     }
 
-    let switchPoE = parseInt(sw.poeBudget);
+    let switchPoE = parseInt(sw.poeBudget, 10);
     if (isNaN(switchPoE)) {
-      const dbEntry = SWITCH_DATABASE.find(s => s.id === sw.id || s.sku === sw.sku);
+      const dbEntry = typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE.find(s => s.id === sw.id || s.sku === sw.sku) : null;
       switchPoE = dbEntry ? dbEntry.poeBudget : 0;
       sw.poeBudget = switchPoE;
     }
@@ -706,6 +713,8 @@ function auditSwitchCapacities() {
     };
   });
 
+  const factor = 1 + ((typeof extraHeadroomPercent !== "undefined" ? extraHeadroomPercent : 20) / 100);
+
   projectBOM.forEach(item => {
     if (!item || item.parentInstanceId || !item.uplinkTargetId) return;
 
@@ -723,9 +732,9 @@ function auditSwitchCapacities() {
     } else {
       host.usedDownlinkPorts += qty;
 
-      if (item.powerSource === "poe_switch") {
-        const itemWatts = (item.baseWatts || item.poeWattsDrawn || 15) * qty;
-        host.consumedPoEWatts += Math.ceil(itemWatts * 1.2);
+      if (item.powerSource === "poe_switch" || (!item.powerSource && (item.poeStandard || item.poeWattsDrawn))) {
+        const itemWatts = (item.powerConsumptionWatts || item.maxPowerWatts || item.powerWatts || item.baseWatts || item.poeWattsDrawn || 15) * qty;
+        host.consumedPoEWatts += Math.ceil(itemWatts * factor);
 
         if (item.poeStandardRequired === "802.3bt-60" && host.poeStandard === "802.3at") {
           host.alerts.push(`Device "${item.model}" requires 60W bt, but switch only supports 30W at.`);
@@ -784,23 +793,39 @@ function updateBOMView() {
     totalMSRP += (item.msrp * item.qty);
   });
 
-  const { budgetWithHeadroom, totalCameras } = typeof calculatePoETarget === "function" ? calculatePoETarget() : { budgetWithHeadroom: 0, totalCameras: 0 };
+  const targetPoE = typeof calculatePoETarget === "function" ? calculatePoETarget() : { budgetWithHeadroom: 0, totalCameras: 0 };
+  const budgetWithHeadroom = targetPoE.budgetWithHeadroom || 0;
+  const totalCameras = targetPoE.totalCameras || 0;
+
+  // Tally active connected devices power from switch audits
+  let activeConnectedPoE = 0;
+  let activeConnectedPorts = 0;
+  if (typeof auditSwitchCapacities === "function") {
+    const audits = auditSwitchCapacities();
+    Object.values(audits).forEach(a => {
+      activeConnectedPoE += (a.consumedPoEWatts || 0);
+      activeConnectedPorts += (a.usedDownlinkPorts || 0);
+    });
+  }
+
   const auditContainer = document.getElementById("bomPoEHeadroomAudit");
   if (auditContainer) {
-    if (totalCameras === 0) {
+    if (totalCameras === 0 && activeConnectedPoE === 0) {
       auditContainer.innerHTML = `
         <div class="flex items-center justify-between text-slate-400">
           <span>Calculator Demand: <strong class="text-white">0 Devices</strong></span>
-          <span class="font-mono text-slate-500">No Target Specified</span>
+          <span class="font-mono text-slate-500 text-[11px]">No Target Specified</span>
         </div>
       `;
-    } else {
+    } else if (totalCameras > 0) {
       const delta = totalPoE - budgetWithHeadroom;
       const isSurplus = delta >= 0;
+      const pctCoverage = Math.round((totalPoE / (budgetWithHeadroom || 1)) * 100);
+
       auditContainer.innerHTML = `
-        <div class="space-y-1">
+        <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <span class="text-slate-400">Security Demand (${totalCameras} Ports, +${extraHeadroomPercent}%):</span>
+            <span class="text-slate-400">Calculator Target (${totalCameras} Ports, +${extraHeadroomPercent}%):</span>
             <span class="font-mono font-bold text-white">${budgetWithHeadroom} W</span>
           </div>
           <div class="flex items-center justify-between pt-1 border-t border-slate-800">
@@ -809,11 +834,44 @@ function updateBOMView() {
               ${isSurplus ? 'PoE Capacity Surplus' : 'PoE Deficit Alert'}:
             </span>
             <span class="font-mono font-bold ${isSurplus ? 'text-emerald-300' : 'text-rose-400'}">
-              ${isSurplus ? '+' : ''}${delta} W (${Math.round((totalPoE / (budgetWithHeadroom || 1)) * 100)}% coverage)
+              ${isSurplus ? '+' : ''}${delta} W (${pctCoverage}% coverage)
+            </span>
+          </div>
+          ${activeConnectedPoE > 0 ? `
+            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-0.5 border-t border-slate-900">
+              <span>BOM Device Draw (${activeConnectedPorts} Ports):</span>
+              <span class="font-mono font-bold text-sky-400">${activeConnectedPoE} W (${Math.round((activeConnectedPoE / (totalPoE || 1)) * 100)}% utilized)</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    } else {
+      // totalCameras === 0 but devices are connected in BOM
+      const pctUtil = Math.round((activeConnectedPoE / (totalPoE || 1)) * 100);
+      const isOver = activeConnectedPoE > totalPoE;
+      auditContainer.innerHTML = `
+        <div class="space-y-1">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400">Connected Edge Devices (${activeConnectedPorts} Ports):</span>
+            <span class="font-mono font-bold text-sky-400">${activeConnectedPoE} W</span>
+          </div>
+          <div class="flex items-center justify-between pt-1 border-t border-slate-800">
+            <span class="${isOver ? 'text-rose-400' : 'text-emerald-400'} font-bold flex items-center gap-1 text-[11px]">
+              <i data-lucide="${isOver ? 'alert-octagon' : 'check-circle-2'}" class="w-3.5 h-3.5"></i>
+              ${isOver ? 'PoE Capacity Exceeded' : 'Active Quoted PoE Headroom'}:
+            </span>
+            <span class="font-mono font-bold ${isOver ? 'text-rose-400' : 'text-emerald-300'}">
+              ${totalPoE - activeConnectedPoE} W Free (${pctUtil}% loaded)
             </span>
           </div>
         </div>
       `;
+    }
+
+    if (typeof safeCreateIcons === "function") {
+      safeCreateIcons(auditContainer);
+    } else if (window.lucide) {
+      lucide.createIcons();
     }
   }
 

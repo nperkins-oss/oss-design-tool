@@ -98,30 +98,29 @@
     }
   </style>
 
-  <!-- Master Global Containers -->
-  <script>
-    const SWITCH_DATABASE = [];
-    const FIREWALL_DATABASE = [];
-    const OPTICS_LIST = [];
-    const OPTICS_CATALOG = {};
-    const MODULAR_UPLINK_CATALOG = {};
-    const FEATURE_LICENSE_CATALOG = {};
-    const MGMT_SUBSCRIPTION_CATALOG = {};
-    const POWER_SUPPLY_CATALOG = {};
-  </script>
+  <!-- ========================================== -->
+  <!-- DATA CATALOGS (DOMAINS)                    -->
+  <!-- ========================================== -->
+  <!-- Networking Domain -->
+  <script src="data/networking/data_unifi.js"></script>
+  <script src="data/networking/data_ruckus.js"></script>
+  <script src="data/networking/data_meraki.js"></script>
+  <script src="data/networking/data_juniper.js"></script>
+  <script src="data/networking/data_amg.js"></script>
+  <script src="data/networking/data_allied.js"></script>
+  <script src="data/networking/data_firewalls.js"></script>
+  <script src="data/networking/data_wireless.js"></script>
+  <script src="data/networking/data_interconnects.js"></script>
 
-  <!-- Modular Datasets -->
-  <script src="data/data_unifi.js"></script>
-  <script src="data/data_ruckus.js"></script>
-  <script src="data/data_meraki.js"></script>
-  <script src="data/data_juniper.js"></script>
-  <script src="data/data_amg.js"></script>
-  <script src="data/data_allied.js"></script>
-  <script src="data/data_firewalls.js"></script>
-  <script src="data/data_interconnects.js"></script>
-  <script src="data/data_wireless.js"></script>
-  <script src="data/data_accessories.js"></script>
-  <script src="data/data_cabling.js"></script>
+  <!-- Infrastructure Domain -->
+  <script src="data/infrastructure/data_accessories.js"></script>
+  <script src="data/infrastructure/data_cabling.js"></script>
+
+  <!-- Central Domain Catalog Registry -->
+  <script src="data/registry.js"></script>
+  <script>
+    CatalogRegistry.init();
+  </script>
 </head>
 
 <body class="h-full flex flex-col overflow-hidden">
@@ -138,7 +137,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-sm font-bold text-white tracking-tight">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.5.0-alpha</span>
+            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.1-alpha</span>
           </div>
           <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1.5">
             <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">Default Project</span>
@@ -147,32 +146,9 @@
         </div>
       </div>
 
-      <!-- Mode Navigation Buttons -->
-      <div class="hidden md:flex items-center gap-1.5 bg-slate-950 p-1 rounded-2xl border border-slate-800">
-        <button onclick="switchMode('access')" id="nav-access" class="top-nav-btn active px-3.5 py-2 rounded-xl text-xs font-bold border border-transparent text-slate-300 hover:text-white flex items-center gap-2 transition-all">
-          <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
-          <span>Access & Edge</span>
-        </button>
-        <button onclick="switchMode('backbone')" id="nav-backbone" class="top-nav-btn px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
-          <i data-lucide="cpu" class="w-4 h-4 text-purple-400"></i>
-          <span>Core & Agg</span>
-        </button>
-        <button onclick="switchMode('firewalls')" id="nav-firewalls" class="top-nav-btn px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
-          <i data-lucide="shield" class="w-4 h-4 text-rose-400"></i>
-          <span>Gateways & WAN</span>
-        </button>
-        <button onclick="switchMode('optics')" id="nav-optics" class="top-nav-btn px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
-          <i data-lucide="cable" class="w-4 h-4 text-sky-400"></i>
-          <span>Optics & DACs</span>
-        </button>
-        <button onclick="switchMode('wireless')" id="nav-wireless" class="top-nav-btn px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
-          <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
-          <span>Wireless PtP</span>
-        </button>
-        <button onclick="switchMode('accessories')" id="nav-accessories" class="top-nav-btn px-3.5 py-2 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:text-white flex items-center gap-2 transition-all">
-          <i data-lucide="wrench" class="w-4 h-4 text-amber-400"></i>
-          <span>Accessories</span>
-        </button>
+      <!-- Top Domain Navigation Tabs -->
+      <div id="domainNavigationContainer" class="hidden md:flex items-center gap-1 bg-slate-950 p-1 rounded-2xl border border-slate-800">
+        <!-- Injected dynamically by buildDomainNavigation() in js/core/app.js -->
       </div>
 
       <!-- Action Tools: Topology, Rack, Cable Paths, Compare, BOM -->
@@ -224,6 +200,11 @@
     <!-- Center Product Catalog & Sizing Area -->
     <main class="flex-1 flex flex-col overflow-hidden bg-slate-950">
       
+      <!-- Sub-Mode Category Bar -->
+      <div class="px-4 sm:px-6 py-2.5 bg-slate-900/60 border-b border-slate-800/80 flex items-center justify-between gap-3 shrink-0 overflow-x-auto">
+        <div id="subModeNavigationContainer" class="flex items-center gap-1.5"></div>
+      </div>
+
       <!-- Top Calculator Strip (Multi-Port Demand & Headroom) -->
       <div id="calculatorStripContainer" class="p-4 sm:px-6 border-b border-slate-800 shrink-0"></div>
 
@@ -471,25 +452,36 @@
         <!-- Right Rack Analytics & Field Devices Column -->
         <div class="w-full lg:w-96 space-y-4">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> Cabinet Electrical Load
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+              <span class="flex items-center gap-1.5 text-amber-400">
+                <i data-lucide="zap" class="w-4 h-4"></i> Cabinet Electrical Load
+              </span>
+              <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC / IEEE 802.3</span>
             </h3>
             <div class="space-y-2 text-xs">
               <div class="flex justify-between text-slate-400">
-                <span>Maximum PoE Draw:</span>
+                <span>Chassis Base Power:</span>
+                <span id="rackTotalBaseWatts" class="font-mono text-white font-semibold">0 W</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Max PoE Capacity:</span>
                 <span id="rackTotalPoE" class="font-mono text-white font-semibold">0 W</span>
               </div>
               <div class="flex justify-between text-slate-400">
-                <span>Chassis Base Thermal Load:</span>
-                <span id="rackTotalBaseWatts" class="font-mono text-white font-semibold">0 W</span>
+                <span>Operating Design Load:</span>
+                <span id="rackOperatingWatts" class="font-mono text-sky-400 font-semibold">0 W (0.0 A)</span>
               </div>
               <div class="flex justify-between text-slate-300 font-bold pt-2 border-t border-slate-800">
-                <span>Worst-Case Load:</span>
-                <span id="rackTotalWorstCase" class="font-mono text-amber-400">0 W</span>
+                <span>Worst-Case Nameplate:</span>
+                <span id="rackTotalWorstCase" class="font-mono text-amber-400">0 W (0.0 A)</span>
               </div>
               <div class="flex justify-between text-slate-400 text-[11px]">
                 <span>BTU Heat Output:</span>
-                <span id="rackTotalBTU" class="font-mono text-slate-300">0 BTU/hr</span>
+                <span id="rackTotalBTU" class="font-mono text-slate-300">0 BTU/hr (0 Tons)</span>
+              </div>
+              <div class="pt-2 border-t border-slate-800/80">
+                <span class="text-[10px] text-slate-500 uppercase font-mono block mb-0.5">Required Branch Circuit:</span>
+                <span id="rackCircuitSpec" class="font-mono text-emerald-400 text-[11px] font-bold block">120V 15A Dedicated Circuit (NEMA 5-15R)</span>
               </div>
             </div>
           </div>
@@ -759,39 +751,29 @@
     <span id="toastMessage">Action completed.</span>
   </div>
 
-  <!-- Application Modules -->
-  <script src="js/facility.js"></script>
-  <script src="js/bom.js"></script>
-  <script src="js/rack.js"></script>
-  <script src="js/topology.js"></script>
-  <script src="js/physical_layout.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Core Data Stores & Persistence -->
+  <script src="js/core/storage.js"></script>
+  <script src="js/core/facility.js"></script>
+
+  <!-- Sizing & Filtering Engines -->
+  <script src="js/engines/sizer_network.js"></script>
+  <script src="js/engines/search_filter.js"></script>
+
+  <!-- Presentation Renderers -->
+  <script src="js/renderers/render_compare.js"></script>
+  <script src="js/renderers/render_cards.js"></script>
+  <script src="js/renderers/render_sidebar.js"></script>
+
+  <!-- Interactive Canvas Tools -->
+  <script src="js/tools/topology.js"></script>
+  <script src="js/tools/physical_layout.js"></script>
+  <script src="js/tools/rack.js"></script>
+  <script src="js/tools/bom.js"></script>
+
+  <!-- Master Application Orchestrator -->
+  <script src="js/core/app.js"></script>
   
   <script>
-    // Universal Master ESC Listener (Closes the active modal or drawer)
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        const modals = [
-          { id: "cableLayoutModal", closeFn: () => toggleCableLayoutModal() },
-          { id: "topologyModal", closeFn: () => toggleTopologyModal() },
-          { id: "rackModal", closeFn: () => toggleRackModal() },
-          { id: "compareModal", closeFn: () => toggleCompareModal() },
-          { id: "projectModal", closeFn: () => toggleProjectModal() },
-          { id: "licenseModal", closeFn: () => toggleLicenseModal() },
-          { id: "bomDrawer", closeFn: () => toggleBomDrawer() }
-        ];
-
-        for (const m of modals) {
-          const el = document.getElementById(m.id);
-          // Checks if modal is open (either not hidden or not translated off-screen)
-          if (el && !el.classList.contains("hidden") && !el.classList.contains("translate-x-full")) {
-            m.closeFn();
-            break;
-          }
-        }
-      }
-    });
-
     // Notify physical canvas when switching projects so blueprints reload
     const originalSwitchProject = window.switchActiveProject;
     if (typeof originalSwitchProject === "function") {

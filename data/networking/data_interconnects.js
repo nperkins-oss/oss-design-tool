@@ -5,7 +5,7 @@
 // ==========================================
 // 1. MODULAR UPLINK EXPANSION SLEDS
 // ==========================================
-Object.assign(MODULAR_UPLINK_CATALOG, {
+const MODULAR_UPLINK_CATALOG = {
   // Cisco Catalyst Modular Sleds
   "C9300-NM-8X": { sku: "C9300-NM-8X", name: "Cisco 8x 10G SFP+ Network Module", speed: "10G", ports: 8, msrp: 2400 },
   "C9300-NM-2Q": { sku: "C9300-NM-2Q", name: "Cisco 2x 40G QSFP+ Network Module", speed: "40G", ports: 2, msrp: 3000 },
@@ -20,12 +20,12 @@ Object.assign(MODULAR_UPLINK_CATALOG, {
   // Ruckus ICX 7650 Expansion Modules
   "ICX-4X10GF": { sku: "ICX-4X10GF", name: "Ruckus 4x 10G SFP+ Uplink Module", speed: "10G", ports: 4, msrp: 1100 },
   "ICX-2X100Q": { sku: "ICX-2X100Q", name: "Ruckus 2x 100G QSFP28 Uplink Module", speed: "100G", ports: 2, msrp: 3200 }
-});
+};
 
 // ==========================================
 // 2. HARDWARE FEATURE & PERPETUAL LICENSES
 // ==========================================
-Object.assign(FEATURE_LICENSE_CATALOG, {
+const FEATURE_LICENSE_CATALOG = {
   // Ruckus ICX FastIron Feature Licenses
   "ICX7850-PREM-LIC": { sku: "ICX7850-PREM-LIC", name: "Ruckus ICX 7850 Layer 3 Premium License (BGP, VRF-Lite)", msrp: 4500, category: "switch_feature" },
   "ICX7650-PREM-LIC": { sku: "ICX7650-PREM-LIC", name: "Ruckus ICX 7650 Advanced L3 License (OSPF, BGP, VRF, PIM)", msrp: 2800, category: "switch_feature" },
@@ -51,12 +51,12 @@ Object.assign(FEATURE_LICENSE_CATALOG, {
   "LIC-MX105-SEC-1YR": { sku: "LIC-MX105-SEC-1YR", name: "Meraki MX105 Advanced Security License (1-Year)", msrp: 4250, category: "firewall_utm" },
   "AT-FL-AR4-UTM-1YR": { sku: "AT-FL-AR4-UTM-1YR", name: "Allied Telesis AR4050S UTM Threat Protection (1-Year)", msrp: 650, category: "firewall_utm" },
   "AT-FL-AR3-UTM-1YR": { sku: "AT-FL-AR3-UTM-1YR", name: "Allied Telesis AR3050S UTM Threat Protection (1-Year)", msrp: 480, category: "firewall_utm" }
-});
+};
 
 // ==========================================
 // 3. MANAGEMENT SUBSCRIPTIONS (MULTI-YEAR TERMS)
 // ==========================================
-Object.assign(MGMT_SUBSCRIPTION_CATALOG, {
+const MGMT_SUBSCRIPTION_CATALOG = {
   "Meraki": {
     "cloud": {
       name: "Meraki Dashboard Enterprise License (Mandatory)",
@@ -142,33 +142,32 @@ Object.assign(MGMT_SUBSCRIPTION_CATALOG, {
       terms: { "PERP": { sku: "AMG-BASE", msrp: 0 } }
     }
   }
-});
+};
 
 // ==========================================
 // 4. POWER SUPPLIES & RPS MODULES
 // ==========================================
-Object.assign(POWER_SUPPLY_CATALOG, {
-  "PWR-C1-1100WAC-P": { sku: "PWR-C1-1100WAC-P", name: "Cisco 1100W AC Platinum PSU (Catalyst 9300)", msrp: 1200, category: "internal_psu" },
-  "PWR-C1-715WAC-P": { sku: "PWR-C1-715WAC-P", name: "Cisco 715W AC Platinum PSU (Catalyst 9300)", msrp: 850, category: "internal_psu" },
-  "JPSU-920-AC-AFI": { sku: "JPSU-920-AC-AFI", name: "Juniper 920W AC Redundant PSU (EX4400)", msrp: 950, category: "internal_psu" },
-  "RPS23-E": { sku: "RPS23-E", name: "Ruckus 1000W AC Redundant PSU (ICX 7650 / 8200)", msrp: 850, category: "internal_psu" },
-  "AT-PWR800": { sku: "AT-PWR800-80", name: "Allied Telesis 800W AC Redundant PSU (x530 Series)", msrp: 750, category: "internal_psu" },
-  "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", msrp: 650, category: "external_brick" },
-  "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", msrp: 750, category: "internal_hardened" },
-  "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", msrp: 380, category: "external_brick" },
-  "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", msrp: 260, category: "din_psu" },
-  "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", msrp: 420, category: "din_psu" },
-  "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", msrp: 399, category: "dc_rps" },
-  "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Meraki 1100W AC Secondary PSU (C9300X / MS390)", msrp: 1250, category: "internal_psu" },
-  "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", msrp: 850, category: "internal_psu" },
-  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu" }
-});
+const POWER_SUPPLY_CATALOG = {
+  "PWR-C1-1100WAC-P": { sku: "PWR-C1-1100WAC-P", name: "Cisco 1100W AC Platinum PSU (Catalyst 9300)", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
+  "PWR-C1-715WAC-P": { sku: "PWR-C1-715WAC-P", name: "Cisco 715W AC Platinum PSU (Catalyst 9300)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
+  "JPSU-920-AC-AFI": { sku: "JPSU-920-AC-AFI", name: "Juniper 920W AC Redundant PSU (EX4400)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740 },
+  "RPS23-E": { sku: "RPS23-E", name: "Ruckus 1000W AC Redundant PSU (ICX 7650 / 8200)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740 },
+  "AT-PWR800": { sku: "AT-PWR800-80", name: "Allied Telesis 800W AC Redundant PSU (x530 Series)", msrp: 750, category: "internal_psu", wattage: 800, poeBudgetContribution: 500 },
+  "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", msrp: 650, category: "external_brick", wattage: 340, poeBudgetContribution: 240 },
+  "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", msrp: 750, category: "internal_hardened", wattage: 340, poeBudgetContribution: 240 },
+  "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", msrp: 380, category: "external_brick", wattage: 300, poeBudgetContribution: 240 },
+  "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
+  "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
+  "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", msrp: 399, category: "dc_rps", wattage: 950, poeBudgetContribution: 0 },
+  "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Meraki 1100W AC Secondary PSU (C9300X / MS390)", msrp: 1250, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
+  "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
+  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 }
+};
 
 // ==========================================
 // 5. MASTER OPTICS & INTERCONNECT DATABASE
 // ==========================================
-OPTICS_LIST.length = 0; // Clear and re-populate
-OPTICS_LIST.push(
+const OPTICS_LIST = [
   // ----------------------------------------
   // A. Dedicated Proprietary Stacking Cables
   // ----------------------------------------
@@ -243,12 +242,12 @@ OPTICS_LIST.push(
   { vendor: "AMG", sku: "SFP-SM-10G-LR", name: "AMG Industrial 10G SMF SFP+ (-40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 360, industrial: true },
   { vendor: "Allied Telesis", sku: "AT-SPLX10", name: "Allied Telesis 1G Single-Mode SFP (LX, 10km)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 280, industrial: false },
   { vendor: "Allied Telesis", sku: "AT-SP10LR", name: "Allied Telesis 10G Single-Mode SFP+ (LR, 10km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 980, industrial: false }
-);
+];
 
 // ==========================================
 // 6. OPTICS MATRIX LOOKUP (AUTO-CALCULATOR)
 // ==========================================
-Object.assign(OPTICS_CATALOG, {
+const OPTICS_CATALOG = {
   "UniFi": {
     "1G": {
       "mmf": { sku: "UACC-OM-MM-1G-D", name: "UniFi 1G Multi-Mode SFP", msrp: 38 },
@@ -376,4 +375,4 @@ Object.assign(OPTICS_CATALOG, {
       "dac": { sku: "AT-QSFP28-1CU", name: "Allied Telesis 100G Direct Attach Cable (1m)", msrp: 290 }
     }
   }
-});
+};

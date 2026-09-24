@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.1-alpha] - 2026-09-24
+
+### Added
+- **Centralized Network & PoE Sizing Engine (`js/engines/sizer_network.js`)**:
+  - Full calibration against IEEE 802.3af (15.4W PSE / 12.95W PD), IEEE 802.3at (30W PSE / 25.5W PD), IEEE 802.3bt Type 3 (60W PSE / 51W PD), and IEEE 802.3bt Type 4 (90W PSE / 71.3W PD).
+  - Ohmic cable heat dissipation math across worst-case 100m Cat5e/Cat6/Cat6A horizontal cable runs.
+  - Continuous PSE wattage calculations with configurable engineering headroom buffer (+10%, +15%, +20%, +25%, +30%).
+- **Edge PoE Sizing Strip Overhaul (`js/core/app.js`)**:
+  - Telemetry breakdown showing total PSE continuous power, PD device consumption, and estimated cable heat loss.
+  - Quick reset action (`resetDemandInputs()`) to instantly zero out demand targets.
+  - Multi-tiered switch candidate auditing (`NetworkSizer.auditSwitchFit()`) validating PoE downlinks, total wattage, 90W bt port pools, and 60W/90W bt combinations.
+- **Rack Elevation Power & Thermal Physics (`js/tools/rack.js` & `index.html`)**:
+  - Distinct tracking between **Operating Design Load** (active connected devices with 90% PSU conversion efficiency) and **Worst-Case Nameplate Load** (100% capacity breaker sizing).
+  - Thermal dissipation outputs in both BTU/hr ($1\text{ W} = 3.412142\text{ BTU/hr}$) and Tons of AC cooling ($1\text{ Ton} = 12,000\text{ BTU/hr}$).
+  - NEC 80% continuous branch circuit sizing recommendations (120V 15A/20A/30A and 208V 20A/30A circuits with NEMA receptacles).
+  - Intelligent UPS Advisor calculating required apparent power ($VA = \frac{\text{Watts}}{PF} \times 1.25$ with 25% safety margin), rackmount form factor, and estimated battery runtimes.
+- **Bill of Materials Real-Time Capacity & Standard Auditing (`js/tools/bom.js`)**:
+  - Connected child device power detection evaluating `powerConsumptionWatts`, `maxPowerWatts`, `powerWatts`, `poeWattsDrawn`, and `baseWatts` to prevent underestimating field loads.
+  - Secondary power supply integration (`POWER_SUPPLY_CATALOG` in `data_interconnects.js`), allocating expanded PoE budgets in combined/sharing mode and setting accurate external brick/DIN budgets.
+  - 60W/90W high-power port exhaustion tracking and passive PoE adapter mismatch warnings.
+  - Real-time BOM headroom banner with live percentage coverage, surplus/deficit indicators, and active device draw metrics.
+
+### Changed
+- Upgraded switch card allocation pills in catalog view (`js/renderers/render_cards.js`) to display dynamic headroom percentage and secondary PSU indicators.
+- Synchronized active BOM device PoE loads directly into Rack Elevation telemetry.
+
+---
+
+## [0.10.0-alpha] - 2026-09-24
+
+### Added
+- **Modular Domain Registry Architecture**:
+  - Replaced monolithic single-file global data structures with an isolated multi-domain registry (`CatalogRegistry` in `data/registry.js`).
+  - Modularized catalog datasets into category folders: `data/networking/`, `data/infrastructure/`, `data/physical_security/`, `data/compute_storage/`, and `data/software/`.
+  - Introduced fast O(1) indexed lookups (`_byId` and `_bySku` HashMaps).
+- **Decoupled Application Architecture**:
+  - Separated core application into clean layer directories: `js/core/`, `js/engines/`, `js/renderers/`, and `js/tools/`.
+  - Centralized single-source-of-truth state container (`AppState` in `js/core/app.js`).
+  - Pluggable Strategy Pattern filter architecture (`FilterEngine` in `js/engines/search_filter.js`).
+- **Security Hardening & Quota Resilience**:
+  - Universal XSS sanitization via `escapeHTML()` across all catalog card templates, comparison matrices, and modal views.
+  - Storage quota protection (`StorageService.safeSetItem`) with `QuotaExceededError` detection and defensive cleanup.
+  - Secure JSON project import schema validation and sanitization (`StorageService.importProjectJSON`).
+- **Performance Optimizations**:
+  - 150ms debounced search runner to ensure smooth rendering during high-speed typing.
+  - Scoped Lucide icon rendering (`safeCreateIcons(container)`) eliminating whole-page DOM icon re-scans.
+
+---
+
 ## [0.6.1-alpha] - 2026-09-24
 
 ### Added

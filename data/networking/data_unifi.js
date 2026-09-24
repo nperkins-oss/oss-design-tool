@@ -3,7 +3,7 @@
 // Fully Calibrated Against Official Manufacturer Documentation
 // =========================================================================
 
-SWITCH_DATABASE.push(
+const UNIFI_SWITCHES = [
   // ==========================================
   // 1. CORE & AGGREGATION
   // ==========================================
@@ -1455,4 +1455,4 @@ SWITCH_DATABASE.push(
       "Ultra-slim flush wall-mount profile"
     ]
   }
-);
+];

@@ -3,7 +3,7 @@
 // Fully Calibrated Against Official Cisco Meraki Documentation
 // =========================================================================
 
-SWITCH_DATABASE.push(
+const MERAKI_SWITCHES = [
   // ==========================================
   // 1. CORE & AGGREGATION (MS400 & C9300X FIBER)
   // ==========================================
@@ -889,4 +889,4 @@ SWITCH_DATABASE.push(
       "8x PoE+ ports delivering up to 240W budget"
     ]
   }
-);
+];

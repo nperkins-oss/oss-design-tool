@@ -3,7 +3,7 @@
 // Fully Calibrated Against Official AMG Systems Manufacturer Documentation
 // =========================================================================
 
-SWITCH_DATABASE.push(
+const AMG_SWITCHES = [
   // ==========================================
   // 1. AMG 510 SERIES (HARDENED 1U RACKMOUNT)
   // ==========================================
@@ -451,4 +451,4 @@ SWITCH_DATABASE.push(
       "Plug-and-play zero configuration"
     ]
   }
-);
+];

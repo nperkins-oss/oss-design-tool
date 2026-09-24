@@ -418,44 +418,95 @@ function unmountRackItem(instanceId) {
 // -----------------------------------------------------------
 // Telemetry & Field Devices
 // -----------------------------------------------------------
+// Telemetry & Field Devices
+// -----------------------------------------------------------
 function renderRackTelemetry(rackItems, totalU) {
-  let occupiedU = 0;
-  let totalPoE = 0;
-  let totalBaseWatts = 0;
+  // If auditSwitchCapacities is available, synchronize active connected PoE load
+  if (typeof auditSwitchCapacities === "function" && typeof projectBOM !== "undefined") {
+    const audits = auditSwitchCapacities();
+    rackItems.forEach(it => {
+      if (audits[it.instanceId]) {
+        it.consumedPoEWatts = audits[it.instanceId].consumedPoEWatts || 0;
+      }
+    });
+  }
 
-  rackItems.forEach(it => {
-    if (it.rackSlot) {
-      occupiedU += parseInt(it.rackUnits || 1);
-    }
-    totalPoE += parseFloat(it.poeBudget || 0);
-    totalBaseWatts += parseFloat(it.baseWatts || 0);
-  });
-
-  const totalWorstCaseWatts = Math.round(totalBaseWatts + totalPoE);
-  const totalBTU = Math.round(totalWorstCaseWatts * 3.412142);
-
-  let recommendedUPS = "1000VA 1U Line-Interactive";
-  if (totalWorstCaseWatts > 2200) recommendedUPS = "3000VA 2U / 3U Online Double-Conversion";
-  else if (totalWorstCaseWatts > 1200) recommendedUPS = "2200VA 2U Line-Interactive";
-  else if (totalWorstCaseWatts > 600) recommendedUPS = "1500VA 2U Line-Interactive";
+  let telemetry;
+  if (typeof NetworkSizer !== "undefined" && typeof NetworkSizer.calculateRackElectricalAndThermal === "function") {
+    telemetry = NetworkSizer.calculateRackElectricalAndThermal(rackItems, {
+      nominalVoltage: 120,
+      growthMargin: 0.25
+    });
+  } else {
+    // Fallback calculation
+    let occupiedU = 0, totalPoE = 0, totalBaseWatts = 0;
+    rackItems.forEach(it => {
+      if (it.rackSlot) occupiedU += parseInt(it.rackUnits || 1, 10);
+      totalPoE += parseFloat(it.poeBudget || 0);
+      totalBaseWatts += parseFloat(it.baseWatts || 0);
+    });
+    const worstCaseWatts = Math.round(totalBaseWatts + totalPoE);
+    telemetry = {
+      occupiedU,
+      chassisBaseWatts: Math.round(totalBaseWatts),
+      nameplatePoEWatts: Math.round(totalPoE),
+      operatingAcWatts: Math.round(totalBaseWatts + (totalPoE * 0.5)),
+      worstCaseAcWatts: worstCaseWatts,
+      worstCaseBTU: Math.round(worstCaseWatts * 3.412142),
+      tonsCooling: Math.round((worstCaseWatts * 3.412142 / 12000) * 10) / 10,
+      electrical: {
+        operatingAmps120V: Math.round(((totalBaseWatts + (totalPoE * 0.5)) / (120 * 0.92)) * 10) / 10,
+        worstCaseAmps120V: Math.round((worstCaseWatts / (120 * 0.92)) * 10) / 10,
+        recommendedCircuit: worstCaseWatts > 1440 ? "120V 20A Dedicated Circuit (NEMA 5-20R)" : "120V 15A Dedicated Circuit (NEMA 5-15R)"
+      },
+      ups: {
+        minVA: Math.round(worstCaseWatts / 0.90),
+        recommendedVA: Math.round((worstCaseWatts / 0.90) * 1.25),
+        recommendation: worstCaseWatts > 1200 ? "2200VA 2U Line-Interactive" : "1500VA 2U Line-Interactive",
+        formFactor: "2U Rackmount",
+        batteryRuntimeEstimate: "12 - 18 minutes on battery"
+      }
+    };
+  }
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
   const poeEl = document.getElementById("rackTotalPoE");
   const baseEl = document.getElementById("rackTotalBaseWatts");
+  const operatingEl = document.getElementById("rackOperatingWatts");
   const worstEl = document.getElementById("rackTotalWorstCase");
   const btuEl = document.getElementById("rackTotalBTU");
+  const circuitEl = document.getElementById("rackCircuitSpec");
   const upsEl = document.getElementById("rackUpsAdvisor");
 
-  if (badgeEl) badgeEl.innerText = `${occupiedU} / ${totalU} U Used`;
-  if (poeEl) poeEl.innerText = `${Math.round(totalPoE)} W`;
-  if (baseEl) baseEl.innerText = `${Math.round(totalBaseWatts)} W`;
-  if (worstEl) worstEl.innerText = `${totalWorstCaseWatts} W`;
-  if (btuEl) btuEl.innerText = `${totalBTU.toLocaleString()} BTU/hr`;
+  if (badgeEl) badgeEl.innerText = `${telemetry.occupiedU} / ${totalU} U Used`;
+  if (baseEl) baseEl.innerText = `${telemetry.chassisBaseWatts} W`;
+  if (poeEl) poeEl.innerText = `${telemetry.nameplatePoEWatts.toLocaleString()} W`;
+  if (operatingEl) operatingEl.innerText = `${telemetry.operatingAcWatts} W (${telemetry.electrical.operatingAmps120V} A @ 120V)`;
+  if (worstEl) worstEl.innerText = `${telemetry.worstCaseAcWatts.toLocaleString()} W (${telemetry.electrical.worstCaseAmps120V} A)`;
+  if (btuEl) btuEl.innerText = `${telemetry.worstCaseBTU.toLocaleString()} BTU/hr (${telemetry.tonsCooling} Tons AC)`;
+  if (circuitEl) circuitEl.innerText = telemetry.electrical.recommendedCircuit;
+
   if (upsEl) {
     upsEl.innerHTML = `
-      <div class="font-bold text-emerald-400">${recommendedUPS}</div>
-      <div class="text-[11px] text-slate-400">Covers ${totalWorstCaseWatts}W load + 20% runtime buffer.</div>
+      <div class="space-y-1">
+        <div class="font-bold text-emerald-400 flex items-center justify-between">
+          <span class="truncate max-w-[240px]">${telemetry.ups.recommendation}</span>
+          <span class="font-mono text-[11px] text-emerald-300 font-bold shrink-0">${telemetry.ups.recommendedVA} VA</span>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          Minimum ${telemetry.ups.minVA}VA load + 25% buffer &bull; ${telemetry.ups.formFactor}
+        </div>
+        <div class="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
+          <i data-lucide="clock" class="w-3 h-3 text-slate-400 shrink-0"></i>
+          <span>${telemetry.ups.batteryRuntimeEstimate}</span>
+        </div>
+      </div>
     `;
+    if (typeof safeCreateIcons === "function") {
+      safeCreateIcons(upsEl);
+    } else if (window.lucide) {
+      lucide.createIcons();
+    }
   }
 }
 

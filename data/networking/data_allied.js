@@ -3,7 +3,7 @@
 // Fully Calibrated Against Official Allied Telesis Documentation
 // =========================================================================
 
-SWITCH_DATABASE.push(
+const ALLIED_SWITCHES = [
   // ==========================================
   // 1. X950 SERIES (100G SPINE & DISTRIBUTION CORE)
   // ==========================================
@@ -604,4 +604,4 @@ SWITCH_DATABASE.push(
       "Dual hot-swap load-sharing AC or DC power supplies"
     ]
   }
-);
+];

@@ -3,8 +3,7 @@
 // Standardized for NetSelect Enterprise (Fully Manufacturer-Verified)
 // =========================================================================
 
-FIREWALL_DATABASE.length = 0; // Prevent duplicate entries on hot-reload
-FIREWALL_DATABASE.push(
+const FIREWALL_DATABASE = [
   // ==========================================
   // UBIQUITI UNIFI GATEWAYS & CLOUD CONSOLES
   // ==========================================
@@ -761,4 +760,4 @@ FIREWALL_DATABASE.push(
       "Eliminates reliance on external public internet NTP servers"
     ]
   }
-);
+];

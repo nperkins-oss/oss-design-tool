@@ -3,7 +3,7 @@
 // Fully Calibrated Against Official Ruckus CommScope Documentation
 // =========================================================================
 
-SWITCH_DATABASE.push(
+const RUCKUS_SWITCHES = [
   // ==========================================
   // 1. ICX 7850 SERIES (100G SPINE & CORE FABRIC)
   // ==========================================
@@ -1110,4 +1110,4 @@ SWITCH_DATABASE.push(
       "Stacking up to 12 switches"
     ]
   }
-);
+];
