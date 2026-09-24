@@ -5,8 +5,8 @@
 // =========================================================================
 
 // Version & Build Information
-const APP_VERSION = "0.10.2-alpha";
-const BUILD_NUMBER = "2026.09.24.1230";
+const APP_VERSION = "0.10.3-alpha";
+const BUILD_NUMBER = "2026.09.24.1300";
 
 // Active Navigation State
 let activeDomain = "networking"; // "networking" | "physical_security" | "compute_storage" | "infrastructure" | "software"

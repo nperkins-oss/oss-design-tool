@@ -144,7 +144,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-sm font-bold text-white tracking-tight">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.2-alpha</span>
+            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.3-alpha</span>
           </div>
           <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1.5">
             <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">Default Project</span>
@@ -158,8 +158,12 @@
         <!-- Injected dynamically by buildDomainNavigation() in js/core/app.js -->
       </div>
 
-      <!-- Action Tools: Topology, Rack, Cable Paths, Compare, BOM -->
+      <!-- Action Tools: Facility, Topology, Rack, Cable Paths, Compare, BOM -->
       <div class="flex items-center gap-2">
+        <button onclick="toggleFacilityModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
+          <i data-lucide="building-2" class="w-4 h-4 text-sky-400"></i>
+          <span class="hidden sm:inline">Facility & Enclosures</span>
+        </button>
         <button onclick="toggleTopologyModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
           <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
           <span class="hidden sm:inline">Topology Canvas</span>
@@ -824,6 +828,27 @@
     </div>
   </div>
 
+  <!-- Facility Hierarchy Manager Modal -->
+  <div id="facilityModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="p-1.5 rounded-lg bg-sky-500/10 border border-sky-500/30 text-sky-400">
+            <i data-lucide="building-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-white tracking-tight">Facility, Floors, Spaces & Enclosures</h2>
+            <p class="text-[11px] text-slate-400">Single Source of Truth across Physical Layout, Rack Elevations, BOM, and Topology</p>
+          </div>
+        </div>
+        <button onclick="toggleFacilityModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6" id="facilityManagerContent"></div>
+    </div>
+  </div>
+
   <!-- Licenses & Cloud Terms Modal -->
   <div id="licenseModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
@@ -851,6 +876,7 @@
   <script src="js/core/facility.js"></script>
 
   <!-- Sizing & Filtering Engines -->
+  <script src="js/engines/port_engine.js"></script>
   <script src="js/engines/sizer_network.js"></script>
   <script src="js/engines/search_filter.js"></script>
 

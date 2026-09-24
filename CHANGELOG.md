@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.3-alpha] - 2026-09-24
+
+### Added
+- **Physical Port Engine & Interface Provisioning (`js/engines/port_engine.js`)**:
+  - **Discrete Port Tracking**: Accurate tracking of individual switch ports (1G/2.5G/10G RJ45, 10G/25G SFP+, 40G/100G QSFP28) with per-port PoE capabilities (802.3af 15.4W, 802.3at 30W, 802.3bt 60W/90W).
+  - **Automatic Port Allocation & Interfacing**: Automatically provisions client interfaces for IP cameras, door controllers, wireless bridge stations, and compute servers upon BOM additions or topology reassignment.
+  - **Interactive 24/48-Port Switch Faceplate Grid**: Slide-out topology inspector displays a realistic switch port matrix with color-coded live port telemetry (Green = PoE active, Blue = Uplink trunk, Amber = Data-only, Gray = Free).
+  - **Port Level Telemetry & Recalculation**: Live calculation of connected device IDs, allocated power draw, negotiated speeds, and aggregate switch PoE consumption.
+- **Hierarchical Facility & Enclosure Engine (`js/core/facility.js`)**:
+  - **Multi-Tier Spatial Modeling**: Structured hierarchy spanning Campus / Floors $\rightarrow$ Functional Spaces (MDF, IDF, Pole / Exterior, Wallbox) $\rightarrow$ Enclosures (19" Free-Standing Rack, Wall Cabinet, NEMA 4X Weatherproof Enclosure, DIN Rail).
+  - **Facility Hierarchy Manager Modal (`facilityModal`)**: Interactive management modal accessible from top navigation bar with floor elevation rise tracking, space type badges, and enclosure management.
+  - **Real-Time Thermal & Energy Rollups (`getLocationTelemetry`)**: Calculates equipment count, total power draw (Watts), total PoE output, total rack units (RU) occupied, and thermal dissipation (BTU/hr) per enclosure and space.
+  - **100% Backward Compatibility**: Seamless normalization and string serialization preserving legacy closet and rack references across BOM, rack elevation, and physical layout tools.
+- **Complex Uplink Logic & Field Topologies (`js/tools/topology.js`)**:
+  - **Decoupled Power vs Dataflow Direction**: Supports non-hierarchical deployments where power and data flow in opposite directions (e.g. pole-mounted industrial switch powers a P2P wireless radio station via PoE, but the radio acts as the switch's uplink gateway to the network core).
+  - **Peer Switch Cascades & Ring Topologies**: Support for access-to-access switch trunks and daisy-chain topology links alongside traditional Gateway $\rightarrow$ Core/Agg $\rightarrow$ Access trees.
+  - **Paired Wireless Bridge Links**: Visual rendering of wireless RF bridge interconnects between Master and Station radio pairs with dedicated handoff and uplink roles.
+- **Power Source Overrides on Topology Canvas (`js/tools/topology.js`)**:
+  - **Independent Power Delivery Modes**: Dedicated configuration for `poe_switch` (Switch PSE), `poe_injector` (Midspan Injector), `dedicated_dc` (Pole/Cabinet DC Power Supply), `dedicated_ac` (Mains AC), and `solar_battery`.
+  - **Dynamic PoE Rebalancing**: Overriding a radio, camera, or edge switch to use a local PoE injector or DC supply immediately reduces the switch port PoE load to 0W and credits the switch power budget while maintaining full logical data connectivity.
+  - **Visual Power Mode Indicators**: Live badges and filter states distinguishing PoE-delivered devices from locally powered field endpoints.
+
+---
+
 ## [0.10.2-alpha] - 2026-09-24
 
 ### Added

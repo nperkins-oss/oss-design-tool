@@ -193,6 +193,9 @@ function addToProjectBOM(id, targetLocation = null) {
   };
 
   projectBOM.push(newParent);
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.initSwitchPorts(newParent);
+  }
 
   // Modular Sled Addition
   if (selectedSledSku && MODULAR_UPLINK_CATALOG[selectedSledSku]) {
@@ -566,7 +569,7 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
     if (sw) targetSwitchId = sw.instanceId;
   }
 
-  projectBOM.push({
+  const newCam = {
     instanceId: instanceId,
     id: cam.id,
     model: cam.model,
@@ -589,7 +592,17 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
     isDinMounted: false,
     uplinkTargetId: targetSwitchId,
     assignedRecordingServerId: null
-  });
+  };
+
+  projectBOM.push(newCam);
+
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.initDeviceInterfaces(newCam);
+    if (targetSwitchId) {
+      const sw = projectBOM.find(i => i.instanceId === targetSwitchId);
+      if (sw) PortEngine.allocatePort(sw, newCam);
+    }
+  }
 
   FacilityStore.notifyWorkspaceChange();
   showToast(`Added ${cam.model} to quote`);
@@ -611,7 +624,7 @@ function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = 
     if (sw) targetSwitchId = sw.instanceId;
   }
 
-  projectBOM.push({
+  const newAcc = {
     instanceId: instanceId,
     id: dev.id,
     model: dev.model,
@@ -633,7 +646,17 @@ function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = 
     isDinMounted: dev.mounting && dev.mounting.includes("DIN"),
     uplinkTargetId: targetSwitchId,
     assignedAccessServerId: null
-  });
+  };
+
+  projectBOM.push(newAcc);
+
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.initDeviceInterfaces(newAcc);
+    if (targetSwitchId) {
+      const sw = projectBOM.find(i => i.instanceId === targetSwitchId);
+      if (sw) PortEngine.allocatePort(sw, newAcc);
+    }
+  }
 
   FacilityStore.notifyWorkspaceChange();
   showToast(`Added ${dev.model} to quote`);

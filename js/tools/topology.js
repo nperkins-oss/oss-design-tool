@@ -475,11 +475,11 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     });
   });
 
-  // 2. Core/Aggregation -> Access Uplinks
+  // 2. Core/Aggregation -> Access Uplinks & Peer Cascades
   access.forEach(acc => {
     let target = null;
     if (acc.customUplinkTargetId) {
-      target = nodes.find(n => n.instanceId === acc.customUplinkTargetId);
+      target = nodes.find(n => n.instanceId === acc.customUplinkTargetId) || projectBOM.find(n => n.instanceId === acc.customUplinkTargetId);
     }
     if (!target) {
       const accLoc = FacilityStore.normalize(acc.closetName);
@@ -487,22 +487,54 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     }
 
     if (target && target.instanceId !== acc.instanceId) {
+      const isTargetRadio = target.role === "Wireless Bridge" || target.category === "wireless";
+      const isTargetAccess = target.role === "Access";
       const isInterCloset = FacilityStore.normalize(target.closetName) !== FacilityStore.normalize(acc.closetName);
       const multiplier = acc.customLinkMultiplier || (isInterCloset ? 2 : 1);
       const speed = acc.customLinkSpeed || resolveNegotiatedSpeed(acc, target);
-      const isLAG = multiplier > 1;
+      const isLAG = multiplier > 1 && !isTargetRadio;
 
-      topologyLinks.push({
-        id: `link-${target.instanceId}-${acc.instanceId}`,
-        fromId: target.instanceId,
-        toId: acc.instanceId,
-        multiplier,
-        isLAG,
-        speedLabel: isLAG ? `${multiplier}x ${speed} LAG` : `${speed} Uplink`,
-        rawSpeed: speed,
-        category: "access",
-        isPoEDelivery: false
-      });
+      if (isTargetRadio) {
+        // Reverse uplink pattern: Switch on pole uplinks through the P2P Radio Station
+        const radioPowersFromSwitch = (target.powerSourceOverride === "poe_switch" || !target.powerSourceOverride);
+        topologyLinks.push({
+          id: `link-${acc.instanceId}-${target.instanceId}`,
+          fromId: acc.instanceId,
+          toId: target.instanceId,
+          multiplier: 1,
+          isLAG: false,
+          speedLabel: `${speed} Wireless Uplink Handoff`,
+          rawSpeed: speed,
+          category: "wireless_handoff",
+          isPoEDelivery: radioPowersFromSwitch
+        });
+      } else if (isTargetAccess) {
+        // Access-to-Access daisy chain or ring cascade
+        topologyLinks.push({
+          id: `link-${target.instanceId}-${acc.instanceId}`,
+          fromId: target.instanceId,
+          toId: acc.instanceId,
+          multiplier,
+          isLAG,
+          speedLabel: isLAG ? `${multiplier}x ${speed} Cascade LAG` : `${speed} Cascade Trunk`,
+          rawSpeed: speed,
+          category: "switch_trunk",
+          isPoEDelivery: false
+        });
+      } else {
+        // Standard Core/Gateway uplink
+        topologyLinks.push({
+          id: `link-${target.instanceId}-${acc.instanceId}`,
+          fromId: target.instanceId,
+          toId: acc.instanceId,
+          multiplier,
+          isLAG,
+          speedLabel: isLAG ? `${multiplier}x ${speed} LAG` : `${speed} Uplink`,
+          rawSpeed: speed,
+          category: "access",
+          isPoEDelivery: false
+        });
+      }
     }
   });
 
@@ -532,30 +564,59 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     }
   });
 
-  // 4. Wireless Bridge PtP / PtMP Links
+  // 4. Wireless Bridge PtP / PtMP Links & Host Handoffs
   wireless.forEach(wb => {
-    let target = null;
-    if (wb.customUplinkTargetId) {
-      target = nodes.find(n => n.instanceId === wb.customUplinkTargetId);
-    }
-    if (!target) {
-      const wbLoc = FacilityStore.normalize(wb.closetName);
-      target = access.find(a => FacilityStore.normalize(a.closetName) === wbLoc) || access[0] || cores[0];
+    // A. Check for PtP paired radio link
+    if (wb.linkPairId) {
+      const partner = wireless.find(w => w.linkPairId === wb.linkPairId && w.instanceId !== wb.instanceId);
+      if (partner && wb.instanceId < partner.instanceId) {
+        topologyLinks.push({
+          id: `link-rf-${wb.instanceId}-${partner.instanceId}`,
+          fromId: wb.instanceId,
+          toId: partner.instanceId,
+          multiplier: 1,
+          isLAG: false,
+          speedLabel: wb.maxThroughput || "5.4 Gbps RF Bridge",
+          rawSpeed: "2.5G",
+          category: "wireless",
+          isWireless: true,
+          isPoEDelivery: false
+        });
+      }
     }
 
-    if (target && target.instanceId !== wb.instanceId) {
-      topologyLinks.push({
-        id: `link-${target.instanceId}-${wb.instanceId}`,
-        fromId: target.instanceId,
-        toId: wb.instanceId,
-        multiplier: 1,
-        isLAG: false,
-        speedLabel: wb.maxThroughput || "RF Bridge",
-        rawSpeed: "1G",
-        category: "wireless",
-        isWireless: true,
-        isPoEDelivery: true
-      });
+    // B. Check connection to host switch (data & PoE)
+    let hostSwitch = null;
+    if (wb.connectedHostSwitchId) {
+      hostSwitch = nodes.find(n => n.instanceId === wb.connectedHostSwitchId);
+    } else if (wb.uplinkTargetId) {
+      hostSwitch = nodes.find(n => n.instanceId === wb.uplinkTargetId);
+    } else {
+      const wbLoc = FacilityStore.normalize(wb.closetName);
+      hostSwitch = access.find(a => FacilityStore.normalize(a.closetName) === wbLoc) || access[0] || cores[0];
+    }
+
+    if (hostSwitch && hostSwitch.instanceId !== wb.instanceId) {
+      const alreadyLinked = topologyLinks.some(l => 
+        (l.fromId === hostSwitch.instanceId && l.toId === wb.instanceId) ||
+        (l.fromId === wb.instanceId && l.toId === hostSwitch.instanceId)
+      );
+
+      if (!alreadyLinked) {
+        const isPoE = (wb.powerSourceOverride === "poe_switch" || wb.powerSource === "poe_switch" || !wb.powerSourceOverride);
+        topologyLinks.push({
+          id: `link-${hostSwitch.instanceId}-${wb.instanceId}`,
+          fromId: hostSwitch.instanceId,
+          toId: wb.instanceId,
+          multiplier: 1,
+          isLAG: false,
+          speedLabel: isPoE ? "1G PoE Handoff" : "1G Data Handoff",
+          rawSpeed: "1G",
+          category: "wireless_handoff",
+          isWireless: false,
+          isPoEDelivery: isPoE
+        });
+      }
     }
   });
 
@@ -867,10 +928,10 @@ function renderTopologyInspector() {
     const upstreamLink = topologyLinks.find(l => l.toId === item.instanceId);
     if (linkSpeedEl) linkSpeedEl.innerText = upstreamLink ? upstreamLink.speedLabel : (item.role === "Server" ? "Server Ingest" : "Host Core");
 
-    // Candidate uplink switches
+    // Candidate uplink targets (Core, Agg, Peer Access switches, and Wireless Radios)
     const candidateTargets = projectBOM.filter(n => {
       if (n.instanceId === item.instanceId || n.parentInstanceId) return false;
-      return n.role === "Core" || n.role === "Core & Agg" || n.role === "Aggregation" || n.role === "Gateways & WAN";
+      return n.role === "Core" || n.role === "Core & Agg" || n.role === "Aggregation" || n.role === "Gateways & WAN" || n.role === "Access" || n.role === "Wireless Bridge" || n.category === "wireless";
     });
 
     // Candidate servers in quote
@@ -899,7 +960,7 @@ function renderTopologyInspector() {
         if (d.parentInstanceId) return false;
         if (d.role !== "Access Control" && !(d.category && d.category.includes("access"))) return false;
         if (d.assignedAccessServerId === item.instanceId) return true;
-        if (!d.assignedAccessServerId && d.uplinkTargetId) {
+        if (!d.assignedAccessServerId && c.uplinkTargetId) {
           const sw = projectBOM.find(s => s.instanceId === d.uplinkTargetId);
           if (sw && sw.assignedAccessServerId === item.instanceId) return true;
         }
@@ -1042,7 +1103,245 @@ function renderTopologyInspector() {
       return;
     }
 
+    const isRadio = item.role === "Wireless Bridge" || item.category === "wireless" || item.category === "ptp_60g" || item.topology === "PtP / PtMP";
+    const isEdgeDevice = item.role === "Camera" || item.role === "Access Control" || (item.category && (item.category.includes("camera") || item.category.includes("access")));
+
+    // If selected node is a WIRELESS RADIO / PTP BRIDGE
+    if (isRadio) {
+      const hostSwitch = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
+      const currentPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSourceOverride || "poe_switch");
+      const peerRadios = projectBOM.filter(r => (r.category === "wireless" || r.role === "Wireless Bridge") && r.instanceId !== item.instanceId);
+
+      container.innerHTML = `
+        <!-- Wireless Overview Card -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white truncate max-w-[200px]">${escapeHTML(item.model)}</span>
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-purple-500/40 bg-purple-500/10 text-purple-300 shrink-0">
+              Wireless RF
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-400 space-y-1 font-mono">
+            <div>Throughput: <strong class="text-purple-300">${item.throughput || item.maxThroughput || '5.4 Gbps'}</strong></div>
+            <div>Band: <strong class="text-white">${item.band || item.frequency || '60 GHz / 5 GHz Backup'}</strong></div>
+            <div>Location: <strong class="text-indigo-300">${escapeHTML(FacilityStore.normalize(item.closetName || 'Pole 1'))}</strong></div>
+          </div>
+        </div>
+
+        <!-- Power Delivery & Sourcing -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Power Delivery & Sourcing
+          </span>
+          <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Power Sourcing Method:</label>
+              <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                <option value="poe_switch" ${currentPowerMode === 'poe_switch' ? 'selected' : ''}>⚡ PoE from Host Switch (${item.poeStandard || '802.3at'})</option>
+                <option value="poe_injector" ${currentPowerMode === 'poe_injector' ? 'selected' : ''}>🔌 Dedicated PoE Midspan / Injector</option>
+                <option value="dedicated_dc" ${currentPowerMode === 'dedicated_dc' ? 'selected' : ''}>🔋 Dedicated DC Power Supply (DIN/Pole)</option>
+                <option value="solar_battery" ${currentPowerMode === 'solar_battery' ? 'selected' : ''}>☀️ Solar / Off-Grid Battery Station</option>
+              </select>
+            </div>
+            <div class="flex justify-between text-slate-400 text-xs font-mono pt-1">
+              <span>Radio Power Consumption:</span>
+              <span class="text-amber-400 font-bold">${item.powerWatts || item.maxPowerWatts || 24} W</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reverse Uplink & Network Handoff -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+            <i data-lucide="git-commit" class="w-3.5 h-3.5"></i> Host Switch Handoff & Uplink Role
+          </span>
+          <div class="space-y-2.5 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Connected Local Switch (e.g. Pole Switch):</label>
+              <select onchange="setDeviceHostSwitch('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                <option value="">Unassigned</option>
+                ${candidateTargets.filter(t => t.role === "Access" || t.role === "Core").map(sw => `
+                  <option value="${sw.instanceId}" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
+                    ${sw.model} (${FacilityStore.normalize(sw.closetName)})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            <!-- Reverse Uplink Toggle -->
+            <div 
+              onclick="toggleRadioUplinkRole('${item.instanceId}', ${!item.isUplinkForSwitch})"
+              class="flex items-start gap-2 p-2 rounded-xl border ${item.isUplinkForSwitch ? 'border-sky-500/50 bg-sky-500/10' : 'border-slate-800 bg-slate-900/60 opacity-60'} cursor-pointer hover:opacity-100 transition-all text-xs"
+            >
+              <input type="checkbox" ${item.isUplinkForSwitch ? 'checked' : ''} class="mt-0.5 rounded border-slate-700 bg-slate-900 text-sky-500 pointer-events-none" />
+              <div>
+                <span class="font-bold text-white block text-[11px]">Provides Network Uplink for Host Switch</span>
+                <span class="text-[10px] text-slate-400 block">Switch routes all upstream traffic across this wireless backhaul</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PtP Wireless Peer Link -->
+        <div class="space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+            <i data-lucide="radio" class="w-3.5 h-3.5"></i> PtP Wireless Bridge Partner
+          </span>
+          <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Target Radio (Opposite End of Link):</label>
+              <select onchange="updateRadioPartner('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-purple-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                <option value="">Auto-Pair or Standalone</option>
+                ${peerRadios.map(p => `
+                  <option value="${p.instanceId}" ${item.customUplinkTargetId === p.instanceId ? 'selected' : ''}>${p.model} (${FacilityStore.normalize(p.closetName)})</option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
+    // If selected node is an EDGE CLIENT (Camera, Access Reader, etc.)
+    if (isEdgeDevice) {
+      const hostSwitch = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
+      const hostSwitchPorts = hostSwitch && typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(hostSwitch) : [];
+      const currentPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSourceOverride || "poe_switch");
+      const isCamera = item.role === "Camera" || (item.category && item.category.includes("camera"));
+
+      container.innerHTML = `
+        <!-- Device Overview Card -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-white truncate max-w-[200px]">${escapeHTML(item.model)}</span>
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${getRoleBadgeStyle(item.role)} shrink-0">
+              ${item.role}
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-400 space-y-1 font-mono">
+            <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
+            <div>Location: <strong class="text-indigo-300">${escapeHTML(FacilityStore.normalize(item.closetName || 'IDF-1'))}</strong></div>
+            <div>Hardware Interface: <strong class="text-white">1x 1G RJ-45 (100m Loop)</strong></div>
+          </div>
+        </div>
+
+        <!-- Power Delivery & Sourcing -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Power Delivery & Sourcing
+          </span>
+          <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Power Sourcing Method:</label>
+              <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                <option value="poe_switch" ${currentPowerMode === 'poe_switch' ? 'selected' : ''}>⚡ PoE from Host Switch (${item.poeStandard || '802.3at'})</option>
+                <option value="poe_injector" ${currentPowerMode === 'poe_injector' ? 'selected' : ''}>🔌 Dedicated PoE Midspan / Injector</option>
+                <option value="dedicated_dc" ${currentPowerMode === 'dedicated_dc' ? 'selected' : ''}>🔋 Dedicated DC Power Supply (12/24V)</option>
+                <option value="dedicated_ac" ${currentPowerMode === 'dedicated_ac' ? 'selected' : ''}>⚡ Direct AC Mains Supply (120/240V)</option>
+                <option value="solar_battery" ${currentPowerMode === 'solar_battery' ? 'selected' : ''}>☀️ Solar / Off-Grid Battery Station</option>
+              </select>
+            </div>
+
+            <div class="flex justify-between items-center text-slate-400 text-xs font-mono pt-1">
+              <span>Device Power Draw:</span>
+              <span class="text-amber-400 font-bold">${item.powerConsumptionWatts || item.maxPowerWatts || 15} W</span>
+            </div>
+
+            ${currentPowerMode !== 'poe_switch' ? `
+              <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 flex items-start gap-1.5">
+                <i data-lucide="info" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+                <span>External power supply active. Switch port carries data only with 0W PoE load on switch budget.</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Network Switch & Port Mapping -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+            <i data-lucide="git-commit" class="w-3.5 h-3.5"></i> Host Switch & Port Assignment
+          </span>
+          <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Connected Host Switch:</label>
+              <select onchange="setDeviceHostSwitch('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                <option value="">Unassigned</option>
+                ${candidateTargets.filter(t => t.role === "Access" || t.role === "Core" || t.role === "Core & Agg").map(sw => `
+                  <option value="${sw.instanceId}" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
+                    ${sw.model} (${FacilityStore.normalize(sw.closetName)})
+                  </option>
+                `).join('')}
+              </select>
+            </div>
+
+            ${hostSwitch ? `
+              <div>
+                <label class="text-[10px] text-slate-400 block mb-1">Assigned Switch Port:</label>
+                <select onchange="setDeviceSwitchPort('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-sky-300 font-mono text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500">
+                  ${hostSwitchPorts.map(p => `
+                    <option value="${p.portNumber}" ${(item.assignedSwitchPort === p.portNumber || p.connectedDeviceId === item.instanceId) ? 'selected' : ''}>
+                      ${p.label} &bull; ${p.speed} ${p.poeStandard ? `(${p.poeStandard.toUpperCase()})` : ''} ${p.connectedDeviceId && p.connectedDeviceId !== item.instanceId ? `[In Use: ${p.connectedDeviceModel}]` : ''}
+                    </option>
+                  `).join('')}
+                </select>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Application Specific Routing (Camera / Access) -->
+        ${isCamera ? `
+          <div class="space-y-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-teal-400 flex items-center gap-1.5">
+              <i data-lucide="video" class="w-3.5 h-3.5"></i> VMS Video Stream Routing
+            </span>
+            <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs font-mono">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Stream Bitrate:</span>
+                <span class="text-teal-400 font-bold">${item.streamBitrateMbps || 4.0} Mbps Continuous</span>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 block mb-1">Assigned Recording Server:</label>
+                <select onchange="item.assignedRecordingServerId = this.value || null; FacilityStore.notifyWorkspaceChange(); renderTopology(); renderTopologyInspector();" class="w-full bg-slate-900 border border-slate-700 text-teal-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                  <option value="">Auto-Detect Primary VMS</option>
+                  ${candidateServers.map(s => `
+                    <option value="${s.instanceId}" ${item.assignedRecordingServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
+                  `).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div class="space-y-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+              <i data-lucide="shield" class="w-3.5 h-3.5"></i> Access Control Engine Routing
+            </span>
+            <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs font-mono">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Door Capacity:</span>
+                <span class="text-emerald-400 font-bold">${item.doorCapacity || 2} Doors Managed</span>
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-400 block mb-1">Assigned Access Engine Server:</label>
+                <select onchange="item.assignedAccessServerId = this.value || null; FacilityStore.notifyWorkspaceChange(); renderTopology(); renderTopologyInspector();" class="w-full bg-slate-900 border border-slate-700 text-emerald-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                  <option value="">Auto-Detect Primary Host</option>
+                  ${candidateServers.map(s => `
+                    <option value="${s.instanceId}" ${item.assignedAccessServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
+                  `).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+        `}
+      `;
+      return;
+    }
+
     // Default Switch Inspector Card
+    const switchPorts = typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(item) : [];
+    const portSummary = typeof PortEngine !== "undefined" ? PortEngine.getPortSummary(item) : null;
+
     container.innerHTML = `
       <!-- Node Overview Card -->
       <div class="space-y-2 pb-3 border-b border-slate-800">
@@ -1087,6 +1386,75 @@ function renderTopologyInspector() {
           ` : ''}
         </div>
       </div>
+
+      <!-- Physical Port Matrix (Faceplate Status Grid) -->
+      ${switchPorts.length > 0 ? `
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Physical Port Matrix
+            </span>
+            <span class="font-mono text-[9px] text-slate-400">
+              ${portSummary ? `${portSummary.used}/${portSummary.total} Used` : ''}
+            </span>
+          </div>
+
+          <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-850 space-y-2">
+            <!-- Port grid (up to 24 access ports) -->
+            <div class="grid grid-cols-12 gap-1">
+              ${switchPorts.slice(0, 24).map(p => {
+                const isPoEActive = (p.poeOutputWatts || 0) > 0;
+                const isUplink = p.isUplink || p.role === "uplink";
+                const isDataOnly = p.connectedDeviceId && !isPoEActive;
+                let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                if (isUplink) bg = "bg-sky-500/20 border-sky-500/50 text-sky-300";
+                else if (isPoEActive) bg = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300";
+                else if (isDataOnly) bg = "bg-amber-500/20 border-amber-500/50 text-amber-300";
+
+                return `
+                  <div 
+                    class="h-6 rounded border ${bg} flex items-center justify-center font-mono text-[9px] font-bold cursor-pointer transition-all hover:scale-105" 
+                    title="${p.label}: ${p.connectedDeviceModel || 'Free'} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
+                    onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                  >
+                    ${p.portNumber}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Optical Cages if > 24 ports -->
+            ${switchPorts.length > 24 ? `
+              <div class="pt-1.5 border-t border-slate-900 flex items-center justify-between">
+                <span class="text-[9px] font-mono text-slate-400 uppercase">Optical SFP+ Cages:</span>
+                <div class="flex items-center gap-1">
+                  ${switchPorts.slice(24).map(p => {
+                    const isUplink = p.isUplink || p.role === "uplink" || p.connectedDeviceId;
+                    const bg = isUplink ? "bg-sky-500/30 border-sky-500 text-sky-300" : "bg-slate-900 border-slate-800 text-slate-600";
+                    return `
+                      <div 
+                        class="px-1.5 py-0.5 rounded border ${bg} font-mono text-[9px] font-bold cursor-pointer hover:border-slate-600"
+                        title="${p.label}: ${p.connectedDeviceModel || 'Free'}"
+                        onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                      >
+                        ${p.label}
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Legend strip -->
+            <div class="flex items-center justify-between text-[9px] font-mono text-slate-500 pt-1">
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500 inline-block"></span> PoE Active</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-sky-500 inline-block"></span> Uplink/LAG</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500 inline-block"></span> Data Only</span>
+              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-slate-800 inline-block"></span> Free</span>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Uplink & Interconnect Settings -->
       ${item.role !== "Core" && item.role !== "Core & Agg" && item.role !== "Aggregation" && item.role !== "Gateways & WAN" ? `
@@ -1165,24 +1533,35 @@ function renderTopologyInspector() {
       <div class="space-y-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center justify-between">
           <span>Downlink Clients (${children.length})</span>
-          <span class="text-[9px] font-mono text-slate-500">Auto-Mapped</span>
+          <span class="text-[9px] font-mono text-slate-500">Click to Inspect</span>
         </span>
         <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
           ${children.length === 0 ? `
             <div class="text-[11px] text-slate-500 py-3 text-center bg-slate-950 rounded-xl border border-slate-850">
               No field devices attached to this switch in quote.
             </div>
-          ` : children.map(ch => `
-            <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 flex items-center justify-between text-xs">
-              <div class="truncate max-w-[170px]">
-                <span class="text-white block font-medium truncate">${escapeHTML(ch.model)}</span>
-                <span class="text-[10px] text-slate-400 font-mono">${ch.role || 'Edge Device'} &bull; ${ch.qty || 1}x</span>
+          ` : children.map(ch => {
+            const chPowerBadge = (typeof PortEngine !== "undefined") ? PortEngine.getPowerBadge(ch) : { label: "PoE", badgeLabel: "PoE", isExternal: false };
+            return `
+              <div 
+                onclick="selectTopologyNode('${ch.instanceId}', event)"
+                class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-slate-700 cursor-pointer flex items-center justify-between text-xs transition-colors"
+              >
+                <div class="truncate max-w-[170px]">
+                  <span class="text-white block font-medium truncate">${escapeHTML(ch.model)}</span>
+                  <span class="text-[10px] text-slate-400 font-mono">${ch.role || 'Edge Device'} &bull; ${ch.qty || 1}x &bull; Port ${ch.assignedSwitchPort || 'Auto'}</span>
+                </div>
+                <div class="text-right shrink-0">
+                  <span class="font-mono text-[10px] ${chPowerBadge.isExternal ? 'text-amber-400' : 'text-emerald-400'} font-bold block">
+                    ${chPowerBadge.badgeLabel}
+                  </span>
+                  <span class="font-mono text-[9px] text-slate-500">
+                    ${Math.round((ch.powerConsumptionWatts || ch.maxPowerWatts || 15) * (ch.qty || 1))}W
+                  </span>
+                </div>
               </div>
-              <span class="font-mono text-[10px] text-amber-400 font-bold shrink-0">
-                ${Math.round((ch.powerConsumptionWatts || ch.maxPowerWatts || 15) * (ch.qty || 1))}W PoE
-              </span>
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </div>
     `;
@@ -1338,7 +1717,15 @@ function renderTopologyInspector() {
 }
 
 function getPowerSourceLabel(item) {
+  if (typeof PortEngine !== "undefined") {
+    const badge = PortEngine.getPowerBadge(item);
+    if (badge && badge.label) {
+      if (item.dualPsu && badge.mode === "dedicated_ac") return "Dual Hot-Swap AC";
+      return badge.label;
+    }
+  }
   if (item.dualPsu) return "Dual Hot-Swap AC";
+  if (item.powerSourceOverride) return item.powerSourceOverride;
   if (item.powerSource === "poe_switch" || item.poeStandardRequired) return "PoE-In Powered";
   if (item.isDinMounted || (item.model && item.model.includes("DIN"))) return "48-56VDC Terminal";
   return "Internal AC";
@@ -1584,6 +1971,108 @@ function toggleServerRole(serverInstanceId, roleName) {
   }
 }
 
+function setDevicePowerSource(deviceInstanceId, newPowerSource) {
+  const item = projectBOM.find(i => i.instanceId === deviceInstanceId);
+  if (!item) return;
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.setPowerSource(item, newPowerSource);
+  } else {
+    item.powerSourceOverride = newPowerSource;
+  }
+  FacilityStore.notifyWorkspaceChange();
+  renderTopology();
+  renderTopologyInspector();
+  if (typeof showToast === "function") {
+    const modeDef = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[newPowerSource]) || { label: newPowerSource };
+    showToast(`Set ${item.model} power to ${modeDef.label}`);
+  }
+}
+
+function setDeviceHostSwitch(deviceInstanceId, newSwitchId) {
+  const item = projectBOM.find(i => i.instanceId === deviceInstanceId);
+  if (!item) return;
+  const oldSwitchId = item.uplinkTargetId;
+  item.uplinkTargetId = newSwitchId || null;
+  if (typeof PortEngine !== "undefined") {
+    if (oldSwitchId) {
+      const oldSw = projectBOM.find(i => i.instanceId === oldSwitchId);
+      if (oldSw) PortEngine.disconnectPort(oldSw, item.assignedSwitchPort);
+    }
+    if (newSwitchId) {
+      const newSw = projectBOM.find(i => i.instanceId === newSwitchId);
+      if (newSw) PortEngine.allocatePort(newSw, item);
+    }
+  }
+  FacilityStore.notifyWorkspaceChange();
+  renderTopology();
+  renderTopologyInspector();
+  if (typeof showToast === "function") showToast(`Reassigned ${item.model} to new host switch`);
+}
+
+function setDeviceSwitchPort(deviceInstanceId, newPortNumber) {
+  const item = projectBOM.find(i => i.instanceId === deviceInstanceId);
+  if (!item || !item.uplinkTargetId) return;
+  const sw = projectBOM.find(i => i.instanceId === item.uplinkTargetId);
+  if (!sw) return;
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.connect(sw, parseInt(newPortNumber, 10), item, 1);
+  } else {
+    item.assignedSwitchPort = parseInt(newPortNumber, 10);
+  }
+  FacilityStore.notifyWorkspaceChange();
+  renderTopology();
+  renderTopologyInspector();
+  if (typeof showToast === "function") showToast(`Assigned ${item.model} to Port ${newPortNumber}`);
+}
+
+function toggleRadioUplinkRole(radioInstanceId, isUplink) {
+  const radio = projectBOM.find(i => i.instanceId === radioInstanceId);
+  if (!radio) return;
+  radio.isUplinkForSwitch = isUplink;
+  if (radio.uplinkTargetId) {
+    const sw = projectBOM.find(i => i.instanceId === radio.uplinkTargetId);
+    if (sw) {
+      if (isUplink) {
+        sw.customUplinkTargetId = radio.instanceId;
+      } else if (sw.customUplinkTargetId === radio.instanceId) {
+        sw.customUplinkTargetId = null;
+      }
+    }
+  }
+  FacilityStore.notifyWorkspaceChange();
+  renderTopology();
+  renderTopologyInspector();
+  if (typeof showToast === "function") {
+    showToast(isUplink ? `Set ${radio.model} as uplink for host switch` : `Cleared radio uplink role`);
+  }
+}
+
+function updateRadioPartner(radioInstanceId, partnerInstanceId) {
+  const radio = projectBOM.find(i => i.instanceId === radioInstanceId);
+  if (radio) {
+    radio.customUplinkTargetId = partnerInstanceId || null;
+    FacilityStore.notifyWorkspaceChange();
+    renderTopology();
+    renderTopologyInspector();
+  }
+}
+
+function inspectSwitchPort(switchInstanceId, portNum) {
+  const sw = projectBOM.find(i => i.instanceId === switchInstanceId);
+  if (!sw || typeof PortEngine === "undefined") return;
+  const ports = PortEngine.initSwitchPorts(sw);
+  const port = ports.find(p => p.portNumber === parseInt(portNum, 10));
+  if (!port) return;
+
+  if (port.connectedDeviceId) {
+    selectTopologyNode(port.connectedDeviceId);
+  } else {
+    if (typeof showToast === "function") {
+      showToast(`${port.label} (${port.speed}) is free.`);
+    }
+  }
+}
+
 // Window Compatibility Exports
 window.isTopologyModalVisible = isTopologyModalVisible;
 window.toggleTopologyModal = toggleTopologyModal;
@@ -1604,3 +2093,9 @@ window.updateCustomLinkSpeed = updateCustomLinkSpeed;
 window.updateSwitchVmsServer = updateSwitchVmsServer;
 window.updateSwitchAccessServer = updateSwitchAccessServer;
 window.toggleServerRole = toggleServerRole;
+window.setDevicePowerSource = setDevicePowerSource;
+window.setDeviceHostSwitch = setDeviceHostSwitch;
+window.setDeviceSwitchPort = setDeviceSwitchPort;
+window.toggleRadioUplinkRole = toggleRadioUplinkRole;
+window.updateRadioPartner = updateRadioPartner;
+window.inspectSwitchPort = inspectSwitchPort;
