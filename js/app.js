@@ -1,6 +1,7 @@
 // ==========================================
 // APPLICATION CORE CONTROLLER (NetSelect Enterprise)
 // Integrated with FacilityStore & Project-Scoped State Isolation
+// Comprehensive Search & Filter Suite Across All Domains
 // ==========================================
 
 let currentMode = "access"; // "access" | "backbone" | "firewalls" | "optics" | "wireless" | "accessories"
@@ -21,6 +22,8 @@ let extraHeadroomPercent = 20;
 let selectedVendors = [];
 let selectedPortCounts = [];
 let selectedPoEClasses = [];
+let selectedUplinkSpeed = "all";
+let requireDemandFit = false;
 let requirePerpetualPoE = false;
 let requireSubstation = false;
 let requirePassThrough = false;
@@ -34,13 +37,27 @@ let requireMultiGig = false;
 // Firewall Filter States
 let selectedFwCategories = [];
 let selectedFwVendors = [];
+let fwTargetThroughputGbps = 0;
+let fwTargetThreatMbps = 0;
+let requireFwCellular = false;
+let requireFwDualPsu = false;
+let requireFwRackmount = false;
+let requireFw10GWan = false;
+let requireFwPoePorts = false;
 
 // Optics Filter States
 let selectedOpticMediums = [];
 let selectedOpticSpeeds = [];
 let selectedOpticVendors = [];
+let selectedOpticFormFactor = "all";
+let requireOpticIndustrial = false;
 
-// Wireless Filter States
+// Wireless Filter & Link Sizer States
+let wlTargetDistanceMiles = 0;
+let wlTargetThroughputMbps = 0;
+let selectedWlTopologyRole = "all"; // "all" | "ap" | "ptp" | "station"
+let selectedCompatibleMasterSku = "all";
+let minWlStations = 0;
 let selectedWlFrequencies = [];
 let selectedWlVendors = [];
 let requireWlBackup5G = false;
@@ -48,6 +65,9 @@ let requireWlBackup5G = false;
 // Accessories Filter States
 let selectedAccVendors = [];
 let selectedAccCategories = [];
+let selectedAccTypes = [];
+let selectedAccMounting = "all";
+let accMinPowerWatts = 0;
 
 // Initialize on DOM Ready
 document.addEventListener("DOMContentLoaded", () => {
@@ -88,7 +108,7 @@ function switchMode(newMode) {
       backbone: "Core / Agg Filters",
       firewalls: "Security WAN Filters",
       optics: "Interconnect Filters",
-      wireless: "Wireless PtP Filters",
+      wireless: "Wireless PtP & PtMP Filters",
       accessories: "Accessory Filters"
     };
     sidebarTitle.innerHTML = `<i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> ${titles[newMode] || "Filters"}`;
@@ -112,6 +132,8 @@ function resetCurrentFilters() {
   selectedVendors = [];
   selectedPortCounts = [];
   selectedPoEClasses = [];
+  selectedUplinkSpeed = "all";
+  requireDemandFit = false;
   requirePerpetualPoE = false;
   requireSubstation = false;
   requirePassThrough = false;
@@ -124,15 +146,34 @@ function resetCurrentFilters() {
 
   selectedFwCategories = [];
   selectedFwVendors = [];
+  fwTargetThroughputGbps = 0;
+  fwTargetThreatMbps = 0;
+  requireFwCellular = false;
+  requireFwDualPsu = false;
+  requireFwRackmount = false;
+  requireFw10GWan = false;
+  requireFwPoePorts = false;
+
   selectedOpticMediums = [];
   selectedOpticSpeeds = [];
   selectedOpticVendors = [];
+  selectedOpticFormFactor = "all";
+  requireOpticIndustrial = false;
+
+  wlTargetDistanceMiles = 0;
+  wlTargetThroughputMbps = 0;
+  selectedWlTopologyRole = "all";
+  selectedCompatibleMasterSku = "all";
+  minWlStations = 0;
   selectedWlFrequencies = [];
   selectedWlVendors = [];
   requireWlBackup5G = false;
 
   selectedAccVendors = [];
   selectedAccCategories = [];
+  selectedAccTypes = [];
+  selectedAccMounting = "all";
+  accMinPowerWatts = 0;
   activeSearchQuery = "";
 
   const searchInput = document.getElementById("filterSearch");
@@ -144,7 +185,7 @@ function resetCurrentFilters() {
 }
 
 // -----------------------------------------------------------
-// Multi-Port Demand & Headroom Sizing Engine
+// Multi-Port Demand & Interactive Sizing Strip Engine
 // -----------------------------------------------------------
 function calculatePoETarget() {
   const wattsAf = (demandCounts.af || 0) * 15.4;
@@ -168,80 +209,273 @@ function calculatePoETarget() {
 function updateDemandInput(field, val) {
   demandCounts[field] = Math.max(0, parseInt(val) || 0);
   buildCalculatorStrip();
+  buildSidebarFilters();
+  runActiveFilter();
   FacilityStore.notifyWorkspaceChange();
 }
 
 function updateHeadroom(val) {
   extraHeadroomPercent = parseInt(val) || 20;
   buildCalculatorStrip();
+  runActiveFilter();
   FacilityStore.notifyWorkspaceChange();
+}
+
+function setOpticQuickFilter(preset) {
+  if (preset === "10g_dac") {
+    selectedOpticSpeeds = ["10G"];
+    selectedOpticMediums = ["dac"];
+  } else if (preset === "10g_sr") {
+    selectedOpticSpeeds = ["10G"];
+    selectedOpticMediums = ["mmf"];
+  } else if (preset === "10g_lr") {
+    selectedOpticSpeeds = ["10G"];
+    selectedOpticMediums = ["smf"];
+  } else if (preset === "25g") {
+    selectedOpticSpeeds = ["25G"];
+    selectedOpticMediums = [];
+  } else if (preset === "100g") {
+    selectedOpticSpeeds = ["100G"];
+    selectedOpticMediums = [];
+  } else if (preset === "stacking") {
+    selectedOpticSpeeds = [];
+    selectedOpticMediums = ["stacking"];
+  } else if (preset === "reset") {
+    selectedOpticSpeeds = [];
+    selectedOpticMediums = [];
+    selectedOpticFormFactor = "all";
+    requireOpticIndustrial = false;
+  }
+  buildSidebarFilters();
+  runActiveFilter();
 }
 
 function buildCalculatorStrip() {
   const container = document.getElementById("calculatorStripContainer");
   if (!container) return;
 
-  if (currentMode !== "access") {
-    container.classList.add("hidden");
-    container.innerHTML = "";
-    return;
+  // 1. ACCESS MODE
+  if (currentMode === "access") {
+    container.classList.remove("hidden");
+    const { budgetWithHeadroom, totalCameras } = calculatePoETarget();
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="video" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Surveillance & Physical Security Port Sizer
+            </h4>
+            <p class="text-[11px] text-slate-400">Total Ports: <strong class="text-white font-mono">${totalCameras}</strong> &bull; Wattage with +${extraHeadroomPercent}% Headroom: <strong class="text-amber-300 font-mono">${budgetWithHeadroom}W</strong></p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
+            <span class="text-[10px] font-mono font-bold text-slate-400">af (15W):</span>
+            <input type="number" min="0" max="250" value="${demandCounts.af}" onchange="updateDemandInput('af', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
+          </div>
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
+            <span class="text-[10px] font-mono font-bold text-sky-400">at (30W):</span>
+            <input type="number" min="0" max="250" value="${demandCounts.at}" onchange="updateDemandInput('at', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
+          </div>
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
+            <span class="text-[10px] font-mono font-bold text-indigo-400">bt (60W):</span>
+            <input type="number" min="0" max="250" value="${demandCounts.bt60}" onchange="updateDemandInput('bt60', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
+          </div>
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
+            <span class="text-[10px] font-mono font-bold text-rose-400">bt (90W):</span>
+            <input type="number" min="0" max="250" value="${demandCounts.bt90}" onchange="updateDemandInput('bt90', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
+          </div>
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
+            <span class="text-slate-500 text-[10px]">Headroom:</span>
+            <select onchange="updateHeadroom(this.value)" class="bg-transparent font-mono text-white text-[11px] focus:outline-none">
+              <option value="15" ${extraHeadroomPercent === 15 ? 'selected' : ''}>+15%</option>
+              <option value="20" ${extraHeadroomPercent === 20 ? 'selected' : ''}>+20%</option>
+              <option value="25" ${extraHeadroomPercent === 25 ? 'selected' : ''}>+25%</option>
+              <option value="30" ${extraHeadroomPercent === 30 ? 'selected' : ''}>+30%</option>
+            </select>
+          </div>
+          <div class="bg-slate-950 border border-amber-500/40 px-3 py-1 rounded-xl flex items-center gap-2">
+            <span class="text-[10px] uppercase font-bold text-amber-400">Target PoE:</span>
+            <span class="font-mono text-sm font-black text-amber-300">${budgetWithHeadroom} W</span>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
-  container.classList.remove("hidden");
-  const { budgetWithHeadroom, totalCameras } = calculatePoETarget();
-
-  container.innerHTML = `
-    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
-      <div class="flex items-center gap-3">
-        <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
-          <i data-lucide="video" class="w-5 h-5"></i>
+  // 2. FIREWALLS MODE
+  else if (currentMode === "firewalls") {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 shrink-0">
+            <i data-lucide="shield-alert" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Firewall Throughput & Inspection Sizer
+            </h4>
+            <p class="text-[11px] text-slate-400">Filter security gateways by line-rate firewall capacity and deep threat inspection throughput.</p>
+          </div>
         </div>
-        <div>
-          <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            Surveillance & Physical Security Port Sizer
-          </h4>
-          <p class="text-[11px] text-slate-400">Total Ports: <strong class="text-white font-mono">${totalCameras}</strong> &bull; Wattage with +${extraHeadroomPercent}% Headroom: <strong class="text-amber-300 font-mono">${budgetWithHeadroom}W</strong></p>
+
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Routing:</span>
+            <select onchange="fwTargetThroughputGbps = parseFloat(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-rose-400 text-xs focus:outline-none">
+              <option value="0" ${fwTargetThroughputGbps === 0 ? 'selected' : ''}>Any Speed</option>
+              <option value="1" ${fwTargetThroughputGbps === 1 ? 'selected' : ''}>1.0+ Gbps</option>
+              <option value="3" ${fwTargetThroughputGbps === 3 ? 'selected' : ''}>3.0+ Gbps</option>
+              <option value="5" ${fwTargetThroughputGbps === 5 ? 'selected' : ''}>5.0+ Gbps</option>
+              <option value="10" ${fwTargetThroughputGbps === 10 ? 'selected' : ''}>10+ Gbps</option>
+              <option value="20" ${fwTargetThroughputGbps === 20 ? 'selected' : ''}>20+ Gbps</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Threat (IDS/IPS):</span>
+            <select onchange="fwTargetThreatMbps = parseInt(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-indigo-300 text-xs focus:outline-none">
+              <option value="0" ${fwTargetThreatMbps === 0 ? 'selected' : ''}>Any Threat Level</option>
+              <option value="500" ${fwTargetThreatMbps === 500 ? 'selected' : ''}>500+ Mbps</option>
+              <option value="1000" ${fwTargetThreatMbps === 1000 ? 'selected' : ''}>1.0+ Gbps</option>
+              <option value="2000" ${fwTargetThreatMbps === 2000 ? 'selected' : ''}>2.0+ Gbps</option>
+              <option value="5000" ${fwTargetThreatMbps === 5000 ? 'selected' : ''}>5.0+ Gbps</option>
+              <option value="10000" ${fwTargetThreatMbps === 10000 ? 'selected' : ''}>10+ Gbps</option>
+            </select>
+          </div>
+
+          ${(fwTargetThroughputGbps > 0 || fwTargetThreatMbps > 0) ? `
+            <button onclick="fwTargetThroughputGbps = 0; fwTargetThreatMbps = 0; buildCalculatorStrip(); runActiveFilter();" class="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2">
+              Reset Specs
+            </button>
+          ` : ''}
         </div>
       </div>
+    `;
+  }
 
-      <div class="flex flex-wrap items-center gap-2 text-xs">
-        <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1" title="Fixed 1080p/4K Domes, Intercoms (15.4W)">
-          <span class="text-[10px] font-mono font-bold text-slate-400">af (15W):</span>
-          <input type="number" min="0" max="250" value="${demandCounts.af}" onchange="updateDemandInput('af', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
+  // 3. OPTICS MODE
+  else if (currentMode === "optics") {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400 shrink-0">
+            <i data-lucide="cable" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Optics & Transceiver Fast-Select Strip
+            </h4>
+            <p class="text-[11px] text-slate-400">Quick-filter physical fiber interfaces, direct-attach copper, and chassis stacking cables.</p>
+          </div>
         </div>
 
-        <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1" title="Motorized PTZ, Reader Controllers (30W)">
-          <span class="text-[10px] font-mono font-bold text-sky-400">at (30W):</span>
-          <input type="number" min="0" max="250" value="${demandCounts.at}" onchange="updateDemandInput('at', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
-        </div>
-
-        <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1" title="180°/360° Multi-Sensor, 60GHz Radios (60W)">
-          <span class="text-[10px] font-mono font-bold text-indigo-400">bt (60W):</span>
-          <input type="number" min="0" max="250" value="${demandCounts.bt60}" onchange="updateDemandInput('bt60', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
-        </div>
-
-        <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1" title="Heated Enclosures, Blowers, Long-Range PTZ (90W)">
-          <span class="text-[10px] font-mono font-bold text-rose-400">bt (90W):</span>
-          <input type="number" min="0" max="250" value="${demandCounts.bt90}" onchange="updateDemandInput('bt90', this.value)" class="w-11 bg-transparent font-mono font-bold text-white focus:outline-none text-right" />
-        </div>
-
-        <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1">
-          <span class="text-slate-500 text-[10px]">Headroom:</span>
-          <select onchange="updateHeadroom(this.value)" class="bg-transparent font-mono text-white text-[11px] focus:outline-none">
-            <option value="15" ${extraHeadroomPercent === 15 ? 'selected' : ''}>+15%</option>
-            <option value="20" ${extraHeadroomPercent === 20 ? 'selected' : ''}>+20%</option>
-            <option value="25" ${extraHeadroomPercent === 25 ? 'selected' : ''}>+25%</option>
-            <option value="30" ${extraHeadroomPercent === 30 ? 'selected' : ''}>+30%</option>
-          </select>
-        </div>
-
-        <div class="bg-slate-950 border border-amber-500/40 px-3 py-1 rounded-xl flex items-center gap-2">
-          <span class="text-[10px] uppercase font-bold text-amber-400">Target PoE:</span>
-          <span class="font-mono text-sm font-black text-amber-300">${budgetWithHeadroom} W</span>
+        <div class="flex flex-wrap items-center gap-1.5 text-xs">
+          <button onclick="setOpticQuickFilter('10g_dac')" class="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-sky-500/50 hover:bg-sky-950/20 text-slate-300 hover:text-white font-mono text-[11px] transition-all">10G DAC</button>
+          <button onclick="setOpticQuickFilter('10g_sr')" class="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-sky-500/50 hover:bg-sky-950/20 text-slate-300 hover:text-white font-mono text-[11px] transition-all">10G MMF (SR)</button>
+          <button onclick="setOpticQuickFilter('10g_lr')" class="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-sky-500/50 hover:bg-sky-950/20 text-slate-300 hover:text-white font-mono text-[11px] transition-all">10G SMF (LR)</button>
+          <button onclick="setOpticQuickFilter('25g')" class="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-sky-500/50 hover:bg-sky-950/20 text-slate-300 hover:text-white font-mono text-[11px] transition-all">25G SFP28</button>
+          <button onclick="setOpticQuickFilter('100g')" class="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-sky-500/50 hover:bg-sky-950/20 text-slate-300 hover:text-white font-mono text-[11px] transition-all">100G QSFP28</button>
+          <button onclick="setOpticQuickFilter('stacking')" class="px-2.5 py-1 rounded-xl bg-slate-950 border border-slate-800 hover:border-indigo-500/50 hover:bg-indigo-950/20 text-indigo-300 hover:text-white font-mono text-[11px] transition-all">Stacking</button>
+          <button onclick="setOpticQuickFilter('reset')" class="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2">Reset</button>
         </div>
       </div>
-    </div>
-  `;
+    `;
+  }
+
+  // 4. WIRELESS MODE
+  else if (currentMode === "wireless") {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 shrink-0">
+            <i data-lucide="radio" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Wireless Link Path Sizer
+            </h4>
+            <p class="text-[11px] text-slate-400">Filter radios by minimum operating distance and line-rate throughput requirements.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Distance:</span>
+            <input type="number" step="0.1" min="0" max="25" value="${wlTargetDistanceMiles || 0}" onchange="wlTargetDistanceMiles = parseFloat(this.value) || 0; runActiveFilter();" class="w-14 bg-transparent font-mono font-bold text-emerald-400 focus:outline-none text-right" />
+            <span class="text-[10px] font-mono text-slate-500">Miles (${((wlTargetDistanceMiles || 0) * 1.609).toFixed(1)} km)</span>
+          </div>
+
+          <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Speed:</span>
+            <select onchange="wlTargetThroughputMbps = parseInt(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-indigo-300 text-xs focus:outline-none">
+              <option value="0" ${wlTargetThroughputMbps === 0 ? 'selected' : ''}>Any Speed</option>
+              <option value="450" ${wlTargetThroughputMbps === 450 ? 'selected' : ''}>450+ Mbps (Camera Pole)</option>
+              <option value="1000" ${wlTargetThroughputMbps === 1000 ? 'selected' : ''}>1.0+ Gbps (Gigabit Trunk)</option>
+              <option value="2000" ${wlTargetThroughputMbps === 2000 ? 'selected' : ''}>2.0+ Gbps (Multi-Gig)</option>
+              <option value="5000" ${wlTargetThroughputMbps === 5000 ? 'selected' : ''}>5.0+ Gbps (High Capacity)</option>
+              <option value="10000" ${wlTargetThroughputMbps === 10000 ? 'selected' : ''}>10 Gbps (Carrier E-Band)</option>
+            </select>
+          </div>
+
+          ${(wlTargetDistanceMiles > 0 || wlTargetThroughputMbps > 0) ? `
+            <button onclick="wlTargetDistanceMiles = 0; wlTargetThroughputMbps = 0; buildCalculatorStrip(); runActiveFilter();" class="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2">
+              Reset Link
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // 5. ACCESSORIES MODE
+  else if (currentMode === "accessories") {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="wrench" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Power & Enclosure Infrastructure Sizer
+            </h4>
+            <p class="text-[11px] text-slate-400">Directly size industrial DIN-rail power supplies, midspan PoE injectors, and exterior enclosures.</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 text-xs">
+          <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Output Power:</span>
+            <select onchange="accMinPowerWatts = parseInt(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-amber-400 text-xs focus:outline-none">
+              <option value="0" ${accMinPowerWatts === 0 ? 'selected' : ''}>Any Power</option>
+              <option value="30" ${accMinPowerWatts === 30 ? 'selected' : ''}>30W (PoE+)</option>
+              <option value="60" ${accMinPowerWatts === 60 ? 'selected' : ''}>60W (PoE++ / bt)</option>
+              <option value="120" ${accMinPowerWatts === 120 ? 'selected' : ''}>120W+ (DIN PSU)</option>
+              <option value="240" ${accMinPowerWatts === 240 ? 'selected' : ''}>240W+ (Industrial High-Draw)</option>
+            </select>
+          </div>
+
+          ${accMinPowerWatts > 0 ? `
+            <button onclick="accMinPowerWatts = 0; buildCalculatorStrip(); runActiveFilter();" class="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2">
+              Reset
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  } else {
+    container.classList.add("hidden");
+    container.innerHTML = "";
+  }
 
   if (window.lucide) {
     try { lucide.createIcons(); } catch (e) {}
@@ -255,34 +489,72 @@ function buildSidebarFilters() {
   const container = document.getElementById("dynamicSidebarContent");
   if (!container) return;
 
+  // SWITCHES
   if (currentMode === "access" || currentMode === "backbone") {
     const currentDataset = SWITCH_DATABASE.filter(s => currentMode === "access" ? s.role === "Access" : (s.role === "Core" || s.role === "Aggregation"));
     const vendors = [...new Set(currentDataset.map(s => s.vendor))];
+    const { totalCameras } = calculatePoETarget();
 
     container.innerHTML = `
+      ${currentMode === "access" && totalCameras > 0 ? `
+        <div class="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/40 space-y-1.5">
+          <label class="flex items-center gap-2 text-xs font-bold text-amber-300 cursor-pointer">
+            <input type="checkbox" ${requireDemandFit ? 'checked' : ''} onchange="requireDemandFit = this.checked; runActiveFilter();" class="rounded border-amber-600 bg-slate-950 text-amber-500" />
+            <span>Only Show Capable Switches</span>
+          </label>
+          <p class="text-[10px] text-slate-400 leading-tight">Filters out switches that cannot fulfill ${totalCameras} ports or required PoE wattage.</p>
+        </div>
+      ` : ''}
+
       <div class="space-y-2">
         <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Manufacturer</label>
         <div class="space-y-1">
-          ${vendors.map(v => `
-            <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
-              <span class="flex items-center gap-2">
-                <input type="checkbox" value="${v}" ${selectedVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('vendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
-                <span>${v}</span>
-              </span>
-              <span class="font-mono text-[10px] text-slate-500">${currentDataset.filter(s => s.vendor === v).length}</span>
+          ${vendors.map(v => {
+            const count = currentDataset.filter(s => s.vendor === v).length;
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+                <span class="flex items-center gap-2">
+                  <input type="checkbox" value="${v}" ${selectedVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('vendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
+                  <span>${v}</span>
+                </span>
+                <span class="font-mono text-[10px] text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Port Density Category</label>
+        <div class="grid grid-cols-2 gap-1 text-xs">
+          ${[
+            { id: 48, label: "48-Port" },
+            { id: 24, label: "24-Port" },
+            { id: 16, label: "16-Port" },
+            { id: 8,  label: "Compact/DIN" }
+          ].map(p => `
+            <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 cursor-pointer">
+              <input type="checkbox" value="${p.id}" ${selectedPortCounts.includes(p.id) ? 'checked' : ''} onchange="toggleFilterItem('ports', ${p.id})" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
+              <span class="font-mono text-slate-300">${p.label}</span>
             </label>
           `).join('')}
         </div>
       </div>
 
       <div class="space-y-2 pt-3 border-t border-slate-800">
-        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Downlink Port Density</label>
-        <div class="grid grid-cols-2 gap-1 text-xs">
-          ${[8, 10, 16, 24, 48].map(p => `
-            <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 cursor-pointer">
-              <input type="checkbox" value="${p}" ${selectedPortCounts.includes(p) ? 'checked' : ''} onchange="toggleFilterItem('ports', ${p})" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
-              <span class="font-mono text-slate-300">${p} Ports</span>
-            </label>
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Uplink Speed</label>
+        <div class="grid grid-cols-3 gap-1 text-[11px] font-mono font-semibold">
+          ${[
+            { id: "all", label: "All" },
+            { id: "10G", label: "10G SFP+" },
+            { id: "25G", label: "25G SFP28" },
+            { id: "40G", label: "40G" },
+            { id: "100G", label: "100G" },
+            { id: "1G", label: "1G SFP" }
+          ].map(u => `
+            <button onclick="setUplinkSpeedFilter('${u.id}')" class="py-1 px-1.5 rounded-lg border text-center transition-all ${selectedUplinkSpeed === u.id ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+              ${u.label}
+            </button>
           `).join('')}
         </div>
       </div>
@@ -291,6 +563,10 @@ function buildSidebarFilters() {
         <div class="space-y-2 pt-3 border-t border-slate-800">
           <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">PoE Power Class Required</label>
           <div class="space-y-1 text-xs text-slate-300">
+            <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+              <input type="checkbox" value="at" ${selectedPoEClasses.includes('at') ? 'checked' : ''} onchange="toggleFilterItem('poeClass', 'at')" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
+              <span>Requires 30W at (PoE+)</span>
+            </label>
             <label class="flex items-center gap-2 cursor-pointer hover:text-white">
               <input type="checkbox" value="bt60" ${selectedPoEClasses.includes('bt60') ? 'checked' : ''} onchange="toggleFilterItem('poeClass', 'bt60')" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
               <span>Requires 60W bt (Type 3)</span>
@@ -316,7 +592,7 @@ function buildSidebarFilters() {
           </label>
           <label class="flex items-center gap-2 cursor-pointer hover:text-white">
             <input type="checkbox" ${requireShallowDepth ? 'checked' : ''} onchange="requireShallowDepth = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
-            <span>Shallow Depth (&lt;12" Wallmount)</span>
+            <span>Shallow Depth (&le;12" Wallmount)</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer hover:text-white">
             <input type="checkbox" ${requireDinMount ? 'checked' : ''} onchange="requireDinMount = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
@@ -341,7 +617,10 @@ function buildSidebarFilters() {
         </div>
       </div>
     `;
-  } else if (currentMode === "firewalls") {
+  }
+
+  // FIREWALLS
+  else if (currentMode === "firewalls") {
     const list = FIREWALL_DATABASE || [];
     const vendors = [...new Set(list.map(f => (f.vendor || '').trim()).filter(Boolean))];
     const categories = [...new Set(list.map(f => (f.category || '').toLowerCase().trim()).filter(Boolean))];
@@ -350,20 +629,23 @@ function buildSidebarFilters() {
       <div class="space-y-2">
         <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Gateway Manufacturer</label>
         <div class="space-y-1">
-          ${vendors.map(v => `
-            <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
-              <span class="flex items-center gap-2">
-                <input type="checkbox" value="${v}" ${selectedFwVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('fwVendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
-                <span>${v}</span>
-              </span>
-              <span class="font-mono text-[10px] text-slate-500">${list.filter(f => (f.vendor || '').trim() === v).length}</span>
-            </label>
-          `).join('')}
+          ${vendors.map(v => {
+            const count = list.filter(f => (f.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+                <span class="flex items-center gap-2">
+                  <input type="checkbox" value="${v}" ${selectedFwVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('fwVendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
+                  <span>${v}</span>
+                </span>
+                <span class="font-mono text-[10px] text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
         </div>
       </div>
 
       <div class="space-y-2 pt-3 border-t border-slate-800">
-        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Form Factor & Role</label>
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Gateway Classification</label>
         <div class="space-y-1.5 text-xs text-slate-300">
           ${categories.map(c => `
             <label class="flex items-center gap-2 cursor-pointer hover:text-white">
@@ -373,8 +655,37 @@ function buildSidebarFilters() {
           `).join('')}
         </div>
       </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Chassis & Architecture</label>
+        <div class="space-y-1.5 text-xs text-slate-300">
+          <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+            <input type="checkbox" ${requireFwRackmount ? 'checked' : ''} onchange="requireFwRackmount = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
+            <span>1U Rackmount Chassis</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+            <input type="checkbox" ${requireFwCellular ? 'checked' : ''} onchange="requireFwCellular = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
+            <span>Integrated Cellular (LTE / 5G)</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+            <input type="checkbox" ${requireFwDualPsu ? 'checked' : ''} onchange="requireFwDualPsu = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
+            <span>Dual / Redundant Power Supplies</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+            <input type="checkbox" ${requireFw10GWan ? 'checked' : ''} onchange="requireFw10GWan = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
+            <span>High-Speed 10G/25G WAN Uplinks</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+            <input type="checkbox" ${requireFwPoePorts ? 'checked' : ''} onchange="requireFwPoePorts = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-rose-500" />
+            <span>Integrated PoE Switch Ports</span>
+          </label>
+        </div>
+      </div>
     `;
-  } else if (currentMode === "optics") {
+  }
+
+  // OPTICS
+  else if (currentMode === "optics") {
     const list = OPTICS_LIST || [];
     const mediums = [...new Set(list.map(o => (o.medium || '').toLowerCase().trim()).filter(Boolean))];
     const speeds = [...new Set(list.map(o => (o.speed || '').trim()).filter(Boolean))];
@@ -404,7 +715,7 @@ function buildSidebarFilters() {
       </div>
 
       <div class="space-y-2 pt-3 border-t border-slate-800">
-        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Speed</label>
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Line Rate Speed</label>
         <div class="grid grid-cols-2 gap-1 text-xs">
           ${speeds.map(s => `
             <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-slate-950/60 border border-slate-800 hover:border-slate-700 cursor-pointer">
@@ -416,7 +727,20 @@ function buildSidebarFilters() {
       </div>
 
       <div class="space-y-2 pt-3 border-t border-slate-800">
-        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Vendor</label>
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Form Factor</label>
+        <select onchange="selectedOpticFormFactor = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="all" ${selectedOpticFormFactor === 'all' ? 'selected' : ''}>All Form Factors</option>
+          <option value="SFP" ${selectedOpticFormFactor === 'SFP' ? 'selected' : ''}>SFP (1G)</option>
+          <option value="SFP+" ${selectedOpticFormFactor === 'SFP+' ? 'selected' : ''}>SFP+ (10G)</option>
+          <option value="SFP28" ${selectedOpticFormFactor === 'SFP28' ? 'selected' : ''}>SFP28 (25G)</option>
+          <option value="QSFP+" ${selectedOpticFormFactor === 'QSFP+' ? 'selected' : ''}>QSFP+ (40G)</option>
+          <option value="QSFP28" ${selectedOpticFormFactor === 'QSFP28' ? 'selected' : ''}>QSFP28 (100G)</option>
+          <option value="Stacking" ${selectedOpticFormFactor === 'Stacking' ? 'selected' : ''}>Stacking Cable</option>
+        </select>
+      </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Switch Ecosystem</label>
         <div class="space-y-1">
           ${vendors.map(v => `
             <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
@@ -428,25 +752,70 @@ function buildSidebarFilters() {
           `).join('')}
         </div>
       </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Environment</label>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+          <input type="checkbox" ${requireOpticIndustrial ? 'checked' : ''} onchange="requireOpticIndustrial = this.checked; runActiveFilter();" class="rounded border-slate-700 bg-slate-950 text-sky-500" />
+          <span>Industrial Hardened (-40°C to +85°C)</span>
+        </label>
+      </div>
     `;
-  } else if (currentMode === "wireless") {
+  }
+
+  // WIRELESS
+  else if (currentMode === "wireless") {
     const list = (typeof WIRELESS_DATABASE !== "undefined") ? WIRELESS_DATABASE : [];
     const vendors = [...new Set(list.map(w => (w.vendor || '').trim()).filter(Boolean))];
+    const masters = list.filter(w => (w.topologyRole === "ap" || (w.maxStations || 0) > 1));
 
     container.innerHTML = `
       <div class="space-y-2">
         <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Wireless Manufacturer</label>
         <div class="space-y-1">
-          ${vendors.map(v => `
-            <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
-              <span class="flex items-center gap-2">
-                <input type="checkbox" value="${v}" ${selectedWlVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('wlVendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-emerald-500" />
-                <span>${v}</span>
-              </span>
-              <span class="font-mono text-[10px] text-slate-500">${list.filter(w => (w.vendor || '').trim() === v).length}</span>
-            </label>
-          `).join('')}
+          ${vendors.map(v => {
+            const count = list.filter(w => (w.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+                <span class="flex items-center gap-2">
+                  <input type="checkbox" value="${v}" ${selectedWlVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('wlVendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-emerald-500" />
+                  <span>${v}</span>
+                </span>
+                <span class="font-mono text-[10px] text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
         </div>
+      </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Topology & Capacity</label>
+        <div class="space-y-2 text-xs">
+          <select onchange="selectedWlTopologyRole = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-emerald-500">
+            <option value="all" ${selectedWlTopologyRole === 'all' ? 'selected' : ''}>All Roles (PtP & PtMP)</option>
+            <option value="ap" ${selectedWlTopologyRole === 'ap' ? 'selected' : ''}>BaseStation AP (Multi-Point Master)</option>
+            <option value="ptp" ${selectedWlTopologyRole === 'ptp' ? 'selected' : ''}>Point-to-Point (1-to-1)</option>
+            <option value="station" ${selectedWlTopologyRole === 'station' ? 'selected' : ''}>Subscriber Station Only</option>
+          </select>
+
+          <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[10px] text-slate-400">Min Connected Clients:</span>
+            <div class="flex items-center gap-1.5">
+              <input type="number" min="0" max="60" value="${minWlStations}" onchange="minWlStations = parseInt(this.value) || 0; runActiveFilter();" class="w-10 bg-transparent text-emerald-400 font-mono font-bold text-right text-xs focus:outline-none" />
+              <span class="text-[10px] font-mono text-slate-500">pts</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Filter By Master Compatibility</label>
+        <select onchange="selectedCompatibleMasterSku = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-amber-300 font-semibold rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${selectedCompatibleMasterSku === 'all' ? 'selected' : ''}>All Hardware</option>
+          ${masters.map(m => `
+            <option value="${m.sku}" ${selectedCompatibleMasterSku === m.sku ? 'selected' : ''}>Stations for ${m.model} (${m.sku})</option>
+          `).join('')}
+        </select>
       </div>
 
       <div class="space-y-2 pt-3 border-t border-slate-800">
@@ -455,6 +824,10 @@ function buildSidebarFilters() {
           <label class="flex items-center gap-2 cursor-pointer hover:text-white">
             <input type="checkbox" value="60" ${selectedWlFrequencies.includes('60') ? 'checked' : ''} onchange="toggleFilterItem('wlFreq', '60')" class="rounded border-slate-700 bg-slate-950 text-emerald-500" />
             <span>60 GHz High-Capacity Carrier</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer hover:text-white">
+            <input type="checkbox" value="70" ${selectedWlFrequencies.includes('70') ? 'checked' : ''} onchange="toggleFilterItem('wlFreq', '70')" class="rounded border-slate-700 bg-slate-950 text-emerald-500" />
+            <span>70/80 GHz E-Band Full Duplex</span>
           </label>
           <label class="flex items-center gap-2 cursor-pointer hover:text-white">
             <input type="checkbox" value="5" ${selectedWlFrequencies.includes('5') ? 'checked' : ''} onchange="toggleFilterItem('wlFreq', '5')" class="rounded border-slate-700 bg-slate-950 text-emerald-500" />
@@ -471,40 +844,76 @@ function buildSidebarFilters() {
         </label>
       </div>
     `;
-  } else if (currentMode === "accessories") {
+  }
+
+  // ACCESSORIES
+  else if (currentMode === "accessories") {
     const list = (typeof ACCESSORY_DATABASE !== "undefined") ? ACCESSORY_DATABASE : [];
     const vendors = [...new Set(list.map(a => (a.vendor || '').trim()).filter(Boolean))];
-    const categories = [...new Set(list.map(a => (a.category || '').toLowerCase().trim()).filter(Boolean))];
+    const types = [
+      { id: "power_supply", label: "Power Supplies (DIN/AC)" },
+      { id: "poe_injector", label: "PoE Midspan Injectors" },
+      { id: "media_converter", label: "Media Converters" },
+      { id: "power_distribution", label: "Managed PDUs" },
+      { id: "enclosure", label: "Weatherproof Enclosures" },
+      { id: "surge_protector", label: "Surge Suppressors" }
+    ];
 
     container.innerHTML = `
       <div class="space-y-2">
         <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Manufacturer</label>
         <div class="space-y-1">
-          ${vendors.map(v => `
-            <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
-              <span class="flex items-center gap-2">
-                <input type="checkbox" value="${v}" ${selectedAccVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('accVendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-amber-500" />
-                <span>${v}</span>
-              </span>
-              <span class="font-mono text-[10px] text-slate-500">${list.filter(a => (a.vendor || '').trim() === v).length}</span>
-            </label>
-          `).join('')}
+          ${vendors.map(v => {
+            const count = list.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 hover:text-white cursor-pointer select-none">
+                <span class="flex items-center gap-2">
+                  <input type="checkbox" value="${v}" ${selectedAccVendors.includes(v) ? 'checked' : ''} onchange="toggleFilterItem('accVendor', '${v}')" class="rounded border-slate-700 bg-slate-950 text-amber-500" />
+                  <span>${v}</span>
+                </span>
+                <span class="font-mono text-[10px] text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
         </div>
       </div>
 
       <div class="space-y-2 pt-3 border-t border-slate-800">
-        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Type / Classification</label>
-        <div class="space-y-1.5 text-xs text-slate-300">
-          ${categories.map(c => `
-            <label class="flex items-center gap-2 cursor-pointer hover:text-white">
-              <input type="checkbox" value="${c}" ${selectedAccCategories.includes(c) ? 'checked' : ''} onchange="toggleFilterItem('accCategory', '${c}')" class="rounded border-slate-700 bg-slate-950 text-amber-500" />
-              <span class="capitalize">${c.replace('_', ' ')}</span>
-            </label>
-          `).join('')}
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Device Classification</label>
+        <div class="space-y-1 text-xs text-slate-300">
+          ${types.map(t => {
+            const count = list.filter(a => a.type === t.id || a.category === t.id).length;
+            return `
+              <label class="flex items-center justify-between cursor-pointer hover:text-white">
+                <span class="flex items-center gap-2">
+                  <input type="checkbox" value="${t.id}" ${selectedAccTypes.includes(t.id) ? 'checked' : ''} onchange="toggleFilterItem('accType', '${t.id}')" class="rounded border-slate-700 bg-slate-950 text-amber-500" />
+                  <span>${t.label}</span>
+                </span>
+                <span class="font-mono text-[10px] text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
         </div>
+      </div>
+
+      <div class="space-y-2 pt-3 border-t border-slate-800">
+        <label class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Mounting Environment</label>
+        <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${selectedAccMounting === 'all' ? 'selected' : ''}>All Mountings</option>
+          <option value="DIN" ${selectedAccMounting === 'DIN' ? 'selected' : ''}>DIN-Rail</option>
+          <option value="Rack" ${selectedAccMounting === 'Rack' ? 'selected' : ''}>19" Rackmount (1U)</option>
+          <option value="Wall" ${selectedAccMounting === 'Wall' ? 'selected' : ''}>Wall / Surface</option>
+          <option value="Pole" ${selectedAccMounting === 'Pole' ? 'selected' : ''}>Outdoor Pole Box</option>
+        </select>
       </div>
     `;
   }
+}
+
+function setUplinkSpeedFilter(speed) {
+  selectedUplinkSpeed = speed;
+  buildSidebarFilters();
+  runActiveFilter();
 }
 
 function toggleFilterItem(type, val) {
@@ -530,10 +939,206 @@ function toggleFilterItem(type, val) {
     selectedWlFrequencies = selectedWlFrequencies.includes(val) ? selectedWlFrequencies.filter(f => f !== val) : [...selectedWlFrequencies, val];
   } else if (type === "accVendor") {
     selectedAccVendors = selectedAccVendors.includes(val) ? selectedAccVendors.filter(v => v !== val) : [...selectedAccVendors, val];
-  } else if (type === "accCategory") {
-    selectedAccCategories = selectedAccCategories.includes(val) ? selectedAccCategories.filter(c => c !== val) : [...selectedAccCategories, val];
+  } else if (type === "accType") {
+    selectedAccTypes = selectedAccTypes.includes(val) ? selectedAccTypes.filter(t => t !== val) : [...selectedAccTypes, val];
   }
   runActiveFilter();
+}
+
+// -----------------------------------------------------------
+// Helper Evaluation Functions
+// -----------------------------------------------------------
+function matchesSearchTokens(item, query) {
+  if (!query) return true;
+  const cleanQ = query.toLowerCase().trim();
+  const tokens = cleanQ.split(/\s+/).filter(Boolean);
+
+  const rawFields = [
+    item.model,
+    item.sku,
+    item.name,
+    item.vendor,
+    item.role,
+    item.category,
+    item.type,
+    item.portFormFactorSummary,
+    item.uplinksSummary,
+    item.frequency,
+    item.band,
+    item.architecture,
+    item.mounting,
+    item.description,
+    ...(item.keyFeatures || [])
+  ].filter(Boolean).join(" ").toLowerCase();
+
+  const normalizedFields = rawFields.replace(/[^a-z0-9]/g, "");
+
+  return tokens.every(token => {
+    if (rawFields.includes(token)) return true;
+    const cleanToken = token.replace(/[^a-z0-9]/g, "");
+    return cleanToken.length > 0 && normalizedFields.includes(cleanToken);
+  });
+}
+
+function checkSwitchPortCategory(sw, targetCategories) {
+  if (!targetCategories || targetCategories.length === 0) return true;
+  return targetCategories.some(cat => {
+    if (cat === 48) {
+      return sw.portCategory === "48" || (sw.ports >= 48 && sw.ports <= 56);
+    }
+    if (cat === 24) {
+      return sw.portCategory === "24" || (sw.ports >= 24 && sw.ports <= 32);
+    }
+    if (cat === 16) {
+      return sw.portCategory === "16" || (sw.ports >= 14 && sw.ports <= 20);
+    }
+    if (cat === 8 || cat === 10) {
+      return sw.portCategory === "compact" || sw.ports < 16;
+    }
+    return sw.ports === cat;
+  });
+}
+
+function checkSwitchMultiGig(sw) {
+  if (sw.hasMultiGig === true) return true;
+  if (sw.portSpeed === "mGig" || sw.portSpeed === "2.5G" || sw.portSpeed === "5G") return true;
+
+  const summary = (sw.portFormFactorSummary || "").toLowerCase();
+  const model = (sw.model || "").toLowerCase();
+
+  return summary.includes("mgig") ||
+         summary.includes("2.5g") ||
+         summary.includes("5g") ||
+         summary.includes("100m/1g/2.5g") ||
+         summary.includes("10gbase-t") ||
+         model.includes("multigig") ||
+         model.includes("multi-gig") ||
+         model.includes("mgig");
+}
+
+function checkSwitchDemandFit(sw) {
+  const { budgetWithHeadroom, totalCameras, demandCounts } = calculatePoETarget();
+  if (totalCameras === 0) return true;
+
+  let downlinks = sw.ports;
+  if (sw.portCategory === "48") downlinks = 48;
+  else if (sw.portCategory === "24") downlinks = 24;
+  else if (sw.portCategory === "16") downlinks = 16;
+  else if (sw.portCategory === "compact") downlinks = 8;
+
+  if (downlinks < totalCameras) return false;
+  if ((sw.poeBudget || 0) < budgetWithHeadroom) return false;
+
+  if (demandCounts.bt90 > 0 && (sw.poeBt90Ports || 0) < demandCounts.bt90) return false;
+  const totalBt = (sw.poeBt60Ports || 0) + (sw.poeBt90Ports || 0);
+  const requiredBt = demandCounts.bt60 + demandCounts.bt90;
+  if (requiredBt > 0 && totalBt < requiredBt) return false;
+
+  return true;
+}
+
+// -----------------------------------------------------------
+// Removable Active Filter Pills Engine
+// -----------------------------------------------------------
+function renderActiveFilterPills() {
+  const container = document.getElementById("activeFilterPillsContainer");
+  if (!container) return;
+
+  const pills = [];
+
+  if (activeSearchQuery) {
+    pills.push({ label: `Search: "${activeSearchQuery}"`, onRemove: () => { activeSearchQuery = ""; document.getElementById("filterSearch").value = ""; } });
+  }
+
+  // Switch Pills
+  if (currentMode === "access" || currentMode === "backbone") {
+    selectedVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('vendor', v) }));
+    selectedPortCounts.forEach(p => {
+      const name = p === 48 ? "48-Port" : p === 24 ? "24-Port" : p === 16 ? "16-Port" : "Compact";
+      pills.push({ label: `Density: ${name}`, onRemove: () => toggleFilterItem('ports', p) });
+    });
+    if (selectedUplinkSpeed && selectedUplinkSpeed !== "all") pills.push({ label: `Uplink: ${selectedUplinkSpeed}`, onRemove: () => setUplinkSpeedFilter('all') });
+    if (requireDemandFit) pills.push({ label: `Fit: Security Demand`, onRemove: () => { requireDemandFit = false; } });
+    selectedPoEClasses.forEach(c => pills.push({ label: `PoE: ${c.toUpperCase()}`, onRemove: () => toggleFilterItem('poeClass', c) }));
+    if (requireMultiGig) pills.push({ label: "Multi-Gig", onRemove: () => { requireMultiGig = false; } });
+    if (requireShallowDepth) pills.push({ label: "Shallow Depth", onRemove: () => { requireShallowDepth = false; } });
+    if (requireStacking) pills.push({ label: "Stackable", onRemove: () => { requireStacking = false; } });
+    if (requireDualPsu) pills.push({ label: "Dual PSU", onRemove: () => { requireDualPsu = false; } });
+    if (requireDinMount) pills.push({ label: "DIN Mount", onRemove: () => { requireDinMount = false; } });
+    if (requirePerpetualPoE) pills.push({ label: "Perpetual PoE", onRemove: () => { requirePerpetualPoE = false; } });
+    if (requireTAA) pills.push({ label: "TAA Compliant", onRemove: () => { requireTAA = false; } });
+    if (requireSubstation) pills.push({ label: "Substation", onRemove: () => { requireSubstation = false; } });
+  }
+
+  // Firewall Pills
+  if (currentMode === "firewalls") {
+    selectedFwVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('fwVendor', v) }));
+    selectedFwCategories.forEach(c => pills.push({ label: `Type: ${c}`, onRemove: () => toggleFilterItem('fwCategory', c) }));
+    if (fwTargetThroughputGbps > 0) pills.push({ label: `Routing: ${fwTargetThroughputGbps}+ Gbps`, onRemove: () => { fwTargetThroughputGbps = 0; buildCalculatorStrip(); } });
+    if (fwTargetThreatMbps > 0) pills.push({ label: `Threat: ${fwTargetThreatMbps >= 1000 ? (fwTargetThreatMbps/1000) + ' Gbps' : fwTargetThreatMbps + ' Mbps'}`, onRemove: () => { fwTargetThreatMbps = 0; buildCalculatorStrip(); } });
+    if (requireFwRackmount) pills.push({ label: "1U Rackmount", onRemove: () => { requireFwRackmount = false; } });
+    if (requireFwCellular) pills.push({ label: "LTE/5G Failover", onRemove: () => { requireFwCellular = false; } });
+    if (requireFwDualPsu) pills.push({ label: "Dual PSU", onRemove: () => { requireFwDualPsu = false; } });
+    if (requireFw10GWan) pills.push({ label: "10G/25G WAN", onRemove: () => { requireFw10GWan = false; } });
+    if (requireFwPoePorts) pills.push({ label: "PoE Switch Ports", onRemove: () => { requireFwPoePorts = false; } });
+  }
+
+  // Optics Pills
+  if (currentMode === "optics") {
+    selectedOpticVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('opticVendor', v) }));
+    selectedOpticMediums.forEach(m => pills.push({ label: `Medium: ${m.toUpperCase()}`, onRemove: () => toggleFilterItem('opticMedium', m) }));
+    selectedOpticSpeeds.forEach(s => pills.push({ label: `Speed: ${s}`, onRemove: () => toggleFilterItem('opticSpeed', s) }));
+    if (selectedOpticFormFactor !== "all") pills.push({ label: `Form: ${selectedOpticFormFactor}`, onRemove: () => { selectedOpticFormFactor = "all"; } });
+    if (requireOpticIndustrial) pills.push({ label: "Industrial (-40°C to +85°C)", onRemove: () => { requireOpticIndustrial = false; } });
+  }
+
+  // Wireless Pills
+  if (currentMode === "wireless") {
+    selectedWlVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('wlVendor', v) }));
+    selectedWlFrequencies.forEach(f => pills.push({ label: `Freq: ${f} GHz`, onRemove: () => toggleFilterItem('wlFreq', f) }));
+    if (wlTargetDistanceMiles > 0) pills.push({ label: `Min Range: ${wlTargetDistanceMiles} mi`, onRemove: () => { wlTargetDistanceMiles = 0; buildCalculatorStrip(); } });
+    if (wlTargetThroughputMbps > 0) pills.push({ label: `Min Speed: ${wlTargetThroughputMbps >= 1000 ? (wlTargetThroughputMbps/1000) + ' Gbps' : wlTargetThroughputMbps + ' Mbps'}`, onRemove: () => { wlTargetThroughputMbps = 0; buildCalculatorStrip(); } });
+    if (selectedWlTopologyRole !== "all") pills.push({ label: `Role: ${selectedWlTopologyRole.toUpperCase()}`, onRemove: () => { selectedWlTopologyRole = "all"; } });
+    if (selectedCompatibleMasterSku !== "all") pills.push({ label: `Master: ${selectedCompatibleMasterSku}`, onRemove: () => { selectedCompatibleMasterSku = "all"; } });
+    if (minWlStations > 0) pills.push({ label: `Min Stations: ${minWlStations}+`, onRemove: () => { minWlStations = 0; } });
+    if (requireWlBackup5G) pills.push({ label: "5GHz Backup", onRemove: () => { requireWlBackup5G = false; } });
+  }
+
+  // Accessories Pills
+  if (currentMode === "accessories") {
+    selectedAccVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('accVendor', v) }));
+    selectedAccTypes.forEach(t => pills.push({ label: `Type: ${t.replace('_', ' ')}`, onRemove: () => toggleFilterItem('accType', t) }));
+    if (selectedAccMounting !== "all") pills.push({ label: `Mount: ${selectedAccMounting}`, onRemove: () => { selectedAccMounting = "all"; } });
+    if (accMinPowerWatts > 0) pills.push({ label: `Min Power: ${accMinPowerWatts}W`, onRemove: () => { accMinPowerWatts = 0; buildCalculatorStrip(); } });
+  }
+
+  if (pills.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  container.innerHTML = `
+    <div class="flex flex-wrap items-center gap-1.5 py-1">
+      <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mr-1">Active:</span>
+      ${pills.map((pill, idx) => `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-700 text-xs text-slate-200 shadow-sm">
+          <span>${pill.label}</span>
+          <button onclick="removeFilterPill(${idx})" class="text-slate-400 hover:text-rose-400 font-bold ml-0.5">&times;</button>
+        </span>
+      `).join('')}
+      <button onclick="resetCurrentFilters()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold px-2 py-0.5 ml-1">Clear All</button>
+    </div>
+  `;
+
+  window._activePillRemovers = pills.map(p => p.onRemove);
+}
+
+function removeFilterPill(idx) {
+  if (window._activePillRemovers && window._activePillRemovers[idx]) {
+    window._activePillRemovers[idx]();
+    buildSidebarFilters();
+    runActiveFilter();
+  }
 }
 
 // -----------------------------------------------------------
@@ -548,6 +1153,8 @@ function runActiveFilter() {
   if (!container) return;
   if (sortSelector) currentSortMode = sortSelector.value;
 
+  renderActiveFilterPills();
+
   let results = [];
 
   if (currentMode === "access") {
@@ -555,64 +1162,141 @@ function runActiveFilter() {
   } else if (currentMode === "backbone") {
     results = SWITCH_DATABASE.filter(s => s.role === "Core" || s.role === "Aggregation");
   } else if (currentMode === "firewalls") {
-    results = FIREWALL_DATABASE || [];
+    results = (typeof FIREWALL_DATABASE !== "undefined") ? FIREWALL_DATABASE : [];
   } else if (currentMode === "optics") {
-    results = OPTICS_LIST || [];
+    results = (typeof OPTICS_LIST !== "undefined") ? OPTICS_LIST : [];
   } else if (currentMode === "wireless") {
     results = (typeof WIRELESS_DATABASE !== "undefined") ? WIRELESS_DATABASE : [];
   } else if (currentMode === "accessories") {
     results = (typeof ACCESSORY_DATABASE !== "undefined") ? ACCESSORY_DATABASE : [];
   }
 
-  // Universal text search
+  // Universal tokenized search
   if (activeSearchQuery) {
-    results = results.filter(item => {
-      const targetStr = `${item.model || ''} ${item.sku || ''} ${item.name || ''} ${item.vendor || ''} ${item.category || ''} ${(item.keyFeatures || []).join(' ')}`.toLowerCase();
-      return targetStr.includes(activeSearchQuery);
-    });
+    results = results.filter(item => matchesSearchTokens(item, activeSearchQuery));
   }
 
   // Switch Filters
   if (currentMode === "access" || currentMode === "backbone") {
     if (selectedVendors.length > 0) results = results.filter(s => selectedVendors.includes(s.vendor));
-    if (selectedPortCounts.length > 0) results = results.filter(s => selectedPortCounts.includes(s.ports));
-    if (requireShallowDepth) results = results.filter(s => s.shallowDepth);
+    if (selectedPortCounts.length > 0) results = results.filter(s => checkSwitchPortCategory(s, selectedPortCounts));
+    if (requireDemandFit && currentMode === "access") results = results.filter(s => checkSwitchDemandFit(s));
+
+    if (selectedUplinkSpeed && selectedUplinkSpeed !== "all") {
+      const sp = selectedUplinkSpeed.toUpperCase();
+      results = results.filter(s => {
+        const bb = (s.maxBackboneSpeed || "").toUpperCase();
+        const up = (s.uplinksSummary || "").toUpperCase();
+        return bb === sp || up.includes(sp);
+      });
+    }
+
+    if (requireShallowDepth) results = results.filter(s => s.shallowDepth === true || (s.depthInches > 0 && s.depthInches <= 12.0));
     if (requireDualPsu) results = results.filter(s => s.dualPsu);
     if (requireStacking) results = results.filter(s => s.stacking);
     if (requireTAA) results = results.filter(s => s.taa);
     if (requireSubstation) results = results.filter(s => s.substationCertified);
     if (requirePerpetualPoE) results = results.filter(s => s.perpetualPoE);
-    if (requireDinMount) results = results.filter(s => s.mounting && s.mounting.includes("DIN"));
-    if (requireMultiGig) results = results.filter(s => s.hasMultiGig || (s.portSpeed && s.portSpeed.includes("2.5G")));
-    if (selectedPoEClasses.includes("bt60")) results = results.filter(s => (s.poeBt60Ports || 0) > 0 || (s.poeBt90Ports || 0) > 0);
-    if (selectedPoEClasses.includes("bt90")) results = results.filter(s => (s.poeBt90Ports || 0) > 0);
+    if (requireDinMount) results = results.filter(s => s.isDinMounted === true || (s.mounting && s.mounting.includes("DIN")));
+    if (requireMultiGig) results = results.filter(s => checkSwitchMultiGig(s));
+
+    if (selectedPoEClasses.includes("at")) {
+      results = results.filter(s => (s.poeAtPorts || 0) > 0 || (s.poeBt60Ports || 0) > 0 || (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && s.poeStandardsSupported.includes("802.3at")));
+    }
+    if (selectedPoEClasses.includes("bt60")) {
+      results = results.filter(s => (s.poeBt60Ports || 0) > 0 || (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && s.poeStandardsSupported.includes("802.3bt-Type3")));
+    }
+    if (selectedPoEClasses.includes("bt90")) {
+      results = results.filter(s => (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && (s.poeStandardsSupported.includes("802.3bt-Type4") || s.poeStandardsSupported.includes("PoH"))));
+    }
   }
 
   // Firewall Filters
   if (currentMode === "firewalls") {
-    if (selectedFwVendors.length > 0) {
-      results = results.filter(f => selectedFwVendors.includes((f.vendor || '').trim()));
+    if (selectedFwVendors.length > 0) results = results.filter(f => selectedFwVendors.includes((f.vendor || '').trim()));
+    if (selectedFwCategories.length > 0) results = results.filter(f => selectedFwCategories.includes((f.category || '').toLowerCase().trim()));
+
+    if (fwTargetThroughputGbps > 0) {
+      results = results.filter(f => {
+        const str = (f.statefulThroughput || "").toLowerCase().replace(/,/g, '');
+        let val = parseFloat(str) || 0;
+        if (str.includes("mbps")) val = val / 1000;
+        return val >= fwTargetThroughputGbps;
+      });
     }
-    if (selectedFwCategories.length > 0) {
-      results = results.filter(f => selectedFwCategories.includes((f.category || '').toLowerCase().trim()));
+
+    if (fwTargetThreatMbps > 0) {
+      results = results.filter(f => {
+        const str = (f.threatThroughput || "").toLowerCase().replace(/,/g, '');
+        let val = parseFloat(str) || 0;
+        if (str.includes("gbps")) val = val * 1000;
+        return val >= fwTargetThreatMbps;
+      });
     }
+
+    if (requireFwRackmount) results = results.filter(f => (parseInt(f.rackUnits) || 0) >= 1);
+    if (requireFwCellular) results = results.filter(f => f.category === "cellular" || (f.keyFeatures || []).some(k => k.toLowerCase().includes("lte") || k.toLowerCase().includes("5g")));
+    if (requireFwDualPsu) results = results.filter(f => f.dualPsu === true);
+    if (requireFw10GWan) results = results.filter(f => (f.interfaces || '').includes('10G') || (f.interfaces || '').includes('25G') || (f.wanPorts || '').includes('10G') || (f.wanPorts || '').includes('25G'));
+    if (requireFwPoePorts) results = results.filter(f => (f.poeBudget || 0) > 0 || (f.interfaces || '').includes('PoE'));
   }
 
   // Optics Filters
   if (currentMode === "optics") {
-    if (selectedOpticMediums.length > 0) {
-      results = results.filter(o => selectedOpticMediums.includes((o.medium || '').toLowerCase().trim()));
+    if (selectedOpticMediums.length > 0) results = results.filter(o => selectedOpticMediums.includes((o.medium || '').toLowerCase().trim()));
+    if (selectedOpticSpeeds.length > 0) results = results.filter(o => selectedOpticSpeeds.includes((o.speed || '').trim()));
+    if (selectedOpticVendors.length > 0) results = results.filter(o => selectedOpticVendors.includes((o.vendor || '').trim()));
+
+    if (selectedOpticFormFactor !== "all") {
+      results = results.filter(o => (o.formFactor || '').toLowerCase() === selectedOpticFormFactor.toLowerCase());
     }
-    if (selectedOpticSpeeds.length > 0) {
-      results = results.filter(o => selectedOpticSpeeds.includes((o.speed || '').trim()));
-    }
-    if (selectedOpticVendors.length > 0) {
-      results = results.filter(o => selectedOpticVendors.includes((o.vendor || '').trim()));
-    }
+    if (requireOpticIndustrial) results = results.filter(o => o.industrial === true);
   }
 
   // Wireless Filters
   if (currentMode === "wireless") {
+    if (wlTargetDistanceMiles > 0) {
+      results = results.filter(w => {
+        const maxMiles = w.distanceMiles || w.rangeMiles || w.maxRangeMiles || ((w.distanceKm || 0) * 0.621371);
+        return maxMiles >= wlTargetDistanceMiles;
+      });
+    }
+
+    if (wlTargetThroughputMbps > 0) {
+      results = results.filter(w => {
+        const mbps = w.maxThroughputMbps || ((w.throughputGbps || 0) * 1000);
+        return mbps >= wlTargetThroughputMbps;
+      });
+    }
+
+    if (selectedWlTopologyRole !== "all") {
+      results = results.filter(w => {
+        const role = (w.topologyRole || "").toLowerCase();
+        const top = (w.topology || w.type || "").toLowerCase();
+        if (selectedWlTopologyRole === "ap") {
+          return role === "ap" || top.includes("ap") || top.includes("mesh node") || top.includes("distribution");
+        }
+        if (selectedWlTopologyRole === "ptp") {
+          return role === "ptp" || (top.includes("ptp") && !top.includes("ptmp ap"));
+        }
+        if (selectedWlTopologyRole === "station") {
+          return role === "station" || top.includes("station") || top.includes("terminal") || top.includes("client");
+        }
+        return true;
+      });
+    }
+
+    if (selectedCompatibleMasterSku !== "all") {
+      results = results.filter(w => {
+        if (w.sku === selectedCompatibleMasterSku) return true;
+        return (w.compatibleMasterSkus || []).includes(selectedCompatibleMasterSku);
+      });
+    }
+
+    if (minWlStations > 0) {
+      results = results.filter(w => (w.maxStations || 0) >= minWlStations);
+    }
+
     if (selectedWlVendors.length > 0) {
       results = results.filter(w => {
         const v = (w.vendor || '').trim().toLowerCase();
@@ -622,25 +1306,44 @@ function runActiveFilter() {
         });
       });
     }
+
     if (selectedWlFrequencies.length > 0) {
       results = results.filter(w => {
         const cleanFreq = (w.frequency || '').toLowerCase().replace(/\s+/g, '');
+        const band = (w.band || '').toLowerCase();
         return selectedWlFrequencies.some(f => {
           const cleanF = f.toLowerCase().replace(/\s+/g, '');
-          return cleanFreq.includes(cleanF);
+          return cleanFreq.includes(cleanF) || band.includes(cleanF);
         });
       });
     }
-    if (requireWlBackup5G) results = results.filter(w => w.backup5GHz);
+
+    if (requireWlBackup5G) {
+      results = results.filter(w => {
+        const freq = (w.frequency || '').toLowerCase();
+        const arch = (w.architecture || '').toLowerCase();
+        const feat = (w.keyFeatures || []).join(' ').toLowerCase();
+        return w.backup5GHz === true || freq.includes("5 ghz") || arch.includes("5ghz") || feat.includes("5 ghz");
+      });
+    }
   }
 
   // Accessories Filters
   if (currentMode === "accessories") {
-    if (selectedAccVendors.length > 0) {
-      results = results.filter(a => selectedAccVendors.includes((a.vendor || '').trim()));
+    if (selectedAccVendors.length > 0) results = results.filter(a => selectedAccVendors.includes((a.vendor || '').trim()));
+    if (selectedAccTypes.length > 0) {
+      results = results.filter(a => selectedAccTypes.includes(a.type) || selectedAccTypes.includes(a.category));
     }
-    if (selectedAccCategories.length > 0) {
-      results = results.filter(a => selectedAccCategories.includes((a.category || '').toLowerCase().trim()));
+
+    if (selectedAccMounting !== "all") {
+      results = results.filter(a => {
+        const m = (a.mounting || "").toLowerCase();
+        return m.includes(selectedAccMounting.toLowerCase());
+      });
+    }
+
+    if (accMinPowerWatts > 0) {
+      results = results.filter(a => (a.powerWatts || 0) >= accMinPowerWatts);
     }
   }
 
@@ -731,6 +1434,10 @@ function renderSwitchCard(sw) {
   const allLocations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(true) : ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1"];
   const defaultLoc = (sw.role === "Core" || sw.role === "Aggregation") ? "MDF • Rack-1" : "IDF-1 • Rack-1";
 
+  const isMGig = checkSwitchMultiGig(sw);
+  const isShallow = sw.shallowDepth === true || (sw.depthInches > 0 && sw.depthInches <= 12.0);
+  const isDin = sw.isDinMounted === true || (sw.mounting && sw.mounting.includes("DIN"));
+
   let allocationHtml = "";
   if (typeof auditSwitchCapacities === "function" && typeof projectBOM !== "undefined") {
     const activeInstances = projectBOM.filter(i => !i.parentInstanceId && (i.id === sw.id || i.sku === sw.sku));
@@ -794,10 +1501,10 @@ function renderSwitchCard(sw) {
               ${roleBadge}
               <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300">${sw.ports} Ports</span>
               ${sw.stacking ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">Stackable</span>' : ''}
-              ${sw.shallowDepth ? '<span class="badge-chip border border-sky-500/40 bg-sky-500/10 text-sky-300">Shallow &lt;12"</span>' : ''}
+              ${isShallow ? '<span class="badge-chip border border-sky-500/40 bg-sky-500/10 text-sky-300">Shallow &le;12"</span>' : ''}
               ${sw.dualPsu ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">Dual PSU</span>' : ''}
-              ${sw.mounting && sw.mounting.includes("DIN") ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300">DIN-Mount</span>' : ''}
-              ${sw.hasMultiGig ? '<span class="badge-chip border border-teal-500/40 bg-teal-500/10 text-teal-300">Multi-Gig</span>' : ''}
+              ${isDin ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300">DIN-Mount</span>' : ''}
+              ${isMGig ? '<span class="badge-chip border border-teal-500/40 bg-teal-500/10 text-teal-300">Multi-Gig</span>' : ''}
               ${sw.perpetualPoE ? '<span class="badge-chip border border-emerald-500/40 bg-emerald-500/10 text-emerald-300">Continuous PoE</span>' : ''}
               ${sw.substationCertified ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300">IEC 61850-3</span>' : ''}
               ${sw.taa ? '<span class="badge-chip border border-sky-500/40 bg-sky-500/10 text-sky-300">TAA/NDAA</span>' : ''}
@@ -871,7 +1578,7 @@ function renderSwitchCard(sw) {
         <div class="grid grid-cols-3 gap-2 bg-slate-950/70 p-2 rounded-xl border border-slate-855 mb-3 text-xs">
           <div><span class="text-[10px] text-slate-500 block uppercase font-medium">${sw.role === 'Access' ? 'PoE Budget' : 'Fabric'}</span><span class="font-mono font-bold text-amber-400">${sw.role === 'Access' ? `${sw.poeBudget}W` : sw.switchingCapacity}</span></div>
           <div><span class="text-[10px] text-slate-500 block uppercase font-medium">VMS Buffer</span><span class="font-mono font-bold ${sw.packetBufferMb >= 4 ? 'text-cyan-300' : 'text-slate-400'}">${sw.packetBufferMb} MB</span></div>
-          <div><span class="text-[10px] text-slate-500 block uppercase font-medium">Depth</span><span class="font-mono font-semibold ${sw.shallowDepth ? 'text-sky-300' : 'text-slate-400'}">${sw.depthInches}"</span></div>
+          <div><span class="text-[10px] text-slate-500 block uppercase font-medium">Depth</span><span class="font-mono font-semibold ${isShallow ? 'text-sky-300' : 'text-slate-400'}">${sw.depthInches}"</span></div>
         </div>
 
         <div class="space-y-1 mb-3">
@@ -919,9 +1626,11 @@ function renderFirewallCard(fw) {
             <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <span class="badge-chip border border-rose-500/30 bg-rose-500/10 text-rose-400 font-bold">${fw.vendor}</span>
               <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 uppercase">${(fw.category || '').replace('_', ' ')}</span>
-              ${fw.cellularFailover ? '<span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-300">LTE / 5G Failover</span>' : ''}
+              ${fw.cellularFailover || (fw.keyFeatures || []).some(k => k.toLowerCase().includes("lte") || k.toLowerCase().includes("5g")) ? '<span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-300">LTE / 5G Failover</span>' : ''}
               ${fw.ports ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300">${fw.ports}x Interfaces</span>` : ''}
-              ${fw.has10G ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">10G SFP+ WAN</span>' : ''}
+              ${(fw.interfaces || '').includes('10G') || (fw.wanPorts || '').includes('10G') ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">10G SFP+ WAN</span>' : ''}
+              ${fw.dualPsu ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">Dual PSU</span>' : ''}
+              ${fw.rackUnits ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300">${fw.rackUnits}U Rackmount</span>` : ''}
             </div>
             <h3 class="font-bold text-base text-white">${fw.model}</h3>
             <span class="text-[11px] font-mono text-slate-400">SKU: ${fw.sku}</span>
@@ -933,10 +1642,10 @@ function renderFirewallCard(fw) {
         </div>
 
         <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-3 space-y-1.5 text-xs font-mono">
-          <div class="flex justify-between"><span class="text-slate-500">Stateful FW:</span><span class="text-white font-bold">${fw.statefulThroughput || '1.0 Gbps'}</span></div>
-          <div class="flex justify-between"><span class="text-slate-500">UTM / Threat:</span><span class="text-rose-300 font-bold">${fw.threatThroughput || '500 Mbps'}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Stateful Routing:</span><span class="text-white font-bold">${fw.statefulThroughput || '1.0 Gbps'}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Threat / IPS:</span><span class="text-rose-300 font-bold">${fw.threatThroughput || '500 Mbps'}</span></div>
           <div class="flex justify-between"><span class="text-slate-500">Site-to-Site VPN:</span><span class="text-indigo-300 font-bold">${fw.vpnThroughput || '250 Mbps'}</span></div>
-          <div class="flex justify-between"><span class="text-slate-500">Physical Ports:</span><span class="text-slate-200">${fw.interfaces || `${fw.ports || 4}x GbE RJ45`}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Interfaces:</span><span class="text-slate-200">${fw.interfaces || `${fw.ports || 4}x GbE RJ45`}</span></div>
         </div>
       </div>
 
@@ -973,7 +1682,9 @@ function renderOpticCard(opt) {
             <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <span class="badge-chip border ${badgeColor} font-bold">${opt.speed}</span>
               <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 uppercase">${(opt.medium || '').toUpperCase()}</span>
+              ${opt.formFactor ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 font-mono">${opt.formFactor}</span>` : ''}
               <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300">${opt.vendor}</span>
+              ${opt.industrial ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300">Industrial</span>' : ''}
             </div>
             <h3 class="font-bold text-sm text-white">${opt.name}</h3>
             <span class="text-[11px] font-mono text-slate-400">SKU: ${opt.sku}</span>
@@ -1001,9 +1712,10 @@ function renderOpticCard(opt) {
 
 function renderWirelessCard(radio) {
   const isCompared = comparisonList.includes(radio.id);
-  const throughput = radio.maxThroughputGbps || radio.throughputGbps || (radio.throughputMbps ? `${radio.throughputMbps / 1000} Gbps` : '1.0+ Gbps');
-  const distance = radio.maxDistanceKm || radio.distanceKm || radio.rangeKm || 'N/A';
-  const watts = radio.powerWatts || radio.powerDrawWatts || radio.poeWatts || 24;
+  const throughput = radio.throughput || (radio.throughputGbps ? `${radio.throughputGbps} Gbps` : radio.maxThroughput) || "1.0+ Gbps";
+  const distance = radio.distanceKm || radio.rangeKm || radio.maxRangeKm || "N/A";
+  const watts = radio.powerConsumptionWatts || radio.maxPowerWatts || radio.powerWatts || 24;
+  const standard = radio.poeStandard || (radio.poeStandardsSupported && radio.poeStandardsSupported[0]) || (watts > 30 ? "802.3bt" : "802.3at");
 
   return `
     <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
@@ -1012,10 +1724,11 @@ function renderWirelessCard(radio) {
           <div>
             <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <span class="badge-chip border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 font-bold">${radio.vendor}</span>
-              <span class="badge-chip border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 font-bold">${radio.frequency}</span>
-              <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 font-mono">${radio.topology}</span>
-              ${radio.backup5GHz ? '<span class="badge-chip border border-sky-500/30 bg-sky-500/10 text-sky-300">5GHz Failover</span>' : ''}
-              ${radio.integratedAntenna ? '<span class="badge-chip border border-teal-500/30 bg-teal-500/10 text-teal-300">Integrated Antenna</span>' : ''}
+              <span class="badge-chip border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 font-bold">${radio.frequency || radio.band}</span>
+              <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 font-mono">${radio.topology || radio.type}</span>
+              ${radio.frequency && radio.frequency.includes("5 GHz") ? '<span class="badge-chip border border-sky-500/30 bg-sky-500/10 text-sky-300">5GHz Failover</span>' : ''}
+              ${radio.maxStations > 1 ? `<span class="badge-chip border border-purple-500/30 bg-purple-500/10 text-purple-300 font-bold">${radio.maxStations} Clients</span>` : ''}
+              ${radio.antennaGainDbi ? `<span class="badge-chip border border-teal-500/30 bg-teal-500/10 text-teal-300">${radio.antennaGainDbi} dBi</span>` : ''}
             </div>
             <h3 class="font-bold text-base text-white">${radio.model}</h3>
             <span class="text-[11px] font-mono text-slate-400">SKU: ${radio.sku}</span>
@@ -1029,7 +1742,7 @@ function renderWirelessCard(radio) {
         <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
           <div class="flex justify-between"><span class="text-slate-500">Max Throughput:</span><span class="text-emerald-400 font-bold">${throughput}</span></div>
           <div class="flex justify-between"><span class="text-slate-500">Max Distance:</span><span class="text-slate-200 font-bold">${distance} km</span></div>
-          <div class="flex justify-between"><span class="text-slate-500">Power Consumption:</span><span class="text-amber-300 font-bold">${watts} W (${watts > 30 ? '802.3bt' : '802.3at'})</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Power Consumption:</span><span class="text-amber-300 font-bold">${watts} W (${standard})</span></div>
         </div>
 
         <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-855 mb-3 space-y-1.5 text-xs">
@@ -1081,8 +1794,9 @@ function renderAccessoryCard(acc) {
           <div>
             <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
               <span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-400 font-bold">${acc.vendor}</span>
-              <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 uppercase">${(acc.category || 'Accessory').replace('_', ' ')}</span>
-              ${acc.mounting ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-400">${acc.mounting}</span>` : ''}
+              <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 uppercase">${(acc.type || acc.category || 'Accessory').replace('_', ' ')}</span>
+              ${acc.mounting ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-400 font-mono">${acc.mounting}</span>` : ''}
+              ${acc.rackUnits ? `<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">${acc.rackUnits}U Rack</span>` : ''}
             </div>
             <h3 class="font-bold text-base text-white">${acc.model || acc.name}</h3>
             <span class="text-[11px] font-mono text-slate-400">SKU: ${acc.sku}</span>
@@ -1174,7 +1888,7 @@ function renderCompareModalContent() {
 
   const items = comparisonList.map(id => {
     return SWITCH_DATABASE.find(s => s.id === id) ||
-           FIREWALL_DATABASE.find(f => f.sku === id) ||
+           ((typeof FIREWALL_DATABASE !== "undefined") ? FIREWALL_DATABASE.find(f => f.sku === id) : null) ||
            ((typeof WIRELESS_DATABASE !== "undefined") ? WIRELESS_DATABASE.find(w => w.id === id) : null);
   }).filter(Boolean);
 
@@ -1200,7 +1914,7 @@ function renderCompareModalContent() {
           <tr><td class="p-3 text-slate-400">Downlink Ports</td>${items.map(it => `<td class="p-3 text-white">${it.ports || it.interfaces || 'N/A'}</td>`).join('')}</tr>
           <tr><td class="p-3 text-slate-400">PoE Budget</td>${items.map(it => `<td class="p-3 text-amber-400">${it.poeBudget ? `${it.poeBudget}W` : 'None'}</td>`).join('')}</tr>
           <tr><td class="p-3 text-slate-400">VMS Packet Buffer</td>${items.map(it => `<td class="p-3 text-cyan-300">${it.packetBufferMb ? `${it.packetBufferMb} MB` : 'N/A'}</td>`).join('')}</tr>
-          <tr><td class="p-3 text-slate-400">Uplinks / Backhaul</td>${items.map(it => `<td class="p-3 text-slate-300">${it.uplinksSummary || (it.maxThroughputGbps ? `${it.maxThroughputGbps} Gbps` : 'Fixed')}</td>`).join('')}</tr>
+          <tr><td class="p-3 text-slate-400">Uplinks / Backhaul</td>${items.map(it => `<td class="p-3 text-slate-300">${it.uplinksSummary || (it.throughput ? it.throughput : 'Fixed')}</td>`).join('')}</tr>
           <tr><td class="p-3 text-slate-400">Cabinet Depth</td>${items.map(it => `<td class="p-3 text-slate-300">${it.depthInches ? `${it.depthInches}"` : 'N/A'}</td>`).join('')}</tr>
           <tr><td class="p-3 text-slate-400">Stacking</td>${items.map(it => `<td class="p-3 ${it.stacking ? 'text-emerald-400' : 'text-slate-500'}">${it.stacking ? 'Yes' : 'No'}</td>`).join('')}</tr>
           <tr><td class="p-3 text-slate-400">Dual PSU</td>${items.map(it => `<td class="p-3 ${it.dualPsu ? 'text-emerald-400' : 'text-slate-500'}">${it.dualPsu ? 'Yes' : 'No'}</td>`).join('')}</tr>
@@ -1216,7 +1930,7 @@ function renderCompareModalContent() {
 }
 
 // -----------------------------------------------------------
-// Multi-Project State Persistence & Project Synchronization (Item B)
+// Multi-Project State Persistence & Project Synchronization
 // -----------------------------------------------------------
 let autoSaveDebounce = null;
 function queueAutoSave() {
@@ -1308,7 +2022,6 @@ function saveCurrentAsNewProject() {
   let totalMsrp = 0;
   projectBOM.forEach(i => totalMsrp += (i.msrp * i.qty));
 
-  // Retrieve project-specific facility floors
   let facilityFloors = [];
   try {
     const rawFac = localStorage.getItem(`netselect_facility_${projId}`);
@@ -1331,7 +2044,6 @@ function saveCurrentAsNewProject() {
   const label = document.getElementById("activeProjectLabel");
   if (label) label.innerText = name;
 
-  // Persist state under new project ID
   saveStateToLocalStorage();
   if (typeof saveFacilityState === "function") saveFacilityState();
 
@@ -1357,12 +2069,10 @@ function loadProjectSnapshot(idx) {
   const label = document.getElementById("activeProjectLabel");
   if (label) label.innerText = proj.name;
 
-  // Sync Facility Layout State to this project
   if (typeof loadFacilityState === "function") {
     loadFacilityState();
   }
 
-  // Refresh All Application Views
   FacilityStore.notifyWorkspaceChange();
   buildCalculatorStrip();
   runActiveFilter();
