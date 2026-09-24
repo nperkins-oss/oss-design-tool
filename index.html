@@ -542,35 +542,41 @@
     </div>
   </div>
 
-  <!-- Rack Elevation Visualizer Modal -->
+  <!-- Mounting Host & Enclosure Elevation Visualizer Modal -->
   <div id="rackModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
       
-      <!-- Modal Header with Rack Selector & Quick Tools -->
+      <!-- Modal Header with Host Selector & Quick Tools -->
       <div class="px-6 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0 gap-3">
         <div class="flex items-center gap-3">
           <div class="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
-            <i data-lucide="server" class="w-5 h-5"></i>
+            <i data-lucide="server" id="hostHeaderIcon" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-sm font-bold text-white flex items-center gap-2">Rack Elevation & Power Sizing Visualizer</h2>
-            <p class="text-xs text-slate-400">Density audit, depth compliance, and UPS battery load sizing.</p>
+            <h2 id="hostModalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+              <span>Mounting Host & Elevation Visualizer</span>
+              <span id="hostTypeBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-700/60">19" EIA Rack</span>
+            </h2>
+            <p id="hostModalSubtitle" class="text-xs text-slate-400">Density audit, subplate layout, and electrical sizing across 5 physical mounting host types.</p>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <!-- Cabinet / Location Selector -->
+          <!-- Cabinet / Host Location Selector -->
           <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
-            <span class="text-slate-400 font-medium">Cabinet:</span>
-            <select id="rackLocationSelector" onchange="switchActiveRackElevation(this.value)" class="bg-slate-950 border border-slate-700 text-indigo-300 font-bold rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500">
+            <span class="text-slate-400 font-medium">Host:</span>
+            <select id="rackLocationSelector" onchange="switchActiveRackElevation(this.value)" class="bg-slate-950 border border-slate-700 text-indigo-300 font-bold rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 max-w-[200px] truncate">
               <!-- Dynamically populated -->
             </select>
-            <button onclick="promptCreateNewRack()" class="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-bold" title="Add New Cabinet">+ Rack</button>
-            <button onclick="deleteActiveRackElevation()" class="p-1 text-slate-500 hover:text-rose-400" title="Delete This Cabinet"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="promptCreateNewRack()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-bold" title="Add New Mounting Host">+ Host</button>
+            <button onclick="toggleFacilityManager()" class="px-2 py-0.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800/60 rounded text-[10px] font-bold flex items-center gap-1" title="Open Full Facility Hierarchy Manager">
+              <i data-lucide="network" class="w-3 h-3"></i> Hierarchy
+            </button>
+            <button onclick="deleteActiveRackElevation()" class="p-1 text-slate-500 hover:text-rose-400" title="Delete This Host"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </div>
 
-          <!-- Rail Height Selector -->
-          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
+          <!-- Dynamic Host Dimension Selector (switches depending on hostType) -->
+          <div id="hostDimensionControl" class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
             <span class="text-slate-400 font-medium">Height:</span>
             <select id="rackHeightSelector" onchange="setRackHeight(this.value)" class="bg-slate-950 border border-slate-700 text-white font-mono rounded px-2 py-0.5">
               <option value="12">12U Wallbox</option>
@@ -585,7 +591,7 @@
           <button onclick="autoMountAllToActiveRack()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow" title="Automatically slot all unmounted equipment into available units">
             <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Auto-Mount
           </button>
-          <button onclick="unmountAllFromActiveRack()" class="px-3 py-1.5 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors" title="Clear all equipment slots in this cabinet">
+          <button onclick="unmountAllFromActiveRack()" class="px-3 py-1.5 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors" title="Clear all equipment slots in this host">
             <i data-lucide="eraser" class="w-3.5 h-3.5"></i> Unmount All
           </button>
 
@@ -596,67 +602,89 @@
       </div>
 
       <div class="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6 bg-slate-950">
-        <!-- Rack Frame Elevation Column -->
+        <!-- Host Frame Elevation Column -->
         <div class="flex-1 flex flex-col items-center">
-          <div class="w-full max-w-md bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
+          <div class="w-full max-w-xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
             <div class="flex justify-between items-center pb-2 mb-2 border-b border-slate-800 text-[11px] font-mono text-slate-400">
-              <span>Standard 19" Equipment Rail</span>
+              <span id="elevationFrameTitle" class="flex items-center gap-1.5 font-bold text-slate-200">
+                <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Standard 19" Equipment Rail
+              </span>
               <span id="rackUtilizationBadge" class="text-indigo-400 font-bold">0 / 24 U Used</span>
             </div>
             <div id="rackElevationFrame" class="space-y-1 bg-slate-950 p-2 rounded-xl border border-slate-800/80 min-h-[480px]"></div>
           </div>
         </div>
 
-        <!-- Right Rack Analytics & Field Devices Column -->
-        <div class="w-full lg:w-96 space-y-4">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-              <span class="flex items-center gap-1.5 text-amber-400">
-                <i data-lucide="zap" class="w-4 h-4"></i> Cabinet Electrical Load
-              </span>
-              <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC / IEEE 802.3</span>
-            </h3>
-            <div class="space-y-2 text-xs">
-              <div class="flex justify-between text-slate-400">
-                <span>Chassis Base Power:</span>
-                <span id="rackTotalBaseWatts" class="font-mono text-white font-semibold">0 W</span>
+        <!-- Right Side: Tabs for Analytics & Served Endpoints -->
+        <div class="w-full lg:w-96 flex flex-col gap-3">
+          <!-- Sidebar Tabs -->
+          <div class="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-1 shrink-0 text-xs font-semibold">
+            <button id="hostTabBtn-telemetry" onclick="setHostSidebarTab('telemetry')" class="flex-1 py-1.5 px-3 rounded-lg text-white bg-indigo-600 transition-all flex items-center justify-center gap-1.5 shadow">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i> Engineering
+            </button>
+            <button id="hostTabBtn-endpoints" onclick="setHostSidebarTab('endpoints')" class="flex-1 py-1.5 px-3 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center justify-center gap-1.5">
+              <i data-lucide="network" class="w-3.5 h-3.5"></i> Field Drops (<span id="hostEndpointsCount">0</span>)
+            </button>
+          </div>
+
+          <!-- Tab Content 1: Engineering Telemetry -->
+          <div id="hostTabContent-telemetry" class="space-y-4">
+            <div id="hostTelemetryContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <!-- Dynamically populated per host type -->
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+                <span class="flex items-center gap-1.5 text-amber-400">
+                  <i data-lucide="zap" class="w-4 h-4"></i> Electrical & Thermal Load
+                </span>
+                <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC / IEEE 802.3</span>
+              </h3>
+              <div class="space-y-2 text-xs">
+                <div class="flex justify-between text-slate-400">
+                  <span>Chassis Base Power:</span>
+                  <span id="rackTotalBaseWatts" class="font-mono text-white font-semibold">0 W</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>Max PoE Capacity:</span>
+                  <span id="rackTotalPoE" class="font-mono text-white font-semibold">0 W</span>
+                </div>
+                <div class="flex justify-between text-slate-400">
+                  <span>Operating Design Load:</span>
+                  <span id="rackOperatingWatts" class="font-mono text-sky-400 font-semibold">0 W (0.0 A)</span>
+                </div>
+                <div class="flex justify-between text-slate-300 font-bold pt-2 border-t border-slate-800">
+                  <span>Worst-Case Nameplate:</span>
+                  <span id="rackTotalWorstCase" class="font-mono text-amber-400">0 W (0.0 A)</span>
+                </div>
+                <div class="flex justify-between text-slate-400 text-[11px]">
+                  <span>BTU Heat Output:</span>
+                  <span id="rackTotalBTU" class="font-mono text-slate-300">0 BTU/hr (0 Tons)</span>
+                </div>
+                <div class="pt-2 border-t border-slate-800/80">
+                  <span class="text-[10px] text-slate-500 uppercase font-mono block mb-0.5">Required Branch Circuit:</span>
+                  <span id="rackCircuitSpec" class="font-mono text-emerald-400 text-[11px] font-bold block">120V 15A Dedicated Circuit (NEMA 5-15R)</span>
+                </div>
               </div>
-              <div class="flex justify-between text-slate-400">
-                <span>Max PoE Capacity:</span>
-                <span id="rackTotalPoE" class="font-mono text-white font-semibold">0 W</span>
-              </div>
-              <div class="flex justify-between text-slate-400">
-                <span>Operating Design Load:</span>
-                <span id="rackOperatingWatts" class="font-mono text-sky-400 font-semibold">0 W (0.0 A)</span>
-              </div>
-              <div class="flex justify-between text-slate-300 font-bold pt-2 border-t border-slate-800">
-                <span>Worst-Case Nameplate:</span>
-                <span id="rackTotalWorstCase" class="font-mono text-amber-400">0 W (0.0 A)</span>
-              </div>
-              <div class="flex justify-between text-slate-400 text-[11px]">
-                <span>BTU Heat Output:</span>
-                <span id="rackTotalBTU" class="font-mono text-slate-300">0 BTU/hr (0 Tons)</span>
-              </div>
-              <div class="pt-2 border-t border-slate-800/80">
-                <span class="text-[10px] text-slate-500 uppercase font-mono block mb-0.5">Required Branch Circuit:</span>
-                <span id="rackCircuitSpec" class="font-mono text-emerald-400 text-[11px] font-bold block">120V 15A Dedicated Circuit (NEMA 5-15R)</span>
-              </div>
+            </div>
+
+            <div id="hostAuxContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="battery-charging" class="w-4 h-4 text-emerald-400"></i> UPS Sizing Recommendation
+              </h3>
+              <div id="rackUpsAdvisor" class="text-xs text-slate-300 space-y-1"></div>
+            </div>
+
+            <div id="hostFieldSummaryContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="radio-tower" class="w-4 h-4 text-amber-400"></i> DIN & Secondary Modules
+              </h3>
+              <div id="rackDinList" class="space-y-1.5 pt-1"></div>
             </div>
           </div>
 
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="battery-charging" class="w-4 h-4 text-emerald-400"></i> UPS Sizing Recommendation
-            </h3>
-            <div id="rackUpsAdvisor" class="text-xs text-slate-300 space-y-1"></div>
-          </div>
-
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="radio-tower" class="w-4 h-4 text-amber-400"></i> Field & DIN Devices
-            </h3>
-            <p class="text-[11px] text-slate-400">Pole radios and DIN-rail switches are excluded from 19" rack elevation units.</p>
-            <div id="rackDinList" class="space-y-1.5 pt-1"></div>
+          <!-- Tab Content 2: Served Field Endpoints -->
+          <div id="hostTabContent-endpoints" class="hidden space-y-4">
+            <div id="hostEndpointsContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+              <!-- Dynamically populated: Door portals, surveillance cameras, APs homed to this host -->
+            </div>
           </div>
         </div>
       </div>

@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.8-alpha] - 2026-09-24
+
+### Added
+- **Unified Physical Hierarchy & 5 Mounting Host Engines (`js/core/facility.js`, `js/tools/rack.js`, & `index.html`)**:
+  - **Full Overhaul of Location & Rack Engines**: Combined the disparate location and rack concepts into a unified physical hierarchy supporting **5 Canonical Mounting Host Types**:
+    1. **19" EIA Equipment Racks (`equipment_rack`)**: 4-post, 2-post, and wall cabinets with $1\text{U}..48\text{U}$ vertical rails, front/rear depth compliance, AC branch circuit sizing (120V/208V), and line-interactive/online UPS battery sizing.
+    2. **Security Cabinets (`security_cabinet`)**: Subplate bay modular enclosures (e.g. Altronix Trove & LifeSafety Power ProWire) for access control master controllers (Mercury LP1502), sub-controllers (MR52), and lock power supplies with standby AGM battery calculation compliant with NFPA 731 / UL 294 (4-hr standby + 15-min alarm).
+    3. **Industrial Weatherproof DIN Enclosures (`industrial_din`)**: NEMA 4X / IP66 enclosures with horizontal 35mm top-hat DIN rails, millimeter width tracking, internal temperature rise / delta-T thermal calculations, and dual redundant 48VDC terminals.
+    4. **Structural Mounts (`structural_mount`)**: Exterior poles, masts, parapets, and bollards with 4 vertical elevation zones (Mast Top, Upper Pole, Mid Pole NEMA Box, Base Handhole), Effective Projected Area (EPA) wind loading, and lightning ground rod specs (NEC 800/810).
+    5. **Architectural Backboards (`architectural_backboard`)**: Fire-rated 3/4" plywood wallfield layouts with demarc/NID, 66/110 punchdown fields, hinged brackets, and low-voltage power zones with 36" NEC 110.26 working clearance compliance.
+  - **Served Edge Endpoints & Field Drops Integration**:
+    - Modeled 5 canonical edge endpoints (`door_portal`, `surveillance_point`, `wireless_node`, `telecom_outlet`, `sensor_point`).
+    - Added dedicated "Field Drops" tab in the elevation visualizer right sidebar, reporting home-run composite "banana" cable runs, Cat6A plenum drops, and fiber counts served by the active host.
+    - Added 1-click endpoint homing and unlinking directly inside the elevation visualizer.
+  - **Interactive Unassigned Staging & Auto-Mount Across All Host Types**:
+    - Auto-Mount intelligently adapts to host type: filling U-slots in racks, modular bays in security cabinets, DIN tracks in NEMA boxes, vertical zones on poles, and quadrant zones on backboards.
+    - Drag-and-drop support across all host types with real-time collision detection and slot persistence.
+  - **Strict Backward Compatibility**:
+    - Preserved legacy `item.closetName = "Space • Enclosure"` and `FacilityStore.parse()` fields (`enclosure`, `isDin`, `enclosureId`) while providing modern `hostType`, `hostName`, `hostId`, and typed configuration accessors.
+
+---
+
 ## [0.10.7-alpha] - 2026-09-24
 
 ### Fixed
