@@ -224,6 +224,64 @@ function toggleTopologyInspector(forceState = null) {
 }
 
 // -----------------------------------------------------------
+// Facility & Device Auto-Linking Engine at Scale
+// -----------------------------------------------------------
+function autoResolveDeviceUplinks() {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const switches = projectBOM.filter(i => 
+    !i.parentInstanceId && 
+    (i.role === "Access" || i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation")
+  );
+
+  if (switches.length === 0) return;
+
+  projectBOM.forEach(item => {
+    if (item.parentInstanceId) return;
+    const isEdge = item.role === "Camera" || item.role === "Access Control" || 
+      (item.category && (item.category.includes("camera") || item.category.includes("access")));
+    const isRadio = item.role === "Wireless Bridge" || item.category === "wireless" || item.category === "ptp_60g";
+
+    if (!isEdge && !isRadio) return;
+
+    // Check if device currently has a valid uplink target
+    const currentTarget = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
+    if (!currentTarget) {
+      const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+      
+      // 1. First priority: Access switch in the exact same closet / enclosure
+      let candidateSwitch = switches.find(s => 
+        FacilityStore.normalize(s.closetName || s.rackId) === itemLoc && s.role === "Access"
+      );
+
+      // 2. Second priority: Core/Agg in the same closet
+      if (!candidateSwitch) {
+        candidateSwitch = switches.find(s => 
+          FacilityStore.normalize(s.closetName || s.rackId) === itemLoc
+        );
+      }
+
+      // 3. Fallback: If no switch in same location (e.g. outdoor pole), use primary Access switch
+      if (!candidateSwitch) {
+        candidateSwitch = switches.find(s => s.role === "Access") || switches[0];
+      }
+
+      if (candidateSwitch && candidateSwitch.instanceId !== item.instanceId) {
+        item.uplinkTargetId = candidateSwitch.instanceId;
+        if (typeof PortEngine !== "undefined") {
+          PortEngine.allocatePort(candidateSwitch, item);
+        }
+      }
+    } else {
+      // Ensure port is allocated if missing
+      if (typeof PortEngine !== "undefined" && !item.assignedSwitchPort) {
+        PortEngine.allocatePort(currentTarget, item);
+      }
+    }
+  });
+}
+
+// -----------------------------------------------------------
 // Master Topology Renderer
 // -----------------------------------------------------------
 function renderTopology() {
@@ -247,6 +305,9 @@ function renderTopology() {
     if (window.lucide) lucide.createIcons();
     return;
   }
+
+  // Auto-resolve device uplinks to local switches in closets at scale
+  autoResolveDeviceUplinks();
 
   // Filter primary topology infrastructure nodes (exclude internal licenses, accessories, and unassigned staging items)
   const activeNodes = projectBOM.filter(item => {
@@ -508,6 +569,15 @@ function renderTopology() {
                   <span>${item.ports ? `${item.ports} Ports` : 'Chassis'}</span>
                 </div>
               </div>
+
+              ${(item.uplinkTargetId && item.role !== "Access" && item.role !== "Core" && item.role !== "Core & Agg" && item.role !== "Aggregation") ? `
+                <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono">
+                  <span class="text-slate-500">Host Switch:</span>
+                  <span class="text-sky-300 font-bold truncate max-w-[160px]" title="Connected to ${escapeHTML((projectBOM.find(s => s.instanceId === item.uplinkTargetId) || {}).model || 'Switch')}">
+                    ${escapeHTML((projectBOM.find(s => s.instanceId === item.uplinkTargetId) || {}).model || 'Switch')} (Port ${item.assignedSwitchPort || 'Auto'})
+                  </span>
+                </div>
+              ` : ''}
 
               <!-- PoE Allocation Bar (for PoE Switches) -->
               ${item.poeBudget && item.poeBudget > 0 ? `
@@ -832,6 +902,19 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
       });
     }
   }
+
+  // 7. Detect Resilient Ring Loops & Peer Links (e.g. Access switches connected in a loop)
+  topologyLinks.forEach(link => {
+    const nodeA = nodes.find(n => n.instanceId === link.fromId);
+    const nodeB = nodes.find(n => n.instanceId === link.toId);
+    // If two switches of Access tier are interconnected or loop back
+    if (nodeA && nodeB && (nodeA.role === "Access" && nodeB.role === "Access")) {
+      link.isRing = true;
+      if (!link.speedLabel.includes("Ring")) {
+        link.speedLabel = `${link.speedLabel} (Ring Trunk)`;
+      }
+    }
+  });
 }
 
 /**
@@ -899,50 +982,72 @@ function renderTopologyLinks() {
     };
 
     let x1, y1, x2, y2;
+    let cx1, cy1, cx2, cy2;
+    let midX, midY;
 
-    // Determine clean orientation between boxes
-    if (fromBox.x + fromBox.w < toBox.x) {
-      // fromBox is to the LEFT of toBox
+    if (fromCluster === toCluster) {
+      // Intra-cluster / Intra-rack patch connection:
+      // Loop out from the right edge of both cards so the line curves gracefully outside the cluster
       x1 = fromBox.x + fromBox.w;
-      y1 = fromBox.y + (fromBox.h / 2);
-      x2 = toBox.x;
-      y2 = toBox.y + (toBox.h / 2);
-    } else if (fromBox.x > toBox.x + toBox.w) {
-      // fromBox is to the RIGHT of toBox
-      x1 = fromBox.x;
       y1 = fromBox.y + (fromBox.h / 2);
       x2 = toBox.x + toBox.w;
       y2 = toBox.y + (toBox.h / 2);
-    } else {
-      // Vertical stacking
-      if (fromBox.y < toBox.y) {
-        x1 = fromBox.x + (fromBox.w / 2);
-        y1 = fromBox.y + fromBox.h;
-        x2 = toBox.x + (toBox.w / 2);
-        y2 = toBox.y;
-      } else {
-        x1 = fromBox.x + (fromBox.w / 2);
-        y1 = fromBox.y;
-        x2 = toBox.x + (toBox.w / 2);
-        y2 = toBox.y + toBox.h;
-      }
-    }
 
-    // Bézier Control Points for smooth S-curve flow
-    const dx = Math.abs(x2 - x1) * 0.5;
-    const dy = Math.abs(y2 - y1) * 0.5;
-
-    let cx1, cy1, cx2, cy2;
-    if (Math.abs(x2 - x1) > Math.abs(y2 - y1)) {
-      cx1 = x1 + (x2 > x1 ? dx : -dx);
+      const loopWidth = 45;
+      cx1 = Math.max(x1, x2) + loopWidth;
       cy1 = y1;
-      cx2 = x2 - (x2 > x1 ? dx : -dx);
+      cx2 = Math.max(x1, x2) + loopWidth;
       cy2 = y2;
+
+      midX = Math.max(x1, x2) + loopWidth + 10;
+      midY = (y1 + y2) / 2;
     } else {
-      cx1 = x1;
-      cy1 = y1 + (y2 > y1 ? dy : -dy);
-      cx2 = x2;
-      cy2 = y2 - (y2 > y1 ? dy : -dy);
+      // Inter-cluster orientation between boxes
+      if (fromBox.x + fromBox.w < toBox.x) {
+        // fromBox is to the LEFT of toBox
+        x1 = fromBox.x + fromBox.w;
+        y1 = fromBox.y + (fromBox.h / 2);
+        x2 = toBox.x;
+        y2 = toBox.y + (toBox.h / 2);
+      } else if (fromBox.x > toBox.x + toBox.w) {
+        // fromBox is to the RIGHT of toBox
+        x1 = fromBox.x;
+        y1 = fromBox.y + (fromBox.h / 2);
+        x2 = toBox.x + toBox.w;
+        y2 = toBox.y + (toBox.h / 2);
+      } else {
+        // Vertical stacking
+        if (fromBox.y < toBox.y) {
+          x1 = fromBox.x + (fromBox.w / 2);
+          y1 = fromBox.y + fromBox.h;
+          x2 = toBox.x + (toBox.w / 2);
+          y2 = toBox.y;
+        } else {
+          x1 = fromBox.x + (fromBox.w / 2);
+          y1 = fromBox.y;
+          x2 = toBox.x + (toBox.w / 2);
+          y2 = toBox.y + toBox.h;
+        }
+      }
+
+      // Bézier Control Points for smooth S-curve flow
+      const dx = Math.abs(x2 - x1) * 0.5;
+      const dy = Math.abs(y2 - y1) * 0.5;
+
+      if (Math.abs(x2 - x1) > Math.abs(y2 - y1)) {
+        cx1 = x1 + (x2 > x1 ? dx : -dx);
+        cy1 = y1;
+        cx2 = x2 - (x2 > x1 ? dx : -dx);
+        cy2 = y2;
+      } else {
+        cx1 = x1;
+        cy1 = y1 + (y2 > y1 ? dy : -dy);
+        cx2 = x2;
+        cy2 = y2 - (y2 > y1 ? dy : -dy);
+      }
+
+      midX = (x1 + x2) / 2;
+      midY = (y1 + y2) / 2;
     }
 
     // Color & Style by Speed and Role
@@ -950,7 +1055,11 @@ function renderTopologyLinks() {
     let strokeWidth = link.isLAG ? "3.5" : "2.5";
     let isDashed = false;
 
-    if (link.category === "vms_stream") {
+    if (link.isRing) {
+      strokeColor = "#f59e0b"; // Golden Amber: Resilient Ring Loop
+      isDashed = true;
+      strokeWidth = "3.5";
+    } else if (link.category === "vms_stream") {
       strokeColor = "#2dd4bf"; // Teal: VMS Video Ingest Stream
       isDashed = true;
       strokeWidth = "2.5";
@@ -990,9 +1099,6 @@ function renderTopologyLinks() {
     svg.appendChild(path);
 
     // Midpoint Speed / Wire Pill Badge
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
-
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.setAttribute("class", "cursor-pointer select-none");
     g.onclick = (e) => selectTopologyLink(link.id, e);
@@ -1334,6 +1440,8 @@ function renderTopologyInspector() {
       const maxCap = item.maxIngestBandwidthMbps || 750;
       const ingestPercent = Math.min(100, Math.round((totalIngestMbps / maxCap) * 100));
       const hostedRoles = item.hostedRoles || ["VMS Ingest & Recording"];
+      const serverSupportedModes = (typeof PortEngine !== "undefined") ? PortEngine.getSupportedPowerModes(item) : ["internal_psu", "dual_ac"];
+      const serverPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.dualPsu ? "dual_ac" : "internal_psu");
 
       container.innerHTML = `
         <!-- Server Overview Card -->
@@ -1356,6 +1464,28 @@ function renderTopologyInspector() {
             </div>
             <div>Interfaces: <strong class="text-white">${item.ports || 2}x ${item.portSpeed || '10G'} High-Speed NICs</strong></div>
             ${item.usableStorageTb ? `<div>Video Storage: <strong class="text-emerald-400">${item.usableStorageTb} TB RAID Array</strong></div>` : ''}
+          </div>
+        </div>
+
+        <!-- Electrical & Power Supply -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & Power Supply
+          </span>
+          <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Power Architecture:</label>
+              <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                ${serverSupportedModes.map(m => {
+                  const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
+                  return `<option value="${m}" ${serverPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                }).join('')}
+              </select>
+            </div>
+            <div class="flex justify-between text-slate-400 text-xs font-mono pt-1">
+              <span>Chassis Draw:</span>
+              <span class="text-white font-bold">${item.baseWatts || item.powerWatts || 350} W</span>
+            </div>
           </div>
         </div>
 
@@ -1467,6 +1597,7 @@ function renderTopologyInspector() {
     if (isRadio) {
       const hostSwitch = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
       const currentPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSourceOverride || "poe_switch");
+      const supportedModes = (typeof PortEngine !== "undefined") ? PortEngine.getSupportedPowerModes(item) : ["poe_switch", "poe_injector"];
       const peerRadios = projectBOM.filter(r => (r.category === "wireless" || r.role === "Wireless Bridge") && r.instanceId !== item.instanceId);
 
       container.innerHTML = `
@@ -1501,10 +1632,10 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Power Sourcing Method:</label>
               <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="poe_switch" ${currentPowerMode === 'poe_switch' ? 'selected' : ''}>⚡ PoE from Host Switch (${item.poeStandard || '802.3at'})</option>
-                <option value="poe_injector" ${currentPowerMode === 'poe_injector' ? 'selected' : ''}>🔌 Dedicated PoE Midspan / Injector</option>
-                <option value="dedicated_dc" ${currentPowerMode === 'dedicated_dc' ? 'selected' : ''}>🔋 Dedicated DC Power Supply (DIN/Pole)</option>
-                <option value="solar_battery" ${currentPowerMode === 'solar_battery' ? 'selected' : ''}>☀️ Solar / Off-Grid Battery Station</option>
+                ${supportedModes.map(m => {
+                  const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
+                  return `<option value="${m}" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                }).join('')}
               </select>
             </div>
             <div class="flex justify-between text-slate-400 text-xs font-mono pt-1">
@@ -1572,6 +1703,7 @@ function renderTopologyInspector() {
       const hostSwitch = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
       const hostSwitchPorts = hostSwitch && typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(hostSwitch) : [];
       const currentPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSourceOverride || "poe_switch");
+      const supportedModes = (typeof PortEngine !== "undefined") ? PortEngine.getSupportedPowerModes(item) : ["poe_switch", "poe_injector"];
       const isCamera = item.role === "Camera" || (item.category && item.category.includes("camera"));
 
       container.innerHTML = `
@@ -1606,11 +1738,10 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Power Sourcing Method:</label>
               <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="poe_switch" ${currentPowerMode === 'poe_switch' ? 'selected' : ''}>⚡ PoE from Host Switch (${item.poeStandard || '802.3at'})</option>
-                <option value="poe_injector" ${currentPowerMode === 'poe_injector' ? 'selected' : ''}>🔌 Dedicated PoE Midspan / Injector</option>
-                <option value="dedicated_dc" ${currentPowerMode === 'dedicated_dc' ? 'selected' : ''}>🔋 Dedicated DC Power Supply (12/24V)</option>
-                <option value="dedicated_ac" ${currentPowerMode === 'dedicated_ac' ? 'selected' : ''}>⚡ Direct AC Mains Supply (120/240V)</option>
-                <option value="solar_battery" ${currentPowerMode === 'solar_battery' ? 'selected' : ''}>☀️ Solar / Off-Grid Battery Station</option>
+                ${supportedModes.map(m => {
+                  const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
+                  return `<option value="${m}" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                }).join('')}
               </select>
             </div>
 
@@ -1712,6 +1843,12 @@ function renderTopologyInspector() {
     // Default Switch Inspector Card
     const switchPorts = typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(item) : [];
     const portSummary = typeof PortEngine !== "undefined" ? PortEngine.getPortSummary(item) : null;
+    const supportedModes = typeof PortEngine !== "undefined" ? PortEngine.getSupportedPowerModes(item) : ["internal_psu"];
+    const currentPowerMode = typeof PortEngine !== "undefined" ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
+
+    const copperPorts = switchPorts.filter(p => p.connector === "RJ-45" && !p.isUplink);
+    const opticalCages = switchPorts.filter(p => p.connector !== "RJ-45" || p.isUplink);
+    const isAllOptical = copperPorts.length === 0 && opticalCages.length > 0;
 
     container.innerHTML = `
       <!-- Node Overview Card -->
@@ -1745,11 +1882,10 @@ function renderTopologyInspector() {
           <div>
             <label class="text-[10px] text-slate-400 block mb-1 font-sans">Chassis Power Mode:</label>
             <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-              <option value="internal_psu" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : (item.powerSource || 'internal_psu')) === 'internal_psu' ? 'selected' : ''}>⚡ Internal AC Supply (120/240V)</option>
-              <option value="dual_ac" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'dual_ac' ? 'selected' : ''}>⚡ Dual Hot-Swap AC Redundant</option>
-              <option value="dedicated_dc" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'dedicated_dc' ? 'selected' : ''}>🔋 Dedicated 48-56VDC Terminal</option>
-              <option value="poe_switch" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'poe_switch' ? 'selected' : ''}>⚡ PoE-In Powered (Passthrough)</option>
-              <option value="solar_battery" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'solar_battery' ? 'selected' : ''}>☀️ Solar / Off-Grid Station</option>
+              ${supportedModes.map(m => {
+                const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
+                return `<option value="${m}" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+              }).join('')}
             </select>
           </div>
           <div class="flex justify-between text-slate-400">
@@ -1787,54 +1923,89 @@ function renderTopologyInspector() {
             </span>
           </div>
 
-          <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-850 space-y-2">
-            <!-- Port grid (up to 24 access ports) -->
-            <div class="grid grid-cols-12 gap-1">
-              ${switchPorts.slice(0, 24).map(p => {
-                const isPoEActive = (p.poeOutputWatts || 0) > 0;
-                const isUplink = p.isUplink || p.role === "uplink";
-                const isDataOnly = p.connectedDeviceId && !isPoEActive;
-                let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
-                if (isUplink) bg = "bg-sky-500/20 border-sky-500/50 text-sky-300";
-                else if (isPoEActive) bg = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300";
-                else if (isDataOnly) bg = "bg-amber-500/20 border-amber-500/50 text-amber-300";
-
-                return `
-                  <div 
-                    class="h-6 rounded border ${bg} flex items-center justify-center font-mono text-[9px] font-bold cursor-pointer transition-all hover:scale-105" 
-                    title="${p.label}: ${p.connectedDeviceModel || 'Free'} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
-                    onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
-                  >
-                    ${p.portNumber}
-                  </div>
-                `;
-              }).join('')}
-            </div>
-
-            <!-- Optical Cages if > 24 ports -->
-            ${switchPorts.length > 24 ? `
-              <div class="pt-1.5 border-t border-slate-900 flex items-center justify-between">
-                <span class="text-[9px] font-mono text-slate-400 uppercase">Optical SFP+ Cages:</span>
-                <div class="flex items-center gap-1">
-                  ${switchPorts.slice(24).map(p => {
-                    const isUplink = p.isUplink || p.role === "uplink" || p.connectedDeviceId;
-                    const bg = isUplink ? "bg-sky-500/30 border-sky-500 text-sky-300" : "bg-slate-900 border-slate-800 text-slate-600";
+          <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-850 space-y-2.5">
+            ${isAllOptical ? `
+              <!-- High-Density All-Optical Spine Matrix -->
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between text-[9px] font-mono text-cyan-400 uppercase font-semibold">
+                  <span>QSFP/SFP Optical Transceiver Cages:</span>
+                  <span class="text-slate-400">${opticalCages.length}x ${opticalCages[0]?.speed || '100G'}</span>
+                </div>
+                <div class="grid ${opticalCages.length > 16 ? 'grid-cols-8' : (opticalCages.length > 8 ? 'grid-cols-6' : 'grid-cols-4')} gap-1">
+                  ${opticalCages.map(p => {
+                    const isConnected = !!p.connectedDeviceId;
+                    let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                    if (isConnected) bg = "bg-cyan-500/20 border-cyan-500 text-cyan-300";
                     return `
                       <div 
-                        class="px-1.5 py-0.5 rounded border ${bg} font-mono text-[9px] font-bold cursor-pointer hover:border-slate-600"
-                        title="${p.label}: ${p.connectedDeviceModel || 'Free'}"
+                        class="h-7 rounded border ${bg} flex flex-col items-center justify-center font-mono text-[8px] font-bold cursor-pointer transition-all hover:scale-105"
+                        title="${p.label}: ${p.connectedDeviceModel || 'Free / Unpopulated Cage'} (${p.speed})"
                         onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
                       >
-                        ${p.label}
+                        <span>Q${p.portNumber}</span>
+                        <span class="text-[7px] font-normal opacity-70">${p.speed}</span>
                       </div>
                     `;
                   }).join('')}
                 </div>
               </div>
-            ` : ''}
+            ` : `
+              <!-- Copper Access Ports Grid (up to 48 ports) -->
+              <div class="space-y-1.5">
+                ${copperPorts.length > 0 ? `
+                  <div class="grid grid-cols-12 gap-1">
+                    ${copperPorts.map(p => {
+                      const isPoEActive = (p.poeOutputWatts || 0) > 0;
+                      const isUplink = p.isUplink || p.role === "uplink";
+                      const isDataOnly = p.connectedDeviceId && !isPoEActive;
+                      let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                      if (isUplink) bg = "bg-sky-500/20 border-sky-500/50 text-sky-300";
+                      else if (isPoEActive) bg = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300";
+                      else if (isDataOnly) bg = "bg-amber-500/20 border-amber-500/50 text-amber-300";
+
+                      return `
+                        <div 
+                          class="h-6 rounded border ${bg} flex items-center justify-center font-mono text-[9px] font-bold cursor-pointer transition-all hover:scale-105" 
+                          title="${p.label}: ${p.connectedDeviceModel || 'Free'} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
+                          onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                        >
+                          ${p.portNumber}
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                ` : ''}
+
+                <!-- Optical Uplink Cages -->
+                ${opticalCages.length > 0 ? `
+                  <div class="pt-2 border-t border-slate-900 space-y-1">
+                    <div class="flex items-center justify-between text-[9px] font-mono text-slate-400 uppercase">
+                      <span>Optical SFP/QSFP Cages:</span>
+                      <span class="text-sky-400 font-bold">${opticalCages.length} Cages</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-1.5">
+                      ${opticalCages.map((p, idx) => {
+                        const isConnected = !!p.connectedDeviceId;
+                        const bg = isConnected ? "bg-sky-500/20 border-sky-500 text-sky-300" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                        return `
+                          <div 
+                            class="px-1.5 py-1 rounded border ${bg} font-mono text-[9px] font-bold cursor-pointer flex items-center justify-between transition-all hover:border-slate-600"
+                            title="${p.label}: ${p.connectedDeviceModel || 'Free'} (${p.speed})"
+                            onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                          >
+                            <span>U${idx + 1}</span>
+                            <span class="text-[8px] text-sky-400 font-normal">${p.speed}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                    </div>
+                  </div>
+                ` : ''}
+              </div>
+            `}
 
             <!-- Legend strip -->
-            <div class="flex items-center justify-between text-[9px] font-mono text-slate-500 pt-1">
+            <div class="flex flex-wrap items-center justify-between gap-1.5 text-[9px] font-mono text-slate-400 pt-2 border-t border-slate-900">
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-emerald-500 inline-block"></span> PoE Active</span>
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-sky-500 inline-block"></span> Uplink/LAG</span>
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500 inline-block"></span> Data Only</span>
@@ -2247,8 +2418,13 @@ function handleTopologyMouseUp(e) {
 // -----------------------------------------------------------
 // Position State & Auto-Arrange Hierarchy
 // -----------------------------------------------------------
-function autoArrangeTopologyHierarchy() {
+function autoArrangeTopologyHierarchy(layoutMode = null) {
   if (typeof projectBOM === "undefined") return;
+
+  if (!layoutMode) {
+    const modeSelect = document.getElementById("topologyLayoutMode");
+    layoutMode = modeSelect ? modeSelect.value : "tree";
+  }
 
   const positions = {};
   const activeNodes = projectBOM.filter(item => {
@@ -2265,45 +2441,88 @@ function autoArrangeTopologyHierarchy() {
     locMap[loc].push(item);
   });
 
-  const gateways = [];
-  const coreAgg = [];
-  const access = [];
-  const others = [];
+  const allLocs = Object.keys(locMap);
+  if (allLocs.length === 0) return;
 
-  Object.entries(locMap).forEach(([loc, items]) => {
-    if (items.some(i => i.role === "Gateways & WAN" || i.role === "Security WAN")) {
-      gateways.push(loc);
-    } else if (items.some(i => i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation" || i.role === "Server")) {
-      coreAgg.push(loc);
-    } else if (items.some(i => i.role === "Access")) {
-      access.push(loc);
-    } else {
-      others.push(loc);
-    }
-  });
+  if (layoutMode === "hub_spoke") {
+    // Hub and Spoke Star Pattern
+    const hubLoc = allLocs.find(loc => 
+      locMap[loc].some(i => i.role === "Core" || i.role === "Core & Agg" || i.role === "Gateways & WAN")
+    ) || allLocs[0];
 
-  // Layout Tier 1: Gateways (Top)
-  gateways.forEach((loc, idx) => {
-    positions[loc] = { x: 80 + (idx * 400), y: 80 };
-  });
+    const spokes = allLocs.filter(l => l !== hubLoc);
+    const centerX = 800;
+    const centerY = 480;
+    positions[hubLoc] = { x: centerX - 140, y: centerY - 80 };
 
-  // Layout Tier 2: Core & Distribution Aggregation (Middle)
-  const coreY = gateways.length > 0 ? 320 : 80;
-  coreAgg.forEach((loc, idx) => {
-    positions[loc] = { x: 80 + (idx * 400), y: coreY };
-  });
+    const spokeCount = spokes.length;
+    const radiusX = Math.max(460, spokeCount * 80);
+    const radiusY = Math.max(300, spokeCount * 55);
 
-  // Layout Tier 3: Access Closets (Lower Tier)
-  const accessY = coreY + (coreAgg.length > 0 ? 340 : 0);
-  access.forEach((loc, idx) => {
-    positions[loc] = { x: 80 + (idx * 400), y: accessY };
-  });
+    spokes.forEach((loc, idx) => {
+      const theta = (2 * Math.PI * idx) / (spokeCount || 1) - (Math.PI / 2);
+      positions[loc] = {
+        x: Math.round(centerX + radiusX * Math.cos(theta) - 140),
+        y: Math.round(centerY + radiusY * Math.sin(theta) - 80)
+      };
+    });
+  } else if (layoutMode === "ring") {
+    // Resilient Circular / Perimeter Ring Loop
+    const totalCount = allLocs.length;
+    const centerX = 800;
+    const centerY = 500;
+    const radiusX = Math.max(500, totalCount * 95);
+    const radiusY = Math.max(350, totalCount * 65);
 
-  // Layout Tier 4: Field & Wireless (Bottom)
-  const othersY = accessY + (access.length > 0 ? 340 : 0);
-  others.forEach((loc, idx) => {
-    positions[loc] = { x: 80 + (idx * 400), y: othersY };
-  });
+    allLocs.forEach((loc, idx) => {
+      const theta = (2 * Math.PI * idx) / totalCount - (Math.PI / 2);
+      positions[loc] = {
+        x: Math.round(centerX + radiusX * Math.cos(theta) - 140),
+        y: Math.round(centerY + radiusY * Math.sin(theta) - 80)
+      };
+    });
+  } else {
+    // Default Tiered Tree Hierarchy
+    const gateways = [];
+    const coreAgg = [];
+    const access = [];
+    const others = [];
+
+    Object.entries(locMap).forEach(([loc, items]) => {
+      if (items.some(i => i.role === "Gateways & WAN" || i.role === "Security WAN")) {
+        gateways.push(loc);
+      } else if (items.some(i => i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation" || i.role === "Server")) {
+        coreAgg.push(loc);
+      } else if (items.some(i => i.role === "Access")) {
+        access.push(loc);
+      } else {
+        others.push(loc);
+      }
+    });
+
+    // Layout Tier 1: Gateways (Top)
+    gateways.forEach((loc, idx) => {
+      positions[loc] = { x: 80 + (idx * 400), y: 80 };
+    });
+
+    // Layout Tier 2: Core & Distribution Aggregation (Middle)
+    const coreY = gateways.length > 0 ? 320 : 80;
+    coreAgg.forEach((loc, idx) => {
+      positions[loc] = { x: 80 + (idx * 400), y: coreY };
+    });
+
+    // Layout Tier 3: Access Closets (Lower Tier)
+    const accessY = coreY + (coreAgg.length > 0 ? 340 : 0);
+    access.forEach((loc, idx) => {
+      positions[loc] = { x: 80 + (idx * 400), y: accessY };
+    });
+
+    // Layout Tier 4: Field & Wireless (Bottom)
+    const othersY = accessY + (access.length > 0 ? 340 : 0);
+    others.forEach((loc, idx) => {
+      positions[loc] = { x: 80 + (idx * 400), y: othersY };
+    });
+  }
 
   // Save to persistence
   try {
@@ -2313,7 +2532,10 @@ function autoArrangeTopologyHierarchy() {
 
   renderTopology();
   renderTopologyInspector();
-  if (typeof showToast === "function") showToast("Arranged topology into clean Gateways > Core > Access hierarchy.");
+  if (typeof showToast === "function") {
+    const label = layoutMode === "hub_spoke" ? "Hub & Spoke Star" : (layoutMode === "ring" ? "Resilient Ring Loop" : "Tiered Tree Hierarchy");
+    showToast(`Arranged topology into clean ${label}.`);
+  }
 }
 
 function saveTopologyPosition(loc, x, y) {
@@ -2524,11 +2746,15 @@ function openRackViewerFor(loc) {
   }
 }
 
-function populateTopologyQuickJump() {
-  const select = document.getElementById("topologyQuickJump");
-  if (!select) return;
+// -----------------------------------------------------------
+// Searchable Quick Navigator (Combobox & Filter Engine)
+// -----------------------------------------------------------
+let topologySearchActiveIndex = -1;
 
+function getTopologySearchItems() {
+  const items = [];
   const groups = {};
+
   if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
     projectBOM.forEach(item => {
       if (item.parentInstanceId) return;
@@ -2543,75 +2769,247 @@ function populateTopologyQuickJump() {
     });
   }
 
-  let html = `<option value="">Jump to Device / Rack...</option>`;
-
-  // Optgroup 1: Racks & Enclosures
-  const locs = Object.keys(groups);
-  if (locs.length > 0) {
-    html += `<optgroup label="── Racks & Enclosures ──">`;
-    locs.forEach(loc => {
-      const isSel = selectedTopologyRackLoc === loc;
-      html += `<option value="loc:${escapeHTML(loc)}" ${isSel ? 'selected' : ''}>🏢 ${escapeHTML(loc)} (${groups[loc].length} Chassis)</option>`;
-    });
-    html += `</optgroup>`;
-  }
-
-  // Optgroup 2: Core & Gateways
-  const coreSwitches = [];
-  const accessSwitches = [];
-  const servers = [];
-  const radios = [];
-
-  locs.forEach(loc => {
-    groups[loc].forEach(item => {
-      if (item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Gateways & WAN") {
-        coreSwitches.push(item);
-      } else if (item.role === "Access") {
-        accessSwitches.push(item);
-      } else if (item.role === "Server" || item.role === "VMS Server" || item.role === "Compute & Storage") {
-        servers.push(item);
-      } else if (item.role === "Wireless Bridge" || item.category === "wireless") {
-        radios.push(item);
-      }
+  // 1. Racks & Enclosures
+  Object.keys(groups).forEach(loc => {
+    const chassisList = groups[loc];
+    items.push({
+      targetVal: `loc:${loc}`,
+      name: loc,
+      badge: `${chassisList.length} Chassis`,
+      category: "Racks & Closets",
+      icon: "🏢",
+      searchText: `${loc} rack enclosure closet cabinet ${chassisList.map(c => c.model).join(' ')}`.toLowerCase()
     });
   });
 
-  if (coreSwitches.length > 0) {
-    html += `<optgroup label="── Core & Gateways ──">`;
-    coreSwitches.forEach(sw => {
-      const isSel = selectedTopologyNodeId === sw.instanceId;
-      html += `<option value="node:${sw.instanceId}" ${isSel ? 'selected' : ''}>🌐 ${escapeHTML(sw.model)} (${FacilityStore.normalize(sw.closetName)})</option>`;
+  // 2. Chassis & Connected Devices by Category
+  Object.keys(groups).forEach(loc => {
+    groups[loc].forEach(item => {
+      let category = "Connected Devices";
+      let icon = "🔌";
+
+      if (item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Gateways & WAN") {
+        category = "Core & Aggregation";
+        icon = "🌐";
+      } else if (item.role === "Access") {
+        category = "Access Switches";
+        icon = "⚡";
+      } else if (item.role === "Server" || item.role === "VMS Server" || item.role === "Compute & Storage") {
+        category = "Servers & Ingest";
+        icon = "🖥️";
+      } else if (item.role === "Wireless Bridge" || item.category === "wireless") {
+        category = "Wireless Bridges";
+        icon = "📡";
+      } else if (item.category === "camera" || item.role === "Security Camera") {
+        category = "IP Cameras & Video";
+        icon = "📹";
+      } else if (item.category === "access_control" || item.role === "Access Control") {
+        category = "Access Control & Intercom";
+        icon = "🔐";
+      }
+
+      const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "");
+
+      items.push({
+        targetVal: `node:${item.instanceId}`,
+        name: item.model,
+        badge: `${loc} • ${item.role || category}`,
+        category: category,
+        icon: icon,
+        searchText: `${item.model} ${loc} ${item.role || ''} ${category} ${item.partNumber || ''} ${item.notes || ''} ${pwr}`.toLowerCase()
+      });
     });
-    html += `</optgroup>`;
+  });
+
+  return items;
+}
+
+function openTopologySearchMenu() {
+  const input = document.getElementById("topologyQuickSearchInput");
+  const query = input ? input.value : "";
+  filterTopologySearch(query);
+}
+
+function filterTopologySearch(query) {
+  const resultsContainer = document.getElementById("topologyQuickSearchResults");
+  const clearBtn = document.getElementById("topologySearchClearBtn");
+  if (!resultsContainer) return;
+
+  const q = (query || "").trim().toLowerCase();
+  if (clearBtn) {
+    if (q.length > 0) clearBtn.classList.remove("hidden");
+    else clearBtn.classList.add("hidden");
   }
 
-  if (accessSwitches.length > 0) {
-    html += `<optgroup label="── Access Switches ──">`;
-    accessSwitches.forEach(sw => {
-      const isSel = selectedTopologyNodeId === sw.instanceId;
-      html += `<option value="node:${sw.instanceId}" ${isSel ? 'selected' : ''}>⚡ ${escapeHTML(sw.model)} (${FacilityStore.normalize(sw.closetName)})</option>`;
-    });
-    html += `</optgroup>`;
+  const allItems = getTopologySearchItems();
+  const filtered = q ? allItems.filter(i => i.searchText.includes(q)) : allItems;
+
+  if (filtered.length === 0) {
+    resultsContainer.innerHTML = `
+      <div class="px-3 py-4 text-center text-xs text-slate-500 font-mono">
+        No devices or racks matching "${escapeHTML(q)}"
+      </div>
+    `;
+    resultsContainer.classList.remove("hidden");
+    topologySearchActiveIndex = -1;
+    return;
   }
 
-  if (servers.length > 0) {
-    html += `<optgroup label="── Servers & Appliances ──">`;
-    servers.forEach(srv => {
-      const isSel = selectedTopologyNodeId === srv.instanceId;
-      html += `<option value="node:${srv.instanceId}" ${isSel ? 'selected' : ''}>🖥️ ${escapeHTML(srv.model)} (${FacilityStore.normalize(srv.closetName)})</option>`;
+  // Group by category
+  const categories = {};
+  filtered.forEach(item => {
+    if (!categories[item.category]) categories[item.category] = [];
+    categories[item.category].push(item);
+  });
+
+  let html = "";
+  let itemCounter = 0;
+
+  Object.keys(categories).forEach(cat => {
+    html += `
+      <div class="px-2 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between border-t border-slate-800/60 first:border-t-0">
+        <span>${escapeHTML(cat)}</span>
+        <span class="text-slate-500">${categories[cat].length}</span>
+      </div>
+    `;
+
+    categories[cat].forEach(item => {
+      const isSelected = (selectedTopologyRackLoc && item.targetVal === `loc:${selectedTopologyRackLoc}`) ||
+                         (selectedTopologyNodeId && item.targetVal === `node:${selectedTopologyNodeId}`);
+      
+      html += `
+        <button
+          type="button"
+          data-search-idx="${itemCounter}"
+          data-target-val="${item.targetVal}"
+          onclick="selectSearchItem('${item.targetVal}', '${escapeHTML(item.name)}')"
+          class="w-full text-left px-2 py-1.5 rounded-lg flex items-center justify-between gap-2 text-xs transition-colors group cursor-pointer ${
+            isSelected ? 'bg-indigo-950/70 border border-indigo-500/40 text-white' : 'text-slate-200 hover:bg-slate-850 hover:text-white'
+          }"
+        >
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-sm shrink-0">${item.icon}</span>
+            <div class="truncate">
+              <div class="font-medium truncate group-hover:text-indigo-300 transition-colors">${escapeHTML(item.name)}</div>
+              <div class="text-[10px] text-slate-400 font-mono truncate">${escapeHTML(item.badge)}</div>
+            </div>
+          </div>
+          <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"></i>
+        </button>
+      `;
+      itemCounter++;
     });
-    html += `</optgroup>`;
+  });
+
+  resultsContainer.innerHTML = html;
+  resultsContainer.classList.remove("hidden");
+  topologySearchActiveIndex = -1;
+
+  if (typeof safeCreateIcons === "function") {
+    safeCreateIcons(resultsContainer);
+  } else if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function selectSearchItem(targetVal, label) {
+  const input = document.getElementById("topologyQuickSearchInput");
+  const resultsContainer = document.getElementById("topologyQuickSearchResults");
+  const clearBtn = document.getElementById("topologySearchClearBtn");
+
+  if (input && label) {
+    input.value = label;
+  }
+  if (resultsContainer) {
+    resultsContainer.classList.add("hidden");
+  }
+  if (clearBtn) {
+    clearBtn.classList.remove("hidden");
   }
 
-  if (radios.length > 0) {
-    html += `<optgroup label="── Wireless Bridges & PtP ──">`;
-    radios.forEach(rad => {
-      const isSel = selectedTopologyNodeId === rad.instanceId;
-      html += `<option value="node:${rad.instanceId}" ${isSel ? 'selected' : ''}>📡 ${escapeHTML(rad.model)} (${FacilityStore.normalize(rad.closetName)})</option>`;
-    });
-    html += `</optgroup>`;
+  jumpToTopologyTarget(targetVal);
+}
+
+function clearTopologySearch() {
+  const input = document.getElementById("topologyQuickSearchInput");
+  const clearBtn = document.getElementById("topologySearchClearBtn");
+  const resultsContainer = document.getElementById("topologyQuickSearchResults");
+
+  if (input) {
+    input.value = "";
+    input.focus();
+  }
+  if (clearBtn) {
+    clearBtn.classList.add("hidden");
+  }
+  if (resultsContainer) {
+    resultsContainer.classList.add("hidden");
+  }
+}
+
+function handleTopologySearchKey(e) {
+  const resultsContainer = document.getElementById("topologyQuickSearchResults");
+  if (!resultsContainer || resultsContainer.classList.contains("hidden")) {
+    if (e.key === "ArrowDown" || e.key === "Enter") {
+      openTopologySearchMenu();
+    }
+    return;
   }
 
+  const buttons = Array.from(resultsContainer.querySelectorAll("button[data-search-idx]"));
+  if (buttons.length === 0) return;
+
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    topologySearchActiveIndex = (topologySearchActiveIndex + 1) % buttons.length;
+    highlightSearchItem(buttons);
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    topologySearchActiveIndex = (topologySearchActiveIndex - 1 + buttons.length) % buttons.length;
+    highlightSearchItem(buttons);
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (topologySearchActiveIndex >= 0 && topologySearchActiveIndex < buttons.length) {
+      buttons[topologySearchActiveIndex].click();
+    } else if (buttons.length > 0) {
+      buttons[0].click();
+    }
+  } else if (e.key === "Escape") {
+    resultsContainer.classList.add("hidden");
+  }
+}
+
+function highlightSearchItem(buttons) {
+  buttons.forEach((btn, idx) => {
+    if (idx === topologySearchActiveIndex) {
+      btn.classList.add("bg-indigo-600", "text-white");
+      btn.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    } else {
+      btn.classList.remove("bg-indigo-600");
+    }
+  });
+}
+
+// Global click-outside listener to close quick search results menu
+document.addEventListener("click", function(e) {
+  const container = document.getElementById("topologyQuickSearchContainer");
+  const results = document.getElementById("topologyQuickSearchResults");
+  if (container && results && !container.contains(e.target)) {
+    results.classList.add("hidden");
+  }
+});
+
+function populateTopologyQuickJump() {
+  const select = document.getElementById("topologyQuickJump");
+  if (!select) return;
+
+  const items = getTopologySearchItems();
+  let html = `<option value="">Jump to Device / Rack...</option>`;
+  items.forEach(item => {
+    const isSel = (selectedTopologyRackLoc && item.targetVal === `loc:${selectedTopologyRackLoc}`) ||
+                  (selectedTopologyNodeId && item.targetVal === `node:${selectedTopologyNodeId}`);
+    html += `<option value="${item.targetVal}" ${isSel ? 'selected' : ''}>${item.icon} ${escapeHTML(item.name)} (${escapeHTML(item.badge)})</option>`;
+  });
   select.innerHTML = html;
 }
 
@@ -2647,6 +3045,11 @@ window.deselectTopologyNode = deselectTopologyNode;
 window.openRackViewerFor = openRackViewerFor;
 window.updateDeviceLocation = updateDeviceLocation;
 window.populateTopologyQuickJump = populateTopologyQuickJump;
+window.openTopologySearchMenu = openTopologySearchMenu;
+window.filterTopologySearch = filterTopologySearch;
+window.selectSearchItem = selectSearchItem;
+window.clearTopologySearch = clearTopologySearch;
+window.handleTopologySearchKey = handleTopologySearchKey;
 window.jumpToTopologyTarget = jumpToTopologyTarget;
 window.autoArrangeTopologyHierarchy = autoArrangeTopologyHierarchy;
 window.autoDefaultTopology = autoDefaultTopology;

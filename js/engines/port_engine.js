@@ -118,37 +118,105 @@ const PortEngine = {
     const poeBt60Count = parseInt(item.poeBt60Ports, 10) || 0;
     const poeBt90Count = parseInt(item.poeBt90Ports, 10) || 0;
 
-    // Detect optical uplink cages from uplinksSummary or SKU
-    const uplinksText = (item.uplinksSummary || item.portFormFactorSummary || "").toLowerCase();
+    // Detect optical uplink cages from uplinksSummary, SKU, or port descriptions
+    const portDesc = `${item.portFormFactorSummary || ''} ${item.uplinksSummary || ''} ${item.description || ''}`.toLowerCase();
+    
+    // Check if device is an all-optical spine / aggregation switch (e.g. 32x 100G QSFP28 Core)
+    const isAllOptical = (
+      item.role === "Core" || 
+      item.role === "Aggregation" || 
+      item.role === "Core & Agg" || 
+      portDesc.includes("qsfp") || 
+      portDesc.includes("cage")
+    ) && !portDesc.includes("rj-45") && !portDesc.includes("rj45") && !portDesc.includes("base-t") && poeBudget === 0;
+
+    const ports = [];
+
+    if (isAllOptical) {
+      // All ports are high-speed optical cages
+      let speed = "100G";
+      let media = "qsfp28_100g";
+      let connector = "QSFP28";
+      let prefix = "Q";
+
+      if (item.portSpeed === "25G" || portDesc.includes("25g") || portDesc.includes("sfp28")) {
+        speed = "25G";
+        media = "sfp28_25g";
+        connector = "SFP28";
+        prefix = "SFP28 ";
+      } else if (item.portSpeed === "10G" || portDesc.includes("10g") || portDesc.includes("sfp+")) {
+        speed = "10G";
+        media = "sfp_plus_10g";
+        connector = "SFP+";
+        prefix = "SFP+ ";
+      } else if (item.portSpeed === "40G" || portDesc.includes("40g")) {
+        speed = "40G";
+        media = "qsfp_plus_40g";
+        connector = "QSFP+";
+        prefix = "Q";
+      }
+
+      for (let i = 1; i <= totalPortCount; i++) {
+        ports.push({
+          portNumber: i,
+          label: `${prefix}${i} (${speed})`,
+          mediaType: media,
+          connector: connector,
+          speed: speed,
+          poeStandard: null,
+          maxPoeWatts: 0,
+          poeOutputWatts: 0,
+          connectedDeviceId: null,
+          connectedDeviceModel: null,
+          connectedPortNumber: null,
+          role: "uplink",
+          isUplink: true,
+          linkStatus: "down",
+          adminStatus: "up"
+        });
+      }
+
+      item.physicalPorts = ports;
+      return ports;
+    }
+
+    // Mixed Copper + Optical Switch
     let uplinkPortCount = 0;
     let uplinkSpeed = "10G";
     let uplinkMedia = "sfp_plus_10g";
 
-    if (uplinksText.includes("100g") || (item.maxBackboneSpeed === "100G")) {
+    if (portDesc.includes("100g") || (item.maxBackboneSpeed === "100G")) {
       uplinkPortCount = 4;
       uplinkSpeed = "100G";
       uplinkMedia = "qsfp28_100g";
-    } else if (uplinksText.includes("40g") || (item.maxBackboneSpeed === "40G")) {
+    } else if (portDesc.includes("40g") || (item.maxBackboneSpeed === "40G")) {
       uplinkPortCount = 2;
       uplinkSpeed = "40G";
       uplinkMedia = "qsfp_plus_40g";
-    } else if (uplinksText.includes("25g") || (item.maxBackboneSpeed === "25G")) {
+    } else if (portDesc.includes("25g") || (item.maxBackboneSpeed === "25G")) {
       uplinkPortCount = 4;
       uplinkSpeed = "25G";
       uplinkMedia = "sfp28_25g";
-    } else if (uplinksText.includes("10g") || (item.maxBackboneSpeed === "10G") || totalPortCount >= 24) {
+    } else if (portDesc.includes("10g") || (item.maxBackboneSpeed === "10G") || totalPortCount >= 24) {
       uplinkPortCount = (totalPortCount === 52 || totalPortCount === 48) ? 4 : (totalPortCount === 28 ? 4 : 2);
       uplinkSpeed = "10G";
       uplinkMedia = "sfp_plus_10g";
-    } else if (uplinksText.includes("sfp")) {
+    } else if (portDesc.includes("sfp")) {
       uplinkPortCount = 2;
       uplinkSpeed = "1G";
       uplinkMedia = "sfp_1g";
     }
 
     // Determine access ports vs uplink cages
-    const accessPortCount = Math.max(1, totalPortCount - uplinkPortCount);
-    const ports = [];
+    let accessPortCount = totalPortCount;
+    if (totalPortCount === 52) accessPortCount = 48;
+    else if (totalPortCount === 28) accessPortCount = 24;
+    else if (totalPortCount > uplinkPortCount && (totalPortCount === 24 || totalPortCount === 48)) {
+      // 24 or 48 dedicated access ports with separate uplinks
+      accessPortCount = totalPortCount;
+    } else {
+      accessPortCount = Math.max(1, totalPortCount - uplinkPortCount);
+    }
 
     // 1. Generate Access / Downlink Ports (RJ-45)
     for (let i = 1; i <= accessPortCount; i++) {
@@ -539,39 +607,40 @@ const PortEngine = {
    */
   getDevicePowerSource(deviceItem) {
     if (!deviceItem) return "internal_psu";
-    if (deviceItem.powerSourceOverride && this.POWER_MODES[deviceItem.powerSourceOverride]) {
-      return deviceItem.powerSourceOverride;
+    const supported = this.getSupportedPowerModes(deviceItem);
+
+    let candidate = deviceItem.powerSourceOverride || deviceItem.powerSource;
+    if (!candidate && deviceItem.interfaces && deviceItem.interfaces.length > 0 && deviceItem.interfaces[0].powerSource) {
+      candidate = deviceItem.interfaces[0].powerSource;
     }
-    if (deviceItem.powerSource && this.POWER_MODES[deviceItem.powerSource]) {
-      return deviceItem.powerSource;
-    }
-    if (deviceItem.interfaces && deviceItem.interfaces.length > 0 && deviceItem.interfaces[0].powerSource) {
-      const ps = deviceItem.interfaces[0].powerSource;
-      if (this.POWER_MODES[ps]) return ps;
+    if (candidate && supported.includes(candidate)) {
+      return candidate;
     }
 
     const role = deviceItem.role;
     if (role === "Server" || role === "VMS Server" || role === "Compute & Storage") {
-      return deviceItem.dualPsu !== false ? "dual_ac" : "dedicated_ac";
+      const pref = deviceItem.dualPsu !== false ? "dual_ac" : "dedicated_ac";
+      return supported.includes(pref) ? pref : (supported[0] || "internal_psu");
     }
     if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN") {
-      return (deviceItem.dualPsu || deviceItem.psuSku) ? "dual_ac" : "internal_psu";
+      const pref = (deviceItem.dualPsu || deviceItem.psuSku) ? "dual_ac" : "internal_psu";
+      return supported.includes(pref) ? pref : (supported[0] || "internal_psu");
     }
     if (role === "Access") {
       if (deviceItem.isPoEPowered || deviceItem.powerSource === "poe_switch" || deviceItem.powerSource === "poe_in") {
-        return "poe_switch";
+        return supported.includes("poe_switch") ? "poe_switch" : (supported[0] || "internal_psu");
       }
       if (deviceItem.directDc || (deviceItem.mounting && deviceItem.mounting.includes("DIN") && !deviceItem.mounting.includes("19\""))) {
-        return "dedicated_dc";
+        return supported.includes("dedicated_dc") ? "dedicated_dc" : (supported[0] || "internal_psu");
       }
-      return "internal_psu";
+      return supported.includes("internal_psu") ? "internal_psu" : (supported[0] || "internal_psu");
     }
     if (role === "Wireless Bridge" || deviceItem.category === "wireless") {
-      if (deviceItem.directDc) return "dedicated_dc";
-      return "poe_switch";
+      if (deviceItem.directDc && supported.includes("dedicated_dc")) return "dedicated_dc";
+      return supported.includes("poe_switch") ? "poe_switch" : (supported[0] || "poe_switch");
     }
-    if (deviceItem.directDc) return "dedicated_dc";
-    return "poe_switch";
+    if (deviceItem.directDc && supported.includes("dedicated_dc")) return "dedicated_dc";
+    return supported.includes("poe_switch") ? "poe_switch" : (supported[0] || "internal_psu");
   },
 
   /**
@@ -587,6 +656,163 @@ const PortEngine = {
       icon: def.icon,
       isExternal: !def.drawsFromSwitch
     };
+  },
+
+  /**
+   * Returns valid power delivery modes supported by this specific hardware model
+   * Prevents impossible configurations (e.g. Solar or PoE-in on Core switches)
+   */
+  getSupportedPowerModes(item) {
+    if (!item) return ["internal_psu"];
+    const role = item.role || "";
+    const cat = (item.category || "").toLowerCase();
+    const model = (item.model || "").toLowerCase();
+    const isDin = item.isDinMounted || (item.mounting && item.mounting.includes("DIN"));
+    const isIndustrial = model.includes("industrial") || cat.includes("industrial") || isDin;
+    const isHighPower = (item.baseWatts || 0) > 80 || (item.powerConsumptionWatts || 0) > 80;
+
+    // 1. Core, Aggregation, Gateways, High-Power Enterprise Switches & Servers
+    if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN" || role === "Server" || role === "VMS Server" || role === "Compute & Storage") {
+      const modes = ["internal_psu"];
+      if (item.dualPsu !== false || item.psuSku || model.includes("enterprise") || model.includes("core") || model.includes("pro") || isHighPower) {
+        modes.push("dual_ac");
+      }
+      return modes;
+    }
+
+    // 2. Standard Access Switches
+    if (role === "Access") {
+      const isPoePassthrough = item.isPoEPowered || item.powerSource === "poe_switch" || item.powerSource === "poe_in" || model.includes("flex");
+      if (isPoePassthrough) {
+        return ["poe_switch", "poe_injector", "dedicated_dc"];
+      }
+      if (isIndustrial) {
+        return ["internal_psu", "dedicated_dc", "solar_battery"];
+      }
+      const modes = ["internal_psu"];
+      if (item.dualPsu || (item.psuSlots && item.psuSlots > 1)) {
+        modes.push("dual_ac");
+      }
+      return modes;
+    }
+
+    // 3. Wireless Bridges & PtP Radios
+    if (role === "Wireless Bridge" || cat === "wireless" || cat === "ptp_60g") {
+      const modes = ["poe_switch", "poe_injector"];
+      if (item.directDc || isIndustrial || isDin) {
+        modes.push("dedicated_dc");
+      }
+      modes.push("solar_battery");
+      return modes;
+    }
+
+    // 4. IP Cameras & Access Control Devices
+    if (role === "Camera" || role === "Access Control" || cat.includes("camera") || cat.includes("access")) {
+      const modes = ["poe_switch", "poe_injector"];
+      if (item.supportsAuxDc !== false && (item.auxPower || isIndustrial || model.includes("ptz") || model.includes("mercury") || model.includes("axis"))) {
+        modes.push("dedicated_dc");
+      }
+      if (item.supportsAuxAc || model.includes("mercury") || model.includes("ac-")) {
+        modes.push("dedicated_ac");
+      }
+      if (isIndustrial || (item.closetName && item.closetName.toLowerCase().includes("pole"))) {
+        modes.push("solar_battery");
+      }
+      return modes;
+    }
+
+    return ["internal_psu", "poe_switch", "dedicated_dc"];
+  },
+
+  /**
+   * Synchronizes BOM accessories when device power mode changes (e.g. adding PoE injector or DC PSU)
+   */
+  syncPowerAccessories(deviceItem, newPowerMode) {
+    if (!deviceItem || typeof projectBOM === "undefined") return;
+
+    // 1. Remove any previously auto-provisioned power accessories for this device
+    const oldAccessories = projectBOM.filter(i => 
+      i.parentInstanceId === deviceItem.instanceId && 
+      (i.category === "power_injector" || i.category === "power_supply" || i.role === "Power Accessory")
+    );
+    oldAccessories.forEach(oldAcc => {
+      const idx = projectBOM.findIndex(i => i.instanceId === oldAcc.instanceId);
+      if (idx >= 0) projectBOM.splice(idx, 1);
+    });
+
+    // 2. If new mode is PoE Injector, auto-add matching midspan injector to quote BOM
+    if (newPowerMode === "poe_injector") {
+      const wattsNeeded = parseFloat(deviceItem.powerWatts || deviceItem.maxPowerWatts || deviceItem.powerConsumptionWatts || 15);
+      const isBt = wattsNeeded > 30 || deviceItem.poeStandardRequired === "802.3bt-60" || deviceItem.poeStandardRequired === "802.3bt-90";
+      
+      const injectorSku = isBt ? "UACC-PoE-bt-60" : "UACC-PoE-at";
+      const injectorModel = isBt ? "UniFi PoE++ Midspan Injector (60W)" : "UniFi PoE+ Midspan Injector (30W)";
+      const injectorPrice = isBt ? 35 : 19;
+
+      const injectorItem = {
+        instanceId: `inj-${deviceItem.instanceId}`,
+        parentInstanceId: deviceItem.instanceId,
+        id: injectorSku,
+        sku: injectorSku,
+        model: injectorModel,
+        name: injectorModel,
+        role: "Power Accessory",
+        category: "power_injector",
+        vendor: "UniFi",
+        msrp: injectorPrice,
+        qty: deviceItem.qty || 1,
+        closetName: deviceItem.closetName || "MDF",
+        rackId: deviceItem.rackId || deviceItem.closetName || "MDF",
+        baseWatts: 0,
+        poeBudget: 0,
+        description: `Dedicated ${isBt ? '60W PoE++ (802.3bt)' : '30W PoE+ (802.3at)'} injector powering ${deviceItem.model}`
+      };
+
+      projectBOM.push(injectorItem);
+    }
+
+    // 3. If new mode is Dedicated DC PSU, auto-add Mean Well DIN-rail supply if industrial
+    if (newPowerMode === "dedicated_dc") {
+      const dcSku = "NDR-120-48";
+      const dcModel = "Mean Well 120W Industrial DIN-Rail Power Supply";
+      const dcItem = {
+        instanceId: `psu-${deviceItem.instanceId}`,
+        parentInstanceId: deviceItem.instanceId,
+        id: dcSku,
+        sku: dcSku,
+        model: dcModel,
+        name: dcModel,
+        role: "Power Accessory",
+        category: "power_supply",
+        vendor: "Mean Well",
+        msrp: 45,
+        qty: 1,
+        closetName: deviceItem.closetName || "MDF",
+        rackId: deviceItem.rackId || deviceItem.closetName || "MDF",
+        baseWatts: 0,
+        poeBudget: 0,
+        description: `120W 48VDC industrial power supply powering ${deviceItem.model}`
+      };
+
+      projectBOM.push(dcItem);
+    }
+  },
+
+  /**
+   * Sets power delivery mode on device and synchronizes BOM accessories
+   */
+  setPowerSource(deviceItem, newPowerMode) {
+    if (!deviceItem || !newPowerMode) return;
+    const supported = this.getSupportedPowerModes(deviceItem);
+    if (!supported.includes(newPowerMode)) {
+      newPowerMode = supported[0] || "internal_psu";
+    }
+    deviceItem.powerSourceOverride = newPowerMode;
+    deviceItem.powerSource = newPowerMode;
+    this.syncPowerAccessories(deviceItem, newPowerMode);
+    if (typeof updateBOMView === "function") {
+      updateBOMView();
+    }
   },
 
   /**

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.5-alpha] - 2026-09-24
+
+### Added
+- **Dynamic Hardware-Constrained Power Modes (`js/engines/port_engine.js` & `js/tools/topology.js`)**:
+  - **Hardware Sizing Enforcement (`getSupportedPowerModes`)**: Power delivery modes dynamically adapt to hardware specifications. Core and spine switches and enterprise rackmount compute servers strictly permit `internal_psu` and `dual_ac`, eliminating impossible configurations such as solar or PoE-in on 100G core switches.
+  - **Dynamic Power Selectors in Inspector**: Slide-out inspector cards for Core switches, Access switches, Servers, PtP Radios, and Edge Devices only render valid, supported power choices for the selected model.
+- **Automated BoM Power Accessory Provisioning (`js/engines/port_engine.js`)**:
+  - **Automatic PoE Injectors**: Switching an edge device or wireless radio to `poe_injector` automatically provisions and sizes the appropriate PoE midspan injector (`UACC-PoE-at` 30W or `UACC-PoE-bt-60` 60W) directly onto the Project BoM.
+  - **Automatic Industrial DC Power Supplies**: Selecting `dedicated_dc` automatically provisions an industrial DIN-rail power supply (`NDR-120-48` 48V 120W) onto the BoM.
+  - **Intelligent BoM Reconciliation**: Switching power modes back to `poe_switch` or `internal_psu` automatically reconciles and removes the associated accessory from the BoM in real time.
+- **Facilities & Building-to-Building Master Auto-Linking (`js/tools/topology.js`)**:
+  - **Automated Closet Device Onboarding (`autoResolveDeviceUplinks`)**: Building-to-building wireless bridge masters, IP cameras, and edge clients automatically discover and link to the primary switch in their designated closet or enclosure, auto-allocating switch ports at scale.
+  - **Intra-Cluster Loop Routing**: Interconnections between devices within the same rack loop gracefully outside the equipment cards with a $45\text{px}$ offset, ensuring intra-rack patch cables are $100\%$ visible rather than hidden beneath card layers.
+  - **Node Card Host Switch Badges**: Equipment cards inside location clusters display real-time host switch name and assigned port chips.
+- **Dark Searchable Quick Jump Combobox (`js/tools/topology.js` & `index.html`)**:
+  - **Custom Search Combobox (`#topologyQuickSearchContainer`)**: Replaced OS-native select input with a modern dark floating combobox. Features live real-time filtering, category groupings (Racks, Core, Access, Servers, Wireless, Clients), equipment status chips, and full keyboard navigation (Up, Down, Enter, Escape).
+- **Network Layout Presets & Ring Topology Support (`js/tools/topology.js` & `index.html`)**:
+  - **Multi-Layout Auto-Arrange Engine**: Added preset layout selector supporting **Tiered Tree** (hierarchical spine/leaf), **Hub & Spoke** (central core star layout), and **Resilient Ring** (circular loop/ERP layout).
+  - **Ring Trunk & Loop Detection**: Access switch peer-to-peer trunks and ring topologies are automatically identified, rendered with amber/gold dashed vectors, and labeled `(Ring Trunk)`.
+
+### Fixed
+- **Optical Cages Overflow & Inspector Legend Clutter (`js/tools/topology.js`)**:
+  - High-density QSFP28/SFP+ optical cages now use an 8-column and 6-column wrapping grid with compact identifiers (`Q1`..`Q32`), fully preventing inspector drawer overflow on 32-port 100G switches (`ECS-Core`).
+  - Added responsive flex-wrapping to the inspector port legend to prevent overlapping port status chips.
+
+---
+
 ## [0.10.4-alpha] - 2026-09-24
 
 ### Added
