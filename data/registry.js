@@ -186,6 +186,23 @@ const CatalogRegistry = {
   get(idOrSku) {
     if (!idOrSku) return null;
     return this._byId.get(idOrSku) || this._bySku.get(idOrSku) || null;
+  },
+
+  /**
+   * Retrieves switch by ID or SKU across all switch vendors
+   */
+  getSwitch(idOrSku) {
+    if (!idOrSku) return null;
+    const item = this.get(idOrSku);
+    if (item && (item.ports !== undefined || item.role === "Access" || item.role === "Core" || item.role === "Aggregation")) return item;
+    return (this.networking.switches || []).find(s => s.id === idOrSku || s.sku === idOrSku) || null;
+  },
+
+  /**
+   * Retrieves equipment across all domains by ID or SKU
+   */
+  getDevice(idOrSku) {
+    return this.get(idOrSku);
   }
 };
 

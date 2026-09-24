@@ -141,7 +141,8 @@ function setItemLocation(instanceId, combinedKey) {
 // Hardware Line Item Creation
 // -----------------------------------------------------------
 function addToProjectBOM(id, targetLocation = null) {
-  const sw = (typeof CatalogRegistry !== "undefined" && CatalogRegistry.getSwitch(id)) ||
+  const sw = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getSwitch === "function" ? CatalogRegistry.getSwitch(id) : null) ||
+             (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(id) : null) ||
              (typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE.find(s => s.id === id || s.sku === id) : null);
   if (!sw) {
     console.error("addToProjectBOM: Switch not found in catalog for id:", id);
@@ -515,7 +516,8 @@ function addOpticsToBOM(sku, name, msrp, qty, vendor) {
 }
 
 function addServerToBOM(serverId, targetLocation = null) {
-  const srv = (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId);
+  const srv = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(serverId) : null) ||
+              (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId);
   if (!srv) return;
 
   const instanceId = `srv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -558,7 +560,8 @@ function addServerToBOM(serverId, targetLocation = null) {
 }
 
 function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) {
-  const cam = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.id === cameraId || c.sku === cameraId);
+  const cam = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(cameraId) : null) ||
+              (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.id === cameraId || c.sku === cameraId);
   if (!cam) return;
 
   const instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -614,7 +617,8 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
 }
 
 function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = null) {
-  const dev = (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []).find(a => a.id === accessId || a.sku === accessId);
+  const dev = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(accessId) : null) ||
+              (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []).find(a => a.id === accessId || a.sku === accessId);
   if (!dev) return;
 
   const instanceId = `acc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -668,7 +672,8 @@ function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = 
 }
 
 function addWirelessToBOM(radioId, isMatchedPair = false) {
-  const radio = WIRELESS_DATABASE.find(r => r.id === radioId);
+  const radio = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(radioId) : null) ||
+                (typeof WIRELESS_DATABASE !== "undefined" ? WIRELESS_DATABASE : []).find(r => r.id === radioId || r.sku === radioId);
   if (!radio) return;
 
   const precChecked = document.getElementById(`wl-prec-${radio.id}`)?.checked;
@@ -1520,6 +1525,20 @@ function exportBomCSV() {
 }
 
 // Window Compatibility Exports
+window.addToProjectBOM = addToProjectBOM;
+window.addFirewallToBOM = addFirewallToBOM;
+window.addOpticsToBOM = addOpticsToBOM;
+window.addWirelessToBOM = addWirelessToBOM;
 window.addServerToBOM = addServerToBOM;
 window.addCameraToBOM = addCameraToBOM;
 window.addAccessDeviceToBOM = addAccessDeviceToBOM;
+window.handleLocationDropdownChange = handleLocationDropdownChange;
+window.setItemLocation = setItemLocation;
+window.updateBOMView = updateBOMView;
+window.removeBomItem = removeBomItem;
+window.clearBom = clearBom;
+window.changeBomQty = changeBomQty;
+window.toggleBomDrawer = toggleBomDrawer;
+window.exportBomCSV = exportBomCSV;
+window.auditSwitchCapacities = auditSwitchCapacities;
+window.autoResolveUplinks = autoResolveUplinks;

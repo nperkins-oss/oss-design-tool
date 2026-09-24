@@ -560,3 +560,13 @@ function renderCardByDomain(item, mode) {
     </div>
   `;
 }
+
+// Window Compatibility Exports
+window.handleAddSwitchToBOM = handleAddSwitchToBOM;
+window.handleAddFirewallToBOM = handleAddFirewallToBOM;
+window.renderSwitchCard = renderSwitchCard;
+window.renderFirewallCard = renderFirewallCard;
+window.renderOpticsCard = renderOpticsCard;
+window.renderWirelessCard = renderWirelessCard;
+window.renderAccessoryCard = renderAccessoryCard;
+window.renderCardByDomain = renderCardByDomain;
