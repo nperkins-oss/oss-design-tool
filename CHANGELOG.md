@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Dynamic PoE Rebalancing**: Overriding a radio, camera, or edge switch to use a local PoE injector or DC supply immediately reduces the switch port PoE load to 0W and credits the switch power budget while maintaining full logical data connectivity.
   - **Visual Power Mode Indicators**: Live badges and filter states distinguishing PoE-delivered devices from locally powered field endpoints.
 
+### Fixed
+- **Resolved "Add to BOM" Button Failure**: Restored the missing `FacilityStore.notifyWorkspaceChange()` cross-modal dispatcher method in `js/core/facility.js` that caused an unhandled `TypeError` preventing items from being added to the BOM.
+- **Port Engine Array vs Integer Conflict**: Fixed `PortEngine.initSwitchPorts` to store discrete port models on `item.physicalPorts` rather than overwriting `item.ports`, preserving the numeric port count required by downstream PoE calculations, sizers, and rack elevations.
+- **Resilient Catalog Lookups in Hardware Adders**: Enhanced `addToProjectBOM` and `addFirewallToBOM` to search by either `id` or `sku` across both `CatalogRegistry` and legacy databases.
+
 ---
 
 ## [0.10.2-alpha] - 2026-09-24

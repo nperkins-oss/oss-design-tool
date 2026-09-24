@@ -445,6 +445,46 @@ const FacilityStore = {
       totalRuOccupied,
       btuPerHour
     };
+  },
+
+  // =========================================================================
+  // UNIFIED WORKSPACE DISPATCHER (Cross-Modal Sync & Real-Time Recalculations)
+  // =========================================================================
+  notifyWorkspaceChange() {
+    try {
+      if (typeof saveBOMState === "function") saveBOMState();
+      if (typeof updateBOMView === "function") updateBOMView();
+      if (typeof runActiveFilter === "function") runActiveFilter();
+
+      // 1. Live update Rack Visualizer if open
+      const rackModal = document.getElementById("rackModal");
+      if (rackModal && !rackModal.classList.contains("hidden")) {
+        if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+      }
+
+      // 2. Live update Topology if open
+      const topoModal = document.getElementById("topologyModal");
+      if (topoModal && !topoModal.classList.contains("hidden")) {
+        if (typeof renderTopology === "function") renderTopology();
+      }
+
+      // 3. Live update Physical Layout Canvas if open
+      const cableModal = document.getElementById("cableLayoutModal");
+      if (cableModal && !cableModal.classList.contains("hidden")) {
+        if (typeof syncBOMClosetsToFloors === "function") syncBOMClosetsToFloors();
+        if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
+        if (typeof renderCableCanvas === "function") renderCableCanvas();
+        if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
+      }
+
+      // 4. Live update Facility Hierarchy Manager if open
+      const facModal = document.getElementById("facilityModal");
+      if (facModal && !facModal.classList.contains("hidden")) {
+        if (typeof renderFacilityManager === "function") renderFacilityManager();
+      }
+    } catch (e) {
+      console.error("Error in FacilityStore.notifyWorkspaceChange:", e);
+    }
   }
 };
 

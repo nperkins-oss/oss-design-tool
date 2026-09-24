@@ -83,11 +83,17 @@ const PortEngine = {
    */
   initSwitchPorts(item) {
     if (!item) return [];
+    if (Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0) {
+      return item.physicalPorts;
+    }
+    // Backward compatibility: if item.ports was previously set to an array of port objects
     if (Array.isArray(item.ports) && item.ports.length > 0 && typeof item.ports[0] === "object") {
-      return item.ports;
+      item.physicalPorts = item.ports;
+      item.ports = item.physicalPorts.filter(p => p.role === "access" || !p.isUplink).length || 24;
+      return item.physicalPorts;
     }
 
-    const totalPortCount = parseInt(item.ports, 10) || 24;
+    const totalPortCount = parseInt(item.portCount || item.ports, 10) || 24;
     const poeBudget = parseFloat(item.poeBudget) || 0;
     const poeAfCount = parseInt(item.poeAfPorts, 10) || 0;
     const poeAtCount = parseInt(item.poeAtPorts, 10) || (poeBudget > 0 ? totalPortCount : 0);
@@ -191,7 +197,7 @@ const PortEngine = {
       });
     }
 
-    item.ports = ports;
+    item.physicalPorts = ports;
     return ports;
   },
 

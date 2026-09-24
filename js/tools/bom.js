@@ -141,8 +141,12 @@ function setItemLocation(instanceId, combinedKey) {
 // Hardware Line Item Creation
 // -----------------------------------------------------------
 function addToProjectBOM(id, targetLocation = null) {
-  const sw = SWITCH_DATABASE.find(s => s.id === id);
-  if (!sw) return;
+  const sw = (typeof CatalogRegistry !== "undefined" && CatalogRegistry.getSwitch(id)) ||
+             (typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE.find(s => s.id === id || s.sku === id) : null);
+  if (!sw) {
+    console.error("addToProjectBOM: Switch not found in catalog for id:", id);
+    return;
+  }
 
   const qtyToAdd = 1;
   const sledSelect = document.getElementById(`sled-${sw.id}`);
@@ -452,7 +456,8 @@ function autoResolveUplinks() {
 }
 
 function addFirewallToBOM(sku, targetLocation = null) {
-  const fw = FIREWALL_DATABASE.find(f => f.sku === sku);
+  const fw = (typeof CatalogRegistry !== "undefined" && CatalogRegistry.get(sku)) ||
+             (typeof FIREWALL_DATABASE !== "undefined" ? FIREWALL_DATABASE.find(f => f.sku === sku || f.id === sku) : null);
   if (!fw) return;
 
   const qtyToAdd = 1;
