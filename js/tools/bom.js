@@ -506,6 +506,139 @@ function addOpticsToBOM(sku, name, msrp, qty, vendor) {
   showToast(`Added ${qty}x ${sku} to Project BOM.`);
 }
 
+function addServerToBOM(serverId, targetLocation = null) {
+  const srv = (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId);
+  if (!srv) return;
+
+  const instanceId = `srv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let assignedLoc = "MDF • Rack-1";
+  if (targetLocation && targetLocation !== "new_location") {
+    assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  }
+
+  projectBOM.push({
+    instanceId: instanceId,
+    id: srv.id,
+    model: srv.model,
+    sku: srv.sku,
+    role: "Server",
+    serverType: srv.serverType || "vms_recording",
+    vendor: srv.vendor,
+    msrp: srv.msrp,
+    ports: srv.ports || 2,
+    portSpeed: srv.portSpeed || "10G",
+    maxBackboneSpeed: srv.portSpeed || "10G",
+    baseWatts: srv.baseWatts || 300,
+    maxPowerWatts: srv.maxPowerWatts || 500,
+    rackUnits: srv.rackUnits || 2,
+    depthInches: srv.depthInches || 28,
+    dualPsu: srv.dualPsu !== false,
+    qty: 1,
+    closetName: assignedLoc,
+    rackId: assignedLoc,
+    rackSlot: null,
+    rackU: null,
+    isDinMounted: false,
+    hostedRoles: [...(srv.hostedRoles || ["VMS Ingest & Recording"])],
+    maxIngestBandwidthMbps: srv.maxIngestBandwidthMbps || 750,
+    powerSource: "dual_ac",
+    uplinkTargetId: null
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  showToast(`Added ${srv.model} to ${assignedLoc}`);
+}
+
+function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) {
+  const cam = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.id === cameraId || c.sku === cameraId);
+  if (!cam) return;
+
+  const instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let assignedLoc = "IDF-1 • Rack-1";
+  if (targetLocation && targetLocation !== "new_location") {
+    assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  }
+
+  // Auto-resolve uplink switch if not explicitly provided
+  let targetSwitchId = uplinkTargetId;
+  if (!targetSwitchId) {
+    const sw = projectBOM.find(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core") && FacilityStore.normalize(i.closetName) === assignedLoc);
+    if (sw) targetSwitchId = sw.instanceId;
+  }
+
+  projectBOM.push({
+    instanceId: instanceId,
+    id: cam.id,
+    model: cam.model,
+    sku: cam.sku,
+    role: "Camera",
+    category: "camera",
+    vendor: cam.vendor,
+    msrp: cam.msrp,
+    ports: 1,
+    powerConsumptionWatts: cam.powerConsumptionWatts || 8,
+    maxPowerWatts: cam.maxPowerWatts || 15,
+    poeStandard: cam.poeStandard || "802.3af",
+    streamBitrateMbps: cam.streamBitrateMbps || 4.0,
+    resolution: cam.resolution || "2MP",
+    qty: 1,
+    closetName: assignedLoc,
+    rackId: assignedLoc,
+    rackSlot: null,
+    rackU: null,
+    isDinMounted: false,
+    uplinkTargetId: targetSwitchId,
+    assignedRecordingServerId: null
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  showToast(`Added ${cam.model} to quote`);
+}
+
+function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = null) {
+  const dev = (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []).find(a => a.id === accessId || a.sku === accessId);
+  if (!dev) return;
+
+  const instanceId = `acc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  let assignedLoc = "IDF-1 • Rack-1";
+  if (targetLocation && targetLocation !== "new_location") {
+    assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  }
+
+  let targetSwitchId = uplinkTargetId;
+  if (!targetSwitchId) {
+    const sw = projectBOM.find(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core") && FacilityStore.normalize(i.closetName) === assignedLoc);
+    if (sw) targetSwitchId = sw.instanceId;
+  }
+
+  projectBOM.push({
+    instanceId: instanceId,
+    id: dev.id,
+    model: dev.model,
+    sku: dev.sku,
+    role: "Access Control",
+    category: "access_control",
+    vendor: dev.vendor,
+    msrp: dev.msrp,
+    ports: 1,
+    powerConsumptionWatts: dev.powerConsumptionWatts || 15,
+    poeStandard: dev.poeStandard || "802.3at",
+    doorCapacity: dev.doorCapacity || 2,
+    readerCapacity: dev.readerCapacity || 4,
+    qty: 1,
+    closetName: assignedLoc,
+    rackId: assignedLoc,
+    rackSlot: null,
+    rackU: null,
+    isDinMounted: dev.mounting && dev.mounting.includes("DIN"),
+    uplinkTargetId: targetSwitchId,
+    assignedAccessServerId: null
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  showToast(`Added ${dev.model} to quote`);
+}
+
 function addWirelessToBOM(radioId, isMatchedPair = false) {
   const radio = WIRELESS_DATABASE.find(r => r.id === radioId);
   if (!radio) return;
@@ -1357,3 +1490,8 @@ function exportBomCSV() {
   link.click();
   showToast("Exported BOM CSV.");
 }
+
+// Window Compatibility Exports
+window.addServerToBOM = addServerToBOM;
+window.addCameraToBOM = addCameraToBOM;
+window.addAccessDeviceToBOM = addAccessDeviceToBOM;

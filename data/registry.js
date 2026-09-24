@@ -112,6 +112,11 @@ const CatalogRegistry = {
     this.infrastructure.accessories = typeof ACCESSORY_DATABASE !== "undefined" ? ACCESSORY_DATABASE : [];
     this.infrastructure.cabling = typeof CABLING_CATALOG !== "undefined" ? CABLING_CATALOG : (typeof CABLING_DATABASE !== "undefined" ? CABLING_DATABASE : {});
 
+    // Ingest Physical Security & Compute
+    this.physical_security.cameras = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
+    this.physical_security.accessControl = typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : [];
+    this.compute_storage.servers = typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : [];
+
     // 3. Build Lookup Indexes
     this._byId.clear();
     this._bySku.clear();
@@ -121,7 +126,10 @@ const CatalogRegistry = {
       ...this.networking.firewalls,
       ...this.networking.wireless,
       ...this.networking.optics,
-      ...this.infrastructure.accessories
+      ...this.infrastructure.accessories,
+      ...this.physical_security.cameras,
+      ...this.physical_security.accessControl,
+      ...this.compute_storage.servers
     ];
 
     // Index structured cabling items
@@ -158,6 +166,9 @@ const CatalogRegistry = {
     window.OPTICS_LIST = this.networking.optics;
     window.ACCESSORY_DATABASE = this.infrastructure.accessories;
     window.CABLING_CATALOG = this.infrastructure.cabling;
+    window.CAMERAS_DATABASE = this.physical_security.cameras;
+    window.ACCESS_CONTROL_DATABASE = this.physical_security.accessControl;
+    window.SERVERS_DATABASE = this.compute_storage.servers;
     window.MODULAR_UPLINK_CATALOG = this.networking.modularUplinks;
     window.POWER_SUPPLY_CATALOG = this.networking.powerSupplies;
     window.FEATURE_LICENSE_CATALOG = this.networking.featureLicenses;
@@ -166,7 +177,7 @@ const CatalogRegistry = {
     window.CatalogRegistry = this;
     window.MASTER_CATALOG = this;
 
-    console.info(`[CatalogRegistry] Initialized: ${this.networking.switches.length} switches, ${this.networking.firewalls.length} firewalls, ${this.networking.wireless.length} wireless radios, ${this.networking.optics.length} optics, ${this.infrastructure.accessories.length} accessories. Indexed ${this._byId.size} unique IDs / ${this._bySku.size} SKUs.`);
+    console.info(`[CatalogRegistry] Initialized: ${this.networking.switches.length} switches, ${this.networking.firewalls.length} firewalls, ${this.compute_storage.servers.length} servers, ${this.physical_security.cameras.length} cameras, ${this.physical_security.accessControl.length} access controllers. Indexed ${this._byId.size} unique IDs / ${this._bySku.size} SKUs.`);
   },
 
   /**

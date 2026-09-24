@@ -116,6 +116,13 @@
   <script src="data/infrastructure/data_accessories.js"></script>
   <script src="data/infrastructure/data_cabling.js"></script>
 
+  <!-- Compute & Storage Domain -->
+  <script src="data/compute_storage/data_servers.js"></script>
+
+  <!-- Physical Security Domain -->
+  <script src="data/physical_security/data_cameras.js"></script>
+  <script src="data/physical_security/data_access.js"></script>
+
   <!-- Central Domain Catalog Registry -->
   <script src="data/registry.js"></script>
   <script>
@@ -137,7 +144,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-sm font-bold text-white tracking-tight">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.1-alpha</span>
+            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.2-alpha</span>
           </div>
           <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1.5">
             <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">Default Project</span>
@@ -332,53 +339,141 @@
   </div>
 
   <!-- Interactive Topology & Interconnect Canvas Modal -->
-  <div id="topologyModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 animate-fade-in">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-7xl h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+  <div id="topologyModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-1 sm:p-3 animate-fade-in">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-7xl h-[94vh] flex flex-col shadow-2xl overflow-hidden">
       
-      <!-- Modal Header -->
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+      <!-- Modal Header & Systems Control Bar -->
+      <div class="px-5 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between bg-slate-950/70 gap-3 shrink-0">
         <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+          <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
             <i data-lucide="network" class="w-5 h-5"></i>
           </div>
           <div>
-            <h2 class="text-base font-bold text-white flex items-center gap-2">Interactive Topology & Interconnect Canvas</h2>
-            <p class="text-xs text-slate-400">Drag clusters, configure LAG/LACP uplinks, and route PoE energy paths.</p>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-bold text-white tracking-tight">Logical Systems & Network Topology</h2>
+              <span class="text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded font-bold">L2/L3 Transport & Roles</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Wire speeds, LACP LAG trunks, PoE delivery paths, and logical service ingest.</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-            <span class="text-slate-300 font-mono text-[11px]">1x Link</span>
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-sky-400 ml-2"></span>
-            <span class="text-slate-300 font-mono text-[11px]">2x LACP LAG</span>
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400 ml-2"></span>
-            <span class="text-slate-300 font-mono text-[11px]">PoE Delivery</span>
-            <span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-400 ml-2"></span>
-            <span class="text-slate-300 font-mono text-[11px]">Wireless RF</span>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <!-- Systems Plane Filter Selector -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl">
+            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">View:</span>
+            <select id="topologyPlaneSelector" onchange="setTopologyViewPlane(this.value)" class="bg-transparent font-bold text-xs text-brand-400 focus:outline-none cursor-pointer">
+              <option value="all">All Systems (Unified)</option>
+              <option value="backbone">Backbone & Speeds</option>
+              <option value="power">PoE & Power Delivery</option>
+              <option value="vms">VMS Video Recording & Ingest</option>
+              <option value="access">Access Control & Security Services</option>
+            </select>
           </div>
-          <button onclick="autoDefaultTopology()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow flex items-center gap-1.5">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Auto-Route
+
+          <!-- Canvas Zoom Controls -->
+          <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5">
+            <button onclick="zoomTopologyCanvas(-0.15)" class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors" title="Zoom Out (-)">
+              <i data-lucide="zoom-out" class="w-3.5 h-3.5"></i>
+            </button>
+            <span id="topologyZoomLevelBadge" class="text-[10px] font-mono text-slate-300 font-bold px-1.5">100%</span>
+            <button onclick="zoomTopologyCanvas(0.15)" class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors" title="Zoom In (+)">
+              <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="resetTopologyZoom()" class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 border-l border-slate-800 ml-0.5 transition-colors" title="Fit to Screen">
+              <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Auto-Arrange Hierarchy -->
+          <button onclick="autoArrangeTopologyHierarchy()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold shadow flex items-center gap-1.5 transition-all" title="Organize into clean Gateways > Core > Access hierarchy">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Auto-Arrange
           </button>
-          <button onclick="toggleTopologyModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800">
+
+          <!-- Toggle Inspector Drawer -->
+          <button onclick="toggleTopologyInspector()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors" title="Toggle Inspector Panel">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-brand-400"></i> Inspector
+          </button>
+
+          <button onclick="toggleTopologyModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 ml-1">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
 
-      <!-- Main Canvas Viewport -->
-      <div class="flex-1 relative overflow-auto bg-slate-950" id="topologyCanvasViewport">
-        <svg id="topologySvgOverlay" class="absolute inset-0 pointer-events-none z-10" style="min-width: 2500px; min-height: 1600px;"></svg>
-        <div id="topologyNodesContainer" class="relative z-20 p-8" style="min-width: 2500px; min-height: 1600px;"></div>
+      <!-- Main Workspace: Canvas + Slide-Out Inspector Panel -->
+      <div class="flex-1 flex overflow-hidden relative">
+        <!-- Interactive Viewport -->
+        <div class="flex-1 relative overflow-auto bg-slate-950 select-none cursor-grab active:cursor-grabbing" id="topologyCanvasViewport">
+          <svg id="topologySvgOverlay" class="absolute inset-0 pointer-events-none z-10" style="min-width: 2800px; min-height: 1800px;"></svg>
+          <div id="topologyNodesContainer" class="relative z-20 p-8 origin-top-left transition-transform duration-75" style="min-width: 2800px; min-height: 1800px;"></div>
+        </div>
+
+        <!-- Topology Inspector Side Panel -->
+        <aside id="topologyInspectorPanel" class="w-84 bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-30 overflow-hidden shadow-xl transition-all">
+          <div class="p-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-emerald-400"></i>
+              <span class="text-xs font-bold text-white uppercase tracking-wider">Topology Inspector</span>
+            </div>
+            <button onclick="deselectTopologyNode()" class="text-[10px] text-slate-400 hover:text-slate-200">Deselect</button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-4 space-y-4" id="topologyInspectorContent">
+            <!-- Dynamically populated on node or link click -->
+          </div>
+
+          <div class="p-3 border-t border-slate-800 bg-slate-950/90 text-xs space-y-1.5 shrink-0">
+            <div class="flex justify-between text-slate-400 text-[11px]">
+              <span>Selected Node:</span>
+              <span id="topoInspectorSelectedNode" class="font-mono text-white font-bold truncate max-w-[170px]">None</span>
+            </div>
+            <div class="flex justify-between text-slate-400 text-[11px]">
+              <span>Uplink Speed / Mode:</span>
+              <span id="topoInspectorLinkSpeed" class="font-mono text-emerald-400 font-bold">Auto</span>
+            </div>
+            <div class="flex justify-between text-slate-400 text-[11px]">
+              <span>Power Source:</span>
+              <span id="topoInspectorPowerSource" class="font-mono text-amber-300 font-bold">Dual AC / PoE</span>
+            </div>
+          </div>
+        </aside>
       </div>
 
-      <!-- Canvas Footer Status -->
-      <div class="px-6 py-3 border-t border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between text-xs text-slate-400">
-        <div id="topologyStatusText">Click and drag cluster headers to reposition equipment across the workspace.</div>
+      <!-- Canvas Footer Status & Legend -->
+      <div class="px-5 py-2.5 border-t border-slate-800 bg-slate-950/90 flex flex-wrap items-center justify-between text-xs text-slate-400 shrink-0">
+        <!-- Interactive Legend -->
+        <div class="flex items-center gap-3">
+          <span class="text-[10px] font-mono uppercase text-slate-500 font-bold">Legend:</span>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            <span class="text-slate-300 font-mono">100G / 25G Fabric</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-sky-400"></span>
+            <span class="text-slate-300 font-mono">10G / LAG Trunk</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <span class="text-slate-300 font-mono">1G Uplink</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+            <span class="text-slate-300 font-mono">PoE Delivery</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-teal-400"></span>
+            <span class="text-slate-300 font-mono">VMS Video Stream</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[11px]">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-purple-400"></span>
+            <span class="text-slate-300 font-mono">Wireless RF</span>
+          </div>
+        </div>
+
         <div class="flex items-center gap-4 font-mono text-[11px]">
-          <span id="topologyNodesCount">0 Nodes</span>
-          <span id="topologyLinksCount">0 Uplinks</span>
+          <span id="topologyNodesCount" class="text-white font-bold">0 Nodes</span>
+          <span id="topologyLinksCount" class="text-brand-400 font-bold">0 Links</span>
+          <span id="topologyTotalPoEFlow" class="text-amber-400 font-bold">0W PoE Flow</span>
         </div>
       </div>
     </div>

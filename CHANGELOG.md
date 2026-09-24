@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.2-alpha] - 2026-09-24
+
+### Added
+- **Logical Systems Architecture & Topology Canvas Overhaul (`js/tools/topology.js` & `index.html`)**:
+  - **Smooth Cubic Bézier Vector Interconnects**: Snaps links to perimeter chassis borders with auto-calculated control points and interactive speed badge pills, preventing crossing lines over cards.
+  - **Dynamic Wire-Speed Auto-Negotiation**: Automatically calculates mutual link speeds (100G, 40G, 25G, 10G, 2.5G, 1G) between network endpoints and displays configurable LAG trunking (1x/2x/4x LACP bundles).
+  - **Dual-Plane & Service View Filters**: Added unified filter controls supporting `All Systems (Unified)`, `Backbone & Speeds`, `PoE & Power Delivery`, `VMS Video Recording & Ingest`, and `Access Control & Security Services`.
+  - **Slide-Out Topology Inspector Drawer**: Deep inspection of switches, servers, and transport links with live configuration controls for custom uplink targets, LAG bundles, wire speed overrides, and service routing.
+  - **Grouped Edge Client Pools**: Switch chassis cards display aggregated client pools for cameras, doors, and wireless APs with live power and bitrate rollups, preventing visual clutter while enabling full inspection on click.
+  - **1-Click Hierarchical Auto-Layout (`autoArrangeTopologyHierarchy`)**: Automatically arranges complex topologies into standard Gateway $\rightarrow$ Core / Servers $\rightarrow$ Access Closets $\rightarrow$ Field tiers.
+  - **Canvas Zoom & Viewport Controls**: Smooth zoom engine (50% to 200%) with zoom level badge and 1-click fit to screen.
+- **Compute, VMS Servers & Security Integration**:
+  - **Enterprise Server Catalog (`data/compute_storage/data_servers.js`)**: Ingested high-density VMS recording servers and identity hosts (Dell PowerEdge R760, BCDVideo Aurora 1U, Supermicro 4U 24-Bay, HPE ProLiant DL380).
+  - **Enterprise IP Cameras Catalog (`data/physical_security/data_cameras.js`)**: Ingested surveillance cameras (Axis P3265-LVE 2MP, Axis Q3538-LVE 4K AI, Hanwha XNV-8081Z 4K PTRZ, Hanwha XNO-6080R, Avigilon 5MP) with PoE classes and stream bitrates.
+  - **Enterprise Access Control Catalog (`data/physical_security/data_access.js`)**: Ingested door controllers and readers (Mercury LP1502 PoE+, Mercury MR52-S3, Axis A1001, HID Signo 40).
+  - **Live VMS Ingest & Access Routing Engine**: Real-time video ingest bandwidth calculations (Mbps) and logical routing of camera streams and door controllers to assigned servers in the quote.
+  - **Dedicated Line Item Creation (`js/tools/bom.js`)**: Added `addServerToBOM`, `addCameraToBOM`, and `addAccessDeviceToBOM`.
+
+### Changed
+- Strictly isolated physical cabling details (Cat6/fiber spools, run lengths) and physical rack U elevations to the Floor Plan Layout (`physical_layout.js`) and Rack Viewer (`rack.js`), keeping the Topology tool exclusively dedicated to logical network architecture, dataflows, and hosted services.
+- Enhanced domain card rendering (`js/renderers/render_cards.js`) with specialized telemetry badges and direct BOM additions for servers, cameras, and access controllers.
+
+---
+
 ## [0.10.1-alpha] - 2026-09-24
 
 ### Added

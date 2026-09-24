@@ -472,6 +472,49 @@ function renderCardByDomain(item, mode) {
   const safeSku = escapeHTML(item.sku || item.id || "");
   const safeId = escapeHTML(item.id || item.sku || "");
 
+  // Domain-specific click handler
+  let addActionCode = `addOpticsToBOM('${safeSku}', '${safeModel}', ${item.msrp || 0}, 1, '${safeVendor}')`;
+  if (mode === "servers" || item.role === "Server" || item.category === "servers") {
+    addActionCode = `addServerToBOM('${safeId}', document.getElementById('targetLocSelect-${safeId}') ? document.getElementById('targetLocSelect-${safeId}').value : null)`;
+  } else if (mode === "cameras" || item.role === "Camera" || item.category === "cameras") {
+    addActionCode = `addCameraToBOM('${safeId}', document.getElementById('targetLocSelect-${safeId}') ? document.getElementById('targetLocSelect-${safeId}').value : null)`;
+  } else if (mode === "access_control" || item.role === "Access Control" || item.category === "access_control") {
+    addActionCode = `addAccessDeviceToBOM('${safeId}', document.getElementById('targetLocSelect-${safeId}') ? document.getElementById('targetLocSelect-${safeId}').value : null)`;
+  }
+
+  // Domain-specific telemetry pills
+  let specStripHtml = "";
+  if (item.category === "servers" || item.role === "Server") {
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Video Storage:</span><span class="text-emerald-400 font-bold">${item.usableStorageTb || 0} TB Net (${item.raidLevel || 'RAID'})</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Ingest Throughput:</span><span class="text-sky-300 font-bold">${item.maxIngestBandwidthMbps || 500} Mbps (${item.supportedCameras || 64} Cams)</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Dual Hot-Swap PSU:</span><span class="text-amber-300 font-bold">${item.baseWatts || 300}W Base (${item.psuWattage || 800}W Plat)</span></div>
+      </div>
+      ${item.hostedRoles ? `
+        <div class="flex flex-wrap gap-1 mb-2.5">
+          ${item.hostedRoles.map(r => `<span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/30 text-purple-300">${escapeHTML(r)}</span>`).join('')}
+        </div>
+      ` : ''}
+    `;
+  } else if (item.category === "cameras" || item.role === "Camera") {
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Stream Bitrate:</span><span class="text-sky-300 font-bold">${item.streamBitrateMbps || 4} Mbps (${escapeHTML(item.compression || 'H.265')})</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">PoE Power:</span><span class="text-amber-300 font-bold">${item.powerConsumptionWatts || 8}W (${escapeHTML(item.poeStandard || '802.3af')})</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Low-Light IR:</span><span class="text-slate-200 font-bold">${item.irRangeMeters ? `${item.irRangeMeters}m Night Vision` : 'Visual Only'}</span></div>
+      </div>
+    `;
+  } else if (item.category === "access_control" || item.role === "Access Control") {
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Door Capacity:</span><span class="text-emerald-400 font-bold">${item.doorCapacity || 2} Doors (${item.readerCapacity || 4} Readers)</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Power Delivery:</span><span class="text-amber-300 font-bold">${item.powerConsumptionWatts || 15}W (${item.powerSource === 'poe_switch' ? 'PoE+ 802.3at' : '12-24VDC'})</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Protocols:</span><span class="text-slate-200 font-bold">${(item.readerProtocols || ['OSDP v2']).join(', ')}</span></div>
+      </div>
+    `;
+  }
+
   return `
     <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
       <div>
@@ -483,6 +526,7 @@ function renderCardByDomain(item, mode) {
               ${item.formFactor ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-400 font-mono">${escapeHTML(item.formFactor)}</span>` : ''}
               ${item.rackUnits ? `<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">${item.rackUnits}U Rack</span>` : ''}
               ${item.resolution ? `<span class="badge-chip border border-teal-500/40 bg-teal-500/10 text-teal-300">${escapeHTML(item.resolution)}</span>` : ''}
+              ${item.dualPsu ? `<span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-300 font-bold">Dual PSU</span>` : ''}
             </div>
             <h3 class="font-bold text-base text-white">${safeModel}</h3>
             <span class="text-[11px] font-mono text-slate-400">SKU: ${safeSku}</span>
@@ -493,7 +537,9 @@ function renderCardByDomain(item, mode) {
           </div>
         </div>
 
-        <p class="text-xs text-slate-300 mb-3 line-clamp-2">${escapeHTML(item.description || 'Enterprise hardware specification and sizing asset.')}</p>
+        ${specStripHtml}
+
+        <p class="text-xs text-slate-300 mb-3 line-clamp-2">${escapeHTML(item.description || (item.keyFeatures ? item.keyFeatures[0] : 'Enterprise hardware specification and sizing asset.'))}</p>
       </div>
 
       <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-2">
@@ -506,7 +552,7 @@ function renderCardByDomain(item, mode) {
           <option value="new_location">+ New Location...</option>
         </select>
 
-        <button onclick="addOpticsToBOM('${safeSku}', '${safeModel}', ${item.msrp || 0}, 1, '${safeVendor}')" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
+        <button onclick="${addActionCode}" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
           <span>Add to Quote</span>
         </button>
