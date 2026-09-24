@@ -7,9 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-You are completely right. The canvas engine, facility floorplan layout, and topology rendering subsystem received critical updates during this sprint that were completely left out of that draft.
+## [0.6.1-alpha] - 2026-09-24
 
-Here is the updated, all-inclusive changelog reflecting the topology canvas, facility layouts, and UI engine changes alongside the data catalog calibrations.
+### Added
+- **Interactive Sizing Strips Across All Domains**:
+  - **Wireless PtP/PtMP**: Interactive Link Path Sizer calculating range (miles/km) and line-rate throughput targets.
+  - **Gateways & WAN**: Firewall routing line-rate throughput and deep threat (IDS/IPS) inspection sizer.
+  - **Optics & Interconnects**: One-click fast-select strip for 10G DAC, 10G SR/LR, 25G SFP28, 100G QSFP28, and dedicated stacking.
+  - **Accessories**: Minimum output wattage filter for industrial DIN-rail power supplies and PoE midspans.
+- **PtMP Topology & Station Compatibility Engine**:
+  - Standardized `topologyRole` (`ap`, `ptp`, `station`), `maxStations`, and `ptmpFamily` across wireless models.
+  - Introduced station compatibility filtering to verify subscriber association against chosen BaseStations.
+- **Universal Filter Pills Bar**:
+  - Removable tag chips above catalog grid allowing single-click removal of active query tokens, vendor filters, and hardware constraints without resetting the whole form.
+- **Accessories Schema Expansion**:
+  - Added explicit `type` classifications (`media_converter`, `poe_injector`, `power_supply`, `power_distribution`, `enclosure`, `surge_protector`) to support expanding industrial components.
+
+### Changed
+- **Tokenized & Hyphen-Agnostic Search**:
+  - Replaced strict substring evaluation with whitespace-tokenized matching and alphanumeric normalization (e.g., searching `c9300l`, `c9300-l`, or `icx7150` matches accurately regardless of hyphenation or token order).
+- **Faceted Port Density Filtering**:
+  - Replaced strict interface equality checks (`ports === 48`) with categorical density buckets (`48`, `24`, `16`, `compact`) to support switches with modular/fixed uplink cages.
+- **Multi-Gigabit Detection**:
+  - Upgraded Multi-Gig filtering to dynamically evaluate `portSpeed`, `portFormFactorSummary`, and high-power PoE port pools.
+- **Dynamic Facet Counts**:
+  - Sidebar counts now calculate based on active filter intersections to prevent dead-end zero-result selections.
+
+### Fixed
+- Fixed script path loading mismatch for `data_firewalls.js`.
+- Fixed inline JavaScript closure execution error on optics fast-select buttons.
+- Fixed throughput string evaluation across firewalls containing comma separators and unit suffixes.
+
 
 Complete Changelog for v0.6.0-alpha
 Markdown
