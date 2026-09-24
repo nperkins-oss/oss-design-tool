@@ -927,6 +927,7 @@ function setUplinkTarget(childInstanceId, targetSwitchId) {
   if (!child) return;
 
   child.uplinkTargetId = targetSwitchId === "none" ? null : targetSwitchId;
+  child.hostSwitchId = child.uplinkTargetId;
   FacilityStore.notifyWorkspaceChange();
 }
 
@@ -934,8 +935,12 @@ function setPowerSource(childInstanceId, powerType) {
   const child = projectBOM.find(i => i.instanceId === childInstanceId);
   if (!child) return;
 
-  child.powerSource = powerType;
-  FacilityStore.notifyWorkspaceChange();
+  if (typeof PortEngine !== "undefined" && typeof PortEngine.setPowerSource === "function") {
+    PortEngine.setPowerSource(child, powerType);
+  } else {
+    child.powerSource = powerType;
+    FacilityStore.notifyWorkspaceChange();
+  }
 }
 
 // -----------------------------------------------------------
@@ -1124,100 +1129,88 @@ function renderBomSingleItemHtml(item) {
     `;
   }
 
-  const isSwitch = item.role === "Access" || item.role === "Core" || item.role === "Aggregation";
-  const switchAudits = auditSwitchCapacities();
-  const myAudit = switchAudits[item.instanceId];
-  const uplinkParent = item.uplinkTargetId ? projectBOM.find(i => i.instanceId === item.uplinkTargetId) : null;
   const allLocations = getAllDefinedLocations();
   const rawLoc = item.closetName || item.rackId || FacilityStore.UNASSIGNED;
   const currentLocationKey = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
-  const isDualLag = item.uplinkMode === "lag_dual" || item.stackedUnits >= 2;
+  const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
+  const pwrBadge = (typeof PortEngine !== "undefined" && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
 
   return `
-    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm">
+    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm hover:border-slate-700 transition-colors">
       
       <!-- Location & Rack Fast-Move Header -->
       <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
         <div class="flex items-center gap-1.5 flex-1 min-w-0">
           <i data-lucide="${currentLocationKey === FacilityStore.UNASSIGNED ? 'inbox' : 'map-pin'}" class="w-3.5 h-3.5 ${currentLocationKey === FacilityStore.UNASSIGNED ? 'text-amber-400' : 'text-indigo-400'} shrink-0"></i>
-          <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[220px] truncate">
+          <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[220px] truncate" title="Change Assigned Rack / Location">
             ${allLocations.map(loc => `
-              <option value="${loc}" ${loc === currentLocationKey ? 'selected' : ''}>${loc}</option>
+              <option value="${escapeHTML(loc)}" ${loc === currentLocationKey ? 'selected' : ''}>${escapeHTML(loc)}</option>
             `).join('')}
             <option value="new_location">+ Create New Location...</option>
           </select>
         </div>
-        <span class="text-[10px] ${item.isDinMounted ? 'text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded' : 'text-slate-500 font-mono'} uppercase shrink-0">
-          ${item.isDinMounted ? 'Field/DIN' : item.role}
-        </span>
+        <div class="flex items-center gap-1 shrink-0">
+          ${item.isDinMounted ? `
+            <span class="text-[10px] text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded font-mono uppercase">
+              Field/DIN
+            </span>
+          ` : `
+            <span class="text-[10px] text-slate-400 font-mono uppercase">
+              ${escapeHTML(item.role || 'Hardware')}
+            </span>
+          `}
+        </div>
       </div>
 
       <!-- Device Info & Quantity Controls -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <span class="text-xs font-bold text-white truncate block">${item.model}</span>
-          <div class="text-[10px] font-mono text-slate-400">SKU: ${item.sku}</div>
-          <div class="text-[11px] text-emerald-400 font-mono mt-0.5">$${(item.msrp * item.qty).toLocaleString()} ($${item.msrp.toLocaleString()} ea)</div>
+          <span class="text-xs font-bold text-white truncate block">${escapeHTML(item.model)}</span>
+          <div class="text-[10px] font-mono text-slate-400">SKU: ${escapeHTML(item.sku)}</div>
+          <div class="text-[11px] text-emerald-400 font-mono mt-0.5 font-semibold">$${(item.msrp * item.qty).toLocaleString()} <span class="text-slate-500 font-normal">($${item.msrp.toLocaleString()} ea)</span></div>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 shrink-0">
           <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg">
-            <button onclick="changeBomQty('${item.instanceId}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold">-</button>
+            <button onclick="changeBomQty('${item.instanceId}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors" title="Decrease Quantity">-</button>
             <span class="px-2 text-xs font-mono font-bold text-white">${item.qty}</span>
-            <button onclick="changeBomQty('${item.instanceId}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold">+</button>
+            <button onclick="changeBomQty('${item.instanceId}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors" title="Increase Quantity">+</button>
           </div>
-          <button onclick="removeBomItem('${item.instanceId}')" class="text-slate-500 hover:text-rose-400 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          <button onclick="removeBomItem('${item.instanceId}')" class="text-slate-500 hover:text-rose-400 p-1 transition-colors" title="Remove from BOM">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
         </div>
       </div>
 
-      <!-- Real-Time Switch Port & PoE Capacity Audit Display -->
-      ${isSwitch && myAudit ? `
-        <div class="bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="text-slate-400 font-medium">Downlink Port Utilization:</span>
-            <span class="font-mono font-bold ${myAudit.usedDownlinkPorts > myAudit.totalPorts ? 'text-rose-400' : 'text-slate-200'}">
-              ${myAudit.usedDownlinkPorts} /${myAudit.totalPorts} Ports
+      <!-- Streamlined Technical & Power Badge Footer -->
+      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs gap-2">
+        <div class="flex items-center gap-1.5 min-w-0">
+          <button 
+            type="button" 
+            onclick="jumpToTopologyTarget('node:${item.instanceId}')" 
+            class="text-[10px] text-indigo-300 hover:text-white flex items-center gap-1 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
+            title="Inspect ports, wire speeds, and logical uplinks in Topology"
+          >
+            <i data-lucide="network" class="w-3 h-3 text-indigo-400"></i>
+            <span>Inspect in Topology</span>
+          </button>
+          ${item.uplinkTargetId ? `
+            <span class="text-[10px] text-slate-400 font-mono truncate" title="Uplink configured">
+              Linked
             </span>
-          </div>
-          ${myAudit.totalPoEBudget > 0 ? `
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-400 font-medium">PoE Consumption (+20% Headroom):</span>
-              <span class="font-mono font-bold ${myAudit.consumedPoEWatts > myAudit.totalPoEBudget ? 'text-rose-400' : 'text-amber-400'}">
-                ${myAudit.consumedPoEWatts} W / ${myAudit.totalPoEBudget} W
-              </span>
-            </div>
           ` : ''}
-          ${myAudit.alerts.map(al => `
-            <div class="text-[10px] text-rose-400 bg-rose-950/30 border border-rose-800/40 p-1 rounded font-medium flex items-center gap-1">
-              <i data-lucide="alert-triangle" class="w-3 h-3 shrink-0"></i>
-              <span>${al}</span>
-            </div>
-          `).join('')}
         </div>
-      ` : ''}
 
-      <!-- Clean Upstream & Topology Routing Tag -->
-      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-        <div class="flex items-center gap-1.5 text-slate-400">
-          <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-400"></i>
-          <span class="text-[10px]">Uplink:</span>
-          <span class="font-bold text-slate-200 text-[11px] truncate max-w-[150px]">
-            ${uplinkParent ? `${uplinkParent.model} (${uplinkParent.closetName || 'Closet'})` : 'Standalone / Core'}
-          </span>
-          ${isDualLag && uplinkParent ? `
-            <span class="text-[9px] bg-sky-500/20 text-sky-300 border border-sky-500/40 px-1 py-0.2 rounded font-mono font-bold">2x LAG</span>
+        <div class="flex items-center gap-1.5 shrink-0">
+          ${pwrBadge ? `
+            <span class="text-[9px] ${pwrBadge.badgeClass || 'bg-slate-800 text-slate-300 border-slate-700'} border px-1.5 py-0.5 rounded font-mono font-semibold flex items-center gap-1">
+              <span>${pwrBadge.icon}</span>
+              <span>${pwrBadge.badgeLabel}</span>
+            </span>
           ` : ''}
         </div>
-        ${item.powerSource === 'poe_switch' ? `
-          <span class="text-[9px] bg-amber-500/10 text-amber-300 border border-amber-500/30 px-1.5 py-0.5 rounded font-mono font-semibold">
-            PoE (${item.baseWatts || item.poeWattsDrawn || 15}W)
-          </span>
-        ` : item.powerSource === 'local_injector' ? `
-          <span class="text-[9px] bg-slate-800 text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded font-mono">
-            Injector
-          </span>
-        ` : ''}
       </div>
 
+      <!-- Stacking Controls for Stackable Access Switches -->
       ${item.canStack ? `
         <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
           <span class="text-slate-400">Units in stack:</span>
@@ -1234,12 +1227,16 @@ function renderBomSingleItemHtml(item) {
         </div>
       ` : ''}
 
+      <!-- Nested Sub-Items (Modular Sleds, Power Supplies, Feature Licenses, Injectors) -->
       <div class="space-y-1.5">
         ${projectBOM.filter(ch => ch.parentInstanceId === item.instanceId).map(ch => `
           <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
             <div>
-              <span class="text-slate-300 font-medium">${ch.model}</span>
-              <div class="text-[10px] font-mono text-slate-500">${ch.role} &bull; SKU: ${ch.sku}</div>             </div>             <div class="text-right">               <span class="font-mono text-emerald-400 font-semibold">$${(ch.msrp * ch.qty).toLocaleString()}</span>
+              <span class="text-slate-300 font-medium">${escapeHTML(ch.model)}</span>
+              <div class="text-[10px] font-mono text-slate-500">${escapeHTML(ch.role)} &bull; SKU: ${escapeHTML(ch.sku)}</div>
+            </div>
+            <div class="text-right">
+              <span class="font-mono text-emerald-400 font-semibold">$${(ch.msrp * ch.qty).toLocaleString()}</span>
               <span class="text-[10px] text-slate-400 block">${ch.qty}x @ $${ch.msrp}</span>
             </div>
           </div>

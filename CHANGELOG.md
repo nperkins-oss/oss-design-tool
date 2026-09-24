@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.6-alpha] - 2026-09-24
+
+### Fixed
+- **Catalog & "Add to BOM" Universal Lookup Resilience (`data/registry.js` & `js/tools/bom.js`)**:
+  - Restored `CatalogRegistry.getSwitch(idOrSku)` and added `CatalogRegistry.getDevice(idOrSku)` universal lookup helpers in `data/registry.js`, resolving an unhandled `TypeError` that occurred when adding switches to the quote.
+  - Hardened all equipment adder functions (`addToProjectBOM`, `addFirewallToBOM`, `addServerToBOM`, `addCameraToBOM`, `addAccessDeviceToBOM`, `addWirelessToBOM`) with defensive function checks (`typeof CatalogRegistry.get === "function"`) and database array fallbacks.
+  - Attached all card renderers and adder callbacks explicitly to `window` across `render_cards.js` and `bom.js` to ensure reliable cross-script event handling.
+
+### Changed
+- **BOM Drawer & Specialized Engine Separation of Concerns (`index.html` & `js/tools/bom.js`)**:
+  - **Replaced Legacy "Auto Uplinks" with Specialized Engine Launchers**: Replaced the legacy blind "Auto Uplinks" button (which inserted generic 0.5m DACs) in the BOM drawer header with dedicated 1-click launchers for **Topology** (`toggleTopologyModal()`), **Rack Elevations** (`toggleRackModal()`), and **Licensing Terms** (`toggleLicenseModal()`).
+  - **Streamlined Commercial Quote Cards (`renderBomSingleItemHtml`)**: Removed redundant port utilization telemetry and duplicate warning boxes from individual equipment cards in the BOM drawer, returning the drawer to its core purpose: clean commercial pricing, quantities, location re-assignment, stacking, and hardware accessories.
+  - **Direct "Inspect in Topology" Launcher**: Embedded a compact launcher on each equipment card in the BOM drawer, allowing instant in-viewport jumping to that device inside the Logical Topology engine.
+  - **Power & Uplink Mutator Delegation**: Updated `setPowerSource` and `setUplinkTarget` in `bom.js` to automatically delegate to `PortEngine`, ensuring all power mode adjustments enforce hardware constraints and synchronize midspan injectors or DIN-rail supplies.
+
+---
+
 ## [0.10.5-alpha] - 2026-09-24
 
 ### Added
