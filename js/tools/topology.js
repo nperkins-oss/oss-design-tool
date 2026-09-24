@@ -7,12 +7,16 @@
 let isCanvasDragging = false;
 let draggedTopologyNode = null;
 let topoDragOffset = { x: 0, y: 0 };
+let dragStartPos = { x: 0, y: 0 };
+let isViewportPanning = false;
+let panStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
 let topologyLinks = [];
 
-// Canvas Viewport State
+// Canvas Viewport & Selection State
 let topologyZoomLevel = 1.0;
-let activeTopologyViewPlane = "all"; // "all" | "backbone" | "power"
+let activeTopologyViewPlane = "all"; // "all" | "backbone" | "power" | "vms" | "access"
 let selectedTopologyNodeId = null;
+let selectedTopologyRackLoc = null;
 let selectedTopologyLinkId = null;
 let isTopologyInspectorVisible = true;
 
@@ -30,10 +34,14 @@ function toggleTopologyModal() {
     initTopologyCanvas();
     renderTopology();
     renderTopologyInspector();
+    setTimeout(() => {
+      fitTopologyToScreen();
+    }, 60);
     if (window.lucide) lucide.createIcons();
   } else {
     modal.classList.add("hidden");
     isCanvasDragging = false;
+    isViewportPanning = false;
     draggedTopologyNode = null;
   }
 }
@@ -43,15 +51,45 @@ function initTopologyCanvas() {
   if (!viewport || viewport.dataset.initialized === "true") return;
 
   viewport.dataset.initialized = "true";
+  viewport.addEventListener("mousedown", handleViewportMouseDown);
+  viewport.addEventListener("wheel", handleViewportWheel, { passive: false });
   window.addEventListener("mousemove", handleTopologyMouseMove);
   window.addEventListener("mouseup", handleTopologyMouseUp);
+}
+
+function handleViewportMouseDown(e) {
+  if (!isTopologyModalVisible()) return;
+  // If clicked inside an interactive card or control, don't initiate viewport pan
+  if (e.target.closest(".topo-location-cluster") || e.target.closest("button") || e.target.closest("select") || e.target.closest("input")) {
+    return;
+  }
+  const viewport = document.getElementById("topologyCanvasViewport");
+  if (!viewport) return;
+
+  isViewportPanning = true;
+  panStart = {
+    x: e.clientX,
+    y: e.clientY,
+    scrollLeft: viewport.scrollLeft,
+    scrollTop: viewport.scrollTop
+  };
+  viewport.style.cursor = "grabbing";
+}
+
+function handleViewportWheel(e) {
+  if (!isTopologyModalVisible()) return;
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.08 : -0.08;
+    zoomTopologyCanvas(delta);
+  }
 }
 
 // -----------------------------------------------------------
 // Canvas Zoom & Pan Controls
 // -----------------------------------------------------------
 function zoomTopologyCanvas(delta) {
-  topologyZoomLevel = Math.max(0.5, Math.min(2.0, Math.round((topologyZoomLevel + delta) * 100) / 100));
+  topologyZoomLevel = Math.max(0.4, Math.min(2.0, Math.round((topologyZoomLevel + delta) * 100) / 100));
   applyTopologyZoom();
 }
 
@@ -71,6 +109,7 @@ function applyTopologyZoom() {
 
   if (container) {
     container.style.transform = `scale(${topologyZoomLevel})`;
+    container.style.transformOrigin = "top left";
   }
   if (svg) {
     svg.style.transform = `scale(${topologyZoomLevel})`;
@@ -78,6 +117,80 @@ function applyTopologyZoom() {
   }
   if (badge) {
     badge.innerText = `${Math.round(topologyZoomLevel * 100)}%`;
+  }
+  renderTopologyLinks();
+}
+
+function fitTopologyToScreen() {
+  const clusters = document.querySelectorAll(".topo-location-cluster");
+  const viewport = document.getElementById("topologyCanvasViewport");
+  if (clusters.length === 0 || !viewport) return;
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  clusters.forEach(c => {
+    const l = c.offsetLeft;
+    const t = c.offsetTop;
+    const r = l + c.offsetWidth;
+    const b = t + c.offsetHeight;
+    if (l < minX) minX = l;
+    if (t < minY) minY = t;
+    if (r > maxX) maxX = r;
+    if (b > maxY) maxY = b;
+  });
+
+  const inspectorPanel = document.getElementById("topologyInspectorPanel");
+  const inspectorWidth = (inspectorPanel && !inspectorPanel.classList.contains("hidden")) ? inspectorPanel.offsetWidth : 0;
+  const availW = Math.max(400, viewport.clientWidth - inspectorWidth - 100);
+  const availH = Math.max(300, viewport.clientHeight - 100);
+
+  const contentW = Math.max(100, maxX - minX + 80);
+  const contentH = Math.max(100, maxY - minY + 80);
+
+  const scaleW = availW / contentW;
+  const scaleH = availH / contentH;
+  const optimalZoom = Math.max(0.45, Math.min(1.15, Math.min(scaleW, scaleH)));
+
+  topologyZoomLevel = Math.round(optimalZoom * 100) / 100;
+  applyTopologyZoom();
+
+  const centerX = (minX + (contentW / 2)) * topologyZoomLevel;
+  const centerY = (minY + (contentH / 2)) * topologyZoomLevel;
+
+  viewport.scrollTo({
+    left: Math.max(0, centerX - (availW / 2)),
+    top: Math.max(0, centerY - (availH / 2)),
+    behavior: "smooth"
+  });
+}
+
+function panClusterIntoView(loc) {
+  if (!loc) return;
+  const clusterEl = document.querySelector(`.topo-location-cluster[data-location="${CSS.escape(loc)}"]`);
+  const viewport = document.getElementById("topologyCanvasViewport");
+  if (!clusterEl || !viewport) return;
+
+  const inspectorPanel = document.getElementById("topologyInspectorPanel");
+  const inspectorWidth = (inspectorPanel && !inspectorPanel.classList.contains("hidden")) ? inspectorPanel.offsetWidth : 0;
+  const visibleWidth = Math.max(400, viewport.clientWidth - inspectorWidth);
+  const visibleHeight = viewport.clientHeight;
+
+  const targetLeft = (clusterEl.offsetLeft * topologyZoomLevel) - (visibleWidth / 2) + ((clusterEl.offsetWidth * topologyZoomLevel) / 2);
+  const targetTop = (clusterEl.offsetTop * topologyZoomLevel) - (visibleHeight / 2) + ((clusterEl.offsetHeight * topologyZoomLevel) / 2);
+
+  viewport.scrollTo({
+    left: Math.max(0, targetLeft),
+    top: Math.max(0, targetTop),
+    behavior: "smooth"
+  });
+}
+
+function panNodeIntoView(instanceId) {
+  const cardEl = document.getElementById(`topo-card-${instanceId}`);
+  if (cardEl) {
+    const cluster = cardEl.closest(".topo-location-cluster");
+    if (cluster) {
+      panClusterIntoView(cluster.getAttribute("data-location"));
+    }
   }
 }
 
@@ -87,14 +200,26 @@ function setTopologyViewPlane(plane) {
   renderTopologyInspector();
 }
 
-function toggleTopologyInspector() {
+function toggleTopologyInspector(forceState = null) {
   const panel = document.getElementById("topologyInspectorPanel");
+  const openBtn = document.getElementById("topologyOpenInspectorBtn");
+  const headerBtn = document.getElementById("topologyInspectorHeaderBtn");
   if (!panel) return;
-  isTopologyInspectorVisible = !isTopologyInspectorVisible;
+
+  if (forceState !== null) {
+    isTopologyInspectorVisible = forceState;
+  } else {
+    isTopologyInspectorVisible = !isTopologyInspectorVisible;
+  }
+
   if (isTopologyInspectorVisible) {
     panel.classList.remove("hidden");
+    if (openBtn) openBtn.classList.add("hidden");
+    if (headerBtn) headerBtn.classList.add("border-brand-500", "text-brand-300");
   } else {
     panel.classList.add("hidden");
+    if (openBtn) openBtn.classList.remove("hidden");
+    if (headerBtn) headerBtn.classList.remove("border-brand-500", "text-brand-300");
   }
 }
 
@@ -254,27 +379,37 @@ function renderTopology() {
     const pos = savedPositions[loc] || defaultPos;
     const parsed = FacilityStore.parse(loc);
 
+    const isClusterSelected = selectedTopologyRackLoc === loc;
     const clusterEl = document.createElement("div");
-    clusterEl.className = "topo-location-cluster absolute select-none bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-3.5 shadow-2xl backdrop-blur-md w-84";
+    clusterEl.className = `topo-location-cluster absolute select-none bg-slate-900/90 border ${isClusterSelected ? 'border-indigo-500 ring-2 ring-indigo-500/50 shadow-indigo-500/20' : 'border-slate-800 hover:border-slate-700/80'} rounded-2xl p-3.5 shadow-2xl backdrop-blur-md w-84 transition-all`;
     clusterEl.style.left = `${pos.x}px`;
     clusterEl.style.top = `${pos.y}px`;
     clusterEl.setAttribute("data-location", loc);
 
     clusterEl.innerHTML = `
       <!-- Cluster Header -->
-      <div class="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-800 cursor-move topo-cluster-header">
+      <div 
+        class="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-800 cursor-pointer topo-cluster-header group hover:border-indigo-500/40 transition-colors"
+        onclick="selectTopologyRack('${escapeHTML(loc)}', event)"
+        title="Click to inspect this rack enclosure (or drag to reposition)"
+      >
         <div class="flex items-center gap-2.5">
-          <div class="p-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+          <div class="p-1.5 rounded-lg ${isClusterSelected ? 'bg-indigo-500 text-white shadow-md' : 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 group-hover:bg-indigo-500/20'} transition-all">
             <i data-lucide="server" class="w-4 h-4"></i>
           </div>
           <div>
-            <span class="text-xs font-bold text-white tracking-wide block leading-none">${escapeHTML(parsed.space)}</span>
-            <span class="text-[10px] font-mono text-indigo-300 block mt-1 leading-none">${escapeHTML(parsed.enclosure)}</span>
+            <span class="text-xs font-bold ${isClusterSelected ? 'text-indigo-300' : 'text-white'} tracking-wide block leading-none">${escapeHTML(parsed.space)}</span>
+            <span class="text-[10px] font-mono text-indigo-400/90 block mt-1 leading-none">${escapeHTML(parsed.enclosure)}</span>
           </div>
         </div>
-        <span class="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
-          ${items.length} ${items.length === 1 ? 'Chassis' : 'Chassis'}
-        </span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
+            ${items.length} ${items.length === 1 ? 'Chassis' : 'Chassis'}
+          </span>
+          ${isClusterSelected ? `
+            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" title="Inspecting Enclosure"></span>
+          ` : ''}
+        </div>
       </div>
 
       <!-- Equipment Nodes inside Cluster -->
@@ -437,6 +572,7 @@ function renderTopology() {
   updateTopologyCounters(activeNodes.length, topologyLinks.length, Math.round(totalPoEFlow));
   renderTopologyLinks();
   applyTopologyZoom();
+  populateTopologyQuickJump();
 
   if (typeof safeCreateIcons === "function") {
     safeCreateIcons(container);
@@ -478,19 +614,28 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
   // 2. Core/Aggregation -> Access Uplinks & Peer Cascades
   access.forEach(acc => {
     let target = null;
+    const accLoc = FacilityStore.normalize(acc.closetName);
+
     if (acc.customUplinkTargetId) {
       target = nodes.find(n => n.instanceId === acc.customUplinkTargetId) || projectBOM.find(n => n.instanceId === acc.customUplinkTargetId);
     }
     if (!target) {
-      const accLoc = FacilityStore.normalize(acc.closetName);
-      target = cores.find(c => FacilityStore.normalize(c.closetName) === accLoc) || cores[0] || gateways[0];
+      // 1. Check if there is a core or aggregation switch in the same closet
+      target = cores.find(c => FacilityStore.normalize(c.closetName) === accLoc);
+    }
+    if (!target) {
+      // 2. Check if there is a local Wireless Bridge in the same closet/pole providing backhaul
+      target = wireless.find(w => FacilityStore.normalize(w.closetName) === accLoc);
+    }
+    if (!target) {
+      // 3. Fallback to primary core / gateway
+      target = cores[0] || gateways[0];
     }
 
     if (target && target.instanceId !== acc.instanceId) {
       const isTargetRadio = target.role === "Wireless Bridge" || target.category === "wireless";
       const isTargetAccess = target.role === "Access";
-      const isInterCloset = FacilityStore.normalize(target.closetName) !== FacilityStore.normalize(acc.closetName);
-      const multiplier = acc.customLinkMultiplier || (isInterCloset ? 2 : 1);
+      const multiplier = acc.customLinkMultiplier || 1;
       const speed = acc.customLinkSpeed || resolveNegotiatedSpeed(acc, target);
       const isLAG = multiplier > 1 && !isTargetRadio;
 
@@ -593,7 +738,7 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
       hostSwitch = nodes.find(n => n.instanceId === wb.uplinkTargetId);
     } else {
       const wbLoc = FacilityStore.normalize(wb.closetName);
-      hostSwitch = access.find(a => FacilityStore.normalize(a.closetName) === wbLoc) || access[0] || cores[0];
+      hostSwitch = access.find(a => FacilityStore.normalize(a.closetName) === wbLoc) || cores.find(c => FacilityStore.normalize(c.closetName) === wbLoc);
     }
 
     if (hostSwitch && hostSwitch.instanceId !== wb.instanceId) {
@@ -603,7 +748,7 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
       );
 
       if (!alreadyLinked) {
-        const isPoE = (wb.powerSourceOverride === "poe_switch" || wb.powerSource === "poe_switch" || !wb.powerSourceOverride);
+        const isPoE = (wb.powerSourceOverride === "poe_switch" || wb.powerSource === "poe_switch" || (typeof PortEngine !== "undefined" && PortEngine.getDevicePowerSource(wb) === "poe_switch"));
         topologyLinks.push({
           id: `link-${hostSwitch.instanceId}-${wb.instanceId}`,
           fromId: hostSwitch.instanceId,
@@ -883,10 +1028,22 @@ function renderTopologyLinks() {
 // -----------------------------------------------------------
 // Slide-Out Topology Inspector
 // -----------------------------------------------------------
+function selectTopologyRack(loc, e) {
+  if (e) e.stopPropagation();
+  selectedTopologyRackLoc = loc;
+  selectedTopologyNodeId = null;
+  selectedTopologyLinkId = null;
+  toggleTopologyInspector(true);
+  renderTopology();
+  renderTopologyInspector();
+}
+
 function selectTopologyNode(instanceId, e) {
   if (e) e.stopPropagation();
   selectedTopologyNodeId = instanceId;
+  selectedTopologyRackLoc = null;
   selectedTopologyLinkId = null;
+  toggleTopologyInspector(true);
   renderTopology();
   renderTopologyInspector();
 }
@@ -895,12 +1052,15 @@ function selectTopologyLink(linkId, e) {
   if (e) e.stopPropagation();
   selectedTopologyLinkId = linkId;
   selectedTopologyNodeId = null;
+  selectedTopologyRackLoc = null;
+  toggleTopologyInspector(true);
   renderTopology();
   renderTopologyInspector();
 }
 
 function deselectTopologyNode() {
   selectedTopologyNodeId = null;
+  selectedTopologyRackLoc = null;
   selectedTopologyLinkId = null;
   renderTopology();
   renderTopologyInspector();
@@ -914,7 +1074,197 @@ function renderTopologyInspector() {
 
   if (!container) return;
 
-  if (selectedTopologyNodeId) {
+  if (selectedTopologyRackLoc) {
+    const loc = selectedTopologyRackLoc;
+    const parsed = FacilityStore.parse(loc);
+    const itemsInRack = projectBOM.filter(item => {
+      if (item.parentInstanceId) return false;
+      const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+      return itemLoc === loc;
+    });
+
+    let occupiedRU = 0;
+    let totalWatts = 0;
+    let totalPoEBudget = 0;
+    let totalPoEConsumed = 0;
+
+    itemsInRack.forEach(item => {
+      const qty = parseInt(item.qty, 10) || 1;
+      const ru = parseInt(item.rackUnits || item.ruHeight || (item.role === "Server" ? 2 : 1), 10) || 0;
+      occupiedRU += ru * qty;
+
+      const baseW = (parseFloat(item.baseWatts || item.powerConsumptionWatts || item.maxPowerWatts || 0)) * qty;
+      totalWatts += baseW;
+
+      if (item.poeBudget) {
+        totalPoEBudget += (parseFloat(item.poeBudget) || 0) * qty;
+      }
+      if (item.consumedPoEWatts) {
+        totalPoEConsumed += (parseFloat(item.consumedPoEWatts) || 0) * qty;
+      }
+    });
+
+    const totalHeightU = parsed.heightU || (parsed.isDin ? 0 : 24);
+    const ruPercent = totalHeightU > 0 ? Math.min(100, Math.round((occupiedRU / totalHeightU) * 100)) : 0;
+    const btuPerHour = Math.round(totalWatts * 3.412142);
+
+    const switchIds = itemsInRack.map(i => i.instanceId);
+    const servedClients = projectBOM.filter(i => switchIds.includes(i.uplinkTargetId) && !itemsInRack.includes(i));
+    const cameraCount = servedClients.filter(c => c.role === "Camera" || (c.category && c.category.includes("camera"))).reduce((sum, c) => sum + (parseInt(c.qty, 10) || 1), 0);
+    const doorCount = servedClients.filter(d => d.role === "Access Control" || (d.category && d.category.includes("access"))).reduce((sum, d) => sum + (parseInt(d.qty, 10) || 1), 0);
+
+    if (selectedNodeEl) selectedNodeEl.innerText = `${parsed.space} • ${parsed.enclosure}`;
+    if (linkSpeedEl) linkSpeedEl.innerText = `${itemsInRack.length} Mounted Chassis`;
+    if (powerSourceEl) powerSourceEl.innerText = `${Math.round(totalWatts)}W Total Load`;
+
+    container.innerHTML = `
+      <!-- Enclosure Header Card -->
+      <div class="space-y-3 pb-3 border-b border-slate-800">
+        <div class="flex items-start justify-between">
+          <div>
+            <span class="text-xs font-bold text-white block">${escapeHTML(parsed.space)}</span>
+            <span class="text-[11px] font-mono text-indigo-300">${escapeHTML(parsed.enclosure)}</span>
+          </div>
+          <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">
+            ${parsed.isDin ? 'NEMA / DIN Enclosure' : `${totalHeightU}U Rack Cabinet`}
+          </span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-2 pt-1">
+          <button 
+            onclick="openRackViewerFor('${escapeHTML(loc)}')"
+            class="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/50 hover:border-indigo-400 text-indigo-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group"
+            title="Open this rack directly in the 2D Rack Elevation Tool"
+          >
+            <i data-lucide="server" class="w-3.5 h-3.5 group-hover:scale-110 transition-transform"></i>
+            <span>Open Elevation</span>
+          </button>
+          <button 
+            onclick="panClusterIntoView('${escapeHTML(loc)}')"
+            class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+            title="Center this enclosure cluster on the topology canvas"
+          >
+            <i data-lucide="focus" class="w-3.5 h-3.5"></i>
+            <span>Center View</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Rack Space Occupancy (RU) -->
+      ${!parsed.isDin && totalHeightU > 0 ? `
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i> Vertical Rack Space (RU)
+            </span>
+            <span class="font-mono text-[10px] text-white font-bold">
+              ${occupiedRU}U / ${totalHeightU}U (${ruPercent}%)
+            </span>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800 p-0.5">
+            <div 
+              class="h-full rounded-full transition-all ${ruPercent > 90 ? 'bg-rose-500' : ruPercent > 70 ? 'bg-amber-400' : 'bg-sky-400'}" 
+              style="width: ${ruPercent}%"
+            ></div>
+          </div>
+          <div class="flex justify-between text-[9px] font-mono text-slate-400">
+            <span>Available Space: <strong>${Math.max(0, totalHeightU - occupiedRU)}U Free</strong></span>
+            <span>Standard 19" Mounting</span>
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- Power & Thermal Telemetry -->
+      <div class="space-y-2 pb-3 border-b border-slate-800">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & Thermal Load
+        </span>
+        <div class="space-y-1.5 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-850 font-mono">
+          <div class="flex justify-between text-slate-400">
+            <span>Enclosure Power Draw:</span>
+            <span class="text-white font-bold">${Math.round(totalWatts)} W</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Heat Dissipation:</span>
+            <span class="text-orange-400 font-bold">${btuPerHour.toLocaleString()} BTU/hr</span>
+          </div>
+          ${totalPoEBudget > 0 ? `
+            <div class="flex justify-between text-slate-400 pt-1 border-t border-slate-900">
+              <span>PoE Sourcing Budget:</span>
+              <span class="text-amber-400 font-bold">${Math.round(totalPoEBudget)} W</span>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>Delivered PoE Flow:</span>
+              <span class="${totalPoEConsumed > totalPoEBudget ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
+                ${Math.round(totalPoEConsumed)} W (${Math.round((totalPoEConsumed / (totalPoEBudget || 1)) * 100)}%)
+              </span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Installed Hardware Inventory List -->
+      <div class="space-y-2 pb-3 border-b border-slate-800">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 flex items-center justify-between">
+          <span>Mounted Chassis (${itemsInRack.length})</span>
+          <span class="text-[9px] font-mono text-slate-500">Click to Inspect Chassis</span>
+        </span>
+        <div class="space-y-1.5 max-h-52 overflow-y-auto pr-1">
+          ${itemsInRack.length === 0 ? `
+            <div class="text-[11px] text-slate-500 py-3 text-center bg-slate-950 rounded-xl border border-slate-850">
+              No equipment mounted in this rack yet.
+            </div>
+          ` : itemsInRack.map(item => `
+            <div 
+              onclick="selectTopologyNode('${item.instanceId}', event)"
+              class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-indigo-500/60 hover:bg-slate-900 cursor-pointer flex items-center justify-between text-xs transition-colors group"
+            >
+              <div class="truncate max-w-[180px]">
+                <span class="text-white block font-medium truncate group-hover:text-indigo-200">${escapeHTML(item.model)}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.vendor || 'Generic')} &bull; ${item.rackUnits || 1}U &bull; ${escapeHTML(item.role)}</span>
+              </div>
+              <div class="text-right shrink-0">
+                <span class="font-mono text-[10px] text-indigo-300 font-bold block">
+                  ${item.ports ? `${item.ports}P` : (item.role === 'Server' ? 'SRV' : 'DEV')}
+                </span>
+                <span class="font-mono text-[9px] text-slate-500">
+                  ${item.baseWatts || item.powerConsumptionWatts || 0}W
+                </span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Served Downstream Edge Clients -->
+      ${servedClients.length > 0 ? `
+        <div class="space-y-2">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-teal-400 flex items-center justify-between">
+            <span>Downstream Field Endpoints</span>
+            <span class="font-mono text-[9px] text-slate-400">${servedClients.length} Total</span>
+          </span>
+          <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+            <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-center">
+              <span class="text-teal-400 font-bold block text-sm">${cameraCount}</span>
+              <span class="text-[10px] text-slate-400">Cameras</span>
+            </div>
+            <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-center">
+              <span class="text-emerald-400 font-bold block text-sm">${doorCount}</span>
+              <span class="text-[10px] text-slate-400">Access Doors</span>
+            </div>
+          </div>
+        </div>
+      ` : ''}
+    `;
+
+    if (typeof safeCreateIcons === "function") {
+      safeCreateIcons(container);
+    } else if (window.lucide) {
+      lucide.createIcons();
+    }
+    return;
+  } else if (selectedTopologyNodeId) {
     const item = projectBOM.find(i => i.instanceId === selectedTopologyNodeId);
     if (!item) {
       deselectTopologyNode();
@@ -996,7 +1346,14 @@ function renderTopologyInspector() {
           </div>
           <div class="text-[11px] text-slate-400 space-y-1 font-mono">
             <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
-            <div>Location: <strong class="text-indigo-300">${escapeHTML(FacilityStore.normalize(item.closetName || 'MDF'))}</strong></div>
+            <div class="pt-1 pb-1">
+              <label class="text-[10px] text-slate-400 block mb-1 font-sans">Assigned Rack / Enclosure:</label>
+              <select onchange="updateDeviceLocation('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                ${FacilityStore.getLocationNames(false).map(l => `
+                  <option value="${escapeHTML(l)}" ${FacilityStore.normalize(item.closetName || item.rackId) === l ? 'selected' : ''}>${escapeHTML(l)}</option>
+                `).join('')}
+              </select>
+            </div>
             <div>Interfaces: <strong class="text-white">${item.ports || 2}x ${item.portSpeed || '10G'} High-Speed NICs</strong></div>
             ${item.usableStorageTb ? `<div>Video Storage: <strong class="text-emerald-400">${item.usableStorageTb} TB RAID Array</strong></div>` : ''}
           </div>
@@ -1124,7 +1481,14 @@ function renderTopologyInspector() {
           <div class="text-[11px] text-slate-400 space-y-1 font-mono">
             <div>Throughput: <strong class="text-purple-300">${item.throughput || item.maxThroughput || '5.4 Gbps'}</strong></div>
             <div>Band: <strong class="text-white">${item.band || item.frequency || '60 GHz / 5 GHz Backup'}</strong></div>
-            <div>Location: <strong class="text-indigo-300">${escapeHTML(FacilityStore.normalize(item.closetName || 'Pole 1'))}</strong></div>
+            <div class="pt-1 pb-1">
+              <label class="text-[10px] text-slate-400 block mb-1 font-sans">Assigned Location / Enclosure:</label>
+              <select onchange="updateDeviceLocation('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                ${FacilityStore.getLocationNames(false).map(l => `
+                  <option value="${escapeHTML(l)}" ${FacilityStore.normalize(item.closetName || item.rackId) === l ? 'selected' : ''}>${escapeHTML(l)}</option>
+                `).join('')}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1221,7 +1585,14 @@ function renderTopologyInspector() {
           </div>
           <div class="text-[11px] text-slate-400 space-y-1 font-mono">
             <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
-            <div>Location: <strong class="text-indigo-300">${escapeHTML(FacilityStore.normalize(item.closetName || 'IDF-1'))}</strong></div>
+            <div class="pt-1 pb-1">
+              <label class="text-[10px] text-slate-400 block mb-1 font-sans">Assigned Location / Enclosure:</label>
+              <select onchange="updateDeviceLocation('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                ${FacilityStore.getLocationNames(false).map(l => `
+                  <option value="${escapeHTML(l)}" ${FacilityStore.normalize(item.closetName || item.rackId) === l ? 'selected' : ''}>${escapeHTML(l)}</option>
+                `).join('')}
+              </select>
+            </div>
             <div>Hardware Interface: <strong class="text-white">1x 1G RJ-45 (100m Loop)</strong></div>
           </div>
         </div>
@@ -1353,7 +1724,14 @@ function renderTopologyInspector() {
         </div>
         <div class="text-[11px] text-slate-400 space-y-1 font-mono">
           <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
-          <div>Location: <strong class="text-indigo-300">${escapeHTML(FacilityStore.normalize(item.closetName || 'MDF'))}</strong></div>
+          <div class="pt-1 pb-1">
+            <label class="text-[10px] text-slate-400 block mb-1 font-sans">Assigned Rack / Enclosure:</label>
+            <select onchange="updateDeviceLocation('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+              ${FacilityStore.getLocationNames(false).map(l => `
+                <option value="${escapeHTML(l)}" ${FacilityStore.normalize(item.closetName || item.rackId) === l ? 'selected' : ''}>${escapeHTML(l)}</option>
+              `).join('')}
+            </select>
+          </div>
           <div>Interface: <strong class="text-white">${item.ports || 24} Ports (${escapeHTML(item.portSpeed || '1G/10G')})</strong></div>
         </div>
       </div>
@@ -1363,7 +1741,17 @@ function renderTopologyInspector() {
         <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
           <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & PoE Telemetry
         </span>
-        <div class="space-y-1.5 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-850">
+        <div class="space-y-2 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-850">
+          <div>
+            <label class="text-[10px] text-slate-400 block mb-1 font-sans">Chassis Power Mode:</label>
+            <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+              <option value="internal_psu" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : (item.powerSource || 'internal_psu')) === 'internal_psu' ? 'selected' : ''}>⚡ Internal AC Supply (120/240V)</option>
+              <option value="dual_ac" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'dual_ac' ? 'selected' : ''}>⚡ Dual Hot-Swap AC Redundant</option>
+              <option value="dedicated_dc" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'dedicated_dc' ? 'selected' : ''}>🔋 Dedicated 48-56VDC Terminal</option>
+              <option value="poe_switch" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'poe_switch' ? 'selected' : ''}>⚡ PoE-In Powered (Passthrough)</option>
+              <option value="solar_battery" ${(typeof PortEngine !== 'undefined' ? PortEngine.getDevicePowerSource(item) : item.powerSource) === 'solar_battery' ? 'selected' : ''}>☀️ Solar / Off-Grid Station</option>
+            </select>
+          </div>
           <div class="flex justify-between text-slate-400">
             <span>Power Source:</span>
             <span class="text-amber-300 font-bold font-mono">${getPowerSourceLabel(item)}</span>
@@ -1786,12 +2174,16 @@ function updateCustomLinkSpeed(nodeInstanceId, speedVal) {
 }
 
 // -----------------------------------------------------------
-// Drag & Drop Movement Engine
+// Drag & Drop & Viewport Movement Engine
 // -----------------------------------------------------------
 function handleClusterMouseDown(e, clusterEl, loc) {
   if (!isTopologyModalVisible()) return;
+  if (e.target.closest("button") || e.target.closest("select") || e.target.closest("input")) {
+    return;
+  }
 
   isCanvasDragging = true;
+  dragStartPos = { x: e.clientX, y: e.clientY };
   draggedTopologyNode = {
     el: clusterEl,
     loc: loc
@@ -1806,24 +2198,48 @@ function handleClusterMouseDown(e, clusterEl, loc) {
 }
 
 function handleTopologyMouseMove(e) {
-  if (!isTopologyModalVisible() || !isCanvasDragging || !draggedTopologyNode) return;
+  if (!isTopologyModalVisible()) return;
 
   const viewport = document.getElementById("topologyCanvasViewport");
-  const rect = viewport.getBoundingClientRect();
+  if (!viewport) return;
 
-  const newX = Math.max(30, ((e.clientX - rect.left + viewport.scrollLeft) - topoDragOffset.x) / topologyZoomLevel);
-  const newY = Math.max(30, ((e.clientY - rect.top + viewport.scrollTop) - topoDragOffset.y) / topologyZoomLevel);
+  // Mode 1: Viewport Canvas Panning
+  if (isViewportPanning) {
+    const dx = e.clientX - panStart.x;
+    const dy = e.clientY - panStart.y;
+    viewport.scrollLeft = panStart.scrollLeft - dx;
+    viewport.scrollTop = panStart.scrollTop - dy;
+    return;
+  }
 
-  draggedTopologyNode.el.style.left = `${Math.round(newX)}px`;
-  draggedTopologyNode.el.style.top = `${Math.round(newY)}px`;
+  // Mode 2: Dragging a location cluster
+  if (isCanvasDragging && draggedTopologyNode) {
+    const rect = viewport.getBoundingClientRect();
+    const newX = Math.max(30, ((e.clientX - rect.left + viewport.scrollLeft) - topoDragOffset.x) / topologyZoomLevel);
+    const newY = Math.max(30, ((e.clientY - rect.top + viewport.scrollTop) - topoDragOffset.y) / topologyZoomLevel);
 
-  renderTopologyLinks();
+    draggedTopologyNode.el.style.left = `${Math.round(newX)}px`;
+    draggedTopologyNode.el.style.top = `${Math.round(newY)}px`;
+
+    renderTopologyLinks();
+  }
 }
 
-function handleTopologyMouseUp() {
+function handleTopologyMouseUp(e) {
+  const viewport = document.getElementById("topologyCanvasViewport");
+  if (isViewportPanning && viewport) {
+    isViewportPanning = false;
+    viewport.style.cursor = "grab";
+  }
+
   if (isCanvasDragging && draggedTopologyNode) {
     isCanvasDragging = false;
     saveTopologyPosition(draggedTopologyNode.loc, draggedTopologyNode.el.offsetLeft, draggedTopologyNode.el.offsetTop);
+    
+    // If movement was minimal (< 5px), treat as a click to select the rack
+    if (e && Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y) < 5) {
+      selectTopologyRack(draggedTopologyNode.loc);
+    }
     draggedTopologyNode = null;
   }
 }
@@ -2073,6 +2489,145 @@ function inspectSwitchPort(switchInstanceId, portNum) {
   }
 }
 
+// -----------------------------------------------------------
+// Rack Enclosure & Navigation Helpers
+// -----------------------------------------------------------
+function updateDeviceLocation(instanceId, newLoc) {
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item || !newLoc) return;
+  const parsed = FacilityStore.parse(newLoc);
+  item.closetName = newLoc;
+  item.rackId = parsed.enclosure || newLoc;
+  if (parsed.space) item.spaceName = parsed.space;
+
+  FacilityStore.notifyWorkspaceChange();
+  renderTopology();
+  renderTopologyInspector();
+  panNodeIntoView(instanceId);
+  if (typeof showToast === "function") {
+    showToast(`Moved ${item.model} to ${newLoc}`);
+  }
+}
+
+function openRackViewerFor(loc) {
+  if (typeof toggleTopologyModal === "function" && isTopologyModalVisible()) {
+    toggleTopologyModal();
+  }
+  if (typeof toggleRackModal === "function") {
+    const rackModal = document.getElementById("rackModal");
+    if (!rackModal || rackModal.classList.contains("hidden")) {
+      toggleRackModal();
+    }
+    if (typeof switchActiveRackElevation === "function") {
+      switchActiveRackElevation(loc);
+    }
+  }
+}
+
+function populateTopologyQuickJump() {
+  const select = document.getElementById("topologyQuickJump");
+  if (!select) return;
+
+  const groups = {};
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    projectBOM.forEach(item => {
+      if (item.parentInstanceId) return;
+      if (item.role === "Structured Cabling" || item.role === "Optics & DAC") return;
+      if (item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return;
+      if (item.role === "Accessory") return;
+
+      const loc = FacilityStore.normalize(item.closetName || item.rackId);
+      if (loc === FacilityStore.UNASSIGNED) return;
+      if (!groups[loc]) groups[loc] = [];
+      groups[loc].push(item);
+    });
+  }
+
+  let html = `<option value="">Jump to Device / Rack...</option>`;
+
+  // Optgroup 1: Racks & Enclosures
+  const locs = Object.keys(groups);
+  if (locs.length > 0) {
+    html += `<optgroup label="── Racks & Enclosures ──">`;
+    locs.forEach(loc => {
+      const isSel = selectedTopologyRackLoc === loc;
+      html += `<option value="loc:${escapeHTML(loc)}" ${isSel ? 'selected' : ''}>🏢 ${escapeHTML(loc)} (${groups[loc].length} Chassis)</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  // Optgroup 2: Core & Gateways
+  const coreSwitches = [];
+  const accessSwitches = [];
+  const servers = [];
+  const radios = [];
+
+  locs.forEach(loc => {
+    groups[loc].forEach(item => {
+      if (item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Gateways & WAN") {
+        coreSwitches.push(item);
+      } else if (item.role === "Access") {
+        accessSwitches.push(item);
+      } else if (item.role === "Server" || item.role === "VMS Server" || item.role === "Compute & Storage") {
+        servers.push(item);
+      } else if (item.role === "Wireless Bridge" || item.category === "wireless") {
+        radios.push(item);
+      }
+    });
+  });
+
+  if (coreSwitches.length > 0) {
+    html += `<optgroup label="── Core & Gateways ──">`;
+    coreSwitches.forEach(sw => {
+      const isSel = selectedTopologyNodeId === sw.instanceId;
+      html += `<option value="node:${sw.instanceId}" ${isSel ? 'selected' : ''}>🌐 ${escapeHTML(sw.model)} (${FacilityStore.normalize(sw.closetName)})</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  if (accessSwitches.length > 0) {
+    html += `<optgroup label="── Access Switches ──">`;
+    accessSwitches.forEach(sw => {
+      const isSel = selectedTopologyNodeId === sw.instanceId;
+      html += `<option value="node:${sw.instanceId}" ${isSel ? 'selected' : ''}>⚡ ${escapeHTML(sw.model)} (${FacilityStore.normalize(sw.closetName)})</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  if (servers.length > 0) {
+    html += `<optgroup label="── Servers & Appliances ──">`;
+    servers.forEach(srv => {
+      const isSel = selectedTopologyNodeId === srv.instanceId;
+      html += `<option value="node:${srv.instanceId}" ${isSel ? 'selected' : ''}>🖥️ ${escapeHTML(srv.model)} (${FacilityStore.normalize(srv.closetName)})</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  if (radios.length > 0) {
+    html += `<optgroup label="── Wireless Bridges & PtP ──">`;
+    radios.forEach(rad => {
+      const isSel = selectedTopologyNodeId === rad.instanceId;
+      html += `<option value="node:${rad.instanceId}" ${isSel ? 'selected' : ''}>📡 ${escapeHTML(rad.model)} (${FacilityStore.normalize(rad.closetName)})</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  select.innerHTML = html;
+}
+
+function jumpToTopologyTarget(targetVal) {
+  if (!targetVal) return;
+  if (targetVal.startsWith("loc:")) {
+    const loc = targetVal.substring(4);
+    selectTopologyRack(loc);
+    panClusterIntoView(loc);
+  } else if (targetVal.startsWith("node:")) {
+    const nodeId = targetVal.substring(5);
+    selectTopologyNode(nodeId);
+    panNodeIntoView(nodeId);
+  }
+}
+
 // Window Compatibility Exports
 window.isTopologyModalVisible = isTopologyModalVisible;
 window.toggleTopologyModal = toggleTopologyModal;
@@ -2080,11 +2635,19 @@ window.initTopologyCanvas = initTopologyCanvas;
 window.renderTopology = renderTopology;
 window.zoomTopologyCanvas = zoomTopologyCanvas;
 window.resetTopologyZoom = resetTopologyZoom;
+window.fitTopologyToScreen = fitTopologyToScreen;
+window.panClusterIntoView = panClusterIntoView;
+window.panNodeIntoView = panNodeIntoView;
 window.setTopologyViewPlane = setTopologyViewPlane;
 window.toggleTopologyInspector = toggleTopologyInspector;
 window.selectTopologyNode = selectTopologyNode;
+window.selectTopologyRack = selectTopologyRack;
 window.selectTopologyLink = selectTopologyLink;
 window.deselectTopologyNode = deselectTopologyNode;
+window.openRackViewerFor = openRackViewerFor;
+window.updateDeviceLocation = updateDeviceLocation;
+window.populateTopologyQuickJump = populateTopologyQuickJump;
+window.jumpToTopologyTarget = jumpToTopologyTarget;
 window.autoArrangeTopologyHierarchy = autoArrangeTopologyHierarchy;
 window.autoDefaultTopology = autoDefaultTopology;
 window.updateCustomUplink = updateCustomUplink;

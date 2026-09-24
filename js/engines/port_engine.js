@@ -31,6 +31,24 @@ const POWER_SOURCE_MODES = {
     requiresExternalPsu: false,
     description: "Draws 802.3af/at/bt power directly from the host switch port budget"
   },
+  internal_psu: {
+    id: "internal_psu",
+    label: "Internal AC Power Supply",
+    badgeLabel: "Internal AC",
+    icon: "power",
+    drawsFromSwitch: false,
+    requiresExternalPsu: false,
+    description: "Built-in commercial 100-240V AC power supply plugged into PDU or wall outlet"
+  },
+  dual_ac: {
+    id: "dual_ac",
+    label: "Dual Redundant Hot-Swap AC",
+    badgeLabel: "Dual AC",
+    icon: "shield-check",
+    drawsFromSwitch: false,
+    requiresExternalPsu: false,
+    description: "Dual 1+1 redundant hot-swap AC power supplies on separate circuit feeds"
+  },
   poe_injector: {
     id: "poe_injector",
     label: "PoE Midspan / Injector",
@@ -520,14 +538,39 @@ const PortEngine = {
    * Returns current active power delivery mode of a device
    */
   getDevicePowerSource(deviceItem) {
-    if (!deviceItem) return "poe_switch";
-    if (deviceItem.powerSourceOverride) return deviceItem.powerSourceOverride;
-    if (deviceItem.powerSource) return deviceItem.powerSource;
+    if (!deviceItem) return "internal_psu";
+    if (deviceItem.powerSourceOverride && this.POWER_MODES[deviceItem.powerSourceOverride]) {
+      return deviceItem.powerSourceOverride;
+    }
+    if (deviceItem.powerSource && this.POWER_MODES[deviceItem.powerSource]) {
+      return deviceItem.powerSource;
+    }
     if (deviceItem.interfaces && deviceItem.interfaces.length > 0 && deviceItem.interfaces[0].powerSource) {
-      return deviceItem.interfaces[0].powerSource;
+      const ps = deviceItem.interfaces[0].powerSource;
+      if (this.POWER_MODES[ps]) return ps;
+    }
+
+    const role = deviceItem.role;
+    if (role === "Server" || role === "VMS Server" || role === "Compute & Storage") {
+      return deviceItem.dualPsu !== false ? "dual_ac" : "dedicated_ac";
+    }
+    if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN") {
+      return (deviceItem.dualPsu || deviceItem.psuSku) ? "dual_ac" : "internal_psu";
+    }
+    if (role === "Access") {
+      if (deviceItem.isPoEPowered || deviceItem.powerSource === "poe_switch" || deviceItem.powerSource === "poe_in") {
+        return "poe_switch";
+      }
+      if (deviceItem.directDc || (deviceItem.mounting && deviceItem.mounting.includes("DIN") && !deviceItem.mounting.includes("19\""))) {
+        return "dedicated_dc";
+      }
+      return "internal_psu";
+    }
+    if (role === "Wireless Bridge" || deviceItem.category === "wireless") {
+      if (deviceItem.directDc) return "dedicated_dc";
+      return "poe_switch";
     }
     if (deviceItem.directDc) return "dedicated_dc";
-    if (deviceItem.role === "Server" || deviceItem.role === "VMS Server") return "dedicated_ac";
     return "poe_switch";
   },
 

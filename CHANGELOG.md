@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.4-alpha] - 2026-09-24
+
+### Added
+- **Enclosure & Rack Inspection in Topology (`js/tools/topology.js`)**:
+  - **Click-to-Inspect Racks**: Clicking on any location cluster header (MDF, IDF, Pole, Wallbox) selects the enclosure and opens a comprehensive Enclosure Telemetry drawer.
+  - **Physical Space & Thermal Audit**: Live calculation and rendering of vertical rack space occupancy (occupied RU vs total cabinet height with progress bar), total chassis power draw (Watts), thermal dissipation (BTU/hr), and total PoE sourcing capacity vs delivered load.
+  - **Mounted Chassis Inventory**: Complete list of hardware installed inside the selected cabinet with 1-click inspection navigation directly to individual equipment cards.
+  - **Seamless 2D Elevation Integration (`openRackViewerFor`)**: Direct 1-click action button in the rack inspector to launch the 2D Rack Elevation Visualizer scoped to that exact cabinet.
+- **In-Viewport Location & Enclosure Reassignment (`js/tools/topology.js`)**:
+  - **Direct Location Reassignment**: Every equipment inspector card (Switches, Servers, Wireless Bridges, Edge Devices) now includes an interactive **Assigned Rack / Enclosure** dropdown, enabling instantaneous location changes directly within the viewport.
+  - **Dynamic Topology Realignment**: Reassigning a device immediately updates the cluster hierarchy, recalculates power and logical links, and smoothly pans to the target cluster without leaving the canvas.
+- **Topology Canvas Usability & Navigation Overhaul (`js/tools/topology.js` & `index.html`)**:
+  - **Expanded Canvas Dimensions**: Canvas enlarged to $4500\text{px} \times 2800\text{px}$ in a wide-aspect modal ($99\text{vw} \times 96\text{vh}$) providing massive room for large multi-building layouts.
+  - **Click-and-Drag Canvas Panning**: Native mouse background dragging with grab/grabbing cursors and Ctrl/Meta-wheel zooming ($40\%$ to $200\%$).
+  - **Quick Jump Navigator (`topologyQuickJump`)**: Categorized dropdown navigator in the toolbar jumping instantly to any Rack, Core switch, Access switch, Compute server, or Wireless Bridge.
+  - **1-Click Fit to Screen (`fitTopologyToScreen`)**: Automatically calculates bounding boxes of all clusters and centers the network at optimal zoom accounting for inspector width.
+  - **Collapsible Inspector Controls**: Inspector drawer can be collapsed to maximize viewport width, with an accessible floating reopen button.
+
+### Fixed
+- **Switch Internal Power Supply Modes (`js/engines/port_engine.js` & `js/tools/topology.js`)**:
+  - Added `internal_psu` and `dual_ac` modes to `POWER_SOURCE_MODES` (`drawsFromSwitch: false`).
+  - Switches, Gateways, and Servers now correctly display "Internal AC" or "Dual AC PSU" rather than erroneously inheriting "PoE from Switch".
+- **Remote Wireless Radio Link Bleed**:
+  - Removed erroneous cross-campus fallback in `generateTopologyLinks` that drew copper PoE links to MDF switches for remote exterior radios. Remote radios now exclusively establish RF bridge links and hand off only to local switches or explicit assignments.
+- **Reverse Uplink on Pole Deployments**:
+  - Access switches located in remote closures or exterior poles now automatically recognize local wireless bridge stations as their network uplink when no Core switch is co-located.
+- **Default Interconnect LAG Multiplier**:
+  - Normalized inter-closet switch trunk multiplier to default to `1x Link` instead of forcing `2x LAG`, giving users explicit control over LAG trunking via the inspector.
+
+---
+
 ## [0.10.3-alpha] - 2026-09-24
 
 ### Added
