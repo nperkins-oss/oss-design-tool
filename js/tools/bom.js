@@ -181,7 +181,7 @@ function addToProjectBOM(id, targetLocation = null) {
     depthInches: sw.depthInches || 12,
     shallowDepth: sw.shallowDepth || false,
     qty: qtyToAdd,
-    canStack: sw.stacking || false,
+    canStack: (sw.stacking !== undefined ? sw.stacking : (sw.canStack !== undefined ? sw.canStack : (sw.role === "Access" || sw.role === "Aggregation"))),
     closetName: assignedLoc,
     rackId: assignedLoc,
     rackSlot: null,
@@ -320,16 +320,24 @@ function updateStackedCount(instanceId, count) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
-  const val = parseInt(count) || 0;
-  item.stackedUnits = Math.min(item.qty, Math.max(0, val));
-  if (item.stackedUnits === 1) item.stackedUnits = 0;
-
-  if (item.stackedUnits >= 2) {
+  const val = parseInt(count, 10) || 0;
+  if (val >= 2) {
+    item.canStack = true;
+    item.stackedUnits = val;
+    item.qty = Math.max(item.qty || 1, val);
     item.uplinkMode = "lag_dual";
+    item.customLinkMultiplier = Math.max(item.customLinkMultiplier || 1, val);
+  } else {
+    item.stackedUnits = 0;
+  }
+
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.initSwitchPorts(item, true);
   }
 
   applyStackCabling(item);
   FacilityStore.notifyWorkspaceChange();
+  updateBOMView();
 }
 
 function applyStackCabling(item) {
@@ -811,6 +819,9 @@ function changeBomQty(instanceId, delta) {
       child.qty = item.qty;
     });
     applyStackCabling(item);
+    if (typeof PortEngine !== "undefined" && (item.canStack || item.ports)) {
+      PortEngine.initSwitchPorts(item, true);
+    }
   }
 
   FacilityStore.notifyWorkspaceChange();
@@ -1183,7 +1194,7 @@ function renderBomSingleItemHtml(item) {
 
       <!-- Streamlined Technical & Power Badge Footer -->
       <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs gap-2">
-        <div class="flex items-center gap-1.5 min-w-0">
+        <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
           <button 
             type="button" 
             onclick="jumpToTopologyTarget('node:${item.instanceId}')" 
@@ -1191,7 +1202,16 @@ function renderBomSingleItemHtml(item) {
             title="Inspect ports, wire speeds, and logical uplinks in Topology"
           >
             <i data-lucide="network" class="w-3 h-3 text-indigo-400"></i>
-            <span>Inspect in Topology</span>
+            <span>Topology</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')" 
+            class="text-[10px] text-amber-300 hover:text-white flex items-center gap-1 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
+            title="Inspect blueprint, floor drops, and cable pathways in Physical Layout"
+          >
+            <i data-lucide="map" class="w-3 h-3 text-amber-400"></i>
+            <span>Physical</span>
           </button>
           ${item.uplinkTargetId ? `
             <span class="text-[10px] text-slate-400 font-mono truncate" title="Uplink configured">
@@ -1210,15 +1230,16 @@ function renderBomSingleItemHtml(item) {
         </div>
       </div>
 
-      <!-- Stacking Controls for Stackable Access Switches -->
-      ${item.canStack ? `
+      <!-- Stacking Controls for Stackable Access/Aggregation Switches -->
+      ${(item.canStack || item.role === "Access" || item.role === "Aggregation") ? `
         <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
           <span class="text-slate-400">Units in stack:</span>
           <div class="flex items-center gap-2">
             <select onchange="updateStackedCount('${item.instanceId}', this.value)" class="bg-slate-900 border border-slate-700 text-xs text-white rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 font-mono">
-              <option value="0" ${item.stackedUnits === 0 ? 'selected' : ''}>0 (Standalone)</option>${Array.from({ length: item.qty - 1 }, (_, i) => i + 2).map(n => `
-                <option value="${n}" ${item.stackedUnits === n ? 'selected' : ''}>${n} Stacked</option>
-              `).join('')}
+              <option value="0" ${(!item.stackedUnits || item.stackedUnits === 0) ? 'selected' : ''}>0 (Standalone)</option>
+              <option value="2" ${item.stackedUnits === 2 ? 'selected' : ''}>2 Stacked Units</option>
+              <option value="3" ${item.stackedUnits === 3 ? 'selected' : ''}>3 Stacked Units</option>
+              <option value="4" ${item.stackedUnits === 4 ? 'selected' : ''}>4 Stacked Units</option>
             </select>
             <span class="text-[10px] font-mono ${item.stackedUnits >= 2 ? 'text-indigo-400 bg-indigo-500/10 border-indigo-500/30' : 'text-slate-500 bg-slate-900 border-slate-800'} px-1.5 py-0.5 rounded border">
               ${item.stackedUnits >= 2 ? `+${item.stackedUnits}x Cables` : '0 Cables'}
@@ -1539,3 +1560,6 @@ window.toggleBomDrawer = toggleBomDrawer;
 window.exportBomCSV = exportBomCSV;
 window.auditSwitchCapacities = auditSwitchCapacities;
 window.autoResolveUplinks = autoResolveUplinks;
+window.updateStackedCount = updateStackedCount;
+window.applyStackCabling = applyStackCabling;
+window.jumpToPhysicalLayoutTarget = typeof jumpToPhysicalLayoutTarget !== "undefined" ? jumpToPhysicalLayoutTarget : (typeof window !== "undefined" ? window.jumpToPhysicalLayoutTarget : null);

@@ -165,7 +165,7 @@ function fitTopologyToScreen() {
 
 function panClusterIntoView(loc) {
   if (!loc) return;
-  const clusterEl = document.querySelector(`.topo-location-cluster[data-location="${CSS.escape(loc)}"]`);
+  const clusterEl = Array.from(document.querySelectorAll(".topo-location-cluster")).find(el => el.getAttribute("data-location") === loc);
   const viewport = document.getElementById("topologyCanvasViewport");
   if (!clusterEl || !viewport) return;
 
@@ -191,8 +191,21 @@ function panNodeIntoView(instanceId) {
     if (cluster) {
       panClusterIntoView(cluster.getAttribute("data-location"));
     }
+    cardEl.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    cardEl.classList.add("ring-4", "ring-indigo-400", "scale-[1.02]", "shadow-2xl");
+    setTimeout(() => {
+      cardEl.classList.remove("ring-4", "ring-indigo-400", "scale-[1.02]", "shadow-2xl");
+    }, 1800);
+  } else {
+    // If it's a child/edge device, pan to its host switch
+    const item = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.find(i => i.instanceId === instanceId) : null;
+    if (item && item.uplinkTargetId) {
+      selectTopologyNode(item.uplinkTargetId);
+      panNodeIntoView(item.uplinkTargetId);
+    }
   }
 }
+
 
 function setTopologyViewPlane(plane) {
   activeTopologyViewPlane = plane || "all";
@@ -542,31 +555,58 @@ function renderTopology() {
           }
 
           // Render Switch Chassis Node Card
+          const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
+            (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
+          const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
+          const basePortsPerUnit = item.ports || 24;
+          const totalStackPorts = basePortsPerUnit * stackUnits;
+          const totalStackPoE = (item.poeBudget || 0) * stackUnits;
+          const totalStackBaseWatts = (item.baseWatts || 0) * stackUnits;
+
           return `
             <div 
-              class="topo-node-card text-xs space-y-2 p-3 rounded-xl border ${isSelected ? 'border-brand-500 ring-2 ring-brand-500/30 bg-slate-850' : 'border-slate-800 bg-slate-950/80 hover:border-slate-700'} transition-all cursor-pointer shadow-md" 
+              class="topo-node-card text-xs space-y-2 p-3 rounded-xl border ${isSelected ? 'border-brand-500 ring-2 ring-brand-500/40 bg-slate-850' : (isStacked ? 'border-indigo-500/50 bg-slate-950/90 hover:border-indigo-400' : 'border-slate-800 bg-slate-950/80 hover:border-slate-700')} transition-all cursor-pointer shadow-md ${isStacked ? 'shadow-indigo-950/30' : ''}" 
               id="topo-card-${item.instanceId}"
               onclick="selectTopologyNode('${item.instanceId}', event)"
             >
               <div class="flex items-start justify-between gap-1.5">
                 <div class="min-w-0">
                   <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
-                  <span class="text-[10px] text-slate-400 font-mono block">${escapeHTML(item.vendor || 'Generic')} &bull; SKU: ${escapeHTML(item.sku || 'N/A')}</span>
+                  <span class="text-[10px] text-slate-400 font-mono block">
+                    ${escapeHTML(item.vendor || 'Generic')} &bull; ${isStacked ? `<span class="text-indigo-300 font-semibold">${stackUnits}x Member Virtual Chassis &bull; ${item.rackUnits * stackUnits}U</span>` : `SKU: ${escapeHTML(item.sku || 'N/A')}`}
+                  </span>
                 </div>
-                <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${getRoleBadgeStyle(item.role)} shrink-0">
-                  ${item.role}
-                </span>
+                <div class="flex items-center gap-1 shrink-0">
+                  ${isStacked ? `
+                    <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-indigo-500/50 bg-indigo-500/20 text-indigo-300" title="Unified virtual chassis stack of ${stackUnits} physical units">
+                      Stack (${stackUnits}U)
+                    </span>
+                  ` : ''}
+                  <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${getRoleBadgeStyle(item.role)}">
+                    ${item.role}
+                  </span>
+                </div>
               </div>
+
+              ${isStacked ? `
+                <div class="flex items-center justify-between bg-indigo-950/40 border border-indigo-800/40 rounded-lg px-2 py-0.5 text-[9px] font-mono text-indigo-300">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="layers" class="w-3 h-3 text-indigo-400"></i>
+                    <span>Single Logical Virtual Chassis</span>
+                  </span>
+                  <span class="text-indigo-400/90">${stackUnits} Physical Units</span>
+                </div>
+              ` : ''}
 
               <!-- Power & Port Telemetry -->
               <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-900 text-[10px] font-mono">
                 <div class="flex items-center gap-1 text-slate-400">
                   <i data-lucide="zap" class="w-3 h-3 text-amber-400 shrink-0"></i>
-                  <span class="truncate">${powerSourceLabel}</span>
+                  <span class="truncate">${powerSourceLabel}${isStacked ? ` (${stackUnits}x PSUs &bull; ${totalStackBaseWatts}W)` : ''}</span>
                 </div>
                 <div class="flex items-center justify-end gap-1 text-slate-400">
                   <i data-lucide="layers" class="w-3 h-3 text-sky-400 shrink-0"></i>
-                  <span>${item.ports ? `${item.ports} Ports` : 'Chassis'}</span>
+                  <span>${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P)` : ''}</span>
                 </div>
               </div>
 
@@ -580,16 +620,16 @@ function renderTopology() {
               ` : ''}
 
               <!-- PoE Allocation Bar (for PoE Switches) -->
-              ${item.poeBudget && item.poeBudget > 0 ? `
+              ${totalStackPoE > 0 ? `
                 <div class="space-y-1 pt-1 border-t border-slate-900">
                   <div class="flex justify-between text-[10px] font-mono">
                     <span class="text-slate-500">PoE Power:</span>
-                    <span class="text-amber-300 font-bold">${item.consumedPoEWatts || 0}W / ${item.poeBudget}W</span>
+                    <span class="text-amber-300 font-bold">${item.consumedPoEWatts || 0}W / ${totalStackPoE}W ${isStacked ? `(${stackUnits}x ${item.poeBudget}W)` : ''}</span>
                   </div>
                   <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
                     <div 
-                      class="h-full rounded-full transition-all ${((item.consumedPoEWatts || 0) > item.poeBudget) ? 'bg-rose-500' : 'bg-amber-400'}" 
-                      style="width: ${Math.min(100, Math.round(((item.consumedPoEWatts || 0) / item.poeBudget) * 100))}%"
+                      class="h-full rounded-full transition-all ${((item.consumedPoEWatts || 0) > totalStackPoE) ? 'bg-rose-500' : 'bg-amber-400'}" 
+                      style="width: ${Math.min(100, Math.round(((item.consumedPoEWatts || 0) / totalStackPoE) * 100))}%"
                     ></div>
                   </div>
                 </div>
@@ -705,9 +745,13 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     if (target && target.instanceId !== acc.instanceId) {
       const isTargetRadio = target.role === "Wireless Bridge" || target.category === "wireless";
       const isTargetAccess = target.role === "Access";
-      const multiplier = acc.customLinkMultiplier || 1;
+      const isStacked = (acc.stackedUnits && acc.stackedUnits >= 2) || 
+        (acc.stackedUnits !== 0 && acc.qty >= 2 && (acc.canStack || acc.role === "Access" || acc.role === "Aggregation"));
+      const stackUnits = isStacked ? (acc.stackedUnits || acc.qty) : 1;
+      const defaultMultiplier = isStacked ? Math.max(2, acc.customLinkMultiplier || 2) : (acc.customLinkMultiplier || 1);
+      const multiplier = acc.customLinkMultiplier || defaultMultiplier;
       const speed = acc.customLinkSpeed || resolveNegotiatedSpeed(acc, target);
-      const isLAG = multiplier > 1 && !isTargetRadio;
+      const isLAG = (multiplier > 1 || isStacked) && !isTargetRadio;
 
       if (isTargetRadio) {
         // Reverse uplink pattern: Switch on pole uplinks through the P2P Radio Station
@@ -731,6 +775,7 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
           toId: acc.instanceId,
           multiplier,
           isLAG,
+          isCrossStack: isStacked,
           speedLabel: isLAG ? `${multiplier}x ${speed} Cascade LAG` : `${speed} Cascade Trunk`,
           rawSpeed: speed,
           category: "switch_trunk",
@@ -738,13 +783,18 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
         });
       } else {
         // Standard Core/Gateway uplink
+        const speedLabel = isStacked 
+          ? `${multiplier}x ${speed} Cross-Stack LACP LAG (${stackUnits} Units)` 
+          : (isLAG ? `${multiplier}x ${speed} LAG` : `${speed} Uplink`);
+
         topologyLinks.push({
           id: `link-${target.instanceId}-${acc.instanceId}`,
           fromId: target.instanceId,
           toId: acc.instanceId,
           multiplier,
           isLAG,
-          speedLabel: isLAG ? `${multiplier}x ${speed} LAG` : `${speed} Uplink`,
+          isCrossStack: isStacked,
+          speedLabel,
           rawSpeed: speed,
           category: "access",
           isPoEDelivery: false
@@ -1055,7 +1105,10 @@ function renderTopologyLinks() {
     let strokeWidth = link.isLAG ? "3.5" : "2.5";
     let isDashed = false;
 
-    if (link.isRing) {
+    if (link.isCrossStack) {
+      strokeColor = "#818cf8"; // Indigo / Violet: Redundant Cross-Stack LACP LAG
+      strokeWidth = "4.0";
+    } else if (link.isRing) {
       strokeColor = "#f59e0b"; // Golden Amber: Resilient Ring Loop
       isDashed = true;
       strokeWidth = "3.5";
@@ -1206,7 +1259,7 @@ function renderTopologyInspector() {
         totalPoEBudget += (parseFloat(item.poeBudget) || 0) * qty;
       }
       if (item.consumedPoEWatts) {
-        totalPoEConsumed += (parseFloat(item.consumedPoEWatts) || 0) * qty;
+        totalPoEConsumed += (parseFloat(item.consumedPoEWatts) || 0);
       }
     });
 
@@ -1846,6 +1899,14 @@ function renderTopologyInspector() {
     const supportedModes = typeof PortEngine !== "undefined" ? PortEngine.getSupportedPowerModes(item) : ["internal_psu"];
     const currentPowerMode = typeof PortEngine !== "undefined" ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
 
+    const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
+      (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
+    const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
+    const basePortsPerUnit = item.ports || 24;
+    const totalStackPorts = basePortsPerUnit * stackUnits;
+    const totalStackPoE = (item.poeBudget || 0) * stackUnits;
+    const totalStackBaseWatts = (item.baseWatts || 0) * stackUnits;
+
     const copperPorts = switchPorts.filter(p => p.connector === "RJ-45" && !p.isUplink);
     const opticalCages = switchPorts.filter(p => p.connector !== "RJ-45" || p.isUplink);
     const isAllOptical = copperPorts.length === 0 && opticalCages.length > 0;
@@ -1854,13 +1915,21 @@ function renderTopologyInspector() {
       <!-- Node Overview Card -->
       <div class="space-y-2 pb-3 border-b border-slate-800">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-white">${escapeHTML(item.model)}</span>
-          <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${getRoleBadgeStyle(item.role)}">
-            ${item.role}
-          </span>
+          <span class="text-xs font-bold text-white truncate max-w-[200px]">${escapeHTML(item.model)}</span>
+          <div class="flex items-center gap-1 shrink-0">
+            ${isStacked ? `
+              <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-indigo-500/50 bg-indigo-500/20 text-indigo-300">
+                Stack (${stackUnits}U)
+              </span>
+            ` : ''}
+            <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${getRoleBadgeStyle(item.role)}">
+              ${item.role}
+            </span>
+          </div>
         </div>
         <div class="text-[11px] text-slate-400 space-y-1 font-mono">
           <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
+          <div>Architecture: <strong class="${isStacked ? 'text-indigo-300 font-semibold' : 'text-slate-300'}">${isStacked ? `Single Logical Stack (${stackUnits}x Member Units &bull; ${item.rackUnits * stackUnits}U)` : 'Standalone Chassis'}</strong></div>
           <div class="pt-1 pb-1">
             <label class="text-[10px] text-slate-400 block mb-1 font-sans">Assigned Rack / Enclosure:</label>
             <select onchange="updateDeviceLocation('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
@@ -1869,9 +1938,44 @@ function renderTopologyInspector() {
               `).join('')}
             </select>
           </div>
-          <div>Interface: <strong class="text-white">${item.ports || 24} Ports (${escapeHTML(item.portSpeed || '1G/10G')})</strong></div>
+          <div>Interface: <strong class="text-white">${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P Stack)` : ''} (${escapeHTML(item.portSpeed || '1G/10G')})</strong></div>
         </div>
       </div>
+
+      <!-- Chassis Stacking & Virtual Resiliency -->
+      ${(item.canStack || item.role === "Access") ? `
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+              <i data-lucide="layers" class="w-3.5 h-3.5"></i> Chassis Stacking & Resiliency
+            </span>
+            <span class="text-[9px] font-mono ${isStacked ? 'text-indigo-400 font-bold bg-indigo-500/10 border border-indigo-500/30 px-1.5 py-0.5 rounded' : 'text-slate-500'}">
+              ${isStacked ? `${stackUnits}-Switch Stack` : 'Standalone'}
+            </span>
+          </div>
+          <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1 font-sans">Stack Members (Treated as 1 Single Stack):</label>
+              <select onchange="updateSwitchStackFromTopology('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
+                <option value="0" ${!isStacked ? 'selected' : ''}>0 (Standalone - 1 Unit)</option>
+                <option value="2" ${stackUnits === 2 ? 'selected' : ''}>2 Units (Dual-Chassis Stack - Recommended)</option>
+                <option value="3" ${stackUnits === 3 ? 'selected' : ''}>3 Units (3-Chassis Stack)</option>
+                <option value="4" ${stackUnits === 4 ? 'selected' : ''}>4 Units (4-Chassis Stack)</option>
+              </select>
+            </div>
+            <div class="text-[10px] font-mono text-slate-400 space-y-1 pt-1 border-t border-slate-900">
+              <div class="flex justify-between">
+                <span>Hardware Stacking Cables:</span>
+                <span class="text-white font-bold">${isStacked ? `${stackUnits}x Dedicated Cables (In BOM)` : 'None'}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Uplink Architecture:</span>
+                <span class="text-indigo-300 font-semibold">${isStacked ? 'Cross-Stack LACP LAG (Failover Protected)' : 'Standard Single Trunk'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ` : ''}
 
       <!-- Power & PoE Telemetry -->
       <div class="space-y-2 pb-3 border-b border-slate-800">
@@ -1890,21 +1994,21 @@ function renderTopologyInspector() {
           </div>
           <div class="flex justify-between text-slate-400">
             <span>Power Source:</span>
-            <span class="text-amber-300 font-bold font-mono">${getPowerSourceLabel(item)}</span>
+            <span class="text-amber-300 font-bold font-mono">${getPowerSourceLabel(item)}${isStacked ? ` (${stackUnits}x PSUs)` : ''}</span>
           </div>
           <div class="flex justify-between text-slate-400">
             <span>Chassis Base Draw:</span>
-            <span class="font-mono text-white">${item.baseWatts || 0} W</span>
+            <span class="font-mono text-white">${totalStackBaseWatts} W ${isStacked ? `(${stackUnits}x ${item.baseWatts || 0}W Chassis)` : ''}</span>
           </div>
-          ${item.poeBudget > 0 ? `
+          ${totalStackPoE > 0 ? `
             <div class="flex justify-between text-slate-400">
               <span>Total PoE Budget:</span>
-              <span class="font-mono text-amber-400 font-bold">${item.poeBudget} W</span>
+              <span class="font-mono text-amber-400 font-bold">${totalStackPoE} W ${isStacked ? `(${stackUnits}x ${item.poeBudget}W PSUs)` : ''}</span>
             </div>
             <div class="flex justify-between text-slate-400">
               <span>Connected Load:</span>
-              <span class="font-mono ${((item.consumedPoEWatts || 0) > item.poeBudget) ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
-                ${item.consumedPoEWatts || 0} W (${Math.round(((item.consumedPoEWatts || 0) / (item.poeBudget || 1)) * 100)}%)
+              <span class="font-mono ${((item.consumedPoEWatts || 0) > totalStackPoE) ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
+                ${item.consumedPoEWatts || 0} W (${Math.round(((item.consumedPoEWatts || 0) / (totalStackPoE || 1)) * 100)}%)
               </span>
             </div>
           ` : ''}
@@ -1926,81 +2030,103 @@ function renderTopologyInspector() {
           <div class="p-2.5 bg-slate-950 rounded-xl border border-slate-850 space-y-2.5">
             ${isAllOptical ? `
               <!-- High-Density All-Optical Spine Matrix -->
-              <div class="space-y-1.5">
-                <div class="flex items-center justify-between text-[9px] font-mono text-cyan-400 uppercase font-semibold">
-                  <span>QSFP/SFP Optical Transceiver Cages:</span>
-                  <span class="text-slate-400">${opticalCages.length}x ${opticalCages[0]?.speed || '100G'}</span>
-                </div>
-                <div class="grid ${opticalCages.length > 16 ? 'grid-cols-8' : (opticalCages.length > 8 ? 'grid-cols-6' : 'grid-cols-4')} gap-1">
-                  ${opticalCages.map(p => {
-                    const isConnected = !!p.connectedDeviceId;
-                    let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
-                    if (isConnected) bg = "bg-cyan-500/20 border-cyan-500 text-cyan-300";
-                    return `
-                      <div 
-                        class="h-7 rounded border ${bg} flex flex-col items-center justify-center font-mono text-[8px] font-bold cursor-pointer transition-all hover:scale-105"
-                        title="${p.label}: ${p.connectedDeviceModel || 'Free / Unpopulated Cage'} (${p.speed})"
-                        onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
-                      >
-                        <span>Q${p.portNumber}</span>
-                        <span class="text-[7px] font-normal opacity-70">${p.speed}</span>
+              <div class="space-y-2">
+                ${Array.from({ length: stackUnits }, (_, uIdx) => {
+                  const u = uIdx + 1;
+                  const unitCages = opticalCages.filter(p => (p.unitIndex || 1) === u);
+                  return `
+                    <div class="space-y-1.5 ${u > 1 ? 'pt-2 border-t border-slate-900' : ''}">
+                      <div class="flex items-center justify-between text-[9px] font-mono text-cyan-400 uppercase font-semibold">
+                        <span>${isStacked ? `Unit ${u} Optical Cages:` : 'QSFP/SFP Optical Transceiver Cages:'}</span>
+                        <span class="text-slate-400">${unitCages.length}x ${unitCages[0]?.speed || '100G'}</span>
                       </div>
-                    `;
-                  }).join('')}
-                </div>
+                      <div class="grid ${unitCages.length > 16 ? 'grid-cols-8' : (unitCages.length > 8 ? 'grid-cols-6' : 'grid-cols-4')} gap-1">
+                        ${unitCages.map(p => {
+                          const isConnected = !!p.connectedDeviceId;
+                          let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                          if (isConnected) bg = "bg-cyan-500/20 border-cyan-500 text-cyan-300";
+                          return `
+                            <div 
+                              class="h-7 rounded border ${bg} flex flex-col items-center justify-center font-mono text-[8px] font-bold cursor-pointer transition-all hover:scale-105"
+                              title="${p.label}: ${p.connectedDeviceModel || 'Free / Unpopulated Cage'} (${p.speed})"
+                              onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                            >
+                              <span>${p.shortLabel || `Q${p.portNumber}`}</span>
+                              <span class="text-[7px] font-normal opacity-70">${p.speed}</span>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             ` : `
-              <!-- Copper Access Ports Grid (up to 48 ports) -->
-              <div class="space-y-1.5">
-                ${copperPorts.length > 0 ? `
-                  <div class="grid grid-cols-12 gap-1">
-                    ${copperPorts.map(p => {
-                      const isPoEActive = (p.poeOutputWatts || 0) > 0;
-                      const isUplink = p.isUplink || p.role === "uplink";
-                      const isDataOnly = p.connectedDeviceId && !isPoEActive;
-                      let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
-                      if (isUplink) bg = "bg-sky-500/20 border-sky-500/50 text-sky-300";
-                      else if (isPoEActive) bg = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300";
-                      else if (isDataOnly) bg = "bg-amber-500/20 border-amber-500/50 text-amber-300";
+              <!-- Copper Access Ports Grid (per stack unit) -->
+              <div class="space-y-2.5">
+                ${Array.from({ length: stackUnits }, (_, uIdx) => {
+                  const u = uIdx + 1;
+                  const unitCopper = copperPorts.filter(p => (p.unitIndex || 1) === u);
+                  const unitOptical = opticalCages.filter(p => (p.unitIndex || 1) === u);
+                  return `
+                    <div class="space-y-1.5 ${u > 1 ? 'pt-2.5 border-t border-slate-900' : ''}">
+                      <div class="flex items-center justify-between text-[10px] font-mono font-bold ${u === 1 ? 'text-sky-400' : 'text-indigo-400'}">
+                        <span class="flex items-center gap-1">
+                          <i data-lucide="layers" class="w-3 h-3"></i>
+                          ${isStacked ? `Unit ${u} (${u === 1 ? 'Master Chassis' : 'Member Chassis'} &bull; ${unitCopper.length} Ports)` : 'Access Ports Faceplate'}
+                        </span>
+                        <span class="text-slate-500 font-normal text-[9px]">${isStacked ? `Member ${u} Ports` : `${unitCopper.length}P`}</span>
+                      </div>
 
-                      return `
-                        <div 
-                          class="h-6 rounded border ${bg} flex items-center justify-center font-mono text-[9px] font-bold cursor-pointer transition-all hover:scale-105" 
-                          title="${p.label}: ${p.connectedDeviceModel || 'Free'} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
-                          onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
-                        >
-                          ${p.portNumber}
-                        </div>
-                      `;
-                    }).join('')}
-                  </div>
-                ` : ''}
+                      <div class="grid grid-cols-12 gap-1">
+                        ${unitCopper.map(p => {
+                          const isPoEActive = (p.poeOutputWatts || 0) > 0;
+                          const isUplink = p.isUplink || p.role === "uplink";
+                          const isDataOnly = p.connectedDeviceId && !isPoEActive;
+                          let bg = "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                          if (isUplink) bg = "bg-sky-500/20 border-sky-500/50 text-sky-300";
+                          else if (isPoEActive) bg = "bg-emerald-500/20 border-emerald-500/50 text-emerald-300";
+                          else if (isDataOnly) bg = "bg-amber-500/20 border-amber-500/50 text-amber-300";
 
-                <!-- Optical Uplink Cages -->
-                ${opticalCages.length > 0 ? `
-                  <div class="pt-2 border-t border-slate-900 space-y-1">
-                    <div class="flex items-center justify-between text-[9px] font-mono text-slate-400 uppercase">
-                      <span>Optical SFP/QSFP Cages:</span>
-                      <span class="text-sky-400 font-bold">${opticalCages.length} Cages</span>
-                    </div>
-                    <div class="grid grid-cols-4 gap-1.5">
-                      ${opticalCages.map((p, idx) => {
-                        const isConnected = !!p.connectedDeviceId;
-                        const bg = isConnected ? "bg-sky-500/20 border-sky-500 text-sky-300" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
-                        return `
-                          <div 
-                            class="px-1.5 py-1 rounded border ${bg} font-mono text-[9px] font-bold cursor-pointer flex items-center justify-between transition-all hover:border-slate-600"
-                            title="${p.label}: ${p.connectedDeviceModel || 'Free'} (${p.speed})"
-                            onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
-                          >
-                            <span>U${idx + 1}</span>
-                            <span class="text-[8px] text-sky-400 font-normal">${p.speed}</span>
+                          return `
+                            <div 
+                              class="h-6 rounded border ${bg} flex items-center justify-center font-mono text-[9px] font-bold cursor-pointer transition-all hover:scale-105" 
+                              title="${p.label}: ${p.connectedDeviceModel || 'Free'} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
+                              onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                            >
+                              ${p.unitPortNumber || p.portNumber}
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+
+                      ${unitOptical.length > 0 ? `
+                        <div class="pt-1.5 border-t border-slate-900 space-y-1">
+                          <div class="flex items-center justify-between text-[9px] font-mono text-slate-400 uppercase">
+                            <span>${isStacked ? `Unit ${u} Uplink Cages:` : 'Optical SFP/QSFP Cages:'}</span>
+                            <span class="text-sky-400 font-bold">${unitOptical.length} Cages</span>
                           </div>
-                        `;
-                      }).join('')}
+                          <div class="grid grid-cols-4 gap-1.5">
+                            ${unitOptical.map((p, idx) => {
+                              const isConnected = !!p.connectedDeviceId;
+                              const bg = isConnected ? "bg-sky-500/20 border-sky-500 text-sky-300" : "bg-slate-900 border-slate-800 text-slate-500 hover:border-slate-700";
+                              return `
+                                <div 
+                                  class="px-1.5 py-1 rounded border ${bg} font-mono text-[9px] font-bold cursor-pointer flex items-center justify-between transition-all hover:border-slate-600"
+                                  title="${p.label}: ${p.connectedDeviceModel || 'Free'} (${p.speed})"
+                                  onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
+                                >
+                                  <span>${p.shortLabel || `U${idx + 1}`}</span>
+                                  <span class="text-[8px] text-sky-400 font-normal">${p.speed}</span>
+                                </div>
+                              `;
+                            }).join('')}
+                          </div>
+                        </div>
+                      ` : ''}
                     </div>
-                  </div>
-                ` : ''}
+                  `;
+                }).join('')}
               </div>
             `}
 
@@ -3013,16 +3139,80 @@ function populateTopologyQuickJump() {
   select.innerHTML = html;
 }
 
-function jumpToTopologyTarget(targetVal) {
-  if (!targetVal) return;
-  if (targetVal.startsWith("loc:")) {
-    const loc = targetVal.substring(4);
-    selectTopologyRack(loc);
-    panClusterIntoView(loc);
-  } else if (targetVal.startsWith("node:")) {
-    const nodeId = targetVal.substring(5);
-    selectTopologyNode(nodeId);
-    panNodeIntoView(nodeId);
+function updateSwitchStackFromTopology(instanceId, count) {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+
+  const val = parseInt(count, 10) || 0;
+  if (val >= 2) {
+    item.canStack = true;
+    item.stackedUnits = val;
+    item.qty = Math.max(item.qty || 1, val);
+    item.uplinkMode = "lag_dual";
+    item.customLinkMultiplier = Math.max(item.customLinkMultiplier || 1, val);
+  } else {
+    item.stackedUnits = 0;
+  }
+
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.initSwitchPorts(item, true);
+  }
+
+  if (typeof applyStackCabling === "function") {
+    applyStackCabling(item);
+  }
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+
+  renderTopology();
+  renderTopologyInspector();
+  if (typeof showToast === "function") {
+    showToast(val >= 2 ? `Configured ${item.model} as a ${val}-Unit Switch Stack.` : `Configured ${item.model} as Standalone.`);
+  }
+}
+
+function jumpToTopologyTarget(targetVal = null) {
+  // 1. Close BOM drawer if open so full topology canvas and inspector are visible
+  const drawer = document.getElementById("bomDrawer");
+  if (drawer && !drawer.classList.contains("translate-x-full")) {
+    if (typeof toggleBomDrawer === "function") toggleBomDrawer();
+  }
+
+  // 2. Open topology modal if hidden
+  const wasHidden = !isTopologyModalVisible();
+  if (wasHidden && typeof toggleTopologyModal === "function") {
+    toggleTopologyModal();
+  }
+
+  // 3. Jump to target after delay to allow canvas rendering
+  if (targetVal) {
+    setTimeout(() => {
+      if (targetVal.startsWith("loc:")) {
+        const loc = targetVal.substring(4);
+        selectTopologyRack(loc);
+        panClusterIntoView(loc);
+      } else if (targetVal.startsWith("node:")) {
+        const nodeId = targetVal.substring(5);
+        const item = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.find(i => i.instanceId === nodeId) : null;
+        if (item) {
+          // If node has no valid closet, assign default so it displays in a rack cluster
+          if (!item.closetName || item.closetName === FacilityStore.UNASSIGNED) {
+            const def = (item.role === "Core" || item.role === "Aggregation") ? "MDF • Rack-1" : "IDF-1 • Rack-1";
+            item.closetName = def;
+            item.rackId = def;
+            if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+              FacilityStore.notifyWorkspaceChange();
+            }
+            renderTopology();
+          }
+        }
+        selectTopologyNode(nodeId);
+        panNodeIntoView(nodeId);
+      }
+    }, wasHidden ? 160 : 60);
   }
 }
 
@@ -3065,3 +3255,4 @@ window.setDeviceSwitchPort = setDeviceSwitchPort;
 window.toggleRadioUplinkRole = toggleRadioUplinkRole;
 window.updateRadioPartner = updateRadioPartner;
 window.inspectSwitchPort = inspectSwitchPort;
+window.updateSwitchStackFromTopology = updateSwitchStackFromTopology;

@@ -1410,3 +1410,70 @@ function commitCablingToBOM() {
   }
   toggleCableLayoutModal();
 }
+
+// -----------------------------------------------------------
+// Deep Linking & Navigation Launcher
+// -----------------------------------------------------------
+function jumpToPhysicalLayoutTarget(targetVal) {
+  // 1. Close BOM drawer if open so full blueprint canvas is visible
+  if (typeof toggleBomDrawer === "function") {
+    const drawer = document.getElementById("bomDrawer");
+    if (drawer && !drawer.classList.contains("translate-x-full")) {
+      toggleBomDrawer();
+    }
+  }
+
+  // 2. Open physical layout modal if hidden
+  const modal = document.getElementById("cableLayoutModal");
+  if (modal && modal.classList.contains("hidden")) {
+    toggleCableLayoutModal();
+  }
+
+  // 3. Resolve target floor and enclosure node
+  if (targetVal) {
+    setTimeout(() => {
+      let targetLoc = null;
+      let targetDevice = null;
+      if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+        const item = projectBOM.find(i => i.instanceId === targetVal);
+        if (item) {
+          targetDevice = item;
+          targetLoc = item.closetName || item.rackId;
+        }
+      }
+      if (!targetLoc && typeof targetVal === "string") {
+        targetLoc = targetVal;
+      }
+      if (targetLoc && typeof FacilityStore !== "undefined") {
+        const parsed = FacilityStore.parse(targetLoc);
+        if (parsed.floorId && typeof switchActiveFloor === "function") {
+          switchActiveFloor(parsed.floorId);
+        }
+        // Highlight closet or drop node on active floor
+        const currentFloor = typeof getActiveFloor === "function" ? getActiveFloor() : null;
+        if (currentFloor && Array.isArray(currentFloor.nodes)) {
+          const match = currentFloor.nodes.find(n => 
+            n.name.toLowerCase().includes((parsed.space || '').toLowerCase()) || 
+            (targetDevice && n.name.toLowerCase().includes(targetDevice.model.toLowerCase()))
+          );
+          if (match) {
+            selectedNodeId = match.id;
+            recalculateCurrentFloorCables();
+            renderCableCanvas();
+            renderInspector();
+          }
+        }
+      }
+    }, 100);
+  }
+}
+
+// Window Compatibility Exports
+if (typeof window !== "undefined") {
+  window.toggleCableLayoutModal = toggleCableLayoutModal;
+  window.jumpToPhysicalLayoutTarget = jumpToPhysicalLayoutTarget;
+  window.deepLinkToRackElevation = deepLinkToRackElevation;
+  window.switchActiveFloor = switchActiveFloor;
+  window.initCableCanvas = initCableCanvas;
+  window.renderCableCanvas = renderCableCanvas;
+}

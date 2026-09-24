@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.7-alpha] - 2026-09-24
+
+### Fixed
+- **BOM "Inspect in Topology" Quick-Link Navigation (`js/tools/topology.js` & `js/tools/bom.js`)**:
+  - Resolved an issue where clicking the "Inspect in Topology" button on equipment cards did not activate the canvas because the topology modal container remained hidden.
+  - Automatically slides closed the BOM drawer (`#bomDrawer`) when launching topology navigation so the 500px drawer no longer covers the canvas or the slide-out Topology Inspector.
+  - Added automatic closet assignment fallback for newly staged unassigned hardware (`FacilityStore.UNASSIGNED`) to default MDF/IDF locations so target devices are immediately rendered in a location cluster upon inspection.
+  - Added visual highlight pulsing (`ring-4 ring-indigo-400 scale-[1.02]`) and centered smooth scrolling to target equipment cards.
+
+### Added
+- **Direct Physical Floor Plan & Cable Layout Launchers (`js/tools/physical_layout.js`, `js/tools/bom.js`, & `index.html`)**:
+  - Implemented `jumpToPhysicalLayoutTarget(targetVal)` in `js/tools/physical_layout.js` to deep-link directly from BOM equipment cards and quick-action toolbars to floor drop nodes and closet enclosures in the physical floor plan.
+  - Added "Physical" quick launcher button to the BOM drawer header quick-launch toolbar alongside Topology, Racks, and Licenses.
+  - Added individual "Physical" launcher buttons (`jumpToPhysicalLayoutTarget('${item.instanceId}')`) on all equipment cards in the BOM drawer.
+  - Automatically slides closed the BOM drawer when launching physical layout, switches the canvas to the item's target facility floor via `FacilityStore.parse()`, and highlights the corresponding drop node or closet enclosure.
+
+- **Unified Virtual Chassis Stacking Accounting in Logical Topology (`js/engines/port_engine.js`, `js/tools/topology.js`, & `js/tools/bom.js`)**:
+  - **Single Logical Stack Entity with Multi-Unit Accountability**: Stacked switches (e.g. 2, 3, or 4 units) are treated as a single unified logical chassis on the Topology canvas, eliminating duplicate node clutter while accurately accounting for all physical member units in:
+    - **Port Matrix & Physical Interfaces**: `PortEngine.initSwitchPorts` generates discrete unit-indexed ports across all members (Unit 1: `1/1`..`1/24`, Unit 2: `2/1`..`2/24`), and the Topology Inspector divides the faceplate into distinct, labeled sub-matrices (`Unit 1 Master Chassis`, `Unit 2 Member Chassis`).
+    - **Power & PoE Budget**: Node cards and Inspector telemetry denote total physical power supplies (`(2x PSUs)`), scaled chassis base draw (`2x Base Watts`), and aggregate PoE capacity (`(2x PoE Budget)`).
+    - **Cross-Stack LACP LAG Uplinks**: Automatically provisions redundant cross-stack LACP LAG uplinks (`2x LAG Cross-Stack LACP`) with distinctive purple/indigo trunk styling (`#818cf8`) and automatic failover modeling.
+    - **Chassis Stacking & Resiliency Controls**: Added stack member configuration dropdown (`updateSwitchStackFromTopology`) in the Topology Inspector, keeping stack settings, BOM quantities, and dedicated hardware stacking cables synchronized in real time.
+
+---
+
 ## [0.10.6-alpha] - 2026-09-24
 
 ### Fixed

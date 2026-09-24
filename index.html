@@ -144,7 +144,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-sm font-bold text-white tracking-tight">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.6-alpha</span>
+            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.7-alpha</span>
           </div>
           <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1.5">
             <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors">Default Project</span>
@@ -286,15 +286,18 @@
     </div>
 
     <!-- Quick Action Tools Row: Direct Launchers to Specialized Design Engines -->
-    <div class="p-3 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-2 text-xs">
-      <button onclick="toggleTopologyModal()" class="flex-1 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all" title="Open Logical Systems & Network Topology Canvas">
-        <i data-lucide="network" class="w-3.5 h-3.5"></i> Topology
+    <div class="p-2.5 bg-slate-900 border-b border-slate-800 grid grid-cols-4 gap-1.5 text-xs">
+      <button onclick="jumpToTopologyTarget()" class="py-1.5 px-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-xl font-semibold flex items-center justify-center gap-1 transition-all" title="Open Logical Systems & Network Topology Canvas">
+        <i data-lucide="network" class="w-3.5 h-3.5"></i> <span class="truncate">Topology</span>
       </button>
-      <button onclick="toggleRackModal()" class="flex-1 py-1.5 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all" title="Open 2D Rack Elevation Visualizer">
-        <i data-lucide="server" class="w-3.5 h-3.5"></i> Racks
+      <button onclick="jumpToPhysicalLayoutTarget()" class="py-1.5 px-1 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 border border-amber-500/30 rounded-xl font-semibold flex items-center justify-center gap-1 transition-all" title="Open Physical Floor Plan & Cable Layout">
+        <i data-lucide="map" class="w-3.5 h-3.5"></i> <span class="truncate">Physical</span>
       </button>
-      <button onclick="toggleLicenseModal()" class="flex-1 py-1.5 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl font-semibold flex items-center justify-center gap-1.5 transition-all" title="Manage Licensing & Subscription Terms">
-        <i data-lucide="key" class="w-3.5 h-3.5"></i> Licenses
+      <button onclick="if (typeof toggleBomDrawer === 'function') { const d = document.getElementById('bomDrawer'); if (d && !d.classList.contains('translate-x-full')) toggleBomDrawer(); } toggleRackModal();" class="py-1.5 px-1 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded-xl font-semibold flex items-center justify-center gap-1 transition-all" title="Open 2D Rack Elevation Visualizer">
+        <i data-lucide="server" class="w-3.5 h-3.5"></i> <span class="truncate">Racks</span>
+      </button>
+      <button onclick="if (typeof toggleBomDrawer === 'function') { const d = document.getElementById('bomDrawer'); if (d && !d.classList.contains('translate-x-full')) toggleBomDrawer(); } toggleLicenseModal();" class="py-1.5 px-1 bg-purple-600/20 hover:bg-purple-600/30 text-purple-300 border border-purple-500/30 rounded-xl font-semibold flex items-center justify-center gap-1 transition-all" title="Manage Licensing & Subscription Terms">
+        <i data-lucide="key" class="w-3.5 h-3.5"></i> <span class="truncate">Licenses</span>
       </button>
     </div>
 

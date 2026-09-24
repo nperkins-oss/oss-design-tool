@@ -99,11 +99,33 @@ const PortEngine = {
    * @param {Object} item - BOM line item representing a switch or router
    * @returns {Array} Array of standardized port objects
    */
-  initSwitchPorts(item) {
+  initSwitchPorts(item, forceReinit = false) {
     if (!item) return [];
-    if (Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0) {
+
+    const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
+      (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
+    const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
+
+    if (!forceReinit && Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0 && item._lastStackUnits === stackUnits) {
       return item.physicalPorts;
     }
+
+    // Preserve existing connection metadata when resizing stack or reinitializing
+    const existingConnections = {};
+    if (Array.isArray(item.physicalPorts)) {
+      item.physicalPorts.forEach(p => {
+        if (p.connectedDeviceId) {
+          existingConnections[p.portNumber] = {
+            connectedDeviceId: p.connectedDeviceId,
+            connectedDeviceModel: p.connectedDeviceModel,
+            connectedPortNumber: p.connectedPortNumber,
+            poeOutputWatts: p.poeOutputWatts,
+            linkStatus: p.linkStatus
+          };
+        }
+      });
+    }
+
     // Backward compatibility: if item.ports was previously set to an array of port objects
     if (Array.isArray(item.ports) && item.ports.length > 0 && typeof item.ports[0] === "object") {
       item.physicalPorts = item.ports;
@@ -156,27 +178,36 @@ const PortEngine = {
         prefix = "Q";
       }
 
-      for (let i = 1; i <= totalPortCount; i++) {
-        ports.push({
-          portNumber: i,
-          label: `${prefix}${i} (${speed})`,
-          mediaType: media,
-          connector: connector,
-          speed: speed,
-          poeStandard: null,
-          maxPoeWatts: 0,
-          poeOutputWatts: 0,
-          connectedDeviceId: null,
-          connectedDeviceModel: null,
-          connectedPortNumber: null,
-          role: "uplink",
-          isUplink: true,
-          linkStatus: "down",
-          adminStatus: "up"
-        });
+      let globalPortIdx = 1;
+      for (let u = 1; u <= stackUnits; u++) {
+        for (let i = 1; i <= totalPortCount; i++) {
+          const portNum = globalPortIdx++;
+          const conn = existingConnections[portNum] || {};
+          ports.push({
+            portNumber: portNum,
+            unitIndex: u,
+            unitPortNumber: i,
+            label: stackUnits > 1 ? `Unit ${u} - Q${i} (${speed})` : `${prefix}${i} (${speed})`,
+            shortLabel: stackUnits > 1 ? `U${u}:Q${i}` : `${prefix}${i}`,
+            mediaType: media,
+            connector: connector,
+            speed: speed,
+            poeStandard: null,
+            maxPoeWatts: 0,
+            poeOutputWatts: conn.poeOutputWatts || 0,
+            connectedDeviceId: conn.connectedDeviceId || null,
+            connectedDeviceModel: conn.connectedDeviceModel || null,
+            connectedPortNumber: conn.connectedPortNumber || null,
+            role: "uplink",
+            isUplink: true,
+            linkStatus: conn.linkStatus || (conn.connectedDeviceId ? "up" : "down"),
+            adminStatus: "up"
+          });
+        }
       }
 
       item.physicalPorts = ports;
+      item._lastStackUnits = stackUnits;
       return ports;
     }
 
@@ -207,83 +238,95 @@ const PortEngine = {
       uplinkMedia = "sfp_1g";
     }
 
-    // Determine access ports vs uplink cages
+    // Determine access ports vs uplink cages per unit
     let accessPortCount = totalPortCount;
     if (totalPortCount === 52) accessPortCount = 48;
     else if (totalPortCount === 28) accessPortCount = 24;
     else if (totalPortCount > uplinkPortCount && (totalPortCount === 24 || totalPortCount === 48)) {
-      // 24 or 48 dedicated access ports with separate uplinks
       accessPortCount = totalPortCount;
     } else {
       accessPortCount = Math.max(1, totalPortCount - uplinkPortCount);
     }
 
-    // 1. Generate Access / Downlink Ports (RJ-45)
-    for (let i = 1; i <= accessPortCount; i++) {
-      let poeStandard = null;
-      let maxPoeWatts = 0;
+    let globalPortIdx = 1;
+    for (let u = 1; u <= stackUnits; u++) {
+      // 1. Generate Access / Downlink Ports (RJ-45) for Unit u
+      for (let i = 1; i <= accessPortCount; i++) {
+        const portNum = globalPortIdx++;
+        const conn = existingConnections[portNum] || {};
+        let poeStandard = null;
+        let maxPoeWatts = 0;
 
-      if (poeBudget > 0) {
-        if (i <= poeBt90Count) {
-          poeStandard = "bt90";
-          maxPoeWatts = 90;
-        } else if (i <= (poeBt90Count + poeBt60Count)) {
-          poeStandard = "bt60";
-          maxPoeWatts = 60;
-        } else if (i <= poeAtCount) {
-          poeStandard = "at";
-          maxPoeWatts = 30;
-        } else if (i <= poeAfCount) {
-          poeStandard = "af";
-          maxPoeWatts = 15.4;
-        } else {
-          poeStandard = "at";
-          maxPoeWatts = 30;
+        if (poeBudget > 0) {
+          if (i <= poeBt90Count) {
+            poeStandard = "bt90";
+            maxPoeWatts = 90;
+          } else if (i <= (poeBt90Count + poeBt60Count)) {
+            poeStandard = "bt60";
+            maxPoeWatts = 60;
+          } else if (i <= poeAtCount) {
+            poeStandard = "at";
+            maxPoeWatts = 30;
+          } else if (i <= poeAfCount) {
+            poeStandard = "af";
+            maxPoeWatts = 15.4;
+          } else {
+            poeStandard = "at";
+            maxPoeWatts = 30;
+          }
         }
+
+        ports.push({
+          portNumber: portNum,
+          unitIndex: u,
+          unitPortNumber: i,
+          label: stackUnits > 1 ? `Unit ${u} - Port ${i} (${u}/${i})` : `Port ${i}`,
+          shortLabel: stackUnits > 1 ? `${u}/${i}` : `P${i}`,
+          mediaType: "rj45_1g",
+          connector: "RJ-45",
+          speed: item.portSpeed && item.portSpeed.includes("2.5G") ? "2.5G" : (item.portSpeed && item.portSpeed.includes("10G") ? "10G" : "1G"),
+          poeStandard,
+          maxPoeWatts,
+          poeOutputWatts: conn.poeOutputWatts || 0,
+          connectedDeviceId: conn.connectedDeviceId || null,
+          connectedDeviceModel: conn.connectedDeviceModel || null,
+          connectedPortNumber: conn.connectedPortNumber || null,
+          role: "access",
+          isUplink: false,
+          linkStatus: conn.linkStatus || (conn.connectedDeviceId ? "up" : "down"),
+          adminStatus: "up"
+        });
       }
 
-      ports.push({
-        portNumber: i,
-        label: `Port ${i}`,
-        mediaType: "rj45_1g",
-        connector: "RJ-45",
-        speed: item.portSpeed && item.portSpeed.includes("2.5G") ? "2.5G" : (item.portSpeed && item.portSpeed.includes("10G") ? "10G" : "1G"),
-        poeStandard,
-        maxPoeWatts,
-        poeOutputWatts: 0,
-        connectedDeviceId: null,
-        connectedDeviceModel: null,
-        connectedPortNumber: null,
-        role: "access", // access, trunk, uplink, peer
-        isUplink: false,
-        linkStatus: "down",
-        adminStatus: "up"
-      });
-    }
-
-    // 2. Generate Uplink / Backbone Optical Cages
-    for (let j = 1; j <= uplinkPortCount; j++) {
-      const portNum = accessPortCount + j;
-      ports.push({
-        portNumber: portNum,
-        label: `Uplink ${j} (${uplinkSpeed})`,
-        mediaType: uplinkMedia,
-        connector: uplinkMedia.includes("qsfp") ? "QSFP" : "SFP+",
-        speed: uplinkSpeed,
-        poeStandard: null,
-        maxPoeWatts: 0,
-        poeOutputWatts: 0,
-        connectedDeviceId: null,
-        connectedDeviceModel: null,
-        connectedPortNumber: null,
-        role: "uplink",
-        isUplink: true,
-        linkStatus: "down",
-        adminStatus: "up"
-      });
+      // 2. Generate Uplink / Backbone Optical Cages for Unit u
+      for (let j = 1; j <= uplinkPortCount; j++) {
+        const portNum = globalPortIdx++;
+        const conn = existingConnections[portNum] || {};
+        ports.push({
+          portNumber: portNum,
+          unitIndex: u,
+          unitPortNumber: accessPortCount + j,
+          label: stackUnits > 1 ? `Unit ${u} - Uplink ${j} (${uplinkSpeed})` : `Uplink ${j} (${uplinkSpeed})`,
+          shortLabel: stackUnits > 1 ? `U${u}:Q${j}` : `Q${j}`,
+          mediaType: uplinkMedia,
+          connector: uplinkMedia.includes("qsfp") ? "QSFP" : "SFP+",
+          speed: uplinkSpeed,
+          poeStandard: null,
+          maxPoeWatts: 0,
+          poeOutputWatts: 0,
+          connectedDeviceId: conn.connectedDeviceId || null,
+          connectedDeviceModel: conn.connectedDeviceModel || null,
+          connectedPortNumber: conn.connectedPortNumber || null,
+          role: "uplink",
+          isUplink: true,
+          linkStatus: conn.linkStatus || (conn.connectedDeviceId ? "up" : "down"),
+          adminStatus: "up"
+        });
+      }
     }
 
     item.physicalPorts = ports;
+    item._lastStackUnits = stackUnits;
     return ports;
   },
 
@@ -822,13 +865,17 @@ const PortEngine = {
     if (!switchItem) return { total: 0, used: 0, free: 0, poeLoad: 0, poeBudget: 0 };
     const ports = this.initSwitchPorts(switchItem);
 
+    const isStacked = (switchItem.stackedUnits && switchItem.stackedUnits >= 2) || 
+      (switchItem.stackedUnits !== 0 && switchItem.qty >= 2 && (switchItem.canStack || switchItem.role === "Access" || switchItem.role === "Aggregation"));
+    const stackUnits = isStacked ? (switchItem.stackedUnits || switchItem.qty) : 1;
+
     const total = ports.length;
     const used = ports.filter(p => p.connectedDeviceId).length;
     const free = total - used;
     const poeCapable = ports.filter(p => p.poeStandard !== null).length;
     const poeActive = ports.filter(p => (p.poeOutputWatts || 0) > 0).length;
     const poeLoad = switchItem.consumedPoEWatts || 0;
-    const poeBudget = parseFloat(switchItem.poeBudget) || 0;
+    const poeBudget = (parseFloat(switchItem.poeBudget) || 0) * stackUnits;
 
     return {
       total,
@@ -838,6 +885,8 @@ const PortEngine = {
       poeActive,
       poeLoad,
       poeBudget,
+      isStacked,
+      stackUnits,
       percentUsed: Math.round((used / (total || 1)) * 100),
       percentPoe: Math.round((poeLoad / (poeBudget || 1)) * 100)
     };
