@@ -3,8 +3,117 @@
 // Single Source of Truth for Floors, Spaces/Closets/Poles, Enclosures & Event Dispatching
 // =========================================================================
 
+/**
+ * 5 Canonical Physical Mounting Hosts (Where equipment is mounted & powered)
+ */
+const MOUNTING_HOST_TYPES = {
+  equipment_rack: {
+    id: "equipment_rack",
+    label: "Equipment Rack",
+    badgeLabel: "19\" Rack",
+    icon: "server",
+    color: "cyan",
+    unitOfMeasure: "RU",
+    defaultCapacity: 42,
+    description: "Standard 19-inch EIA-310 open 2/4-post rack or enclosed server cabinet"
+  },
+  security_cabinet: {
+    id: "security_cabinet",
+    label: "Security & Control Cabinet",
+    badgeLabel: "Security Can",
+    icon: "shield-alert",
+    color: "purple",
+    unitOfMeasure: "Bays",
+    defaultCapacity: 8,
+    description: "Wall-mount access control & power cabinet with modular subplates (Altronix Trove, LSP ProWire)"
+  },
+  industrial_din: {
+    id: "industrial_din",
+    label: "Industrial NEMA / DIN Box",
+    badgeLabel: "NEMA / DIN",
+    icon: "box",
+    color: "amber",
+    unitOfMeasure: "mm Rail",
+    defaultCapacity: 350,
+    description: "Weatherproof NEMA 4X / IP66 enclosure with 35mm Top-Hat DIN-rails and DC power distribution"
+  },
+  structural_mount: {
+    id: "structural_mount",
+    label: "Structural Pole / Mast Mount",
+    badgeLabel: "Pole Mount",
+    icon: "navigation",
+    color: "emerald",
+    unitOfMeasure: "Points",
+    defaultCapacity: 4,
+    description: "Exterior utility pole, antenna mast, or parking gate pedestal with mounting bracket hardware"
+  },
+  architectural_backboard: {
+    id: "architectural_backboard",
+    label: "Architectural Backboard",
+    badgeLabel: "Backboard",
+    icon: "grid",
+    color: "slate",
+    unitOfMeasure: "Sq Ft",
+    defaultCapacity: 32,
+    description: "3/4-inch fire-retardant AC plywood telecom wall backboard for surface-mounted equipment"
+  }
+};
+
+/**
+ * 5 Canonical Edge Endpoints & Sub-Assemblies (Where field devices live & connect)
+ */
+const EDGE_ENDPOINT_TYPES = {
+  door_portal: {
+    id: "door_portal",
+    label: "Access-Controlled Portal",
+    badgeLabel: "Door Portal",
+    icon: "door-open",
+    defaultMedia: "composite_access",
+    elements: ["Card Reader", "Electric Lock / Strike", "Door Position Switch (DPS)", "Request-to-Exit (REX)"],
+    description: "Complete access-controlled doorway running on bundled 4-element composite cable"
+  },
+  surveillance_point: {
+    id: "surveillance_point",
+    label: "Surveillance Camera Station",
+    badgeLabel: "Camera",
+    icon: "video",
+    defaultMedia: "cat6a_plenum",
+    elements: ["IP Camera", "Mount Bracket / Pendant", "Junction Box", "Surge Protector"],
+    description: "Fixed, multi-sensor, or PTZ camera location with mounting accessories and PoE power"
+  },
+  wireless_node: {
+    id: "wireless_node",
+    label: "Wireless Station / AP",
+    badgeLabel: "Wireless",
+    icon: "wifi",
+    defaultMedia: "cat6a_plenum",
+    elements: ["Access Point / PtP Radio", "Antenna", "Mounting Bracket"],
+    description: "Indoor Wi-Fi AP or outdoor point-to-point wireless bridge endpoint"
+  },
+  telecom_outlet: {
+    id: "telecom_outlet",
+    label: "Workstation Telecom Outlet",
+    badgeLabel: "Telecom Drop",
+    icon: "network",
+    defaultMedia: "cat6a_plenum",
+    elements: ["Faceplate", "Keystone Jacks", "Station Patch Cord"],
+    description: "Wall, floor, or ceiling outlet for desktop computing, VoIP phone, printer, or smart TV"
+  },
+  sensor_point: {
+    id: "sensor_point",
+    label: "Intrusion / Environmental Sensor",
+    badgeLabel: "Sensor",
+    icon: "activity",
+    defaultMedia: "22_4_stranded",
+    elements: ["Sensor Board", "Aux Power", "Supervised Zone Loop"],
+    description: "Motion detector, glass break, emergency panic button, or environmental monitor"
+  }
+};
+
 const FacilityStore = {
   UNASSIGNED: "Unassigned",
+  HOST_TYPES: MOUNTING_HOST_TYPES,
+  ENDPOINT_TYPES: EDGE_ENDPOINT_TYPES,
 
   // Canonical Default Hierarchy Structure
   defaultFloors: [
@@ -19,10 +128,10 @@ const FacilityStore = {
   ],
 
   defaultEnclosures: [
-    { id: "enc-mdf-rack1", spaceId: "space-mdf", name: "Rack-1", type: "rack_4post", heightU: 42, maxWatts: 4500, pduCount: 2 },
-    { id: "enc-idf1-rack1", spaceId: "space-idf1", name: "Rack-1", type: "rack_4post", heightU: 24, maxWatts: 3000, pduCount: 2 },
-    { id: "enc-pole1-nema", spaceId: "space-pole1", name: "NEMA-Box", type: "nema_box", heightU: 0, isDin: true, maxWatts: 800, pduCount: 1 },
-    { id: "enc-guard-rack1", spaceId: "space-guard", name: "Rack-1", type: "wall_cabinet", heightU: 12, maxWatts: 1500, pduCount: 1 }
+    { id: "enc-mdf-rack1", spaceId: "space-mdf", name: "Rack-1", hostType: "equipment_rack", type: "rack_4post", heightU: 42, maxWatts: 4500, pduCount: 2, isDin: false, depthInches: 36 },
+    { id: "enc-idf1-rack1", spaceId: "space-idf1", name: "Rack-1", hostType: "equipment_rack", type: "rack_4post", heightU: 24, maxWatts: 3000, pduCount: 2, isDin: false, depthInches: 24 },
+    { id: "enc-pole1-nema", spaceId: "space-pole1", name: "NEMA-Box", hostType: "industrial_din", type: "nema_box", heightU: 0, isDin: true, maxWatts: 800, pduCount: 1, dinRails: 2, railLengthMm: 350 },
+    { id: "enc-guard-rack1", spaceId: "space-guard", name: "Rack-1", hostType: "equipment_rack", type: "wall_cabinet", heightU: 12, maxWatts: 1500, pduCount: 1, isDin: false, depthInches: 18 }
   ],
 
   getProjectId() {
@@ -133,13 +242,28 @@ const FacilityStore = {
     list.push(newSpace);
     this.saveSpaces(list);
 
-    // Create default enclosure for this space (e.g. Rack-1 or NEMA-Box)
+    // Create default host for this space (e.g. Rack-1, NEMA-Box, or Security Cabinet)
     const isOutdoor = type === "pole" || type === "exterior";
-    const encName = isOutdoor ? "NEMA-Box" : (type === "wallbox" ? "Wallbox" : "Rack-1");
-    const encType = isOutdoor ? "nema_box" : (type === "wallbox" ? "wall_cabinet" : "rack_4post");
-    const heightU = isOutdoor ? 0 : (type === "wallbox" ? 12 : 24);
+    const isAccess = type === "electrical_room" || type === "security_room";
+    let hostName = "Rack-1";
+    let hostType = "equipment_rack";
+    let heightU = 24;
 
-    this.addEnclosure(encName, encType, id, heightU);
+    if (isOutdoor) {
+      hostName = "NEMA-Box";
+      hostType = "industrial_din";
+      heightU = 0;
+    } else if (isAccess) {
+      hostName = "AC-Cabinet-1";
+      hostType = "security_cabinet";
+      heightU = 0;
+    } else if (type === "wallbox") {
+      hostName = "Wallbox";
+      hostType = "equipment_rack";
+      heightU = 12;
+    }
+
+    this.addHost(hostName, hostType, id, { heightU });
     this.notifyWorkspaceChange();
     return newSpace;
   },
@@ -176,10 +300,33 @@ const FacilityStore = {
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultEnclosures));
     }
+
+    // Ensure all hosts have guaranteed hostType
+    list.forEach(e => {
+      if (!e.hostType) {
+        if (e.isDin || e.type === "nema_box" || (e.name && (e.name.toLowerCase().includes("nema") || e.name.toLowerCase().includes("din")))) {
+          e.hostType = "industrial_din";
+        } else if (e.name && (e.name.toLowerCase().includes("panel") || e.name.toLowerCase().includes("trove") || e.name.toLowerCase().includes("ac-"))) {
+          e.hostType = "security_cabinet";
+        } else if (e.name && e.name.toLowerCase().includes("pole")) {
+          e.hostType = "structural_mount";
+        } else if (e.name && (e.name.toLowerCase().includes("backboard") || e.name.toLowerCase().includes("plywood"))) {
+          e.hostType = "architectural_backboard";
+        } else {
+          e.hostType = "equipment_rack";
+        }
+      }
+    });
+
     if (spaceId) {
       return list.filter(e => e.spaceId === spaceId);
     }
     return list;
+  },
+
+  // Host Accessor Alias
+  getHosts(spaceId = null) {
+    return this.getEnclosures(spaceId);
   },
 
   saveEnclosures(list) {
@@ -189,24 +336,67 @@ const FacilityStore = {
     } catch (e) {}
   },
 
-  addEnclosure(name, type = "rack_4post", spaceId = "space-mdf", heightU = 24, maxWatts = 3000) {
+  addEnclosure(name, type = "rack_4post", spaceId = "space-mdf", heightU = 24, maxWatts = 3000, options = {}) {
     if (!name || !name.trim()) return null;
     const list = this.getEnclosures();
     const id = `enc-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
+    
+    // Resolve hostType from options, type, or name context
+    let hostType = options.hostType;
+    if (!hostType) {
+      if (type === "nema_box" || type === "din_rail" || name.toLowerCase().includes("nema") || name.toLowerCase().includes("din")) {
+        hostType = "industrial_din";
+      } else if (type === "wall_cabinet" || name.toLowerCase().includes("panel") || name.toLowerCase().includes("trove") || name.toLowerCase().includes("ac-")) {
+        hostType = "security_cabinet";
+      } else if (type === "pole" || name.toLowerCase().includes("pole")) {
+        hostType = "structural_mount";
+      } else if (type === "backboard" || name.toLowerCase().includes("backboard") || name.toLowerCase().includes("plywood")) {
+        hostType = "architectural_backboard";
+      } else {
+        hostType = "equipment_rack";
+      }
+    }
+
+    const isDin = hostType === "industrial_din" || type === "din_rail" || type === "nema_box";
     const newEnc = {
       id,
       spaceId: spaceId || "space-mdf",
       name: name.trim(),
-      type: type || "rack_4post",
-      heightU: parseInt(heightU, 10) || 24,
-      isDin: type === "din_rail" || type === "nema_box",
-      maxWatts: parseInt(maxWatts, 10) || 3000,
-      pduCount: type === "nema_box" ? 1 : 2
+      hostType,
+      type: type || (isDin ? "nema_box" : "rack_4post"),
+      heightU: parseInt(heightU, 10) || (hostType === "equipment_rack" ? 24 : 0),
+      isDin,
+      maxWatts: parseInt(maxWatts, 10) || (hostType === "equipment_rack" ? 3000 : (hostType === "security_cabinet" ? 1200 : 800)),
+      pduCount: hostType === "equipment_rack" ? 2 : 1,
+      // Specific host parameters:
+      subplateBays: options.subplateBays || (hostType === "security_cabinet" ? 8 : null),
+      dcVoltage: options.dcVoltage || (hostType === "security_cabinet" ? "dual_12_24" : null),
+      dinRails: options.dinRails || (hostType === "industrial_din" ? 2 : null),
+      railLengthMm: options.railLengthMm || (hostType === "industrial_din" ? 350 : null),
+      depthInches: options.depthInches || (hostType === "equipment_rack" ? 24 : null),
+      poleDiameterInches: options.poleDiameterInches || (hostType === "structural_mount" ? 4 : null),
+      widthFt: options.widthFt || (hostType === "architectural_backboard" ? 4 : null),
+      heightFt: options.heightFt || (hostType === "architectural_backboard" ? 8 : null),
+      config: options.config || {}
     };
     list.push(newEnc);
     this.saveEnclosures(list);
     this.notifyWorkspaceChange();
     return newEnc;
+  },
+
+  addHost(name, hostType = "equipment_rack", spaceId = "space-mdf", options = {}) {
+    return this.addEnclosure(name, hostType, spaceId, options.heightU || (hostType === "equipment_rack" ? 24 : 0), options.maxWatts || 3000, { ...options, hostType });
+  },
+
+  updateHost(hostId, updates = {}) {
+    const list = this.getEnclosures();
+    const host = list.find(h => h.id === hostId);
+    if (!host) return false;
+    Object.assign(host, updates);
+    this.saveEnclosures(list);
+    this.notifyWorkspaceChange();
+    return host;
   },
 
   deleteEnclosure(enclosureId, fallbackEnclosureId = null) {
@@ -220,6 +410,79 @@ const FacilityStore = {
 
     encs = encs.filter(e => e.id !== enclosureId);
     this.saveEnclosures(encs);
+    this.notifyWorkspaceChange();
+    return true;
+  },
+
+  deleteHost(hostId, fallbackHostId = null) {
+    return this.deleteEnclosure(hostId, fallbackHostId);
+  },
+
+  // -----------------------------------------------------------
+  // Edge Endpoints & Sub-Assemblies (Doors, Cameras, APs, Drops)
+  // -----------------------------------------------------------
+  getEndpoints(floorId = null) {
+    const projKey = this.getProjectId();
+    let list = [];
+    try {
+      const raw = localStorage.getItem(`netselect_fac_endpoints_${projKey}`);
+      list = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      list = [];
+    }
+    if (floorId) {
+      return list.filter(ep => ep.floorId === floorId);
+    }
+    return list;
+  },
+
+  saveEndpoints(list) {
+    try {
+      const projKey = this.getProjectId();
+      localStorage.setItem(`netselect_fac_endpoints_${projKey}`, JSON.stringify(list));
+    } catch (e) {}
+  },
+
+  addEndpoint(name, endpointType = "door_portal", floorId = "floor-1", options = {}) {
+    if (!name || !name.trim()) return null;
+    const list = this.getEndpoints();
+    const id = `ep-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
+    const def = EDGE_ENDPOINT_TYPES[endpointType] || EDGE_ENDPOINT_TYPES.door_portal;
+
+    const newEndpoint = {
+      id,
+      name: name.trim(),
+      endpointType,
+      floorId: floorId || "floor-1",
+      mediaType: options.mediaType || def.defaultMedia || "cat6a_plenum",
+      homeRunHostId: options.homeRunHostId || null,
+      homeRunHostName: options.homeRunHostName || "MDF • Rack-1",
+      coordinates: options.coordinates || { x: 300, y: 300 },
+      // Sub-elements / components:
+      components: options.components || {},
+      status: "active",
+      notes: options.notes || ""
+    };
+    list.push(newEndpoint);
+    this.saveEndpoints(list);
+    this.notifyWorkspaceChange();
+    return newEndpoint;
+  },
+
+  updateEndpoint(endpointId, updates = {}) {
+    const list = this.getEndpoints();
+    const ep = list.find(e => e.id === endpointId);
+    if (!ep) return false;
+    Object.assign(ep, updates);
+    this.saveEndpoints(list);
+    this.notifyWorkspaceChange();
+    return ep;
+  },
+
+  deleteEndpoint(endpointId) {
+    let list = this.getEndpoints();
+    list = list.filter(e => e.id !== endpointId);
+    this.saveEndpoints(list);
     this.notifyWorkspaceChange();
     return true;
   },
@@ -250,27 +513,49 @@ const FacilityStore = {
         fullName: this.UNASSIGNED,
         space: "Unassigned",
         enclosure: "Holding Bin",
-        isUnassigned: true
+        hostName: "Holding Bin",
+        hostType: "holding_bin",
+        isUnassigned: true,
+        isRack: false,
+        isSecurityCabinet: false,
+        isDin: false,
+        isStructuralMount: false,
+        isBackboard: false
       };
     }
     const parts = normalized.split(" • ");
     const spaceName = parts[0];
-    const enclosureName = parts[1] || "Rack-1";
+    const hostName = parts[1] || "Rack-1";
 
     const spaces = this.getSpaces();
     const space = spaces.find(s => s.name.toLowerCase() === spaceName.toLowerCase());
     const encs = this.getEnclosures(space ? space.id : null);
-    const enc = encs.find(e => e.name.toLowerCase() === enclosureName.toLowerCase());
+    const enc = encs.find(e => e.name.toLowerCase() === hostName.toLowerCase());
+
+    const hostType = enc ? (enc.hostType || (enc.isDin ? "industrial_din" : "equipment_rack")) : (
+      hostName.toLowerCase().includes("nema") || hostName.toLowerCase().includes("din") ? "industrial_din" :
+      hostName.toLowerCase().includes("panel") || hostName.toLowerCase().includes("trove") || hostName.toLowerCase().includes("ac-") ? "security_cabinet" :
+      hostName.toLowerCase().includes("pole") ? "structural_mount" :
+      hostName.toLowerCase().includes("backboard") ? "architectural_backboard" : "equipment_rack"
+    );
 
     return {
       fullName: normalized,
       space: spaceName,
-      enclosure: enclosureName,
+      enclosure: hostName,       // backward compat
+      hostName: hostName,        // clean new naming
       spaceId: space ? space.id : null,
-      enclosureId: enc ? enc.id : null,
+      enclosureId: enc ? enc.id : null, // backward compat
+      hostId: enc ? enc.id : null,      // clean new naming
       floorId: space ? space.floorId : "floor-1",
       heightU: enc ? enc.heightU : 24,
-      isDin: enc ? enc.isDin : false,
+      isDin: hostType === "industrial_din" || (enc && enc.isDin),
+      hostType,
+      hostConfig: enc ? (enc.config || {}) : {},
+      isRack: hostType === "equipment_rack",
+      isSecurityCabinet: hostType === "security_cabinet",
+      isStructuralMount: hostType === "structural_mount",
+      isBackboard: hostType === "architectural_backboard",
       isUnassigned: false
     };
   },
@@ -294,25 +579,39 @@ const FacilityStore = {
           space: s.name,
           spaceId: s.id,
           enclosure: "Rack-1",
+          hostName: "Rack-1",
           enclosureId: null,
+          hostId: null,
+          hostType: "equipment_rack",
           floorId: s.floorId,
           floorName: floor ? floor.name : "Level 1",
-          heightU: 24
+          heightU: 24,
+          isDin: false
         });
       } else {
         spaceEncs.forEach(e => {
+          const hostType = e.hostType || (e.isDin ? "industrial_din" : "equipment_rack");
           list.push({
             id: `loc-${s.id}-${e.id}`,
             name: `${s.name} • ${e.name}`,
             space: s.name,
             spaceId: s.id,
             enclosure: e.name,
+            hostName: e.name,
             enclosureId: e.id,
+            hostId: e.id,
+            hostType,
             floorId: s.floorId,
             floorName: floor ? floor.name : "Level 1",
-            heightU: e.heightU || 24,
-            isDin: e.isDin || false,
-            maxWatts: e.maxWatts || 3000
+            heightU: e.heightU || (hostType === "equipment_rack" ? 24 : 0),
+            isDin: hostType === "industrial_din" || e.isDin || false,
+            maxWatts: e.maxWatts || 3000,
+            subplateBays: e.subplateBays || null,
+            dcVoltage: e.dcVoltage || null,
+            dinRails: e.dinRails || null,
+            railLengthMm: e.railLengthMm || null,
+            depthInches: e.depthInches || null,
+            config: e.config || {}
           });
         });
       }
@@ -332,10 +631,14 @@ const FacilityStore = {
             space: parsed.space,
             spaceId: null,
             enclosure: parsed.enclosure,
+            hostName: parsed.hostName,
             enclosureId: null,
+            hostId: null,
+            hostType: parsed.hostType,
             floorId: "floor-1",
             floorName: "Level 1",
-            heightU: 24
+            heightU: parsed.heightU || 24,
+            isDin: parsed.isDin || false
           });
         }
       });
@@ -676,11 +979,11 @@ function renderFacilityManager() {
       <div class="md:col-span-5 space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i> Enclosures in ${currentSpace ? escapeHTML(currentSpace.name) : 'Space'}
+            <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i> Mounting Hosts & Enclosures (${currentSpaceEncs.length})
           </span>
           ${currentSpace ? `
             <button onclick="promptAddEnclosure('${currentSpace.id}')" class="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold transition-all">
-              + Enclosure / Rack
+              + Host / Enclosure
             </button>
           ` : ''}
         </div>
@@ -688,29 +991,39 @@ function renderFacilityManager() {
         <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
           ${currentSpaceEncs.length === 0 ? `
             <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-850">
-              No racks or cabinets in this space yet.
+              No racks, security cabinets, or mounting hosts in this space yet.
             </div>
           ` : currentSpaceEncs.map(e => {
             const locName = `${currentSpace.name} • ${e.name}`;
             const telem = FacilityStore.getLocationTelemetry(locName);
-            const isDin = e.isDin || e.type === "nema_box" || e.heightU === 0;
+            const hostType = e.hostType || (e.isDin ? "industrial_din" : "equipment_rack");
+            const meta = MOUNTING_HOST_TYPES[hostType] || MOUNTING_HOST_TYPES.equipment_rack;
 
             return `
               <div class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5">
                 <div class="flex items-start justify-between">
-                  <div>
-                    <span class="text-xs font-bold text-white block">${escapeHTML(e.name)}</span>
-                    <span class="text-[10px] font-mono text-indigo-300 block">
-                      ${isDin ? 'NEMA Outdoor / DIN Rail' : `${e.heightU || 24}U Rackmount Enclosure`} &bull; Max ${e.maxWatts || 3000}W
-                    </span>
+                  <div class="min-w-0">
+                    <span class="text-xs font-bold text-white block truncate">${escapeHTML(e.name)}</span>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 flex items-center gap-1">
+                        <i data-lucide="${meta.icon || 'server'}" class="w-2.5 h-2.5"></i> ${meta.badgeLabel}
+                      </span>
+                      <span class="text-[10px] font-mono text-slate-400">
+                        ${hostType === 'equipment_rack' ? `${e.heightU || 24}U EIA &bull; Max ${e.maxWatts || 3000}W` :
+                          (hostType === 'security_cabinet' ? `${e.subplateBays || 8} Subplate Bays &bull; ${e.dcVoltage || '12/24V'}` :
+                          (hostType === 'industrial_din' ? `${e.dinRails || 2}x DIN (${e.railLengthMm || 350}mm)` :
+                          (hostType === 'structural_mount' ? `${e.poleDiameterInches || 4}" Pole Mount` :
+                          `${e.widthFt || 4}' x ${e.heightFt || 8}' Backboard`)))}
+                      </span>
+                    </div>
                   </div>
-                  <div class="flex items-center gap-1">
+                  <div class="flex items-center gap-1 shrink-0">
                     <button 
                       onclick="openRackViewerFor('${locName}')"
                       class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold rounded-lg border border-slate-700 transition-colors"
-                      title="View Equipment in Rack Visualizer"
+                      title="Inspect equipment in Visualizer"
                     >
-                      View Rack
+                      Inspect
                     </button>
                     <button onclick="deleteFacilityEnclosure('${e.id}')" class="p-1 text-slate-500 hover:text-rose-400">
                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -725,8 +1038,18 @@ function renderFacilityManager() {
                     <span class="text-white font-bold">${telem.itemCount} Units</span>
                   </div>
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
-                    <span class="text-slate-500 block text-[9px]">${isDin ? 'Rail Space:' : 'RU Space:'}</span>
-                    <span class="text-indigo-300 font-bold">${isDin ? 'DIN Rail' : `${telem.totalRuOccupied}/${e.heightU || 24}U`}</span>
+                    <span class="text-slate-500 block text-[9px]">
+                      ${hostType === 'equipment_rack' ? 'RU Space:' :
+                        (hostType === 'security_cabinet' ? 'Subplate Bays:' :
+                        (hostType === 'industrial_din' ? 'DIN Rail:' :
+                        (hostType === 'structural_mount' ? 'Mounting Points:' : 'Backboard:')))}
+                    </span>
+                    <span class="text-indigo-300 font-bold">
+                      ${hostType === 'equipment_rack' ? `${telem.totalRuOccupied}/${e.heightU || 24}U` :
+                        (hostType === 'security_cabinet' ? `${e.subplateBays || 8} Bays` :
+                        (hostType === 'industrial_din' ? `${e.dinRails || 2}x Rails` :
+                        (hostType === 'structural_mount' ? `${e.poleDiameterInches || 4}" Mast` : `${e.widthFt || 4}x${e.heightFt || 8} Ft`)))}
+                    </span>
                   </div>
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span class="text-slate-500 block text-[9px]">Power Draw:</span>
@@ -771,10 +1094,10 @@ function promptAddFloor() {
 }
 
 function promptAddSpace(floorId) {
-  const name = prompt("Enter Space / Room / Pole Name (e.g. IDF-2, Pole 2, East Gate Wallbox):", `IDF-${FacilityStore.getSpaces().length + 1}`);
+  const name = prompt("Enter Space / Room / Pole Name (e.g. IDF-2, Pole 2, East Gate Wallbox, Security Hub):", `IDF-${FacilityStore.getSpaces().length + 1}`);
   if (!name || !name.trim()) return;
   const lower = name.toLowerCase();
-  const type = lower.includes("pole") ? "pole" : (lower.includes("wall") ? "wallbox" : "idf");
+  const type = lower.includes("pole") ? "pole" : (lower.includes("wall") ? "wallbox" : (lower.includes("security") || lower.includes("access") ? "security_room" : "idf"));
   const s = FacilityStore.addSpace(name.trim(), type, floorId);
   activeFacilitySpaceId = s.id;
   renderFacilityManager();
@@ -784,14 +1107,49 @@ function promptAddSpace(floorId) {
 function promptAddEnclosure(spaceId) {
   const space = FacilityStore.getSpaces().find(s => s.id === spaceId);
   const isPole = space && (space.type === "pole" || space.name.toLowerCase().includes("pole"));
-  const defaultName = isPole ? "NEMA-Box" : `Rack-${(FacilityStore.getEnclosures(spaceId).length + 1)}`;
-  const name = prompt("Enter Enclosure / Cabinet Name (e.g. Rack-1, NEMA-Box, Wallbox):", defaultName);
+  const isSecurity = space && (space.type === "security_room" || space.name.toLowerCase().includes("security") || space.name.toLowerCase().includes("access"));
+
+  const typeChoice = prompt(
+    "Choose Mounting Host Type:\n1 = 19\" Equipment Rack (EIA RU)\n2 = Security & Control Cabinet (Altronix Trove / LSP)\n3 = Industrial Weatherproof NEMA Box (DIN Rail)\n4 = Structural Pole / Mast Mount\n5 = Architectural Backboard (Plywood)",
+    isPole ? "3" : (isSecurity ? "2" : "1")
+  );
+
+  let hostType = "equipment_rack";
+  let defaultName = `Rack-${FacilityStore.getEnclosures(spaceId).length + 1}`;
+  let options = {};
+
+  if (typeChoice === "2") {
+    hostType = "security_cabinet";
+    defaultName = `AC-Cabinet-${FacilityStore.getEnclosures(spaceId).length + 1}`;
+    options.subplateBays = 8;
+    options.dcVoltage = "dual_12_24";
+  } else if (typeChoice === "3") {
+    hostType = "industrial_din";
+    defaultName = `NEMA-Box-${FacilityStore.getEnclosures(spaceId).length + 1}`;
+    options.dinRails = 2;
+    options.railLengthMm = 350;
+  } else if (typeChoice === "4") {
+    hostType = "structural_mount";
+    defaultName = `Pole-${FacilityStore.getEnclosures(spaceId).length + 1}`;
+    options.poleDiameterInches = 4;
+  } else if (typeChoice === "5") {
+    hostType = "architectural_backboard";
+    defaultName = "Telecom-Backboard";
+    options.widthFt = 4;
+    options.heightFt = 8;
+  }
+
+  const name = prompt("Enter Name for this Mounting Host:", defaultName);
   if (!name || !name.trim()) return;
-  const heightStr = isPole ? "0" : prompt("Enter Rack Height (e.g., 42, 24, 12, 6, 0 for DIN):", "24");
-  const heightU = parseInt(heightStr, 10) || 0;
-  FacilityStore.addEnclosure(name.trim(), heightU === 0 ? "nema_box" : "rack_4post", spaceId, heightU);
+
+  if (hostType === "equipment_rack") {
+    const heightStr = prompt("Enter Rack Height (e.g. 42, 24, 12, 6 RU):", "24");
+    options.heightU = parseInt(heightStr, 10) || 24;
+  }
+
+  FacilityStore.addHost(name.trim(), hostType, spaceId, options);
   renderFacilityManager();
-  if (typeof showToast === "function") showToast(`Added enclosure "${name.trim()}"`);
+  if (typeof showToast === "function") showToast(`Added ${name.trim()} (${MOUNTING_HOST_TYPES[hostType]?.label || hostType})`);
 }
 
 function deleteFacilityFloor(floorId) {
@@ -811,7 +1169,7 @@ function deleteFacilitySpace(spaceId) {
 }
 
 function deleteFacilityEnclosure(enclosureId) {
-  if (confirm("Delete this enclosure? Assigned hardware will be moved to Unassigned.")) {
+  if (confirm("Delete this host / enclosure? Assigned hardware will be moved to Unassigned.")) {
     FacilityStore.deleteEnclosure(enclosureId);
     renderFacilityManager();
   }
@@ -832,6 +1190,8 @@ function openRackViewerFor(locationName) {
 
 // Window Compatibility Exports
 if (typeof window !== "undefined") {
+  window.MOUNTING_HOST_TYPES = MOUNTING_HOST_TYPES;
+  window.EDGE_ENDPOINT_TYPES = EDGE_ENDPOINT_TYPES;
   window.FacilityStore = FacilityStore;
   window.toggleFacilityModal = toggleFacilityModal;
   window.renderFacilityManager = renderFacilityManager;
