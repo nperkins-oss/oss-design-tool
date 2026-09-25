@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.13-alpha] - 2026-09-25
+
+### Added
+- **Native Facility & Enclosure Creation Routing (`js/tools/bom.js`, `js/renderers/render_cards.js`, `js/core/facility.js`)**:
+  - Replaced browser `prompt()` popups when selecting `+ New Location...` in the BOM and catalog hardware cards with direct routing to the Facility & Enclosure creation tool (`openFacilityCreationForLocation`).
+  - Added pending location assignment context (`getPendingFacilityLocationContext` / `clearPendingFacilityLocationContext`) so when a user saves a new Space (`saveInlineSpace`) or Enclosure (`saveInlineHost`), the pending item is automatically assigned and the select element is updated immediately.
+- **Top-Docked Unassigned Equipment in Enclosure Visualizer (`index.html` & `js/tools/rack.js`)**:
+  - Removed the bottom-of-rack unassigned equipment tray from all 5 host elevation frames, eliminating the need to scroll past 42U racks or tall utility poles.
+  - Implemented `#rackUnassignedStagingDock` directly above the rack elevation frame with live compatibility badges, drag-down into slots, and 1-click `[+ Mount Here]` quick-slotting.
+  - Added a dedicated 3rd tab **"Staging"** (`#hostTabBtn-staging` & `#hostTabContent-staging`) in the Enclosure Visualizer right sidebar with live unassigned item counts, specs, and instant mounting actions.
+- **Unassigned Hardware Staging Bin in Facility Spaces View (`js/core/facility.js`)**:
+  - Added full-width **"Unassigned Quote Equipment Staging"** tray (`#facilityUnassignedHardwareTray`) directly below the 3-column facility hierarchy.
+  - Implemented HTML5 drag-and-drop (`handleHardwareStagingDragStart`, `handleSpaceCardDrop`, `handleEnclosureCardDrop`) allowing users to drag staged devices directly onto Space cards (assigning to Space Field) or Enclosure cards.
+  - Added 1-click `[Assign All to {Space} Field]`, quick enclosure selector dropdowns, and omnipresent cross-navigation links.
+- **Physical Layout Consistency Pass (`js/tools/physical_layout.js`)**:
+  - **Field Space Canvas Rendering**: Updated SVG canvas rendering for space-level field terminations (`${Space} • Field`) to display a dashed amber zone boundary and `[FIELD]` badge instead of a server rack chassis.
+  - **Grouped Termination Selector**: Grouped inspector dropdown into `Spaces & Zones (Field / Unenclosed)` and `Racks & Enclosures`.
+  - **BOM Location & Mounting Synchronization**: Updated `updateNodeCloset` and `updateNodeMountMethod` to synchronize underlying BOM items (`item.closetName`, `item.rackId`, `item.mountMethod`) and trigger `FacilityStore.notifyWorkspaceChange()`.
+  - **4-Way Cross-Navigation**: Added Topology, BOM, Enclosure, and Space action buttons to device drop inspectors.
+
+---
+
 ## [0.10.12-alpha] - 2026-09-25
 
 ### Added

@@ -1266,7 +1266,29 @@ function saveInlineSpace() {
   activeFacilitySpaceId = s.id;
   facilityActiveForm = null;
   renderFacilityManager();
-  if (typeof showToast === "function") showToast(`Added space "${name}"`);
+
+  const newLocKey = `${s.name} • Field`;
+  const pendingCtx = (typeof getPendingFacilityLocationContext === "function") ? getPendingFacilityLocationContext() : null;
+  if (pendingCtx) {
+    if (typeof clearPendingFacilityLocationContext === "function") clearPendingFacilityLocationContext();
+
+    if (pendingCtx.selectEl) {
+      const opt = document.createElement("option");
+      opt.value = newLocKey;
+      opt.text = `${s.name} (Space / Field)`;
+      pendingCtx.selectEl.insertBefore(opt, pendingCtx.selectEl.lastElementChild);
+      pendingCtx.selectEl.value = newLocKey;
+      pendingCtx.selectEl.setAttribute("data-previous-val", newLocKey);
+    }
+    if (typeof pendingCtx.callback === "function") {
+      pendingCtx.callback(newLocKey);
+    }
+    if (typeof showToast === "function") {
+      showToast(`Created space "${name}" and assigned equipment!`);
+    }
+  } else {
+    if (typeof showToast === "function") showToast(`Added space "${name}"`);
+  }
 }
 
 function saveInlineHost() {
@@ -1334,8 +1356,30 @@ function saveInlineHost() {
   FacilityStore.addHost(name, hostType, activeFacilitySpaceId, options);
   facilityActiveForm = null;
   renderFacilityManager();
-  if (typeof showToast === "function") {
-    showToast(`Added ${name} (${FacilityStore.HOST_TYPES[hostType]?.label || hostType})`);
+
+  const hostLocKey = currentSpace ? `${currentSpace.name} • ${name}` : name;
+  const pendingCtx = (typeof getPendingFacilityLocationContext === "function") ? getPendingFacilityLocationContext() : null;
+  if (pendingCtx) {
+    if (typeof clearPendingFacilityLocationContext === "function") clearPendingFacilityLocationContext();
+
+    if (pendingCtx.selectEl) {
+      const opt = document.createElement("option");
+      opt.value = hostLocKey;
+      opt.text = hostLocKey;
+      pendingCtx.selectEl.insertBefore(opt, pendingCtx.selectEl.lastElementChild);
+      pendingCtx.selectEl.value = hostLocKey;
+      pendingCtx.selectEl.setAttribute("data-previous-val", hostLocKey);
+    }
+    if (typeof pendingCtx.callback === "function") {
+      pendingCtx.callback(hostLocKey);
+    }
+    if (typeof showToast === "function") {
+      showToast(`Created enclosure "${name}" and assigned equipment!`);
+    }
+  } else {
+    if (typeof showToast === "function") {
+      showToast(`Added ${name} (${FacilityStore.HOST_TYPES[hostType]?.label || hostType})`);
+    }
   }
 }
 
@@ -1348,9 +1392,10 @@ function updateSpacePoleHeight(spaceId, heightFt) {
 }
 
 // -----------------------------------------------------------
-// Drag & Drop Enclosures Between Spaces (Requirement 5)
+// Drag & Drop Enclosures & Hardware Between Spaces (Requirement 2 & 5)
 // -----------------------------------------------------------
 let facilityDraggedEncId = null;
+let facilityDraggedHardwareId = null;
 
 function handleEnclosureDragStart(event, encId) {
   facilityDraggedEncId = encId;
@@ -1364,25 +1409,118 @@ function handleEnclosureDragEnd(event) {
   facilityDraggedEncId = null;
   const el = event.currentTarget;
   if (el) el.style.opacity = "1";
-  document.querySelectorAll(".space-drop-target").forEach(card => {
-    card.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+  document.querySelectorAll(".space-drop-target, .enclosure-drop-target").forEach(card => {
+    card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "ring-emerald-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400", "border-emerald-400");
+  });
+}
+
+function handleHardwareStagingDragStart(event, instanceId) {
+  facilityDraggedHardwareId = instanceId;
+  event.dataTransfer.setData("hardwareInstanceId", instanceId);
+  event.dataTransfer.effectAllowed = "move";
+  const el = event.currentTarget;
+  if (el) el.style.opacity = "0.4";
+}
+
+function handleHardwareStagingDragEnd(event) {
+  facilityDraggedHardwareId = null;
+  const el = event.currentTarget;
+  if (el) el.style.opacity = "1";
+  document.querySelectorAll(".space-drop-target, .enclosure-drop-target").forEach(card => {
+    card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "ring-emerald-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400", "border-emerald-400");
   });
 }
 
 function handleSpaceCardDragOver(event, spaceId) {
-  if (!facilityDraggedEncId) return;
+  if (!facilityDraggedEncId && !facilityDraggedHardwareId) return;
   event.preventDefault();
   event.dataTransfer.dropEffect = "move";
   const card = event.currentTarget;
   if (card && !card.classList.contains("ring-2")) {
-    card.classList.add("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+    card.classList.add("ring-2", facilityDraggedHardwareId ? "ring-amber-400" : "ring-indigo-400", "bg-indigo-950/60", facilityDraggedHardwareId ? "border-amber-400" : "border-indigo-400");
   }
 }
 
 function handleSpaceCardDragLeave(event, spaceId) {
   const card = event.currentTarget;
   if (card) {
-    card.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+    card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400");
+  }
+}
+
+function handleEnclosureCardDragOver(event) {
+  if (!facilityDraggedHardwareId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  const card = event.currentTarget;
+  if (card && !card.classList.contains("ring-2")) {
+    card.classList.add("ring-2", "ring-emerald-400", "bg-emerald-950/40", "border-emerald-400");
+  }
+}
+
+function handleEnclosureCardDragLeave(event) {
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-emerald-400", "bg-emerald-950/40", "border-emerald-400");
+  }
+}
+
+function handleEnclosureCardDrop(event, encLocName) {
+  event.preventDefault();
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-emerald-400", "bg-emerald-950/40", "border-emerald-400");
+  }
+  const hwId = event.dataTransfer.getData("hardwareInstanceId") || facilityDraggedHardwareId;
+  facilityDraggedHardwareId = null;
+  if (hwId && encLocName) {
+    assignHardwareToLocation(hwId, encLocName);
+  }
+}
+
+function assignHardwareToLocation(instanceId, targetLoc) {
+  if (!instanceId || !targetLoc || typeof projectBOM === "undefined") return;
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+
+  const normalized = FacilityStore.normalize(targetLoc);
+  item.closetName = normalized;
+  item.rackId = normalized;
+  item.rackSlot = null;
+  item.rackU = null;
+
+  FacilityStore.notifyWorkspaceChange();
+  renderFacilityManager();
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof showToast === "function") {
+    showToast(`Assigned ${item.model} to ${normalized}`);
+  }
+}
+
+function assignAllUnassignedToSpace(spaceName) {
+  if (!spaceName || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const targetLoc = `${spaceName} • Field`;
+  let count = 0;
+
+  projectBOM.forEach(item => {
+    if (item.parentInstanceId) return;
+    const loc = FacilityStore.normalize(item.closetName || item.rackId);
+    if (loc === FacilityStore.UNASSIGNED) {
+      item.closetName = targetLoc;
+      item.rackId = targetLoc;
+      item.rackSlot = null;
+      item.rackU = null;
+      count++;
+    }
+  });
+
+  if (count > 0) {
+    FacilityStore.notifyWorkspaceChange();
+    renderFacilityManager();
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof showToast === "function") {
+      showToast(`Assigned ${count} device${count === 1 ? '' : 's'} to ${spaceName} Field`);
+    }
   }
 }
 
@@ -1390,7 +1528,18 @@ function handleSpaceCardDrop(event, targetSpaceId) {
   event.preventDefault();
   const card = event.currentTarget;
   if (card) {
-    card.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+    card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400");
+  }
+
+  // Check if hardware drop from staging bin
+  const hwId = event.dataTransfer.getData("hardwareInstanceId") || facilityDraggedHardwareId;
+  facilityDraggedHardwareId = null;
+  if (hwId) {
+    const targetSpace = FacilityStore.getSpaces().find(s => s.id === targetSpaceId);
+    if (targetSpace) {
+      assignHardwareToLocation(hwId, `${targetSpace.name} • Field`);
+    }
+    return;
   }
 
   const encId = event.dataTransfer.getData("text/plain") || facilityDraggedEncId;
@@ -1786,10 +1935,13 @@ function renderFacilityManager() {
 
             return `
               <div 
-                class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5 hover:border-slate-700 transition-colors"
+                class="enclosure-drop-target p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5 hover:border-slate-700 transition-colors"
                 draggable="true"
                 ondragstart="handleEnclosureDragStart(event, '${e.id}')"
                 ondragend="handleEnclosureDragEnd(event)"
+                ondragover="handleEnclosureCardDragOver(event)"
+                ondragleave="handleEnclosureCardDragLeave(event)"
+                ondrop="handleEnclosureCardDrop(event, '${locName}')"
                 data-enclosure-id="${e.id}"
               >
                 <!-- Drag Handle Bar (Requirement 5) -->
@@ -1943,8 +2095,133 @@ function renderFacilityManager() {
             </div>
           `;
         })() : ''}
-      </div>
+    </div>
 
+    <!-- Unassigned Quote Hardware Staging Bin (Requirement 2: Prominent Spaces Area Display) -->
+    ${(() => {
+      const unassignedItems = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
+        if (item.parentInstanceId) return false;
+        const loc = FacilityStore.normalize(item.closetName || item.location || item.rackId);
+        return loc === FacilityStore.UNASSIGNED;
+      }) : [];
+
+      const availableEnclosures = FacilityStore.getEnclosures();
+
+      return `
+        <div id="facilityUnassignedHardwareTray" class="mt-6 p-4 rounded-2xl border ${unassignedItems.length > 0 ? 'border-amber-500/50 bg-amber-950/20 shadow-amber-950/20' : 'border-slate-800 bg-slate-950/60'} shadow-xl space-y-3 transition-all">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-850">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-xl ${unassignedItems.length > 0 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm' : 'bg-slate-900 text-slate-500 border border-slate-800'}">
+                <i data-lucide="inbox" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <h3 class="text-xs font-bold text-white uppercase tracking-wider">Unassigned Quote Equipment Staging</h3>
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full ${unassignedItems.length > 0 ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">
+                    ${unassignedItems.length} Device${unassignedItems.length === 1 ? '' : 's'} Unassigned
+                  </span>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-0.5">
+                  Hardware added to quote without an assigned space or rack. Drag onto spaces/enclosures above, or click below to assign.
+                </p>
+              </div>
+            </div>
+
+            ${unassignedItems.length > 0 && currentSpace ? `
+              <div class="flex items-center gap-2 shrink-0">
+                <button 
+                  onclick="assignAllUnassignedToSpace('${escapeHTML(currentSpace.name)}')" 
+                  class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                  title="Assign all unassigned equipment to ${escapeHTML(currentSpace.name)} Field"
+                >
+                  <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+                  <span>Assign All to ${escapeHTML(currentSpace.name)} Field</span>
+                </button>
+              </div>
+            ` : ''}
+          </div>
+
+          ${unassignedItems.length === 0 ? `
+            <div class="py-6 text-center text-slate-500 text-xs bg-slate-950/40 rounded-xl border border-dashed border-slate-850">
+              <i data-lucide="check-circle-2" class="w-6 h-6 mx-auto mb-1.5 text-emerald-500/60"></i>
+              <p class="font-medium text-slate-300">All quote equipment is assigned to a physical space or mounting enclosure.</p>
+              <p class="text-[10px] text-slate-500 mt-0.5">New devices added from the Quote BOM or Catalog will appear here ready to assign.</p>
+            </div>
+          ` : `
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 max-h-72 overflow-y-auto pr-1">
+              ${unassignedItems.map(item => {
+                const mount = (item.mountMethod || "wall").toUpperCase();
+                const isRadio = item.role === "Wireless Bridge" || item.category?.includes("wireless");
+                const isCam = item.role === "Camera" || item.category?.includes("camera");
+                const isDoor = item.role === "Access Control" || item.category?.includes("access");
+                const isSwitch = item.role === "Access Switch" || item.role === "Core Switch" || item.role === "Distribution Switch";
+                const isServer = item.role === "Server" || item.category === "servers";
+                const iconName = isRadio ? "radio" : (isCam ? "camera" : (isDoor ? "door-closed" : (isSwitch ? "server" : (isServer ? "hard-drive" : "cpu"))));
+
+                return `
+                  <div 
+                    class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 hover:border-amber-500/60 transition-all flex flex-col justify-between gap-2 shadow-sm select-none"
+                    draggable="true"
+                    ondragstart="handleHardwareStagingDragStart(event, '${item.instanceId}')"
+                    ondragend="handleHardwareStagingDragEnd(event)"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <div class="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-amber-400 shrink-0">
+                          <i data-lucide="${iconName}" class="w-3.5 h-3.5"></i>
+                        </div>
+                        <div class="min-w-0">
+                          <span class="font-bold text-white text-xs block truncate" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+                          <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.role || 'Hardware')} &bull; ${item.consumedPoEWatts || item.baseWatts || 0}W</span>
+                        </div>
+                      </div>
+                      <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-950/80 border border-amber-800/80 text-amber-300 font-bold shrink-0">
+                        ${mount}
+                      </span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-900 text-xs">
+                      ${currentSpace ? `
+                        <button 
+                          onclick="assignHardwareToLocation('${item.instanceId}', '${escapeHTML(currentSpace.name)} • Field')" 
+                          class="flex-1 px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[10px] font-bold border border-indigo-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                          title="Assign to ${escapeHTML(currentSpace.name)} (Field / Space Level)"
+                        >
+                          <i data-lucide="plus" class="w-3 h-3"></i> To ${escapeHTML(currentSpace.name)}
+                        </button>
+                      ` : ''}
+
+                      <!-- Enclosure Quick Dropdown -->
+                      <select 
+                        onchange="if(this.value) assignHardwareToLocation('${item.instanceId}', this.value)" 
+                        class="bg-slate-900 border border-slate-700 text-slate-300 text-[10px] rounded px-1.5 py-1 focus:outline-none focus:border-brand-500 max-w-[110px] truncate cursor-pointer"
+                        title="Mount in a specific Enclosure"
+                      >
+                        <option value="">Mount in...</option>
+                        ${availableEnclosures.map(enc => {
+                          const sp = FacilityStore.getSpaces().find(s => s.id === enc.spaceId);
+                          const encLoc = sp ? `${sp.name} • ${enc.name}` : enc.name;
+                          return `<option value="${escapeHTML(encLoc)}">${escapeHTML(encLoc)}</option>`;
+                        }).join('')}
+                      </select>
+
+                      <div class="flex items-center gap-0.5 shrink-0">
+                        <button onclick="jumpToBomTarget('${item.instanceId}')" class="p-1 text-slate-400 hover:text-emerald-300 transition-colors" title="View in BOM">
+                          <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+                        </button>
+                        <button onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')" class="p-1 text-slate-400 hover:text-amber-300 transition-colors" title="View in Physical Layout">
+                          <i data-lucide="map" class="w-3 h-3"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+        </div>
+      `;
+    })()}
     </div>
   `;
 
@@ -2188,44 +2465,30 @@ if (typeof window !== "undefined") {
   window.updateSpacePoleHeight = updateSpacePoleHeight;
   window.handleEnclosureDragStart = handleEnclosureDragStart;
   window.handleEnclosureDragEnd = handleEnclosureDragEnd;
+  window.handleHardwareStagingDragStart = handleHardwareStagingDragStart;
+  window.handleHardwareStagingDragEnd = handleHardwareStagingDragEnd;
   window.handleSpaceCardDragOver = handleSpaceCardDragOver;
   window.handleSpaceCardDragLeave = handleSpaceCardDragLeave;
   window.handleSpaceCardDrop = handleSpaceCardDrop;
+  window.handleEnclosureCardDragOver = handleEnclosureCardDragOver;
+  window.handleEnclosureCardDragLeave = handleEnclosureCardDragLeave;
+  window.handleEnclosureCardDrop = handleEnclosureCardDrop;
+  window.assignHardwareToLocation = assignHardwareToLocation;
+  window.assignAllUnassignedToSpace = assignAllUnassignedToSpace;
   window.promptAssignHardwareToSpace = promptAssignHardwareToSpace;
 }
 
 function promptAssignHardwareToSpace(spaceName) {
-  if (!spaceName || typeof projectBOM === "undefined") return;
-
-  const unassignedHardware = projectBOM.filter(item => {
-    if (item.parentInstanceId) return false;
-    const loc = FacilityStore.normalize(item.closetName || item.rackId);
-    return loc === FacilityStore.UNASSIGNED;
-  });
-
-  if (unassignedHardware.length === 0) {
-    alert("No unassigned devices currently in Quote Staging. Add a P2P radio, camera, or sensor in the Quote BOM first.");
-    return;
+  if (!spaceName) return;
+  const tray = document.getElementById("facilityUnassignedHardwareTray");
+  if (tray) {
+    tray.scrollIntoView({ behavior: "smooth", block: "center" });
+    tray.classList.add("ring-2", "ring-amber-400");
+    setTimeout(() => {
+      tray.classList.remove("ring-2", "ring-amber-400");
+    }, 2500);
+    if (typeof showToast === "function") {
+      showToast(`Select or drag a staged device below to assign to "${spaceName}".`);
+    }
   }
-
-  const promptOptions = unassignedHardware.map((item, idx) => `${idx + 1}: ${item.model} (${item.role || 'Hardware'})`).join("\n");
-  const choice = prompt(`Select unassigned device to assign to space '${spaceName}' (Enter # 1-${unassignedHardware.length}):\n\n${promptOptions}`, "1");
-  if (!choice) return;
-
-  const idx = parseInt(choice.trim(), 10) - 1;
-  if (isNaN(idx) || idx < 0 || idx >= unassignedHardware.length) {
-    alert("Invalid selection number.");
-    return;
-  }
-
-  const selectedItem = unassignedHardware[idx];
-  const targetLoc = `${spaceName} • Field`;
-  selectedItem.closetName = targetLoc;
-  selectedItem.rackId = targetLoc;
-  selectedItem.rackSlot = null;
-
-  FacilityStore.notifyWorkspaceChange();
-  renderFacilityManager();
-  if (typeof updateBOMView === "function") updateBOMView();
-  if (typeof showToast === "function") showToast(`Assigned ${selectedItem.model} to ${spaceName}`);
 }

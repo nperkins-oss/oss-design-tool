@@ -46,35 +46,37 @@ function toggleRackModal() {
 }
 
 function setHostSidebarTab(tabName) {
-  activeHostTab = tabName === "endpoints" ? "endpoints" : "telemetry";
+  activeHostTab = tabName === "endpoints" ? "endpoints" : (tabName === "staging" ? "staging" : "telemetry");
   
   const telBtn = document.getElementById("hostTabBtn-telemetry");
   const endBtn = document.getElementById("hostTabBtn-endpoints");
+  const stgBtn = document.getElementById("hostTabBtn-staging");
   const telContent = document.getElementById("hostTabContent-telemetry");
   const endContent = document.getElementById("hostTabContent-endpoints");
+  const stgContent = document.getElementById("hostTabContent-staging");
+
+  const btns = [telBtn, endBtn, stgBtn];
+  const contents = [telContent, endContent, stgContent];
+
+  btns.forEach(b => {
+    if (b) {
+      b.classList.remove("text-white", "bg-indigo-600", "shadow");
+      b.classList.add("text-slate-400");
+    }
+  });
+  contents.forEach(c => {
+    if (c) c.classList.add("hidden");
+  });
 
   if (activeHostTab === "endpoints") {
-    if (endBtn) {
-      endBtn.classList.replace("text-slate-400", "text-white");
-      endBtn.classList.add("bg-indigo-600", "shadow");
-    }
-    if (telBtn) {
-      telBtn.classList.replace("text-white", "text-slate-400");
-      telBtn.classList.remove("bg-indigo-600", "shadow");
-    }
-    if (telContent) telContent.classList.add("hidden");
+    if (endBtn) { endBtn.classList.replace("text-slate-400", "text-white"); endBtn.classList.add("bg-indigo-600", "shadow"); }
     if (endContent) endContent.classList.remove("hidden");
+  } else if (activeHostTab === "staging") {
+    if (stgBtn) { stgBtn.classList.replace("text-slate-400", "text-white"); stgBtn.classList.add("bg-indigo-600", "shadow"); }
+    if (stgContent) stgContent.classList.remove("hidden");
   } else {
-    if (telBtn) {
-      telBtn.classList.replace("text-slate-400", "text-white");
-      telBtn.classList.add("bg-indigo-600", "shadow");
-    }
-    if (endBtn) {
-      endBtn.classList.replace("text-white", "text-slate-400");
-      endBtn.classList.remove("bg-indigo-600", "shadow");
-    }
+    if (telBtn) { telBtn.classList.replace("text-slate-400", "text-white"); telBtn.classList.add("bg-indigo-600", "shadow"); }
     if (telContent) telContent.classList.remove("hidden");
-    if (endContent) endContent.classList.add("hidden");
   }
 
   if (window.lucide) lucide.createIcons();
@@ -714,6 +716,10 @@ function renderRackVisualizer() {
     `;
   }
 
+  // Render Prominent Staging Dock at the TOP of elevation column (Requirement 2)
+  renderRackUnassignedStagingDock(unassignedItems, parsed, activeEnc);
+  renderHostStagingDrawer(unassignedItems, parsed, activeEnc);
+
   if (hostType === "security_cabinet") {
     renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parsed, activeEnc);
   } else if (hostType === "industrial_din") {
@@ -850,8 +856,6 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
     }
   }
 
-  // Append Unassigned Staging Tray
-  railHTML += renderUnassignedTrayHTML(unassignedItems, "equipment_rack", "Drag into empty U-slot above");
   frame.innerHTML = railHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -986,8 +990,6 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
     </div>
   `;
 
-  // Append Unassigned Staging Tray
-  bayGridHTML += renderUnassignedTrayHTML(unassignedItems, "security_cabinet", "Drag into empty Bay slot above");
   frame.innerHTML = bayGridHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -1103,8 +1105,6 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
     `;
   }
 
-  // Append Unassigned Staging Tray
-  dinHTML += renderUnassignedTrayHTML(unassignedItems, "industrial_din", "Drag into empty DIN rail above");
   frame.innerHTML = dinHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -1288,9 +1288,6 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
   });
 
   poleHTML += `</div>`;
-
-  // Append Unassigned Staging Tray
-  poleHTML += renderUnassignedTrayHTML(unassignedItems, "structural_mount", "Drag into elevation zone above");
   frame.innerHTML = poleHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -1387,9 +1384,6 @@ function renderArchitecturalBackboardFrame(frame, assignedItems, unassignedItems
   });
 
   boardHTML += `</div>`;
-
-  // Append Unassigned Staging Tray
-  boardHTML += renderUnassignedTrayHTML(unassignedItems, "architectural_backboard", "Drag into backboard quadrant above");
   frame.innerHTML = boardHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -1397,49 +1391,119 @@ function renderArchitecturalBackboardFrame(frame, assignedItems, unassignedItems
 }
 
 // -----------------------------------------------------------
-// Shared Unassigned Staging Tray Component (With Compatibility Badges)
+// Dedicated Prominent Unassigned Staging Dock & Drawer (Requirement 2)
 // -----------------------------------------------------------
-function renderUnassignedTrayHTML(unassignedItems, activeHostType = "equipment_rack", instructionText = "Drag into empty slot above") {
-  return `
+function renderRackUnassignedStagingDock(unassignedItems, parsed, activeEnc) {
+  const container = document.getElementById("rackUnassignedStagingDock");
+  if (!container) return;
+
+  const hostType = parsed.hostType || "equipment_rack";
+  const hostLabel = FacilityStore.HOST_TYPES[hostType]?.label || "Mounting Host";
+
+  if (!unassignedItems || unassignedItems.length === 0) {
+    container.innerHTML = `
+      <div 
+        ondragover="handleLocationTransferDragOver(event)"
+        ondragleave="handleLocationTransferDragLeave(event)"
+        ondrop="handleLocationTransferDrop(event, 'Unassigned')"
+        class="px-3 py-2 bg-slate-950/70 border border-dashed border-slate-800 rounded-xl flex items-center justify-between text-xs text-slate-400 select-none hover:border-slate-700 transition-colors"
+        title="All project equipment is currently slotted or assigned. Drag any slotted item here to unmount back to Staging."
+      >
+        <span class="flex items-center gap-1.5 font-medium text-[11px] text-slate-300">
+          <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+          <span>All Quote Equipment Housed</span>
+        </span>
+        <span class="text-[10px] text-slate-500 font-mono">
+          Drag slotted item here to unmount
+        </span>
+      </div>
+    `;
+    return;
+  }
+
+  // Count compatible items for active host
+  let compatCount = 0;
+  unassignedItems.forEach(it => {
+    const comp = checkDeviceHostCompatibility(it, hostType);
+    if (comp.compatible) compatCount++;
+  });
+
+  container.innerHTML = `
     <div 
-      class="pt-3 mt-3 border-t border-slate-800 transition-all rounded-xl p-1"
       ondragover="handleLocationTransferDragOver(event)"
       ondragleave="handleLocationTransferDragLeave(event)"
       ondrop="handleLocationTransferDrop(event, 'Unassigned')"
-      title="Drop mounted hardware here to unmount and return to Unassigned staging area"
+      class="p-3 bg-gradient-to-r from-amber-950/30 via-slate-950/80 to-indigo-950/30 border border-amber-500/40 rounded-xl space-y-2.5 shadow-lg select-none transition-all"
     >
-      <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          <i data-lucide="inbox" class="w-3.5 h-3.5"></i> Unassigned Staging Area (${unassignedItems.length})
-        </span>
-        <span class="text-[9px] text-slate-500 font-mono">${instructionText}</span>
-      </div>
-      <div class="space-y-1.5 max-h-36 overflow-y-auto pr-1">
-        ${unassignedItems.length === 0 ? `
-          <div class="p-2.5 rounded-lg border border-dashed border-slate-800 text-center text-[10px] text-slate-500">
-            No unassigned items. All hardware is currently mounted or mapped.
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 shadow-sm">
+            <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
           </div>
-        ` : unassignedItems.map(it => {
-          const compat = checkDeviceHostCompatibility(it, activeHostType);
+          <div>
+            <span class="text-xs font-bold text-white flex items-center gap-1.5">
+              <span>Unassigned Hardware Staging</span>
+              <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                ${unassignedItems.length} Waiting
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5">
+          ${compatCount > 0 ? `
+            <button 
+              onclick="autoMountAllToActiveRack()" 
+              class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold shadow flex items-center gap-1 transition-colors cursor-pointer"
+              title="Auto-slot ${compatCount} compatible item${compatCount === 1 ? '' : 's'} into this ${hostLabel}"
+            >
+              <i data-lucide="layout-grid" class="w-3 h-3"></i> Auto-Mount (${compatCount})
+            </button>
+          ` : ''}
+          <span class="text-[10px] text-slate-400 font-mono hidden sm:inline">Drag down into slots</span>
+        </div>
+      </div>
+
+      <!-- Horizontal Carousel of Staged Cards -->
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+        ${unassignedItems.map(it => {
+          const comp = checkDeviceHostCompatibility(it, hostType);
+          const isCompatible = comp.compatible;
+
           return `
             <div 
-              class="bg-slate-900/90 border ${compat.compatible ? 'border-amber-500/40 hover:border-amber-400' : 'border-slate-800 hover:border-slate-700 opacity-80'} p-2 rounded-lg flex items-center justify-between cursor-move shadow-sm select-none"
               draggable="true"
               ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+              class="shrink-0 bg-slate-900 border ${isCompatible ? 'border-indigo-500/40 hover:border-indigo-400' : 'border-slate-800 hover:border-slate-700 opacity-80'} p-2 rounded-lg cursor-grab active:cursor-grabbing text-xs space-y-1 w-56 shadow transition-all group"
+              title="${comp.advisory || 'Drag into empty slot or click Mount Here'}"
             >
-              <div class="min-w-0 flex items-center gap-2">
-                <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/40 px-1 py-0.5 rounded border border-amber-800/60 shrink-0">
-                  ${it.rackUnits ? `${it.rackUnits}U` : (it.role || 'Device')}
+              <div class="flex items-start justify-between gap-1">
+                <span class="font-bold text-white text-[11px] truncate block" title="${escapeHTML(it.model)}">${escapeHTML(it.model)}</span>
+                <span class="text-[8.5px] font-mono px-1 py-0.2 rounded font-bold shrink-0 ${isCompatible ? 'bg-emerald-950/80 border border-emerald-700/60 text-emerald-300' : 'bg-slate-800 border border-slate-700 text-slate-400'}">
+                  ${comp.matchBadge || (isCompatible ? 'COMPATIBLE' : 'SECONDARY')}
                 </span>
-                <span class="text-xs font-bold text-slate-200 truncate block">${escapeHTML(it.model)}</span>
               </div>
-              <div class="flex items-center gap-2 shrink-0">
-                ${compat.compatible ? `
-                  <span class="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/80">● Form-Factor Match</span>
-                ` : `
-                  <span class="text-[9px] font-mono font-bold text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80" title="${compat.advisory}">⚠️ ${compat.matchBadge}</span>
-                `}
-                <span class="text-[10px] font-mono text-slate-400">${escapeHTML(it.vendor || '')}</span>
+
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                <span>${escapeHTML(it.role || 'Hardware')}</span>
+                <span class="text-amber-300 font-bold">${it.consumedPoEWatts || it.baseWatts || 0}W</span>
+              </div>
+
+              <div class="pt-1 border-t border-slate-800 flex items-center justify-between gap-1">
+                <button 
+                  onclick="mountItemToFirstAvailableSlot('${it.instanceId}')" 
+                  class="flex-1 px-1.5 py-0.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[9.5px] font-bold border border-indigo-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  title="Mount into first free slot of this host"
+                >
+                  <i data-lucide="arrow-down" class="w-2.5 h-2.5"></i> Mount Here
+                </button>
+                <button 
+                  onclick="jumpToBomTarget('${it.instanceId}')" 
+                  class="p-1 text-slate-400 hover:text-emerald-300 transition-colors"
+                  title="Inspect in BOM"
+                >
+                  <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+                </button>
               </div>
             </div>
           `;
@@ -1447,6 +1511,179 @@ function renderUnassignedTrayHTML(unassignedItems, activeHostType = "equipment_r
       </div>
     </div>
   `;
+}
+
+function renderHostStagingDrawer(unassignedItems, parsed, activeEnc) {
+  const container = document.getElementById("hostStagingDrawerContainer");
+  const countBadge = document.getElementById("hostStagingCount");
+  const tabBadge = document.getElementById("hostStagingTabBadge");
+
+  const count = unassignedItems ? unassignedItems.length : 0;
+  if (countBadge) countBadge.innerText = count;
+  if (tabBadge) tabBadge.innerText = `${count} Device${count === 1 ? '' : 's'}`;
+
+  if (!container) return;
+
+  if (count === 0) {
+    container.innerHTML = `
+      <div class="py-8 text-center text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-dashed border-slate-800">
+        <i data-lucide="check-circle" class="w-6 h-6 mx-auto mb-1.5 text-emerald-400/60"></i>
+        <p class="font-medium text-slate-300">All equipment is mounted or assigned.</p>
+        <p class="text-[10px] text-slate-500 mt-0.5">Drag slotted items here to return to staging.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const hostType = parsed.hostType || "equipment_rack";
+
+  container.innerHTML = unassignedItems.map(it => {
+    const comp = checkDeviceHostCompatibility(it, hostType);
+    return `
+      <div 
+        draggable="true"
+        ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+        class="bg-slate-950 p-2.5 rounded-xl border ${comp.compatible ? 'border-indigo-500/40' : 'border-slate-800'} space-y-2 cursor-grab active:cursor-grabbing hover:border-indigo-400 transition-all shadow-sm"
+      >
+        <div class="flex items-start justify-between gap-1">
+          <div class="min-w-0">
+            <span class="font-bold text-white text-xs block truncate">${escapeHTML(it.model)}</span>
+            <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(it.role || 'Hardware')} &bull; ${it.consumedPoEWatts || it.baseWatts || 0}W</span>
+          </div>
+          <span class="text-[9px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${comp.compatible ? 'bg-emerald-950/80 border border-emerald-700/60 text-emerald-300' : 'bg-slate-800 text-slate-400'}">
+            ${comp.matchBadge || 'SECONDARY'}
+          </span>
+        </div>
+        <div class="flex items-center gap-1.5 pt-1.5 border-t border-slate-900">
+          <button 
+            onclick="mountItemToFirstAvailableSlot('${it.instanceId}')"
+            class="flex-1 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[10px] font-bold border border-indigo-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+          >
+            <i data-lucide="plus" class="w-3 h-3"></i> Mount in this Host
+          </button>
+          <button 
+            onclick="jumpToBomTarget('${it.instanceId}')"
+            class="p-1 bg-slate-900 text-slate-400 hover:text-emerald-300 rounded border border-slate-800 transition-colors"
+            title="View in BOM"
+          >
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function mountItemToFirstAvailableSlot(instanceId) {
+  if (!instanceId || typeof projectBOM === "undefined") return;
+  const parsed = FacilityStore.parse(activeRackId);
+  const hostType = parsed.hostType || "equipment_rack";
+
+  if (hostType === "equipment_rack") {
+    // Determine occupied slots in active rack
+    const occupied = new Set();
+    projectBOM.forEach(item => {
+      const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+      if (itemLoc === activeRackId && item.rackSlot) {
+        const span = parseInt(item.rackUnits, 10) || 1;
+        for (let u = item.rackSlot; u < item.rackSlot + span; u++) {
+          occupied.add(u);
+        }
+      }
+    });
+
+    let targetU = null;
+    for (let u = 1; u <= activeRackHeight; u++) {
+      if (!occupied.has(u)) {
+        targetU = u;
+        break;
+      }
+    }
+
+    if (targetU) {
+      const item = projectBOM.find(i => i.instanceId === instanceId);
+      if (item) {
+        item.rackSlot = targetU;
+        item.closetName = activeRackId;
+        item.rackId = activeRackId;
+        FacilityStore.notifyWorkspaceChange();
+        renderRackVisualizer();
+        if (typeof showToast === "function") {
+          showToast(`Mounted ${item.model} at U${targetU} in ${activeRackId}`);
+        }
+      }
+    } else {
+      if (typeof showToast === "function") showToast("No free rack units available in this rack.");
+    }
+  } else if (hostType === "security_cabinet") {
+    const occupied = new Set();
+    projectBOM.forEach(item => {
+      const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+      if (itemLoc === activeRackId && item.rackSlot) {
+        occupied.add(parseInt(item.rackSlot, 10));
+      }
+    });
+
+    let targetBay = 1;
+    for (let b = 1; b <= 16; b++) {
+      if (!occupied.has(b)) {
+        targetBay = b;
+        break;
+      }
+    }
+
+    const item = projectBOM.find(i => i.instanceId === instanceId);
+    if (item) {
+      item.rackSlot = targetBay;
+      item.closetName = activeRackId;
+      item.rackId = activeRackId;
+      FacilityStore.notifyWorkspaceChange();
+      renderRackVisualizer();
+      if (typeof showToast === "function") {
+        showToast(`Mounted ${item.model} in Bay ${targetBay}`);
+      }
+    }
+  } else if (hostType === "industrial_din") {
+    const item = projectBOM.find(i => i.instanceId === instanceId);
+    if (item) {
+      item.rackSlot = "Rail 1";
+      item.closetName = activeRackId;
+      item.rackId = activeRackId;
+      FacilityStore.notifyWorkspaceChange();
+      renderRackVisualizer();
+      if (typeof showToast === "function") {
+        showToast(`Mounted ${item.model} on DIN Rail`);
+      }
+    }
+  } else if (hostType === "structural_mount") {
+    const item = projectBOM.find(i => i.instanceId === instanceId);
+    if (item) {
+      item.rackSlot = "Mid-Pole";
+      item.closetName = activeRackId;
+      item.rackId = activeRackId;
+      FacilityStore.notifyWorkspaceChange();
+      renderRackVisualizer();
+      if (typeof showToast === "function") {
+        showToast(`Mounted ${item.model} on Pole Assembly`);
+      }
+    }
+  } else {
+    const item = projectBOM.find(i => i.instanceId === instanceId);
+    if (item) {
+      item.rackSlot = "Zone A";
+      item.closetName = activeRackId;
+      item.rackId = activeRackId;
+      FacilityStore.notifyWorkspaceChange();
+      renderRackVisualizer();
+      if (typeof showToast === "function") {
+        showToast(`Mounted ${item.model} on Backboard`);
+      }
+    }
+  }
+}
+
+function renderUnassignedTrayHTML(unassignedItems, activeHostType = "equipment_rack", instructionText = "Drag into empty slot above") {
+  return ""; // Rendered in renderRackUnassignedStagingDock at the top of the frame
 }
 
 // -----------------------------------------------------------
@@ -2272,4 +2509,7 @@ if (typeof window !== "undefined") {
   window.deleteActiveRackElevation = deleteActiveRackElevation;
   window.setHostSidebarTab = setHostSidebarTab;
   window.updatePoleZoneHeight = updatePoleZoneHeight;
+  window.renderRackUnassignedStagingDock = renderRackUnassignedStagingDock;
+  window.renderHostStagingDrawer = renderHostStagingDrawer;
+  window.mountItemToFirstAvailableSlot = mountItemToFirstAvailableSlot;
 }

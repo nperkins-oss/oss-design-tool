@@ -129,30 +129,46 @@ function formatMountMethodLabel(m) {
   }
 }
 
-function handleLocationDropdownChange(selectEl, callback) {
+let pendingFacilityLocationContext = null;
+
+function openFacilityCreationForLocation(ctx) {
+  pendingFacilityLocationContext = ctx;
+
+  // Open the Facility Hierarchy Modal
+  const modal = document.getElementById("facilityModal");
+  if (modal && modal.classList.contains("hidden")) {
+    if (typeof toggleFacilityModal === "function") {
+      toggleFacilityModal();
+    }
+  }
+
+  // Ensure we are in the Hierarchy & Spaces view
+  if (typeof switchFacilityView === "function") {
+    switchFacilityView("hierarchy");
+  }
+
+  // Open the Space creation form by default
+  if (typeof openFacilityAddForm === "function") {
+    openFacilityAddForm("add_space");
+  }
+
+  if (typeof showToast === "function") {
+    showToast("Opened Facility & Enclosure tool. Create a Space or Enclosure to assign your equipment.");
+  }
+}
+
+function handleLocationDropdownChange(selectEl, callback, context) {
   if (!selectEl) return;
   if (selectEl.value === "new_location") {
-    const c = prompt("Enter New Room / Space Name (e.g. IDF-2, Gate Pole, Rooftop, Parking Lot):", "Rooftop");
-    if (!c || !c.trim()) {
-      selectEl.value = selectEl.getAttribute("data-previous-val") || "Unassigned";
-      return;
-    }
-    const r = prompt("Enter Cabinet / Enclosure Name (Leave BLANK for Unenclosed Space / Field Mount):", "");
-    const rawTarget = (r && r.trim()) ? `${c.trim()} • ${r.trim()}` : `${c.trim()} • Field`;
+    const prevVal = selectEl.getAttribute("data-previous-val") || "Unassigned";
+    selectEl.value = prevVal;
 
-    const newKey = typeof FacilityStore !== "undefined"
-      ? FacilityStore.addLocation(rawTarget)
-      : rawTarget;
-
-    const opt = document.createElement("option");
-    opt.value = newKey;
-    opt.text = newKey.endsWith(" • Field") ? `${c.trim()} (Space / Field)` : newKey;
-    selectEl.insertBefore(opt, selectEl.lastElementChild);
-    selectEl.value = newKey;
-    selectEl.setAttribute("data-previous-val", newKey);
-
-    if (typeof callback === "function") callback(newKey);
-    showToast(`Created location: ${newKey}`);
+    openFacilityCreationForLocation({
+      selectEl: selectEl,
+      callback: callback,
+      context: context,
+      prevVal: prevVal
+    });
   } else {
     selectEl.setAttribute("data-previous-val", selectEl.value);
     if (typeof callback === "function") callback(selectEl.value);
@@ -2097,4 +2113,7 @@ function jumpToBomTarget(instanceId) {
 }
 
 window.jumpToBomTarget = jumpToBomTarget;
+window.openFacilityCreationForLocation = openFacilityCreationForLocation;
+window.getPendingFacilityLocationContext = () => pendingFacilityLocationContext;
+window.clearPendingFacilityLocationContext = () => { pendingFacilityLocationContext = null; };
 window.jumpToPhysicalLayoutTarget = typeof jumpToPhysicalLayoutTarget !== "undefined" ? jumpToPhysicalLayoutTarget : (typeof window !== "undefined" ? window.jumpToPhysicalLayoutTarget : null);

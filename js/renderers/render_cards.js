@@ -454,13 +454,41 @@ function renderAccessoryCard(acc) {
           ${allLocations.map(loc => `<option value="${escapeHTML(loc)}">${escapeHTML(loc)}</option>`).join('')}
           <option value="new_location">+ New Location...</option>
         </select>
-        <button onclick="addOpticsToBOM('${safeSku}', '${safeModel}', ${acc.msrp || 0}, 1, '${safeVendor}')" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
+        <button onclick="handleAddCatalogCardToBOM('accessories', '${safeSku}', '${safeSku}', '${safeModel}', ${acc.msrp || 0}, '${safeVendor}')" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
           <span>Add Accessory</span>
         </button>
       </div>
     </div>
   `;
+}
+
+function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor) {
+  const selectEl = document.getElementById(`targetLocSelect-${safeId}`) || document.getElementById(`targetAccLocSelect-${safeSku}`);
+  const targetLoc = selectEl ? selectEl.value : null;
+
+  const performAdd = (loc) => {
+    if (mode === "servers") {
+      if (typeof addServerToBOM === "function") addServerToBOM(safeId, loc);
+    } else if (mode === "cameras") {
+      if (typeof addCameraToBOM === "function") addCameraToBOM(safeId, loc);
+    } else if (mode === "access_control") {
+      if (typeof addAccessDeviceToBOM === "function") addAccessDeviceToBOM(safeId, loc);
+    } else if (mode === "wireless") {
+      if (typeof addWirelessToBOM === "function") addWirelessToBOM(safeId, loc);
+      else addOpticsToBOM(safeSku, safeModel, msrp, 1, safeVendor);
+    } else {
+      addOpticsToBOM(safeSku, safeModel, msrp, 1, safeVendor);
+    }
+  };
+
+  if (targetLoc === "new_location" && selectEl) {
+    handleLocationDropdownChange(selectEl, (createdLoc) => {
+      performAdd(createdLoc);
+    });
+  } else {
+    performAdd(targetLoc);
+  }
 }
 
 function renderCardByDomain(item, mode) {
@@ -472,15 +500,8 @@ function renderCardByDomain(item, mode) {
   const safeSku = escapeHTML(item.sku || item.id || "");
   const safeId = escapeHTML(item.id || item.sku || "");
 
-  // Domain-specific click handler
-  let addActionCode = `addOpticsToBOM('${safeSku}', '${safeModel}', ${item.msrp || 0}, 1, '${safeVendor}')`;
-  if (mode === "servers" || item.role === "Server" || item.category === "servers") {
-    addActionCode = `addServerToBOM('${safeId}', document.getElementById('targetLocSelect-${safeId}') ? document.getElementById('targetLocSelect-${safeId}').value : null)`;
-  } else if (mode === "cameras" || item.role === "Camera" || item.category === "cameras") {
-    addActionCode = `addCameraToBOM('${safeId}', document.getElementById('targetLocSelect-${safeId}') ? document.getElementById('targetLocSelect-${safeId}').value : null)`;
-  } else if (mode === "access_control" || item.role === "Access Control" || item.category === "access_control") {
-    addActionCode = `addAccessDeviceToBOM('${safeId}', document.getElementById('targetLocSelect-${safeId}') ? document.getElementById('targetLocSelect-${safeId}').value : null)`;
-  }
+  // Domain-specific click handler routing through handleAddCatalogCardToBOM
+  let addActionCode = `handleAddCatalogCardToBOM('${mode}', '${safeId}', '${safeSku}', '${safeModel}', ${item.msrp || 0}, '${safeVendor}')`;
 
   // Domain-specific telemetry pills
   let specStripHtml = "";
@@ -564,6 +585,7 @@ function renderCardByDomain(item, mode) {
 // Window Compatibility Exports
 window.handleAddSwitchToBOM = handleAddSwitchToBOM;
 window.handleAddFirewallToBOM = handleAddFirewallToBOM;
+window.handleAddCatalogCardToBOM = handleAddCatalogCardToBOM;
 window.renderSwitchCard = renderSwitchCard;
 window.renderFirewallCard = renderFirewallCard;
 window.renderOpticsCard = renderOpticsCard;

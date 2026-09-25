@@ -912,12 +912,25 @@ function renderSidebarTabContent() {
       `;
     }).join("");
   } else {
-    // Unplaced devices: DIN units, accessories, wireless radios, OR anything currently Unassigned
+    // Unplaced devices: any hardware in quote not currently placed on canvas or marked unassigned
+    const placedInstanceIds = new Set();
+    facilityFloors.forEach(fl => {
+      (fl.nodes || []).forEach(n => {
+        if (n.instanceId) placedInstanceIds.add(n.instanceId);
+        if (n.id && n.id.startsWith("dev-")) placedInstanceIds.add(n.id.replace("dev-", ""));
+        if (n.id) placedInstanceIds.add(n.id);
+      });
+    });
+
     const unplacedBOM = (typeof projectBOM !== "undefined" ? projectBOM : []).filter(item => {
       if (item.parentInstanceId) return false;
+      if (item.role === "Structured Cabling" || item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return false;
+
       const rawLoc = item.closetName || item.rackId;
       const isUnassigned = FacilityStore.normalize(rawLoc) === FacilityStore.UNASSIGNED;
-      return isUnassigned || item.isDinMounted || item.role === "Wireless Bridge" || item.role === "Accessory";
+      const isPlaced = placedInstanceIds.has(item.instanceId);
+
+      return isUnassigned || !isPlaced;
     });
 
     const countUnplacedEl = document.getElementById("countUnplacedDevices");
@@ -928,17 +941,31 @@ function renderSidebarTabContent() {
       return;
     }
 
-    container.innerHTML = unplacedBOM.map(item => `
-      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
-        <div>
-          <span class="font-bold text-white block truncate max-w-[160px]">${item.model}</span>
-          <span class="text-[10px] text-slate-500 font-mono">${item.role}</span>
+    container.innerHTML = unplacedBOM.map(item => {
+      const rawLoc = item.closetName || item.rackId;
+      const isUnassigned = FacilityStore.normalize(rawLoc) === FacilityStore.UNASSIGNED;
+      const mount = (item.mountMethod || "wall").toUpperCase();
+
+      return `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs space-y-1 hover:border-slate-700 transition-colors">
+          <div class="min-w-0 pr-2">
+            <span class="font-bold text-white block truncate max-w-[160px]" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+            <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
+              <span class="text-[9px] font-mono px-1 py-0.2 rounded font-bold ${isUnassigned ? 'bg-amber-950/80 border border-amber-800/80 text-amber-300' : 'bg-indigo-950/80 border border-indigo-800/80 text-indigo-300'}">
+                ${isUnassigned ? 'Unassigned' : escapeHTML(item.closetName)}
+              </span>
+              <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-slate-900 border border-slate-800 text-slate-300">
+                ${mount}
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.role || 'Hardware')} &bull; ${item.consumedPoEWatts || item.baseWatts || 0}W</span>
+            </div>
+          </div>
+          <button onclick="placeBomItemOnFloor('${item.instanceId}')" class="px-2.5 py-1 bg-brand-600 hover:bg-brand-500 text-white rounded-lg text-[10px] font-bold shadow shrink-0 flex items-center gap-1 transition-colors cursor-pointer">
+            <i data-lucide="plus" class="w-3 h-3"></i> Place
+          </button>
         </div>
-        <button onclick="placeBomItemOnFloor('${item.instanceId}')" class="px-2 py-1 bg-brand-600 hover:bg-brand-500 text-white rounded text-[10px] font-bold">
-          Place
-        </button>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   if (window.lucide) lucide.createIcons();
@@ -951,23 +978,45 @@ function placeBomItemOnFloor(instanceId) {
   const floor = getActiveFloor();
   const allClosets = getAllClosetsAcrossFacility();
 
+  // Find matching closet on this floor if item already has a location assigned
+  let matchingCloset = null;
+  if (item.closetName && item.closetName !== FacilityStore.UNASSIGNED) {
+    matchingCloset = allClosets.find(c => c.name === item.closetName && c.floorId === floor.id);
+    if (!matchingCloset) {
+      matchingCloset = allClosets.find(c => c.name === item.closetName);
+    }
+  }
+  if (!matchingCloset) {
+    matchingCloset = allClosets.find(c => c.floorId === floor.id) || allClosets[0] || null;
+  }
+
   const newDrop = {
     id: `dev-${item.instanceId}`,
+    instanceId: item.instanceId,
     name: item.model,
     type: "device",
     floorId: floor.id,
     x: 350 + (Math.random() * 150),
     y: 350 + (Math.random() * 150),
-    assignedClosetId: allClosets[0] ? allClosets[0].id : null,
+    assignedClosetId: matchingCloset ? matchingCloset.id : null,
+    mountMethod: item.mountMethod || "wall",
     waypoints: []
   };
 
   floor.nodes.push(newDrop);
   selectedNodeId = newDrop.id;
 
+  // If item was unassigned, assign it to the matching closet's location
+  if ((!item.closetName || item.closetName === FacilityStore.UNASSIGNED) && matchingCloset) {
+    item.closetName = matchingCloset.name;
+    item.rackId = matchingCloset.name;
+    FacilityStore.notifyWorkspaceChange();
+  }
+
   recalculateCurrentFloorCables();
   renderCableCanvas();
   renderInspector();
+  renderSidebarTabContent();
   switchSidebarTab("runs");
   saveFacilityState();
   if (typeof showToast === "function") {
@@ -1042,27 +1091,36 @@ function renderInspector() {
         </div>
 
         <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-2">
-          <div class="flex items-center justify-between text-[11px]">
-            <span class="font-bold text-indigo-300">Physical Hardware Load</span>
-            <span class="font-mono text-slate-400">${rackMounted.length + patchPanels.length} Rack U &bull; ${fieldDevices.length} Field</span>
-          </div>
+          ${(() => {
+            const telem = (typeof FacilityStore !== "undefined") ? FacilityStore.getLocationTelemetry(node.name) : { totalWatts: 0, totalRuOccupied: 0, totalPoEWatts: 0 };
+            return `
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-bold text-indigo-300">Physical Hardware Load</span>
+                <span class="font-mono text-slate-400">${telem.totalRuOccupied} RU &bull; ${telem.totalWatts}W (${telem.totalPoEWatts}W PoE)</span>
+              </div>
+            `;
+          })()}
           
           <div class="space-y-1 max-h-36 overflow-y-auto pr-1">
             ${patchPanels.map(it => `
               <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-amber-500/30 flex justify-between text-amber-200">
-                <span class="truncate"><strong class="text-amber-400">[1U Panel]</strong> ${it.model}</span>
+                <span class="truncate"><strong class="text-amber-400">[1U Panel]</strong> ${escapeHTML(it.model)}</span>
                 <span class="font-mono font-bold">${it.qty}x</span>
               </div>
             `).join('')}
-            ${rackMounted.map(it => `
-              <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-slate-800 flex justify-between text-slate-200">
-                <span class="truncate"><strong class="text-indigo-400">[Switch]</strong> ${it.model}</span>
-                <span class="font-mono text-emerald-400 font-bold">${it.qty}x</span>
-              </div>
-            `).join('')}
+            ${rackMounted.map(it => {
+              const isStack = it.stackedUnits && it.stackedUnits >= 2;
+              const stackSpan = (parseInt(it.rackUnits, 10) || 1) * (isStack ? it.stackedUnits : (parseInt(it.qty, 10) || 1));
+              return `
+                <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-slate-800 flex justify-between text-slate-200">
+                  <span class="truncate"><strong class="text-indigo-400">[${isStack ? `Stack: ${it.stackedUnits}x` : 'Hardware'}]</strong> ${escapeHTML(it.model)}</span>
+                  <span class="font-mono text-emerald-400 font-bold">${stackSpan}U (${it.qty || 1}x)</span>
+                </div>
+              `;
+            }).join('')}
             ${fieldDevices.map(it => `
               <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-sky-800/40 text-sky-300 flex justify-between">
-                <span class="truncate"><strong class="text-sky-400">[DIN/Pole]</strong> ${it.model}</span>
+                <span class="truncate"><strong class="text-sky-400">[DIN/Field]</strong> ${escapeHTML(it.model)}</span>
                 <span class="font-mono font-bold">${it.qty}x</span>
               </div>
             `).join('')}
@@ -1070,16 +1128,16 @@ function renderInspector() {
         </div>
 
         <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-800 flex-wrap">
-          <button onclick="deepLinkToRackElevation('${node.name}')" class="flex-1 min-w-[100px] py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+          <button onclick="deepLinkToRackElevation('${node.name}')" class="flex-1 min-w-[90px] py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer" title="Open Elevation Visualizer">
             <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Elevation
           </button>
-          <button onclick="jumpToFacilitySpace('${node.name}')" class="flex-1 min-w-[90px] py-1.5 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+          <button onclick="jumpToFacilitySpace('${node.name}')" class="flex-1 min-w-[80px] py-1.5 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer" title="Open Space in Facility Manager">
             <i data-lucide="building-2" class="w-3.5 h-3.5 text-cyan-400"></i> Space
           </button>
-          <button onclick="jumpToTopologyTarget('loc:${node.name}')" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors" title="View in Topology">
+          <button onclick="jumpToTopologyTarget('loc:${node.name}')" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer" title="View in Topology">
             <i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i>
           </button>
-          <button onclick="deleteClosetWithReassignment('${node.id}')" class="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/60 rounded-lg" title="Delete Closet">
+          <button onclick="deleteClosetWithReassignment('${node.id}')" class="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/60 rounded-lg cursor-pointer" title="Delete Closet">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           </button>
         </div>
@@ -1094,11 +1152,18 @@ function renderInspector() {
         </div>
 
         <div>
-          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Terminating Enclosure:</label>
-          <select onchange="updateNodeCloset('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500">
-            ${allClosets.map(c => `
-              <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${c.name} [${c.floorName}]</option>
-            `).join('')}
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Terminating Enclosure / Space:</label>
+          <select onchange="updateNodeCloset('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
+            <optgroup label="Spaces & Zones (Field / Unenclosed)">
+              ${allClosets.filter(c => c.name.endsWith(' • Field')).map(c => `
+                <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${c.name.replace(' • Field', '')} [Field Drop] (${c.floorName})</option>
+              `).join('')}
+            </optgroup>
+            <optgroup label="Racks & Enclosures">
+              ${allClosets.filter(c => !c.name.endsWith(' • Field')).map(c => `
+                <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${c.name} (${c.floorName})</option>
+              `).join('')}
+            </optgroup>
           </select>
         </div>
 
@@ -1127,16 +1192,16 @@ function renderInspector() {
         <div class="pt-1 flex items-center gap-1.5 flex-wrap">
           <button 
             type="button" 
-            onclick="jumpToTopologyTarget('node:${node.id}')"
-            class="flex-1 min-w-[70px] py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+            onclick="jumpToTopologyTarget('node:${node.instanceId || node.id}')"
+            class="flex-1 min-w-[65px] py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Inspect logical port and link status in Topology"
           >
             <i data-lucide="network" class="w-3 h-3 text-indigo-400"></i> Topology
           </button>
           <button 
             type="button" 
-            onclick="jumpToBomTarget('${node.id}')"
-            class="flex-1 min-w-[70px] py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+            onclick="jumpToBomTarget('${node.instanceId || node.id}')"
+            class="flex-1 min-w-[65px] py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Inspect line item in BOM Drawer"
           >
             <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
@@ -1144,10 +1209,18 @@ function renderInspector() {
           <button 
             type="button" 
             onclick="const cl = allClosets.find(c => c.id === '${node.assignedClosetId}'); if (cl) deepLinkToRackElevation(cl.name);"
-            class="flex-1 min-w-[70px] py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+            class="flex-1 min-w-[65px] py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Open Terminating Enclosure"
           >
             <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
+          </button>
+          <button 
+            type="button" 
+            onclick="const cl = allClosets.find(c => c.id === '${node.assignedClosetId}'); if (cl) jumpToFacilitySpace(cl.name);"
+            class="flex-1 min-w-[65px] py-1 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            title="Open Space in Facility Manager"
+          >
+            <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
           </button>
         </div>
 
@@ -1210,6 +1283,31 @@ function updateNodeCloset(id, closetId) {
   const node = floor.nodes.find(n => n.id === id);
   if (node) {
     node.assignedClosetId = closetId;
+
+    // Find the name of the assigned closet across all facility floors
+    let targetClosetName = "";
+    if (closetId) {
+      for (const fl of facilityFloors) {
+        const found = (fl.nodes || []).find(n => n.id === closetId);
+        if (found) {
+          targetClosetName = found.name;
+          break;
+        }
+      }
+    }
+
+    // Synchronize underlying BOM item
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      const match = projectBOM.find(i => (i.instanceId && (i.instanceId === node.instanceId || i.instanceId === node.id || ('dev-' + i.instanceId) === node.id)) || i.model === node.name);
+      if (match && targetClosetName) {
+        match.closetName = targetClosetName;
+        match.rackId = targetClosetName;
+      }
+    }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+
     recalculateCurrentFloorCables();
     renderCableCanvas();
     renderInspector();
@@ -1223,8 +1321,11 @@ function updateNodeMountMethod(id, method) {
   if (node) {
     node.mountMethod = method;
     if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
-      const match = projectBOM.find(i => i.instanceId === node.id || i.model === node.name);
+      const match = projectBOM.find(i => (i.instanceId && (i.instanceId === node.instanceId || i.instanceId === node.id || ('dev-' + i.instanceId) === node.id)) || i.model === node.name);
       if (match) match.mountMethod = method;
+    }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
     }
     saveFacilityState();
     renderCableCanvas();
@@ -1404,8 +1505,32 @@ function renderCableCanvas() {
       hostType = parsed.hostType;
     }
     hostType = hostType || "equipment_rack";
+    const isFieldSpace = (hostType === "field") || (closet.name && closet.name.endsWith(" • Field"));
 
-    if (hostType === "structural_mount") {
+    if (isFieldSpace) {
+      // 0. Field Space / Unenclosed Area Boundary
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
+      rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
+      rect.setAttribute("rx", "12");
+      rect.setAttribute("fill", isSelected ? "#451a03" : "#1c1917");
+      rect.setAttribute("stroke", isSelected ? "#fbbf24" : "#f59e0b");
+      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+      rect.setAttribute("stroke-dasharray", "4 3");
+      g.appendChild(rect);
+
+      const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      centerCircle.setAttribute("r", "8");
+      centerCircle.setAttribute("fill", "#d97706");
+      centerCircle.setAttribute("opacity", "0.4");
+      g.appendChild(centerCircle);
+
+      const centerDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      centerDot.setAttribute("r", "3.5");
+      centerDot.setAttribute("fill", "#fbbf24");
+      g.appendChild(centerDot);
+
+    } else if (hostType === "structural_mount") {
       // 1. Structural Pole Mast (Circular Base with Mast Crosshairs & Radar Boundary)
       const outerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       outerCircle.setAttribute("r", isSelected ? "32" : "28");
@@ -1527,8 +1652,8 @@ function renderCableCanvas() {
     }
 
     // Host Type Badge
-    const typeLabel = hostType === "structural_mount" ? "POLE" : (hostType === "industrial_din" ? "NEMA" : (hostType === "security_cabinet" ? "SEC-CAB" : (hostType === "architectural_backboard" ? "BOARD" : "RACK")));
-    const badgeColor = hostType === "structural_mount" ? "#38bdf8" : (hostType === "industrial_din" ? "#fbbf24" : (hostType === "security_cabinet" ? "#34d399" : (hostType === "architectural_backboard" ? "#d8b4fe" : "#a5b4fc")));
+    const typeLabel = isFieldSpace ? "FIELD" : (hostType === "structural_mount" ? "POLE" : (hostType === "industrial_din" ? "NEMA" : (hostType === "security_cabinet" ? "SEC-CAB" : (hostType === "architectural_backboard" ? "BOARD" : "RACK"))));
+    const badgeColor = isFieldSpace ? "#fbbf24" : (hostType === "structural_mount" ? "#38bdf8" : (hostType === "industrial_din" ? "#fbbf24" : (hostType === "security_cabinet" ? "#34d399" : (hostType === "architectural_backboard" ? "#d8b4fe" : "#a5b4fc"))));
 
     const badgeTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
     badgeTxt.setAttribute("x", 0);
