@@ -2095,6 +2095,7 @@ function renderFacilityManager() {
             </div>
           `;
         })() : ''}
+      </div>
     </div>
 
     <!-- Unassigned Quote Hardware Staging Bin (Requirement 2: Prominent Spaces Area Display) -->
@@ -2108,7 +2109,7 @@ function renderFacilityManager() {
       const availableEnclosures = FacilityStore.getEnclosures();
 
       return `
-        <div id="facilityUnassignedHardwareTray" class="mt-6 p-4 rounded-2xl border ${unassignedItems.length > 0 ? 'border-amber-500/50 bg-amber-950/20 shadow-amber-950/20' : 'border-slate-800 bg-slate-950/60'} shadow-xl space-y-3 transition-all">
+        <div id="facilityUnassignedHardwareTray" class="w-full mt-6 p-4 rounded-2xl border ${unassignedItems.length > 0 ? 'border-amber-500/50 bg-amber-950/20 shadow-amber-950/20' : 'border-slate-800 bg-slate-950/60'} shadow-xl space-y-3 transition-all">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-850">
             <div class="flex items-center gap-2.5">
               <div class="p-2 rounded-xl ${unassignedItems.length > 0 ? 'bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm' : 'bg-slate-900 text-slate-500 border border-slate-800'}">
@@ -2222,7 +2223,6 @@ function renderFacilityManager() {
         </div>
       `;
     })()}
-    </div>
   `;
 
   if (window.lucide) lucide.createIcons();
@@ -2400,6 +2400,19 @@ function deleteFacilityEnclosure(enclosureId) {
 }
 
 function openRackViewerFor(locationName) {
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "facility") NavigationHistory.push(st);
+  }
+  const physModal = document.getElementById("cableLayoutModal");
+  if (physModal && !physModal.classList.contains("hidden")) {
+    if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
+  }
+  const topoModal = document.getElementById("topologyModal");
+  if (topoModal && !topoModal.classList.contains("hidden")) {
+    if (typeof toggleTopologyModal === "function") toggleTopologyModal();
+  }
+
   previousFacilityFloorId = activeFacilityFloorId;
   previousFacilitySpaceId = activeFacilitySpaceId;
   facilityActiveForm = null;
@@ -2414,6 +2427,19 @@ function openRackViewerFor(locationName) {
 
 function jumpToFacilitySpace(target) {
   if (!target) return;
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "facility") NavigationHistory.push(st);
+  }
+  const physModal = document.getElementById("cableLayoutModal");
+  if (physModal && !physModal.classList.contains("hidden")) {
+    if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
+  }
+  const topoModal = document.getElementById("topologyModal");
+  if (topoModal && !topoModal.classList.contains("hidden")) {
+    if (typeof toggleTopologyModal === "function") toggleTopologyModal();
+  }
+
   const parsed = FacilityStore.parse(target);
   const spaces = FacilityStore.getSpaces();
   const space = spaces.find(s => 

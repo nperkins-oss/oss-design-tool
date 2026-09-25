@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.14-alpha] - 2026-09-25
+
+### Fixed
+- **Facility Unassigned Equipment Staging Tray Layout (Photo 1)**:
+  - Resolved layout bug in `js/core/facility.js` where `#facilityUnassignedHardwareTray` was nested inside the 12-column hierarchy grid, causing it to collapse into a narrow vertical sliver on the bottom left. Closed the grid container before the tray and applied full width (`w-full`), allowing staged equipment cards to span the full width of the modal.
+- **Field Icon Auto-Placement Purged from Floor Blueprint (Photo 2)**:
+  - Fixed issue where space-level field containers (`${Space} • Field`) were being auto-placed as closet nodes on the physical floor map. Updated `syncBOMClosetsToFloors` and `getAllClosetsAcrossFacility` in `js/tools/physical_layout.js` to exclude virtual field spaces and automatically purge any existing field closet nodes from all floor plans.
+- **Filtering Enclosure Hardware from Physical Layout Drops**:
+  - Implemented `isFieldDeviceForPhysicalLayout` in `js/tools/physical_layout.js` to filter out rack/enclosure infrastructure (switches, servers, SAN storage, UPS, PDU, firewalls, licenses, bulk cable) from the blueprint drop tray. Only actual edge field devices (cameras, access doors, wireless APs/radios, intercoms, sensors) are presented for floor blueprint placement.
+
+### Added
+- **Physical Canvas Intelligence & Topology UX Parity**:
+  - Implemented background drag-to-pan (`isViewportPanning`, `panStart`) and mouse wheel zoom (`handlePhysWheel`) in `js/tools/physical_layout.js`, matching the feel and navigation of the Logical Topology canvas.
+  - Added auto-fit viewport intelligence (`fitPhysicalLayoutToScreen`) calculating bounding boxes of placed elements, waypoints, and background floor plan blueprints to center and scale the floor view optimally. Added a "Fit All" button to the physical toolbar and automatic fit on modal launch.
+  - Added a Quick Search navigator (`filterPhysCanvasSearch` & `selectAndCenterPhysNode`) to search and jump to any rack, drop, or unplaced device across all floors, with automatic floor switching and smooth viewport centering (`centerPhysNodeInViewport`).
+- **Unified Navigation History & Multi-Tier ESC Key Handling**:
+  - Created centralized `NavigationHistory` stack in `js/core/app.js` with `captureCurrentState()` and `restoreState()` tracking originating tool, floor, and selected element.
+  - Updated all cross-tool navigation links (`jumpToPhysicalLayoutTarget`, `jumpToTopologyTarget`, `deepLinkToRackElevation`, `openRackViewerFor`, `jumpToFacilitySpace`, `jumpToBomTarget`) to capture state prior to switching tools.
+  - Implemented a multi-tier ESC key listener:
+    1. Dismisses active popups and search menus.
+    2. Deselects currently selected nodes in Physical Layout or Topology (`deselectNode` / `deselectTopologyNode`).
+    3. Pops `NavigationHistory` to smoothly return the user to the exact originating tool, floor, and node they clicked from.
+    4. Closes the active modal if no navigation history exists.
+
+---
+
 ## [0.10.13-alpha] - 2026-09-25
 
 ### Added

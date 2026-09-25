@@ -5,8 +5,8 @@
 // =========================================================================
 
 // Version & Build Information
-const APP_VERSION = "0.10.10-alpha";
-const BUILD_NUMBER = "2026.09.25.1000";
+const APP_VERSION = "0.10.14-alpha";
+const BUILD_NUMBER = "2026.09.25.1330";
 
 // Active Navigation State
 let activeDomain = "networking"; // "networking" | "physical_security" | "compute_storage" | "infrastructure" | "software"
@@ -917,14 +917,225 @@ function showToast(msg) {
   }, 2800);
 }
 
-// Universal Master ESC Listener
+// ===========================================================
+// Centralized Navigation History & Backstack Architecture
+// ===========================================================
+const NavigationHistory = {
+  stack: [],
+
+  push(state) {
+    if (!state || !state.tool) return;
+    const top = this.stack[this.stack.length - 1];
+    if (top && top.tool === state.tool && top.targetId === state.targetId && top.view === state.view && top.floorId === state.floorId) {
+      return;
+    }
+    this.stack.push(state);
+    if (this.stack.length > 25) this.stack.shift();
+  },
+
+  pop() {
+    return this.stack.pop();
+  },
+
+  peek() {
+    return this.stack[this.stack.length - 1];
+  },
+
+  clear() {
+    this.stack = [];
+  },
+
+  captureCurrentState() {
+    // 1. Physical Layout Modal
+    const physModal = document.getElementById("cableLayoutModal");
+    if (physModal && !physModal.classList.contains("hidden")) {
+      return {
+        tool: "physical",
+        floorId: typeof activeFloorId !== "undefined" ? activeFloorId : null,
+        selectedNodeId: typeof selectedNodeId !== "undefined" ? selectedNodeId : null
+      };
+    }
+
+    // 2. Topology Modal
+    const topoModal = document.getElementById("topologyModal");
+    if (topoModal && !topoModal.classList.contains("hidden")) {
+      return {
+        tool: "topology",
+        nodeId: typeof selectedTopologyNodeId !== "undefined" ? selectedTopologyNodeId : null,
+        rackLoc: typeof selectedTopologyRackLoc !== "undefined" ? selectedTopologyRackLoc : null
+      };
+    }
+
+    // 3. Port Matrix Studio Modal
+    const portStudio = document.getElementById("portMatrixStudioModal");
+    if (portStudio && !portStudio.classList.contains("hidden")) {
+      return { tool: "port_matrix" };
+    }
+
+    // 4. Facility Modal (Hierarchy or Visualizer)
+    const facModal = document.getElementById("facilityModal");
+    if (facModal && !facModal.classList.contains("hidden")) {
+      return {
+        tool: "facility",
+        view: typeof facilityActiveView !== "undefined" ? facilityActiveView : "hierarchy",
+        spaceId: typeof activeFacilitySpaceId !== "undefined" ? activeFacilitySpaceId : null,
+        floorId: typeof activeFacilityFloorId !== "undefined" ? activeFacilityFloorId : null,
+        rackId: typeof activeRackId !== "undefined" ? activeRackId : null
+      };
+    }
+
+    // 5. BOM Drawer
+    const bomDrawer = document.getElementById("bomDrawer");
+    if (bomDrawer && !bomDrawer.classList.contains("translate-x-full")) {
+      return { tool: "bom" };
+    }
+
+    return null;
+  },
+
+  restoreState(state) {
+    if (!state || !state.tool) return false;
+
+    if (state.tool === "physical") {
+      if (typeof toggleCableLayoutModal === "function") {
+        const modal = document.getElementById("cableLayoutModal");
+        if (modal && modal.classList.contains("hidden")) toggleCableLayoutModal();
+      }
+      if (state.floorId && typeof switchActiveFloor === "function") {
+        switchActiveFloor(state.floorId);
+      }
+      if (state.selectedNodeId && typeof selectNode === "function") {
+        selectNode(state.selectedNodeId);
+      }
+      return true;
+    }
+
+    if (state.tool === "topology") {
+      if (typeof toggleTopologyModal === "function") {
+        const modal = document.getElementById("topologyModal");
+        if (modal && modal.classList.contains("hidden")) toggleTopologyModal();
+      }
+      if (state.nodeId && typeof selectTopologyNode === "function") {
+        selectTopologyNode(state.nodeId);
+      }
+      return true;
+    }
+
+    if (state.tool === "facility") {
+      const facModal = document.getElementById("facilityModal");
+      if (facModal && facModal.classList.contains("hidden")) {
+        if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+      }
+      if (typeof switchFacilityView === "function") {
+        switchFacilityView(state.view || "hierarchy", state.rackId);
+      }
+      return true;
+    }
+
+    if (state.tool === "bom") {
+      const drawer = document.getElementById("bomDrawer");
+      if (drawer && drawer.classList.contains("translate-x-full")) {
+        if (typeof toggleBomDrawer === "function") toggleBomDrawer();
+      }
+      return true;
+    }
+
+    if (state.tool === "port_matrix") {
+      if (typeof openPortMatrixStudio === "function") openPortMatrixStudio();
+      return true;
+    }
+
+    return false;
+  }
+};
+window.NavigationHistory = NavigationHistory;
+
+// Universal Master ESC Listener with Navigation History & Deselect
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
+    // 1. Port Matrix Studio Modal
+    const portStudio = document.getElementById("portMatrixStudioModal");
+    if (portStudio && !portStudio.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof closePortMatrixStudio === "function") closePortMatrixStudio();
+      return;
+    }
+
+    // 2. Topology Quick Search popup
+    const topoSearchResults = document.getElementById("topologyQuickSearchResults");
+    if (topoSearchResults && !topoSearchResults.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof clearTopologySearch === "function") clearTopologySearch();
+      return;
+    }
+
+    // 3. Physical Layout Quick Search popup
+    const physSearchResults = document.getElementById("physQuickSearchResults");
+    if (physSearchResults && !physSearchResults.classList.contains("hidden")) {
+      e.preventDefault();
+      physSearchResults.classList.add("hidden");
+      return;
+    }
+
+    // 4. Facility Inline Form (Add Space, Add Host, Add Floor)
+    if (typeof facilityActiveForm !== "undefined" && facilityActiveForm) {
+      e.preventDefault();
+      if (typeof closeFacilityAddForm === "function") closeFacilityAddForm();
+      return;
+    }
+
+    // 5. Active selection in Physical Layout -> First ESC deselects node
+    const physModal = document.getElementById("cableLayoutModal");
+    if (physModal && !physModal.classList.contains("hidden")) {
+      if (typeof selectedNodeId !== "undefined" && selectedNodeId) {
+        e.preventDefault();
+        if (typeof deselectNode === "function") deselectNode();
+        return;
+      }
+    }
+
+    // 6. Active selection in Topology -> First ESC deselects node
+    const topoModal = document.getElementById("topologyModal");
+    if (topoModal && !topoModal.classList.contains("hidden")) {
+      if ((typeof selectedTopologyNodeId !== "undefined" && selectedTopologyNodeId) || 
+          (typeof selectedTopologyRackLoc !== "undefined" && selectedTopologyRackLoc)) {
+        e.preventDefault();
+        if (typeof deselectTopologyNode === "function") deselectTopologyNode();
+        return;
+      }
+    }
+
+    // 7. Navigation History Back-Stack: If user arrived via a cross-tool link, ESC goes BACK!
+    const prevState = NavigationHistory.pop();
+    if (prevState) {
+      e.preventDefault();
+      // Close currently active modal
+      if (physModal && !physModal.classList.contains("hidden")) {
+        if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
+      }
+      if (topoModal && !topoModal.classList.contains("hidden")) {
+        if (typeof toggleTopologyModal === "function") toggleTopologyModal();
+      }
+      const facModal = document.getElementById("facilityModal");
+      if (facModal && !facModal.classList.contains("hidden")) {
+        if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+      }
+      const bomDrawer = document.getElementById("bomDrawer");
+      if (bomDrawer && !bomDrawer.classList.contains("translate-x-full")) {
+        if (typeof toggleBomDrawer === "function") toggleBomDrawer();
+      }
+
+      // Restore previous state!
+      NavigationHistory.restoreState(prevState);
+      return;
+    }
+
+    // 8. If no navigation history, close the top-most active modal/drawer
     const modals = [
       { id: "cableLayoutModal", closeFn: () => typeof toggleCableLayoutModal === "function" && toggleCableLayoutModal() },
       { id: "topologyModal", closeFn: () => typeof toggleTopologyModal === "function" && toggleTopologyModal() },
-      { id: "rackModal", closeFn: () => typeof toggleRackModal === "function" && toggleRackModal() },
       { id: "facilityModal", closeFn: () => typeof handleFacilityModalCloseOrBack === "function" ? handleFacilityModalCloseOrBack() : (typeof toggleFacilityModal === "function" && toggleFacilityModal()) },
+      { id: "projectHealthModal", closeFn: () => typeof toggleProjectHealthModal === "function" && toggleProjectHealthModal() },
       { id: "compareModal", closeFn: () => typeof toggleCompareModal === "function" && toggleCompareModal() },
       { id: "projectModal", closeFn: () => typeof toggleProjectModal === "function" && toggleProjectModal() },
       { id: "licenseModal", closeFn: () => typeof toggleLicenseModal === "function" && toggleLicenseModal() },
@@ -934,6 +1145,7 @@ document.addEventListener("keydown", (e) => {
     for (const m of modals) {
       const el = document.getElementById(m.id);
       if (el && !el.classList.contains("hidden") && !el.classList.contains("translate-x-full")) {
+        e.preventDefault();
         m.closeFn();
         break;
       }

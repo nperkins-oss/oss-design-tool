@@ -2094,6 +2094,10 @@ window.autoAddMissingLicenses = autoAddMissingLicenses;
 window.autoAddMissingDACCables = autoAddMissingDACCables;
 window.autoAddPoeSupplyOrSwitch = autoAddPoeSupplyOrSwitch;
 function jumpToBomTarget(instanceId) {
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "bom") NavigationHistory.push(st);
+  }
   const drawer = document.getElementById("bomDrawer");
   if (drawer && drawer.classList.contains("translate-x-full")) {
     toggleBomDrawer();

@@ -3072,6 +3072,10 @@ function updateDeviceLocation(instanceId, newLoc) {
 }
 
 function openRackViewerFor(loc) {
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "facility") NavigationHistory.push(st);
+  }
   if (typeof toggleTopologyModal === "function" && isTopologyModalVisible()) {
     toggleTopologyModal();
   }
@@ -3389,13 +3393,31 @@ function updateSwitchStackFromTopology(instanceId, count) {
 }
 
 function jumpToTopologyTarget(targetVal = null) {
-  // 1. Close BOM drawer if open so full topology canvas and inspector are visible
+  // 1. Capture navigation history before switching tools
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "topology") NavigationHistory.push(st);
+  }
+
+  // 2. Close physical layout modal if open
+  const physModal = document.getElementById("cableLayoutModal");
+  if (physModal && !physModal.classList.contains("hidden")) {
+    if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
+  }
+
+  // 3. Close facility modal if open
+  const facModal = document.getElementById("facilityModal");
+  if (facModal && !facModal.classList.contains("hidden")) {
+    if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+  }
+
+  // 4. Close BOM drawer if open so full topology canvas and inspector are visible
   const drawer = document.getElementById("bomDrawer");
   if (drawer && !drawer.classList.contains("translate-x-full")) {
     if (typeof toggleBomDrawer === "function") toggleBomDrawer();
   }
 
-  // 2. Open topology modal if hidden
+  // 5. Open topology modal if hidden
   const wasHidden = !isTopologyModalVisible();
   if (wasHidden && typeof toggleTopologyModal === "function") {
     toggleTopologyModal();

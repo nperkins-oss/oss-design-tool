@@ -81,13 +81,19 @@ function toggleCableLayoutModal() {
     renderCableCanvas();
     renderInspector();
     renderSidebarTabContent();
+    setTimeout(() => {
+      fitPhysicalLayoutToScreen();
+    }, 60);
     if (window.lucide) lucide.createIcons();
   } else {
     modal.classList.add("hidden");
     isDraggingPhysNode = false;
     isDraggingPhysWaypoint = false;
+    isViewportPanning = false;
     draggedPhysNode = null;
     draggedPhysWaypoint = null;
+    const searchPopup = document.getElementById("physQuickSearchResults");
+    if (searchPopup) searchPopup.classList.add("hidden");
   }
 }
 
@@ -142,14 +148,30 @@ function loadFacilityState() {
 // -----------------------------------------------------------
 // Canvas Interaction & Reliable Drag Engine
 // -----------------------------------------------------------
+let isViewportPanning = false;
+let panStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
+
 function initCableCanvas() {
   const svg = document.getElementById("cableSvgCanvas");
+  const viewport = document.getElementById("cableCanvasViewport");
   if (!svg || svg.dataset.initialized === "true") return;
 
   svg.dataset.initialized = "true";
   svg.addEventListener("mousedown", handlePhysMouseDown);
+  if (viewport) {
+    viewport.addEventListener("wheel", handlePhysWheel, { passive: false });
+  }
   window.addEventListener("mousemove", handlePhysMouseMove);
   window.addEventListener("mouseup", handlePhysMouseUp);
+}
+
+function handlePhysWheel(e) {
+  if (!isPhysCanvasVisible()) return;
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.08 : -0.08;
+    adjustCanvasZoom(delta);
+  }
 }
 
 function getCanvasCoordinates(e) {
@@ -315,14 +337,38 @@ function handlePhysMouseDown(e) {
     }
   }
 
-  // Click empty canvas -> deselect
+  // Click empty canvas -> deselect node
   selectedNodeId = null;
   renderInspector();
+  renderSidebarTabContent();
   renderCableCanvas();
+
+  // 7. Pan Viewport (Drag Canvas to Pan - identical to Topology Canvas)
+  const viewport = document.getElementById("cableCanvasViewport");
+  if (viewport && activeCableTool === "select") {
+    isViewportPanning = true;
+    panStart = {
+      x: e.clientX,
+      y: e.clientY,
+      scrollLeft: viewport.scrollLeft,
+      scrollTop: viewport.scrollTop
+    };
+    viewport.style.cursor = "grabbing";
+  }
 }
 
 function handlePhysMouseMove(e) {
   if (!isPhysCanvasVisible()) return;
+
+  if (isViewportPanning) {
+    const viewport = document.getElementById("cableCanvasViewport");
+    if (viewport) {
+      viewport.scrollLeft = panStart.scrollLeft - (e.clientX - panStart.x);
+      viewport.scrollTop = panStart.scrollTop - (e.clientY - panStart.y);
+    }
+    return;
+  }
+
   if (!isDraggingPhysWaypoint && !isDraggingPhysNode) return;
   const pos = getCanvasCoordinates(e);
 
@@ -343,6 +389,11 @@ function handlePhysMouseMove(e) {
 }
 
 function handlePhysMouseUp() {
+  if (isViewportPanning) {
+    isViewportPanning = false;
+    const viewport = document.getElementById("cableCanvasViewport");
+    if (viewport) viewport.style.cursor = "default";
+  }
   if (isDraggingPhysWaypoint || isDraggingPhysNode) {
     isDraggingPhysWaypoint = false;
     draggedPhysWaypoint = null;
@@ -676,25 +727,30 @@ function syncBOMClosetsToFloors() {
     }
   }
 
-  // 2. Synchronize active locations with accurate floors
-  const activeLocations = FacilityStore.getLocations(false); // excludes Unassigned
+  // 2. Synchronize active physical host enclosures with accurate floors (excluding pure field hardware spaces)
+  const activeLocations = FacilityStore.getLocations(false).filter(loc => 
+    loc.hostType !== "field" && !loc.isSpace && !(loc.name && loc.name.endsWith(" • Field"))
+  );
   const validLocMap = new Map();
   activeLocations.forEach(loc => validLocMap.set(loc.name, loc));
 
-  // A. Purge stale closet nodes across all floors
+  // A. Purge stale closet nodes across all floors and remove any field nodes
   const allCurrentClosets = getAllClosetsAcrossFacility();
   const validRemainingCloset = allCurrentClosets.find(c => validLocMap.has(c.name));
 
   facilityFloors.forEach(fl => {
     fl.nodes = fl.nodes.filter(n => {
-      if (n.type === "closet" && !validLocMap.has(n.name)) {
-        // Re-route devices on this closet to a valid remaining closet
-        if (validRemainingCloset) {
-          fl.nodes.filter(d => d.type === "device" && d.assignedClosetId === n.id).forEach(d => {
-            d.assignedClosetId = validRemainingCloset.id;
-          });
+      if (n.type === "closet") {
+        const isFieldNode = n.hostType === "field" || (n.name && n.name.endsWith(" • Field"));
+        if (isFieldNode || !validLocMap.has(n.name)) {
+          // Re-route devices on this closet to a valid remaining closet
+          if (validRemainingCloset && validRemainingCloset.id !== n.id) {
+            fl.nodes.filter(d => d.type === "device" && d.assignedClosetId === n.id).forEach(d => {
+              d.assignedClosetId = validRemainingCloset.id;
+            });
+          }
+          return false;
         }
-        return false;
       }
       return true;
     });
@@ -767,7 +823,7 @@ function syncBOMClosetsToFloors() {
 function getAllClosetsAcrossFacility() {
   const closets = [];
   facilityFloors.forEach(f => {
-    f.nodes.filter(n => n.type === "closet").forEach(c => {
+    (f.nodes || []).filter(n => n.type === "closet" && n.hostType !== "field" && !(n.name && n.name.endsWith(" • Field"))).forEach(c => {
       closets.push({ ...c, floorName: f.name, floorLevel: f.levelIndex || 1 });
     });
   });
@@ -912,7 +968,51 @@ function renderSidebarTabContent() {
       `;
     }).join("");
   } else {
-    // Unplaced devices: any hardware in quote not currently placed on canvas or marked unassigned
+// -----------------------------------------------------------
+// Field Device Classifier for Physical Floor Drops
+// -----------------------------------------------------------
+function isFieldDeviceForPhysicalLayout(item) {
+  if (!item || item.parentInstanceId) return false;
+
+  // Structured Cabling spools, licenses, accessories, optics do not get placed as camera/door drops
+  if (item.role === "Structured Cabling" || item.role === "Optics & DAC") return false;
+  if (item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return false;
+  if (item.role === "Accessory") return false;
+
+  // Infrastructure that lives inside racks / enclosures
+  const infraRoles = [
+    "Access", "Core", "Core & Agg", "Aggregation", "Gateways & WAN", "Security WAN",
+    "Server", "VMS Server", "Compute & Storage", "Storage Drives & SAN",
+    "Rack UPS Power", "UPS", "PDU", "19\" Equipment Racks", "Enclosure", "Patch Panel"
+  ];
+  if (infraRoles.includes(item.role)) return false;
+
+  const cat = (item.category || "").toLowerCase();
+  const role = (item.role || "").toLowerCase();
+
+  if (cat.includes("switch") || cat.includes("server") || cat.includes("storage") || 
+      cat.includes("ups") || cat.includes("pdu") || cat.includes("rack") || 
+      cat.includes("enclosure") || cat.includes("cabinet")) {
+    return false;
+  }
+  if (role.includes("switch") || role.includes("server") || role.includes("storage") || 
+      role.includes("ups") || role.includes("pdu") || role.includes("gateway")) {
+    return false;
+  }
+
+  // Edge / Field devices that get placed on physical blueprints
+  const isEdge = role.includes("camera") || role.includes("access") || role.includes("door") || 
+                 role.includes("wireless") || role.includes("radio") || role.includes("intercom") ||
+                 role.includes("sensor") || role.includes("drop") ||
+                 cat.includes("camera") || cat.includes("access") || cat.includes("wireless") ||
+                 cat.includes("door") || cat.includes("sensor") || cat.includes("intercom") ||
+                 cat.includes("ptp") || cat.includes("endpoint");
+
+  return isEdge || item.isFieldDevice === true;
+}
+
+    // Unplaced devices: edge/field hardware in quote not currently placed on canvas
+    // Devices in racks/enclosures (switches, servers, storage, UPS, PDU) already live inside their enclosures
     const placedInstanceIds = new Set();
     facilityFloors.forEach(fl => {
       (fl.nodes || []).forEach(n => {
@@ -923,14 +1023,9 @@ function renderSidebarTabContent() {
     });
 
     const unplacedBOM = (typeof projectBOM !== "undefined" ? projectBOM : []).filter(item => {
-      if (item.parentInstanceId) return false;
-      if (item.role === "Structured Cabling" || item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return false;
-
-      const rawLoc = item.closetName || item.rackId;
-      const isUnassigned = FacilityStore.normalize(rawLoc) === FacilityStore.UNASSIGNED;
+      if (!isFieldDeviceForPhysicalLayout(item)) return false;
       const isPlaced = placedInstanceIds.has(item.instanceId);
-
-      return isUnassigned || !isPlaced;
+      return !isPlaced;
     });
 
     const countUnplacedEl = document.getElementById("countUnplacedDevices");
@@ -1038,6 +1133,7 @@ function deselectNode() {
   selectedNodeId = null;
   renderInspector();
   renderCableCanvas();
+  renderSidebarTabContent();
 }
 
 function renderInspector() {
@@ -1252,6 +1348,10 @@ function clearNodeWaypoints(id) {
 }
 
 function deepLinkToRackElevation(closetName) {
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "facility") NavigationHistory.push(st);
+  }
   toggleCableLayoutModal();
   if (typeof openRackViewerFor === "function") {
     openRackViewerFor(closetName);
@@ -1861,10 +1961,268 @@ function commitCablingToBOM() {
 }
 
 // -----------------------------------------------------------
+// Canvas Intelligence, Auto-Fit & Viewport Centering
+// -----------------------------------------------------------
+function fitPhysicalLayoutToScreen() {
+  const viewport = document.getElementById("cableCanvasViewport");
+  const floor = getActiveFloor();
+  if (!viewport || !floor) return;
+
+  const nodes = floor.nodes || [];
+  if (nodes.length === 0) {
+    currentCanvasZoom = 1.0;
+    applyCanvasZoom();
+    viewport.scrollTo({ left: 0, top: 0, behavior: "smooth" });
+    return;
+  }
+
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    const w = n.type === "closet" ? 180 : 50;
+    const h = n.type === "closet" ? 100 : 50;
+    minX = Math.min(minX, n.x);
+    minY = Math.min(minY, n.y);
+    maxX = Math.max(maxX, n.x + w);
+    maxY = Math.max(maxY, n.y + h);
+
+    if (n.waypoints && Array.isArray(n.waypoints)) {
+      n.waypoints.forEach(wp => {
+        minX = Math.min(minX, wp.x);
+        minY = Math.min(minY, wp.y);
+        maxX = Math.max(maxX, wp.x);
+        maxY = Math.max(maxY, wp.y);
+      });
+    }
+  });
+
+  // Check if background floor plan image exists
+  const imgEl = document.getElementById("canvasFloorPlanImage");
+  if (imgEl) {
+    const iw = parseFloat(imgEl.getAttribute("width")) || 0;
+    const ih = parseFloat(imgEl.getAttribute("height")) || 0;
+    if (iw > 0 && ih > 0) {
+      minX = Math.min(minX, 0);
+      minY = Math.min(minY, 0);
+      maxX = Math.max(maxX, iw);
+      maxY = Math.max(maxY, ih);
+    }
+  }
+
+  if (minX === Infinity) {
+    minX = 0; minY = 0; maxX = 1200; maxY = 800;
+  }
+
+  const availW = Math.max(300, viewport.clientWidth - 80);
+  const availH = Math.max(300, viewport.clientHeight - 80);
+  const contentW = Math.max(100, maxX - minX + 120);
+  const contentH = Math.max(100, maxY - minY + 120);
+
+  const scaleW = availW / contentW;
+  const scaleH = availH / contentH;
+  const optimalZoom = Math.max(0.35, Math.min(1.25, Math.min(scaleW, scaleH)));
+
+  currentCanvasZoom = Math.round(optimalZoom * 100) / 100;
+  applyCanvasZoom();
+
+  const centerX = (minX + (contentW / 2)) * currentCanvasZoom;
+  const centerY = (minY + (contentH / 2)) * currentCanvasZoom;
+
+  viewport.scrollTo({
+    left: Math.max(0, centerX - (viewport.clientWidth / 2)),
+    top: Math.max(0, centerY - (viewport.clientHeight / 2)),
+    behavior: "smooth"
+  });
+}
+
+function centerPhysNodeInViewport(nodeId) {
+  const viewport = document.getElementById("cableCanvasViewport");
+  const floor = getActiveFloor();
+  if (!viewport || !floor) return;
+
+  const node = (floor.nodes || []).find(n => n.id === nodeId);
+  if (!node) return;
+
+  const nodeCenterX = (node.x + (node.type === "closet" ? 90 : 25)) * currentCanvasZoom;
+  const nodeCenterY = (node.y + (node.type === "closet" ? 50 : 25)) * currentCanvasZoom;
+
+  viewport.scrollTo({
+    left: Math.max(0, nodeCenterX - (viewport.clientWidth / 2)),
+    top: Math.max(0, nodeCenterY - (viewport.clientHeight / 2)),
+    behavior: "smooth"
+  });
+}
+
+// -----------------------------------------------------------
+// Searchable Quick Navigator (Matches Topology Canvas UX)
+// -----------------------------------------------------------
+function getPhysSearchItems() {
+  const items = [];
+  
+  // 1. Closets / Racks
+  facilityFloors.forEach(f => {
+    (f.nodes || []).filter(n => n.type === "closet" && n.hostType !== "field" && !(n.name && n.name.endsWith(" • Field"))).forEach(c => {
+      items.push({
+        id: c.id,
+        floorId: f.id,
+        name: c.name,
+        badge: `${f.name} • Enclosure`,
+        category: "Racks & Closets",
+        icon: "🏢",
+        searchText: `${c.name} ${f.name} rack enclosure closet cabinet`.toLowerCase()
+      });
+    });
+  });
+
+  // 2. Placed Drops
+  facilityFloors.forEach(f => {
+    (f.nodes || []).filter(n => n.type === "device").forEach(d => {
+      const isCam = (d.name || '').toLowerCase().includes('cam') || (d.mountMethod || '').toLowerCase().includes('camera');
+      const isDoor = (d.name || '').toLowerCase().includes('door') || (d.name || '').toLowerCase().includes('portal') || (d.name || '').toLowerCase().includes('card');
+      const icon = isCam ? "📹" : (isDoor ? "🔐" : "🔌");
+      items.push({
+        id: d.id,
+        floorId: f.id,
+        name: d.name,
+        badge: `${f.name} • Drop`,
+        category: "Placed Drops",
+        icon,
+        searchText: `${d.name} ${f.name} drop camera door sensor`.toLowerCase()
+      });
+    });
+  });
+
+  // 3. Unplaced Field BOM Hardware
+  const placedIds = new Set();
+  facilityFloors.forEach(f => (f.nodes || []).forEach(n => {
+    if (n.instanceId) placedIds.add(n.instanceId);
+    if (n.id) placedIds.add(n.id);
+  }));
+
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    projectBOM.filter(i => isFieldDeviceForPhysicalLayout(i) && !placedIds.has(i.instanceId)).forEach(item => {
+      items.push({
+        id: item.instanceId,
+        isUnplaced: true,
+        name: item.model,
+        badge: "Quote BOM • Unplaced",
+        category: "Unplaced Devices",
+        icon: "📦",
+        searchText: `${item.model} ${item.role || ''} ${item.category || ''} unplaced quote`.toLowerCase()
+      });
+    });
+  }
+
+  return items;
+}
+
+function filterPhysCanvasSearch(query) {
+  const container = document.getElementById("physQuickSearchResults");
+  if (!container) return;
+
+  const q = (query || "").trim().toLowerCase();
+  if (!q) {
+    container.classList.add("hidden");
+    return;
+  }
+
+  const allItems = getPhysSearchItems();
+  const filtered = allItems.filter(i => i.searchText.includes(q));
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div class="px-3 py-3 text-center text-xs text-slate-500 font-mono">
+        No devices or racks matching "${escapeHTML(q)}"
+      </div>
+    `;
+    container.classList.remove("hidden");
+    return;
+  }
+
+  // Group by category
+  const categories = {};
+  filtered.forEach(item => {
+    if (!categories[item.category]) categories[item.category] = [];
+    categories[item.category].push(item);
+  });
+
+  let html = "";
+  Object.keys(categories).forEach(cat => {
+    html += `
+      <div class="px-2 pt-1.5 pb-0.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold flex items-center justify-between border-t border-slate-800/60 first:border-t-0">
+        <span>${escapeHTML(cat)}</span>
+        <span class="text-slate-500">${categories[cat].length}</span>
+      </div>
+    `;
+
+    categories[cat].forEach(item => {
+      html += `
+        <button
+          type="button"
+          onclick="selectAndCenterPhysNode('${item.id}', '${item.floorId || ''}', ${item.isUnplaced ? 'true' : 'false'})"
+          class="w-full text-left px-2 py-1.5 rounded-lg flex items-center justify-between gap-2 text-xs transition-colors hover:bg-slate-850 hover:text-white text-slate-200 group cursor-pointer"
+        >
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="text-sm shrink-0">${item.icon}</span>
+            <div class="truncate">
+              <div class="font-medium truncate group-hover:text-amber-300 transition-colors">${escapeHTML(item.name)}</div>
+              <div class="text-[10px] text-slate-400 font-mono truncate">${escapeHTML(item.badge)}</div>
+            </div>
+          </div>
+          <i data-lucide="arrow-right" class="w-3 h-3 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"></i>
+        </button>
+      `;
+    });
+  });
+
+  container.innerHTML = html;
+  container.classList.remove("hidden");
+  if (typeof safeCreateIcons === "function") {
+    safeCreateIcons(container);
+  } else if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function selectAndCenterPhysNode(nodeId, floorId = null, isUnplaced = false) {
+  const container = document.getElementById("physQuickSearchResults");
+  const input = document.getElementById("physCanvasSearchInput");
+  if (container) container.classList.add("hidden");
+  if (input) input.value = "";
+
+  if (isUnplaced) {
+    switchSidebarTab("unplaced");
+    return;
+  }
+
+  if (floorId && floorId !== activeFloorId && typeof switchActiveFloor === "function") {
+    switchActiveFloor(floorId);
+  }
+
+  setTimeout(() => {
+    selectNode(nodeId);
+    centerPhysNodeInViewport(nodeId);
+  }, 40);
+}
+
+// -----------------------------------------------------------
 // Deep Linking & Navigation Launcher
 // -----------------------------------------------------------
 function jumpToPhysicalLayoutTarget(targetVal) {
-  // 1. Close BOM drawer if open so full blueprint canvas is visible
+  // 1. Capture navigation history before switching views
+  if (typeof NavigationHistory !== "undefined") {
+    const st = NavigationHistory.captureCurrentState();
+    if (st && st.tool !== "physical") NavigationHistory.push(st);
+  }
+
+  // 2. Close other open modals
+  const topoModal = document.getElementById("topologyModal");
+  if (topoModal && !topoModal.classList.contains("hidden")) {
+    if (typeof toggleTopologyModal === "function") toggleTopologyModal();
+  }
+  const facModal = document.getElementById("facilityModal");
+  if (facModal && !facModal.classList.contains("hidden")) {
+    if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+  }
   if (typeof toggleBomDrawer === "function") {
     const drawer = document.getElementById("bomDrawer");
     if (drawer && !drawer.classList.contains("translate-x-full")) {
@@ -1872,13 +2230,13 @@ function jumpToPhysicalLayoutTarget(targetVal) {
     }
   }
 
-  // 2. Open physical layout modal if hidden
+  // 3. Open physical layout modal if hidden
   const modal = document.getElementById("cableLayoutModal");
   if (modal && modal.classList.contains("hidden")) {
     toggleCableLayoutModal();
   }
 
-  // 3. Resolve target floor and enclosure node
+  // 4. Resolve target floor and enclosure node
   if (targetVal) {
     setTimeout(() => {
       let targetLoc = null;
@@ -1903,13 +2261,14 @@ function jumpToPhysicalLayoutTarget(targetVal) {
         if (currentFloor && Array.isArray(currentFloor.nodes)) {
           const match = currentFloor.nodes.find(n => 
             n.name.toLowerCase().includes((parsed.space || '').toLowerCase()) || 
-            (targetDevice && n.name.toLowerCase().includes(targetDevice.model.toLowerCase()))
+            (targetDevice && (n.instanceId === targetDevice.instanceId || n.name.toLowerCase().includes(targetDevice.model.toLowerCase())))
           );
           if (match) {
             selectedNodeId = match.id;
             recalculateCurrentFloorCables();
             renderCableCanvas();
             renderInspector();
+            centerPhysNodeInViewport(match.id);
           }
         }
       }
@@ -1926,4 +2285,10 @@ if (typeof window !== "undefined") {
   window.initCableCanvas = initCableCanvas;
   window.renderCableCanvas = renderCableCanvas;
   window.updateNodeMountMethod = updateNodeMountMethod;
+  window.deselectNode = deselectNode;
+  window.fitPhysicalLayoutToScreen = fitPhysicalLayoutToScreen;
+  window.centerPhysNodeInViewport = centerPhysNodeInViewport;
+  window.filterPhysCanvasSearch = filterPhysCanvasSearch;
+  window.selectAndCenterPhysNode = selectAndCenterPhysNode;
+  window.isFieldDeviceForPhysicalLayout = isFieldDeviceForPhysicalLayout;
 }
