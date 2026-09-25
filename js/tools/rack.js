@@ -287,6 +287,33 @@ function updateActiveHostProperty(propKey, value) {
   }
 }
 
+function updatePoleZoneHeight(spaceId, zoneId, heightVal) {
+  if (!spaceId) {
+    const parsed = FacilityStore.parse(activeRackId);
+    spaceId = parsed.spaceId;
+  }
+  if (!spaceId) return;
+
+  const updates = {};
+  if (zoneId === "Mid-Pole") {
+    updates.poleMidHeightFt = heightVal;
+    // Also update any enclosures banded to this pole space
+    const enclosures = FacilityStore.getEnclosures(spaceId);
+    enclosures.forEach(enc => {
+      FacilityStore.updateHost(enc.id, { mountHeightFt: heightVal });
+    });
+  } else if (zoneId === "Upper-Pole") {
+    updates.poleUpperHeightFt = heightVal;
+  }
+
+  FacilityStore.updateSpace(spaceId, updates);
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Adjusted ${zoneId} elevation to ${heightVal} ft AGL`);
+  }
+}
+
 function switchActiveRackElevation(rackName) {
   activeRackId = FacilityStore.normalize(rackName);
   loadRackSettings();
@@ -755,6 +782,11 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
+              ${it.stackedUnits >= 2 ? `
+                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 flex items-center gap-1" title="${it.stackedUnits}-Switch Virtual Stack">
+                  <i data-lucide="layers" class="w-3 h-3"></i> ${it.stackedUnits}x Stack
+                </span>
+              ` : ''}
               ${!compat.compatible ? `
                 <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800" title="${compat.advisory}">⚠️ Bracket Req</span>
               ` : ''}
@@ -1059,10 +1091,10 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
   const diam = (currentSpace && currentSpace.poleDiameterInches) ? currentSpace.poleDiameterInches : ((activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : 4);
   const poleEnclosures = currentSpace ? FacilityStore.getEnclosures(currentSpace.id) : [];
 
-  // Dynamic Height Elevations
+  // Dynamic Height Elevations (Configurable per Zone)
   const topElevation = poleHeight;
-  const upperElevation = Math.max(8, Math.round(poleHeight * 0.8));
-  const midElevation = Math.max(4, Math.round(poleHeight * 0.4));
+  const upperElevation = (currentSpace && currentSpace.poleUpperHeightFt) ? currentSpace.poleUpperHeightFt : Math.max(8, Math.round(poleHeight * 0.8));
+  const midElevation = (currentSpace && currentSpace.poleMidHeightFt) ? currentSpace.poleMidHeightFt : Math.max(4, Math.round(poleHeight * 0.4));
   const baseElevation = 2;
 
   const zones = [
@@ -1113,10 +1145,39 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
         ondragover="handleRackSlotDragOver(event)"
         ondrop="handlePoleZoneDrop(event, '${z.id}')"
       >
-        <div class="flex items-center justify-between mb-1.5">
-          <span class="text-[11px] font-bold text-cyan-400 font-mono flex items-center gap-1.5">
-            <i data-lucide="${z.icon}" class="w-3.5 h-3.5"></i> ${z.label}
-          </span>
+        <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[11px] font-bold text-cyan-400 font-mono flex items-center gap-1.5">
+              <i data-lucide="${z.icon}" class="w-3.5 h-3.5"></i> ${z.label}
+            </span>
+            ${z.id === "Mid-Pole" ? `
+              <div class="flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded border border-cyan-800 text-[10px]">
+                <span class="text-slate-400 font-medium">Height:</span>
+                <select 
+                  onchange="updatePoleZoneHeight('${currentSpace ? currentSpace.id : ''}', 'Mid-Pole', parseInt(this.value, 10))"
+                  class="bg-slate-900 border border-slate-700 text-cyan-300 font-bold rounded px-1.5 py-0.2 text-[10px] font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+                  title="Adjust Mid-Pole mounting height AGL"
+                >
+                  ${[4, 6, 8, 10, 12, 14, 16, 18].filter(h => h < upperElevation).map(h => `
+                    <option value="${h}" ${h === midElevation ? 'selected' : ''}>${h} ft AGL</option>
+                  `).join('')}
+                </select>
+              </div>
+            ` : (z.id === "Upper-Pole" ? `
+              <div class="flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded border border-cyan-800 text-[10px]">
+                <span class="text-slate-400 font-medium">Height:</span>
+                <select 
+                  onchange="updatePoleZoneHeight('${currentSpace ? currentSpace.id : ''}', 'Upper-Pole', parseInt(this.value, 10))"
+                  class="bg-slate-900 border border-slate-700 text-cyan-300 font-bold rounded px-1.5 py-0.2 text-[10px] font-mono focus:outline-none focus:border-cyan-500 cursor-pointer"
+                  title="Adjust Upper-Pole mounting height AGL"
+                >
+                  ${[10, 12, 14, 16, 18, 20, 22, 25, 28, 30, 32, 35].filter(h => h < poleHeight && h > midElevation).map(h => `
+                    <option value="${h}" ${h === upperElevation ? 'selected' : ''}>${h} ft AGL</option>
+                  `).join('')}
+                </select>
+              </div>
+            ` : '')}
+          </div>
           <span class="text-[9px] font-mono text-slate-500">${itemsInZone.length} Device${itemsInZone.length === 1 ? '' : 's'}</span>
         </div>
         <p class="text-[10px] text-slate-400 mb-2">${z.desc}</p>
@@ -2109,4 +2170,5 @@ if (typeof window !== "undefined") {
   window.promptCreateNewRack = promptCreateNewRack;
   window.deleteActiveRackElevation = deleteActiveRackElevation;
   window.setHostSidebarTab = setHostSidebarTab;
+  window.updatePoleZoneHeight = updatePoleZoneHeight;
 }

@@ -181,6 +181,11 @@
           <span class="hidden sm:inline">Compare</span>
           <span id="compareCountBadge" class="hidden absolute -top-1.5 -right-1.5 bg-purple-500 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">0</span>
         </button>
+        <button id="projectHealthPill" onclick="toggleProjectHealthModal()" class="px-2.5 py-2 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Project Health: Live audit of PoE headroom, equipment mounting, transceivers, and licensing">
+          <i id="projectHealthPillIcon" data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+          <span id="projectHealthPillLabel" class="hidden xl:inline">System Healthy</span>
+          <span id="projectHealthPillCount" class="hidden bg-rose-500 text-white font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </button>
         <button onclick="toggleBomDrawer()" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-brand-500/25">
           <i data-lucide="shopping-bag" class="w-4 h-4"></i>
           <span>Quote BOM</span>
@@ -313,8 +318,8 @@
     <!-- Dynamic Item List Container -->
     <div id="bomItemsList" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
 
-    <!-- Real-Time Camera Demand vs PoE Audit Strip -->
-    <div id="bomPoEHeadroomAudit" class="p-3 bg-slate-950 border-t border-slate-800 text-xs"></div>
+    <!-- Real-Time Project Deficit / Health Alert Strip (Compact Dynamic Notification) -->
+    <div id="bomDeficitAlertStrip" class="p-3 bg-slate-950 border-t border-slate-800 text-xs"></div>
 
     <!-- Financial & Capacity Summary Footer -->
     <div class="p-4 bg-slate-950/90 border-t border-slate-800 space-y-3">
@@ -975,6 +980,36 @@
         </button>
       </div>
       <div class="flex-1 overflow-y-auto p-6" id="licenseManagerContent"></div>
+    </div>
+  </div>
+
+  <!-- Project Health & Engineering Validation Audit Modal -->
+  <div id="projectHealthModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div id="projectHealthModalIcon" class="p-2 rounded-xl bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
+            <i data-lucide="shield-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              Project Health & Engineering Validation
+              <span id="projectHealthModalBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">100% Validated</span>
+            </h2>
+            <p class="text-[11px] text-slate-400">Live dynamic scan of PoE headroom deficits, unassigned gear, missing licenses, and hardware interconnects.</p>
+          </div>
+        </div>
+        <button onclick="toggleProjectHealthModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-6 space-y-4" id="projectHealthModalContent">
+        <!-- Rendered by renderProjectHealthModal() -->
+      </div>
+      <div class="px-6 py-3 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-xs">
+        <span class="text-slate-500 font-mono text-[11px]">Audit Engine &bull; Real-time Project Telemetry</span>
+        <button onclick="toggleProjectHealthModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold">Close</button>
+      </div>
     </div>
   </div>
 

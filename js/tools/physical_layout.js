@@ -1096,6 +1096,17 @@ function renderInspector() {
           </select>
         </div>
 
+        <div>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Mounting Architecture:</label>
+          <select onchange="updateNodeMountMethod('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-brand-500">
+            <option value="wall" ${(!node.mountMethod || node.mountMethod === 'wall') ? 'selected' : ''}>Wall Mount (Façade / Surface)</option>
+            <option value="ceiling" ${node.mountMethod === 'ceiling' ? 'selected' : ''}>Ceiling / Soffit Mount</option>
+            <option value="pole" ${node.mountMethod === 'pole' ? 'selected' : ''}>Pole / Mast Mount</option>
+            <option value="parapet" ${node.mountMethod === 'parapet' ? 'selected' : ''}>Parapet Roof Mount</option>
+            <option value="corner" ${node.mountMethod === 'corner' ? 'selected' : ''}>Corner Mount Bracket</option>
+          </select>
+        </div>
+
         ${run ? `
           <div class="bg-slate-900/90 p-2 rounded-lg border ${run.isExceeded ? 'border-rose-500/60' : 'border-slate-800'} text-[11px] font-mono space-y-1">
             <div class="flex justify-between">
@@ -1169,6 +1180,24 @@ function updateNodeCloset(id, closetId) {
     renderCableCanvas();
     renderInspector();
     saveFacilityState();
+  }
+}
+
+function updateNodeMountMethod(id, method) {
+  const floor = getActiveFloor();
+  const node = floor.nodes.find(n => n.id === id);
+  if (node) {
+    node.mountMethod = method;
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      const match = projectBOM.find(i => i.instanceId === node.id || i.model === node.name);
+      if (match) match.mountMethod = method;
+    }
+    saveFacilityState();
+    renderCableCanvas();
+    renderInspector();
+    if (typeof showToast === "function") {
+      showToast(`Updated mounting for ${node.name} to ${method}`);
+    }
   }
 }
 
@@ -1737,4 +1766,5 @@ if (typeof window !== "undefined") {
   window.switchActiveFloor = switchActiveFloor;
   window.initCableCanvas = initCableCanvas;
   window.renderCableCanvas = renderCableCanvas;
+  window.updateNodeMountMethod = updateNodeMountMethod;
 }

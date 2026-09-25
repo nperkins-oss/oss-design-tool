@@ -5,8 +5,8 @@
 // =========================================================================
 
 // Version & Build Information
-const APP_VERSION = "0.10.4-alpha";
-const BUILD_NUMBER = "2026.09.24.1325";
+const APP_VERSION = "0.10.10-alpha";
+const BUILD_NUMBER = "2026.09.25.1000";
 
 // Active Navigation State
 let activeDomain = "networking"; // "networking" | "physical_security" | "compute_storage" | "infrastructure" | "software"
@@ -224,6 +224,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
   safeCreateIcons();
 });
 

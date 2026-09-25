@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.10-alpha] - 2026-09-25
+
+### Added
+- **Adjustable Pole Zone Elevations (`js/tools/rack.js`)**:
+  - Implemented interactive mounting elevation controls for Zone 2 (Upper Pole: fixed cameras, illuminators) and Zone 3 (Mid Pole: NEMA enclosure banding) directly inside the structural pole elevation visualizer.
+  - Implemented `updatePoleZoneHeight(spaceId, zoneId, heightVal)` and exported to `window`.
+  - Mid-pole elevation changes automatically update and synchronize the physical installation height (`mountHeightFt`) of all banded NEMA enclosures attached to that pole space.
+- **Edge Device Physical Mounting Options (`js/tools/bom.js` & `js/tools/physical_layout.js`)**:
+  - Built physical mounting method selector (`wall`, `ceiling`, `pole`, `parapet`, `corner`) across all edge devices (cameras, PtP radios, wireless APs, sensors, access readers).
+  - Implemented `updateDeviceMountMethod(instanceId, method)` in `bom.js` and `updateNodeMountMethod(nodeId, method)` in `physical_layout.js`.
+  - Added physical mounting dropdown to device inspectors on the Blueprint / Physical Layout canvas.
+  - Automatic mounting detection on device creation: pole locations default to `"pole"`, dome cameras default to `"ceiling"`, and bullet/box cameras or wall drops default to `"wall"`.
+- **Project Health & Validation Audit Engine (`js/tools/bom.js` & `index.html`)**:
+  - Moved bulky PoE calculations table out of the Quote BOM drawer, reclaiming vertical space for streamlined quoting.
+  - Built persistent top-bar **Project Health Pill** (`#projectHealthPill`) in the navigation bar, featuring dynamic status indicators (calm green `✓ System Healthy` vs pulsing red `⚠️ X Project Misses`).
+  - Implemented `#bomDeficitAlertStrip` in the BOM drawer providing compact real-time notification alerts when engineering misses exist.
+  - Built dedicated **Project Health & Engineering Validation Modal** (`#projectHealthModal`) scanning in real time for:
+    - **PoE Power Deficits**: Compares switch PoE budgets against edge device loads and camera calculation targets.
+    - **Unassigned Hardware**: Identifies staged equipment without assigned facilities, floors, or racks.
+    - **Missing Software Licenses**: Audits cameras against perpetual VMS channel recording licenses.
+    - **Missing Hardware & Interconnects**: Audits switch stacks for dedicated hardware DAC cables.
+  - Added direct 1-click remediation actions for all deficits (`autoFixUnassignedGear`, `autoAddMissingLicenses`, `autoAddMissingDACCables`, `autoAddPoeSupplyOrSwitch`, and `autoFixAllProjectMisses`).
+- **Switch Stacking Architecture Refactor (`js/tools/bom.js`, `js/tools/topology.js`, `js/tools/rack.js`)**:
+  - Refactored switch cards in the Quote BOM drawer, replacing the clumsy editable stacking dropdown with a sleek read-only stack status badge and deep-link button (`Configure in Topology →`).
+  - Switch stacking controls and hardware member adjustments centralized in Topology canvas (`updateSwitchStackFromTopology`) and Enclosure Visualizer (`renderEquipmentRackFrame`).
+  - Added stacking member badges (`X-Switch Stack (+X DACs)`) to switch chassis in rack elevation views.
+
+---
+
 ## [0.10.9-alpha] - 2026-09-25
 
 ### Added
