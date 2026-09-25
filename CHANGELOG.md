@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.15-alpha] - 2026-09-25
+
+### Refactored & Modularized
+- **Modular Tool Breakouts**:
+  - Extracted **Switch Port Matrix & Interconnect Studio** from `js/tools/topology.js` into dedicated `js/tools/port_matrix.js` module. Isolates widescreen port telemetry, hardware faceplates, and patch cable routing, reducing `topology.js` from 3,832 to 3,436 lines.
+  - Extracted **Project Health & Live Validation Audit Engine** from `js/tools/bom.js` into dedicated `js/tools/project_health.js` module. Isolates project diagnostic rules, PoE deficit scanning, transceiver verification, and 1-click remediation actions, reducing `bom.js` from 2,123 to 1,607 lines.
+  - Linked both standalone modules cleanly in `index.html`.
+
+### Removed & Cleaned (Anti-Bloat)
+- **Dead DOM Elements**: Purged obsolete empty `<div id="rackModal" class="hidden"></div>` placeholder from `index.html` (rack visualization has been fully unified in `#facilityModal`).
+- **Legacy Stubs**: Deleted dead `js/app.js` bridge file.
+- **Unused Functions**:
+  - Purged `renderUnassignedTrayHTML()` in `js/tools/rack.js`.
+  - Purged unreferenced `isFacilityModalVisible()` in `js/core/facility.js`.
+  - Purged dead manual uplink setter `setUplinkTarget()` in `js/tools/bom.js`.
+  - Removed duplicate definition of `openRackViewerFor()` in `js/tools/topology.js` that previously clobbered canonical facility breadcrumb tracking.
+  - Cleaned redundant `jumpToPhysicalLayoutTarget` re-export from `js/tools/bom.js`.
+  - Cleaned obsolete individual card export guards (`renderOpticsCard`, `renderWirelessCard`, `renderAccessoryCard`) in `js/renderers/render_cards.js`.
+
+### Performance & Optimization
+- **Debounced Storage I/O**: Added 250ms debounced persistence to `saveFacilityState()` in `js/tools/physical_layout.js` (with immediate sync on mouseup) to prevent synchronous `localStorage` JSON serialization from blocking main-thread execution during drag events.
+- **RAF Canvas Redraw Throttling**: Added `requestAnimationFrame` render throttling (`requestPhysCanvasRedraw`) during drop, node, and bend handle drag-and-drop on the physical layout blueprint, locking canvas interaction at a smooth 60fps.
+
+---
+
 ## [0.10.14-alpha] - 2026-09-25
 
 ### Fixed

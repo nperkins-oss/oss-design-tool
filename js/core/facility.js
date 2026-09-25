@@ -1007,11 +1007,6 @@ let facilityActiveView = "hierarchy"; // "hierarchy" | "visualizer"
 let previousFacilityFloorId = null;
 let previousFacilitySpaceId = null;
 
-function isFacilityModalVisible() {
-  const modal = document.getElementById("facilityModal");
-  return modal && !modal.classList.contains("hidden");
-}
-
 function syncVisualizerBreadcrumbs() {
   const currentHost = (typeof activeRackId !== "undefined") ? activeRackId : "MDF • Rack-1";
   const parsed = FacilityStore.parse(currentHost);

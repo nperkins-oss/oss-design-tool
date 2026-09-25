@@ -1682,10 +1682,6 @@ function mountItemToFirstAvailableSlot(instanceId) {
   }
 }
 
-function renderUnassignedTrayHTML(unassignedItems, activeHostType = "equipment_rack", instructionText = "Drag into empty slot above") {
-  return ""; // Rendered in renderRackUnassignedStagingDock at the top of the frame
-}
-
 // -----------------------------------------------------------
 // Drag & Drop Mechanics
 // -----------------------------------------------------------

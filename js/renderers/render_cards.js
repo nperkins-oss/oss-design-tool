@@ -588,7 +588,4 @@ window.handleAddFirewallToBOM = handleAddFirewallToBOM;
 window.handleAddCatalogCardToBOM = handleAddCatalogCardToBOM;
 window.renderSwitchCard = renderSwitchCard;
 window.renderFirewallCard = renderFirewallCard;
-if (typeof renderOpticsCard !== "undefined") window.renderOpticsCard = renderOpticsCard;
-if (typeof renderWirelessCard !== "undefined") window.renderWirelessCard = renderWirelessCard;
-if (typeof renderAccessoryCard !== "undefined") window.renderAccessoryCard = renderAccessoryCard;
 window.renderCardByDomain = renderCardByDomain;

@@ -98,11 +98,29 @@ function toggleCableLayoutModal() {
 }
 
 // -----------------------------------------------------------
-// Project-Scoped Persistence
+// Project-Scoped Persistence (Debounced to protect 60fps canvas)
 // -----------------------------------------------------------
-function saveFacilityState() {
+let _facilitySaveTimer = null;
+function saveFacilityState(immediate = false) {
+  if (immediate) {
+    if (_facilitySaveTimer) {
+      clearTimeout(_facilitySaveTimer);
+      _facilitySaveTimer = null;
+    }
+    _doSaveFacilityState();
+    return;
+  }
+  if (_facilitySaveTimer) clearTimeout(_facilitySaveTimer);
+  _facilitySaveTimer = setTimeout(() => {
+    _facilitySaveTimer = null;
+    _doSaveFacilityState();
+  }, 250);
+}
+
+function _doSaveFacilityState() {
   try {
-    const projId = FacilityStore.getProjectId();
+    const projId = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+      ? FacilityStore.getProjectId() : "default";
     const data = {
       activeFloorId,
       activeCableSku,
@@ -357,6 +375,17 @@ function handlePhysMouseDown(e) {
   }
 }
 
+let _physRafPending = false;
+function requestPhysCanvasRedraw() {
+  if (_physRafPending) return;
+  _physRafPending = true;
+  requestAnimationFrame(() => {
+    _physRafPending = false;
+    recalculateCurrentFloorCables();
+    renderCableCanvas();
+  });
+}
+
 function handlePhysMouseMove(e) {
   if (!isPhysCanvasVisible()) return;
 
@@ -375,16 +404,14 @@ function handlePhysMouseMove(e) {
   if (isDraggingPhysWaypoint && draggedPhysWaypoint) {
     draggedPhysWaypoint.x = Math.max(20, pos.x - physDragOffset.x);
     draggedPhysWaypoint.y = Math.max(20, pos.y - physDragOffset.y);
-    recalculateCurrentFloorCables();
-    renderCableCanvas();
+    requestPhysCanvasRedraw();
     return;
   }
 
   if (isDraggingPhysNode && draggedPhysNode) {
     draggedPhysNode.x = Math.max(30, pos.x - physDragOffset.x);
     draggedPhysNode.y = Math.max(30, pos.y - physDragOffset.y);
-    recalculateCurrentFloorCables();
-    renderCableCanvas();
+    requestPhysCanvasRedraw();
   }
 }
 
@@ -399,7 +426,9 @@ function handlePhysMouseUp() {
     draggedPhysWaypoint = null;
     isDraggingPhysNode = false;
     draggedPhysNode = null;
-    saveFacilityState();
+    recalculateCurrentFloorCables();
+    renderCableCanvas();
+    saveFacilityState(true);
   }
 }
 
