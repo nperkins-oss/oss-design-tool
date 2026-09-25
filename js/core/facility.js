@@ -1521,6 +1521,7 @@ function handleEnclosureDragEnd(event) {
 function handleHardwareStagingDragStart(event, instanceId) {
   facilityDraggedHardwareId = instanceId;
   event.dataTransfer.setData("hardwareInstanceId", instanceId);
+  event.dataTransfer.setData("text/plain", instanceId);
   event.dataTransfer.effectAllowed = "move";
   const el = event.currentTarget;
   if (el) el.style.opacity = "0.4";
@@ -1530,8 +1531,8 @@ function handleHardwareStagingDragEnd(event) {
   facilityDraggedHardwareId = null;
   const el = event.currentTarget;
   if (el) el.style.opacity = "1";
-  document.querySelectorAll(".space-drop-target, .enclosure-drop-target").forEach(card => {
-    card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "ring-emerald-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400", "border-emerald-400");
+  document.querySelectorAll(".space-drop-target, .enclosure-drop-target, .floor-field-drop-target, .floor-drop-target").forEach(card => {
+    card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "ring-emerald-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400", "border-emerald-400", "bg-amber-950/40");
   });
 }
 
@@ -1549,6 +1550,66 @@ function handleSpaceCardDragLeave(event, spaceId) {
   const card = event.currentTarget;
   if (card) {
     card.classList.remove("ring-2", "ring-indigo-400", "ring-amber-400", "bg-indigo-950/60", "border-indigo-400", "border-amber-400");
+  }
+}
+
+function handleFloorFieldDragOver(event) {
+  if (!facilityDraggedHardwareId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  const card = event.currentTarget;
+  if (card && !card.classList.contains("ring-2")) {
+    card.classList.add("ring-2", "ring-amber-400", "bg-amber-950/40", "border-amber-400");
+  }
+}
+
+function handleFloorFieldDragLeave(event) {
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-amber-400", "bg-amber-950/40", "border-amber-400");
+  }
+}
+
+function handleFloorFieldDrop(event, floorName) {
+  event.preventDefault();
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-amber-400", "bg-amber-950/40", "border-amber-400");
+  }
+  const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
+  facilityDraggedHardwareId = null;
+  if (hwId && floorName) {
+    assignHardwareToLocation(hwId, `${floorName} • Field`);
+  }
+}
+
+function handleFloorCardDragOver(event, floorId) {
+  if (!facilityDraggedHardwareId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  const card = event.currentTarget;
+  if (card && !card.classList.contains("ring-2")) {
+    card.classList.add("ring-2", "ring-amber-400", "bg-amber-950/40", "border-amber-400");
+  }
+}
+
+function handleFloorCardDragLeave(event, floorId) {
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-amber-400", "bg-amber-950/40", "border-amber-400");
+  }
+}
+
+function handleFloorCardDrop(event, floorName) {
+  event.preventDefault();
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-amber-400", "bg-amber-950/40", "border-amber-400");
+  }
+  const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
+  facilityDraggedHardwareId = null;
+  if (hwId && floorName) {
+    assignHardwareToLocation(hwId, `${floorName} • Field`);
   }
 }
 
@@ -1575,7 +1636,7 @@ function handleEnclosureCardDrop(event, encLocName) {
   if (card) {
     card.classList.remove("ring-2", "ring-emerald-400", "bg-emerald-950/40", "border-emerald-400");
   }
-  const hwId = event.dataTransfer.getData("hardwareInstanceId") || facilityDraggedHardwareId;
+  const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
   facilityDraggedHardwareId = null;
   if (hwId && encLocName) {
     assignHardwareToLocation(hwId, encLocName);
@@ -1636,7 +1697,7 @@ function handleSpaceCardDrop(event, targetSpaceId) {
   }
 
   // Check if hardware drop from staging bin
-  const hwId = event.dataTransfer.getData("hardwareInstanceId") || facilityDraggedHardwareId;
+  const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
   facilityDraggedHardwareId = null;
   if (hwId) {
     const targetSpace = FacilityStore.getSpaces().find(s => s.id === targetSpaceId);
@@ -1819,7 +1880,10 @@ function renderFacilityManager() {
             return `
               <div 
                 onclick="selectFacilityFloor('${f.id}')"
-                class="p-3 rounded-xl border ${isSelected ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'} cursor-pointer transition-all flex items-center justify-between group"
+                ondragover="handleFloorCardDragOver(event, '${f.id}')"
+                ondragleave="handleFloorCardDragLeave(event, '${f.id}')"
+                ondrop="handleFloorCardDrop(event, '${escapeHTML(f.name)}')"
+                class="floor-drop-target p-3 rounded-xl border ${isSelected ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'} cursor-pointer transition-all flex items-center justify-between group"
               >
                 <div class="min-w-0">
                   <span class="text-xs font-bold text-white block truncate">${escapeHTML(f.name)}</span>
@@ -2127,7 +2191,12 @@ function renderFacilityManager() {
           }) : [];
 
           return `
-            <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2.5 shadow-md">
+            <div 
+              class="floor-field-drop-target p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2.5 shadow-md transition-all"
+              ondragover="handleFloorFieldDragOver(event)"
+              ondragleave="handleFloorFieldDragLeave(event)"
+              ondrop="handleFloorFieldDrop(event, '${escapeHTML(currentFloor.name)}')"
+            >
               <div class="flex items-center justify-between">
                 <div>
                   <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -2150,7 +2219,8 @@ function renderFacilityManager() {
 
               ${floorFieldHardware.length === 0 ? `
                 <div class="p-3 bg-slate-950/60 rounded-lg border border-dashed border-slate-800 text-center text-xs text-slate-500">
-                  No field devices (cameras, door portals, wireless APs, drops) assigned to ${escapeHTML(currentFloor.name)}.
+                  <p>No field devices (cameras, door portals, wireless APs, drops) assigned to ${escapeHTML(currentFloor.name)}.</p>
+                  <span class="block text-[10px] text-amber-400/80 font-mono mt-1">● Drag unassigned cameras, readers, or sensors here to assign</span>
                 </div>
               ` : `
                 <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
@@ -2595,6 +2665,12 @@ if (typeof window !== "undefined") {
   window.handleSpaceCardDragOver = handleSpaceCardDragOver;
   window.handleSpaceCardDragLeave = handleSpaceCardDragLeave;
   window.handleSpaceCardDrop = handleSpaceCardDrop;
+  window.handleFloorFieldDragOver = handleFloorFieldDragOver;
+  window.handleFloorFieldDragLeave = handleFloorFieldDragLeave;
+  window.handleFloorFieldDrop = handleFloorFieldDrop;
+  window.handleFloorCardDragOver = handleFloorCardDragOver;
+  window.handleFloorCardDragLeave = handleFloorCardDragLeave;
+  window.handleFloorCardDrop = handleFloorCardDrop;
   window.handleEnclosureCardDragOver = handleEnclosureCardDragOver;
   window.handleEnclosureCardDragLeave = handleEnclosureCardDragLeave;
   window.handleEnclosureCardDrop = handleEnclosureCardDrop;
@@ -2602,6 +2678,10 @@ if (typeof window !== "undefined") {
   window.assignAllUnassignedToSpace = assignAllUnassignedToSpace;
   window.promptAssignHardwareToSpace = promptAssignHardwareToSpace;
   window.promptAssignHardwareToFloorField = promptAssignHardwareToFloorField;
+  window.openQuickAddEnclosureModal = openQuickAddEnclosureModal;
+  window.closeQuickAddEnclosureModal = closeQuickAddEnclosureModal;
+  window.updateQuickAddTypeFields = updateQuickAddTypeFields;
+  window.submitQuickAddEnclosure = submitQuickAddEnclosure;
 }
 
 function promptAssignHardwareToFloorField(floorName) {
@@ -2623,4 +2703,187 @@ function promptAssignHardwareToFloorField(floorName) {
 function promptAssignHardwareToSpace(spaceName) {
   if (!spaceName) return;
   promptAssignHardwareToFloorField(spaceName);
+}
+
+// -----------------------------------------------------------
+// Quick Add Enclosure / Rack Modal Functions
+// -----------------------------------------------------------
+function updateQuickAddTypeFields(hostType) {
+  const container = document.getElementById("quickAddSpecificFields");
+  if (!container) return;
+
+  if (hostType === "equipment_rack") {
+    container.innerHTML = `
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Rack Height:</label>
+        <select id="quickAddRackHeight" class="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="12">12U Wallbox</option>
+          <option value="18">18U Wallbox</option>
+          <option value="24" selected>24U Half-Rack</option>
+          <option value="42">42U Full-Rack</option>
+          <option value="48">48U Enterprise</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Frame Depth:</label>
+        <select id="quickAddRackDepth" class="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="24">24" Shallow</option>
+          <option value="36" selected>36" Standard</option>
+          <option value="42">42" Server Deep</option>
+        </select>
+      </div>
+    `;
+  } else if (hostType === "security_cabinet") {
+    container.innerHTML = `
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Subplate Bays:</label>
+        <select id="quickAddCabinetBays" class="w-full bg-slate-950 border border-slate-700 text-emerald-300 font-bold rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="4">4 Bays (Small LSP/Trove)</option>
+          <option value="8" selected>8 Bays (Medium Trove2)</option>
+          <option value="12">12 Bays (Enterprise Trove3)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">DC Bus Voltage:</label>
+        <select id="quickAddCabinetVoltage" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="dual_12_24" selected>Dual 12V / 24VDC</option>
+          <option value="24vdc">24VDC Lock Power</option>
+          <option value="12vdc">12VDC System</option>
+        </select>
+      </div>
+    `;
+  } else if (hostType === "industrial_din") {
+    container.innerHTML = `
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">DIN Rails:</label>
+        <select id="quickAddDinRails" class="w-full bg-slate-950 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="1">1 Rail (Compact)</option>
+          <option value="2" selected>2 Rails (Standard NEMA)</option>
+          <option value="3">3 Rails (Deep Control)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Mounting:</label>
+        <select id="quickAddDinMounting" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="wall" selected>Wall Mount Flanges</option>
+          <option value="pole">Pole Banding Clamps</option>
+        </select>
+      </div>
+    `;
+  } else {
+    // architectural_backboard
+    container.innerHTML = `
+      <div class="col-span-2">
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Plywood Field Size:</label>
+        <select id="quickAddBackboardSize" class="w-full bg-slate-950 border border-slate-700 text-purple-300 font-bold rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="4" selected>4' x 8' Sheet (32 sq ft)</option>
+          <option value="8">8' x 8' Wallfield (64 sq ft)</option>
+          <option value="12">12' x 8' Room Field (96 sq ft)</option>
+        </select>
+      </div>
+    `;
+  }
+}
+
+function openQuickAddEnclosureModal() {
+  const modal = document.getElementById("quickAddEnclosureModal");
+  if (!modal) return;
+
+  const spaceSelect = document.getElementById("quickAddSpaceSelect");
+  const spaces = FacilityStore.getSpaces();
+  if (spaceSelect) {
+    spaceSelect.innerHTML = spaces.map(s => {
+      const isSel = (s.id === activeFacilitySpaceId) || (typeof activeRackId === "string" && activeRackId.startsWith(s.name));
+      return `<option value="${s.id}" ${isSel ? 'selected' : ''}>${escapeHTML(s.name)} (${s.type.toUpperCase()})</option>`;
+    }).join('');
+  }
+
+  const typeSelect = document.getElementById("quickAddHostTypeSelect");
+  if (typeSelect) typeSelect.value = "equipment_rack";
+  updateQuickAddTypeFields("equipment_rack");
+
+  const nameInput = document.getElementById("quickAddHostNameInput");
+  if (nameInput) {
+    const encCount = FacilityStore.getEnclosures().length;
+    nameInput.value = `Rack-${encCount + 1}`;
+  }
+
+  const err = document.getElementById("quickAddHostError");
+  if (err) err.classList.add("hidden");
+
+  modal.classList.remove("hidden");
+  setTimeout(() => { if (nameInput) nameInput.focus(); }, 50);
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeQuickAddEnclosureModal() {
+  const modal = document.getElementById("quickAddEnclosureModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function submitQuickAddEnclosure() {
+  const nameInput = document.getElementById("quickAddHostNameInput");
+  const spaceSelect = document.getElementById("quickAddSpaceSelect");
+  const typeSelect = document.getElementById("quickAddHostTypeSelect");
+  const errEl = document.getElementById("quickAddHostError");
+
+  const name = nameInput ? nameInput.value.trim() : "";
+  const spaceId = spaceSelect ? spaceSelect.value : activeFacilitySpaceId;
+  const hostType = typeSelect ? typeSelect.value : "equipment_rack";
+
+  if (!name) {
+    if (errEl) {
+      errEl.textContent = "Please enter an enclosure name.";
+      errEl.classList.remove("hidden");
+    }
+    return;
+  }
+
+  const encs = FacilityStore.getEnclosures(spaceId);
+  if (encs.some(e => e.name.trim().toLowerCase() === name.toLowerCase())) {
+    if (errEl) {
+      errEl.textContent = `An enclosure named "${name}" already exists in this space.`;
+      errEl.classList.remove("hidden");
+    }
+    return;
+  }
+
+  const options = {};
+  if (hostType === "equipment_rack") {
+    const hSelect = document.getElementById("quickAddRackHeight");
+    options.heightU = hSelect ? parseInt(hSelect.value, 10) : 24;
+    const dSelect = document.getElementById("quickAddRackDepth");
+    options.depthInches = dSelect ? parseInt(dSelect.value, 10) : 36;
+  } else if (hostType === "security_cabinet") {
+    const bSelect = document.getElementById("quickAddCabinetBays");
+    options.subplateBays = bSelect ? parseInt(bSelect.value, 10) : 8;
+    const vSelect = document.getElementById("quickAddCabinetVoltage");
+    options.dcVoltage = vSelect ? vSelect.value : "dual_12_24";
+  } else if (hostType === "industrial_din") {
+    const rSelect = document.getElementById("quickAddDinRails");
+    options.dinRails = rSelect ? parseInt(rSelect.value, 10) : 2;
+    const mSelect = document.getElementById("quickAddDinMounting");
+    options.mountingMethod = mSelect ? mSelect.value : "wall";
+    options.railLengthMm = 350;
+  } else if (hostType === "architectural_backboard") {
+    const wSelect = document.getElementById("quickAddBackboardSize");
+    options.widthFt = wSelect ? parseInt(wSelect.value, 10) : 4;
+    options.heightFt = 8;
+  }
+
+  FacilityStore.addHost(name, hostType, spaceId, options);
+  closeQuickAddEnclosureModal();
+
+  const space = FacilityStore.getSpaces().find(s => s.id === spaceId);
+  const newLoc = space ? `${space.name} • ${name}` : name;
+  activeRackId = newLoc;
+
+  if (typeof syncRackSelectorOptions === "function") syncRackSelectorOptions();
+  if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+  if (typeof renderFacilityManager === "function") renderFacilityManager();
+
+  if (typeof showToast === "function") {
+    showToast(`Created ${newLoc} (${FacilityStore.HOST_TYPES[hostType].label})`);
+  }
+  if (window.lucide) lucide.createIcons();
 }

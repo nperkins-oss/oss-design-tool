@@ -108,33 +108,61 @@ function checkDeviceHostCompatibility(item, hostType) {
   if (!item) return { compatible: true, matchBadge: "Universal", advisory: "" };
 
   const role = item.role || "";
-  const cat = item.category || "";
+  const cat = (item.category || "").toLowerCase();
   const model = item.model || "";
-  const isRackDev = (item.rackUnits && parseInt(item.rackUnits, 10) > 0) || role === "Access" || role === "Core" || role === "Aggregation" || role === "Server" || role === "Storage" || role === "UPS" || role === "Structured Cabling" || role === "Core & Agg";
-  const isSecurityDev = cat === "access_control" || role === "Access Control" || item.doorCapacity || item.controllerType || model.includes("LP") || model.includes("MR") || model.includes("Trove") || model.includes("FPO") || model.includes("eFlow");
-  const isDinDev = item.isDinMounted || model.includes("DIN") || item.mounting === "DIN" || cat === "industrial_din";
-  const isEdgeField = role === "Surveillance" || role === "Video" || role === "Wireless Bridge" || role === "Wireless" || role === "Accessory" || model.includes("Cam") || model.includes("Dome") || model.includes("Bullet") || model.includes("PTZ") || model.includes("NanoBeam") || model.includes("GigaBeam") || model.includes("AP");
+  const modelLower = model.toLowerCase();
+
+  const isRackDev = (item.rackUnits && parseInt(item.rackUnits, 10) > 0) || 
+                    role === "Access" || role === "Core" || role === "Aggregation" || 
+                    role === "Server" || role === "Storage" || role === "UPS" || 
+                    role === "Structured Cabling" || role === "Core & Agg" || 
+                    cat === "switch" || cat === "server" || cat === "ups";
+
+  const isSecurityDev = cat === "access_control" || role === "Access Control" || 
+                        item.doorCapacity || item.controllerType || 
+                        /lp1501|lp1502|lp2500|lp4502|mr52|mr50|mr16|trove|fpo|eflow/i.test(model);
+
+  const isDinDev = item.isDinMounted || /din/i.test(model) || item.mounting === "DIN" || cat === "industrial_din";
+
+  const isEdgeField = role === "Surveillance" || role === "Video" || role === "Camera" || 
+                      role === "Wireless Bridge" || role === "Wireless" || role === "Access Point" || 
+                      role === "Accessory" || role === "Field" || role === "Sensor" || 
+                      role === "Audio/Intercom" || cat === "surveillance" || cat === "cameras" || 
+                      cat === "wireless" || cat === "field_hardware" || item.isFieldDevice === true ||
+                      /camera|cam|dome|bullet|ptz|turret|fisheye|multisensor|nanobeam|gigabeam|airmax|wave|unifi\s*ap|access\s*point|intercom|horn|sensor|reader|keypad/i.test(modelLower);
 
   if (hostType === "equipment_rack") {
-    if (isRackDev) return { compatible: true, matchBadge: "19\" EIA Match", advisory: "" };
-    if (isDinDev) return { compatible: false, matchBadge: "DIN Form Factor", advisory: "Requires 19\" DIN bracket shelf to rack-mount" };
-    if (isEdgeField) return { compatible: false, matchBadge: "Field Device", advisory: "Outdoor/Edge device — typically mounted on pole or wall" };
-    return { compatible: true, matchBadge: "Hardware", advisory: "" };
+    if (isEdgeField) {
+      return { compatible: false, matchBadge: "Field Device", advisory: "Field device (Camera/Radio/Sensor) - assign to floor or pole location" };
+    }
+    if (isDinDev && !isRackDev) {
+      return { compatible: false, matchBadge: "DIN Form Factor", advisory: "Requires 19\" DIN bracket shelf to rack-mount" };
+    }
+    if (isSecurityDev && !isRackDev) {
+      return { compatible: false, matchBadge: "Subplate Device", advisory: "Mounts inside Security Cabinet subplate" };
+    }
+    if (isRackDev) {
+      return { compatible: true, matchBadge: "19\" EIA Match", advisory: "" };
+    }
+    return { compatible: false, matchBadge: "Non-Rackmount", advisory: "Device does not mount directly to 19\" EIA rack rails" };
   } else if (hostType === "security_cabinet") {
+    if (isEdgeField) return { compatible: false, matchBadge: "Field Device", advisory: "Mounts at perimeter or door location" };
     if (isSecurityDev) return { compatible: true, matchBadge: "Subplate Match", advisory: "" };
     if (isRackDev) return { compatible: false, matchBadge: "Rackmount Chassis", advisory: "Large chassis requires 19\" EIA rack rails" };
-    return { compatible: true, matchBadge: "Module", advisory: "" };
+    return { compatible: false, matchBadge: "Incompatible", advisory: "Cabinet requires subplate-mountable module" };
   } else if (hostType === "industrial_din") {
+    if (isEdgeField) return { compatible: false, matchBadge: "Field Device", advisory: "Mounts at edge field location" };
     if (isDinDev) return { compatible: true, matchBadge: "DIN-Rail Match", advisory: "" };
     if (isRackDev && (item.depthInches > 12 || parseInt(item.rackUnits, 10) > 1)) {
       return { compatible: false, matchBadge: "Exceeds Depth", advisory: "Full-depth 19\" unit exceeds NEMA box dimensions" };
     }
-    return { compatible: true, matchBadge: "Hardened", advisory: "" };
+    return { compatible: false, matchBadge: "Incompatible", advisory: "Requires DIN-rail mounting form-factor" };
   } else if (hostType === "structural_mount") {
     if (isEdgeField || isDinDev) return { compatible: true, matchBadge: "Pole Compatible", advisory: "" };
     if (isRackDev) return { compatible: false, matchBadge: "Indoor Rackmount", advisory: "Indoor chassis cannot withstand outdoor pole exposure" };
     return { compatible: true, matchBadge: "Edge Mount", advisory: "" };
   } else if (hostType === "architectural_backboard") {
+    if (isEdgeField) return { compatible: false, matchBadge: "Field Device", advisory: "Mounts at field/coverage location" };
     if (role === "Structured Cabling" || isSecurityDev || isDinDev || item.shallowDepth) {
       return { compatible: true, matchBadge: "Wallfield Match", advisory: "" };
     }
@@ -150,7 +178,45 @@ function checkDeviceHostCompatibility(item, hostType) {
 // -----------------------------------------------------------
 // Power Supply Units (PSU), Power Feeds & PDU Sizing Models
 // -----------------------------------------------------------
-function getPsuBtnClass(feed) {
+// -----------------------------------------------------------
+// Rack PDU Configuration & Persistence (Dual 0U, Single 0U, Horizontal 1U)
+// -----------------------------------------------------------
+function getRackPduConfig() {
+  const parsed = FacilityStore.parse(activeRackId);
+  const enclosures = FacilityStore.getEnclosures();
+  const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === parsed.hostName.toLowerCase()) || null;
+  const saved = localStorage.getItem(`rack_pdu_config_${activeRackId}`);
+  if (saved) return saved;
+  if (activeEnc && activeEnc.pduConfig) return activeEnc.pduConfig;
+  return "dual_vertical";
+}
+
+function setRackPduConfig(val) {
+  const parsed = FacilityStore.parse(activeRackId);
+  localStorage.setItem(`rack_pdu_config_${activeRackId}`, val);
+  if (parsed.hostId) {
+    FacilityStore.updateHost(parsed.hostId, { pduConfig: val });
+  }
+  const sel = document.getElementById("rackPduConfigSelect");
+  if (sel) sel.value = val;
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    const labels = {
+      dual_vertical: "Dual 0U Vertical (A+B)",
+      single_vertical: "Single 0U Vertical (Feed A)",
+      horizontal: "Horizontal 1U Rackmount PDU"
+    };
+    showToast(`PDU configuration set to ${labels[val] || val}`);
+  }
+}
+window.getRackPduConfig = getRackPduConfig;
+window.setRackPduConfig = setRackPduConfig;
+
+function getPsuBtnClass(feed, pduConfig) {
+  if (pduConfig === "horizontal") {
+    if (feed === "PDU-A" || feed === "PDU-Main") return "bg-indigo-950/80 border-indigo-500/70 text-indigo-300 hover:border-indigo-400";
+    return "bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300";
+  }
   if (feed === "PDU-A") return "bg-emerald-950/80 border-emerald-500/70 text-emerald-300 hover:border-emerald-400";
   if (feed === "PDU-B") return "bg-sky-950/80 border-sky-500/70 text-sky-300 hover:border-sky-400";
   return "bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300";
@@ -222,15 +288,21 @@ function toggleDevicePsuFeed(instanceId, psuNum) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
+  const pduConfig = getRackPduConfig();
   const conns = getDevicePowerConnections(item);
   const key = `psu${psuNum}`;
   const current = conns[key] || (psuNum === 1 ? "PDU-A" : "PDU-B");
 
-  // Cycle: PDU-A -> PDU-B -> None -> PDU-A
   let next = "PDU-A";
-  if (current === "PDU-A") next = "PDU-B";
-  else if (current === "PDU-B") next = "None";
-  else next = "PDU-A";
+  if (pduConfig === "single_vertical" || pduConfig === "horizontal") {
+    // Single feed toggles between PDU-A (connected) and None (unplugged)
+    next = (current === "PDU-A" || current === "PDU-Main") ? "None" : "PDU-A";
+  } else {
+    // Dual feeds cycle: PDU-A -> PDU-B -> None -> PDU-A
+    if (current === "PDU-A") next = "PDU-B";
+    else if (current === "PDU-B") next = "None";
+    else next = "PDU-A";
+  }
 
   item.powerConnections[key] = next;
   FacilityStore.notifyWorkspaceChange();
@@ -241,18 +313,24 @@ window.toggleDevicePsuFeed = toggleDevicePsuFeed;
 function autoBalanceRackPowerFeeds() {
   if (typeof projectBOM === "undefined") return;
   const assigned = projectBOM.filter(i => (FacilityStore.normalize(i.closetName || i.rackId) === activeRackId) && i.rackSlot);
+  const pduConfig = getRackPduConfig();
   let singleCounter = 0;
 
   assigned.forEach(item => {
     const specs = getDevicePsuSpecs(item);
     if (!item.powerConnections) item.powerConnections = {};
-    if (specs.psuCount >= 2) {
+    if (pduConfig === "single_vertical" || pduConfig === "horizontal") {
       item.powerConnections.psu1 = "PDU-A";
-      item.powerConnections.psu2 = "PDU-B";
+      if (specs.psuCount >= 2) item.powerConnections.psu2 = "PDU-A";
     } else {
-      singleCounter++;
-      item.powerConnections.psu1 = (singleCounter % 2 === 1) ? "PDU-A" : "PDU-B";
-      delete item.powerConnections.psu2;
+      if (specs.psuCount >= 2) {
+        item.powerConnections.psu1 = "PDU-A";
+        item.powerConnections.psu2 = "PDU-B";
+      } else {
+        singleCounter++;
+        item.powerConnections.psu1 = (singleCounter % 2 === 1) ? "PDU-A" : "PDU-B";
+        delete item.powerConnections.psu2;
+      }
     }
   });
 
@@ -265,6 +343,7 @@ function autoBalanceRackPowerFeeds() {
 window.autoBalanceRackPowerFeeds = autoBalanceRackPowerFeeds;
 
 function calculateRackPduMetrics(assignedItems, activeEnc) {
+  const pduConfig = getRackPduConfig();
   const voltage = 120;
   const circuitBreakerAmps = 20;
   const maxSafeAmps = 16.0; // 80% continuous NEC
@@ -288,43 +367,59 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
     const specs = getDevicePsuSpecs(item);
     const psuConn = getDevicePowerConnections(item);
 
-    if (specs.psuCount >= 2) {
+    if (pduConfig === "single_vertical" || pduConfig === "horizontal") {
+      // In single or horizontal PDU, all connected load goes to primary PDU-A
       const p1 = psuConn.psu1;
       const p2 = psuConn.psu2;
-
-      if ((p1 === "PDU-A" && p2 === "PDU-B") || (p1 === "PDU-B" && p2 === "PDU-A")) {
-        pduALoadWatts += (itemOperatingWatts * 0.5);
-        pduBLoadWatts += (itemOperatingWatts * 0.5);
+      if (p1 === "PDU-A" || p1 === "PDU-Main") {
+        pduALoadWatts += (specs.psuCount >= 2 && p2 === "PDU-A") ? itemOperatingWatts : (specs.psuCount >= 2 ? itemOperatingWatts * 0.5 : itemOperatingWatts);
         pduAOutletCount++;
-        pduBOutletCount++;
-        redundantDeviceCount++;
-      } else if (p1 === p2 && (p1 === "PDU-A" || p1 === "PDU-B")) {
-        if (p1 === "PDU-A") {
-          pduALoadWatts += itemOperatingWatts;
-          pduAOutletCount += 2;
+      }
+      if (specs.psuCount >= 2 && (p2 === "PDU-A" || p2 === "PDU-Main")) {
+        if (p1 !== "PDU-A" && p1 !== "PDU-Main") pduALoadWatts += itemOperatingWatts * 0.5;
+        pduAOutletCount++;
+      }
+      singleCordedCount++;
+    } else {
+      // dual_vertical
+      if (specs.psuCount >= 2) {
+        const p1 = psuConn.psu1;
+        const p2 = psuConn.psu2;
+
+        if ((p1 === "PDU-A" && p2 === "PDU-B") || (p1 === "PDU-B" && p2 === "PDU-A")) {
+          pduALoadWatts += (itemOperatingWatts * 0.5);
+          pduBLoadWatts += (itemOperatingWatts * 0.5);
+          pduAOutletCount++;
+          pduBOutletCount++;
+          redundantDeviceCount++;
+        } else if (p1 === p2 && (p1 === "PDU-A" || p1 === "PDU-B")) {
+          if (p1 === "PDU-A") {
+            pduALoadWatts += itemOperatingWatts;
+            pduAOutletCount += 2;
+          } else {
+            pduBLoadWatts += itemOperatingWatts;
+            pduBOutletCount += 2;
+          }
+          singlePointFailureCount++;
         } else {
-          pduBLoadWatts += itemOperatingWatts;
-          pduBOutletCount += 2;
+          if (p1 === "PDU-A" || p2 === "PDU-A") {
+            pduALoadWatts += itemOperatingWatts;
+            pduAOutletCount++;
+          } else if (p1 === "PDU-B" || p2 === "PDU-B") {
+            pduBLoadWatts += itemOperatingWatts;
+            pduBOutletCount++;
+          }
+          singleCordedCount++;
         }
-        singlePointFailureCount++;
       } else {
-        if (p1 === "PDU-A" || p2 === "PDU-A") {
+        singleCordedCount++;
+        if (psuConn.psu1 === "PDU-A") {
           pduALoadWatts += itemOperatingWatts;
           pduAOutletCount++;
-        } else if (p1 === "PDU-B" || p2 === "PDU-B") {
+        } else if (psuConn.psu1 === "PDU-B") {
           pduBLoadWatts += itemOperatingWatts;
           pduBOutletCount++;
         }
-        singleCordedCount++;
-      }
-    } else {
-      singleCordedCount++;
-      if (psuConn.psu1 === "PDU-A") {
-        pduALoadWatts += itemOperatingWatts;
-        pduAOutletCount++;
-      } else if (psuConn.psu1 === "PDU-B") {
-        pduBLoadWatts += itemOperatingWatts;
-        pduBOutletCount++;
       }
     }
   });
@@ -333,21 +428,27 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
   const pduBAmps = parseFloat((pduBLoadWatts / voltage).toFixed(1));
   const pduAPct = Math.min(100, Math.round((pduAAmps / maxSafeAmps) * 100));
   const pduBPct = Math.min(100, Math.round((pduBAmps / maxSafeAmps) * 100));
+  const totalOutlets = (pduConfig === "horizontal") ? 8 : 24;
 
   return {
     voltage,
     circuitBreakerAmps,
     maxSafeAmps,
     maxSafeWatts,
+    pduConfig,
     pduA: {
+      label: (pduConfig === "horizontal") ? "1U Horizontal PDU" : (pduConfig === "single_vertical" ? "0U Vertical PDU" : "PDU-A"),
+      subLabel: (pduConfig === "horizontal") ? "1U Rackmount Strip" : (pduConfig === "single_vertical" ? "Single 0U Feed" : "Feed A (Utility)"),
       watts: Math.round(pduALoadWatts),
       amps: pduAAmps,
       pct: pduAPct,
       outletsUsed: pduAOutletCount,
-      totalOutlets: 24,
+      totalOutlets,
       isOverloaded: pduAAmps > maxSafeAmps
     },
     pduB: {
+      label: "PDU-B",
+      subLabel: "Feed B (UPS)",
       watts: Math.round(pduBLoadWatts),
       amps: pduBAmps,
       pct: pduBPct,
@@ -605,11 +706,12 @@ function setRackHeight(heightVal) {
 }
 
 function promptCreateNewRack() {
+  if (typeof openQuickAddEnclosureModal === "function") {
+    openQuickAddEnclosureModal();
+    return;
+  }
   if (typeof openFacilityAddForm === "function") {
     openFacilityAddForm("add_host");
-    if (typeof toggleFacilityModal === "function") {
-      toggleFacilityModal();
-    }
     return;
   }
 
@@ -985,6 +1087,7 @@ function renderRackVisualizer() {
   renderRackLocationTransferBar();
 
   const parsed = FacilityStore.parse(activeRackId);
+  const hostType = parsed.hostType || "equipment_rack";
   const enclosures = FacilityStore.getEnclosures();
   const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === parsed.hostName.toLowerCase()) || null;
 
@@ -1000,7 +1103,11 @@ function renderRackVisualizer() {
       const itemLoc = FacilityStore.normalize(rawLoc);
 
       if (itemLoc === FacilityStore.UNASSIGNED) {
-        unassignedItems.push(item);
+        // Only show unassigned hardware that can actually mount to this host type (e.g. exclude cameras/radios from racks)
+        const comp = checkDeviceHostCompatibility(item, hostType);
+        if (comp.compatible) {
+          unassignedItems.push(item);
+        }
       } else if (itemLoc === activeRackId) {
         assignedItems.push(item);
       }
@@ -1008,13 +1115,19 @@ function renderRackVisualizer() {
   }
 
   // Branch rendering based on Host Type
-  const hostType = parsed.hostType;
   const titleEl = document.getElementById("elevationFrameTitle");
   const hostTypeDef = FacilityStore.HOST_TYPES[hostType] || FacilityStore.HOST_TYPES.equipment_rack;
 
   const orientControl = document.getElementById("rackOrientationControl");
   if (orientControl) {
     orientControl.style.display = (hostType === "equipment_rack") ? "flex" : "none";
+  }
+
+  const pduControl = document.getElementById("rackPduConfigControl");
+  if (pduControl) {
+    pduControl.style.display = (hostType === "equipment_rack") ? "flex" : "none";
+    const pduSelect = document.getElementById("rackPduConfigSelect");
+    if (pduSelect) pduSelect.value = getRackPduConfig();
   }
 
   const frontBtn = document.getElementById("rackViewBtn-front");
@@ -1030,7 +1143,14 @@ function renderRackVisualizer() {
   }
 
   if (titleEl) {
-    const orientLabel = (hostType === "equipment_rack" && rackViewOrientation === "rear") ? "Rear View & 0U PDUs" : "Front Elevation";
+    let pduModeBadge = "Dual 0U PDUs";
+    if (hostType === "equipment_rack") {
+      const cfg = getRackPduConfig();
+      if (cfg === "dual_vertical") pduModeBadge = "Dual 0U PDUs";
+      else if (cfg === "single_vertical") pduModeBadge = "Single 0U PDU";
+      else pduModeBadge = "Horizontal 1U PDU";
+    }
+    const orientLabel = (hostType === "equipment_rack" && rackViewOrientation === "rear") ? `Rear View & ${pduModeBadge}` : "Front Elevation";
     titleEl.innerHTML = `
       <i data-lucide="${hostTypeDef.icon || 'server'}" class="w-3.5 h-3.5 text-indigo-400"></i>
       <span>${escapeHTML(activeRackId)} &bull; ${hostTypeDef.label} &bull; <span class="text-indigo-400 font-mono">${orientLabel}</span></span>
@@ -1209,6 +1329,9 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
 
 function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeEnc) {
   const pduMetrics = calculateRackPduMetrics(assignedItems, activeEnc);
+  const pduConfig = getRackPduConfig();
+  const isHorizontalPdu = pduConfig === "horizontal";
+  const isSinglePdu = pduConfig === "single_vertical";
   let rearRailHTML = "";
 
   for (let u = maxU; u >= 1; u--) {
@@ -1243,15 +1366,25 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                     <span class="text-xs font-bold text-white truncate">${escapeHTML(it.model)}</span>
                     <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">REAR</span>
                     <!-- Redundancy Badge -->
-                    ${isDualPsu ? (
-                      isDualRedundant 
-                        ? `<span class="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-1.5 py-0.2 rounded flex items-center gap-1"><i data-lucide="shield-check" class="w-2.5 h-2.5"></i> Dual-Feed A+B</span>`
-                        : (isSpof 
-                          ? `<span class="text-[9px] font-mono font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 px-1.5 py-0.2 rounded flex items-center gap-1" title="Both power supplies on same PDU! Single point of failure."><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> SPOF</span>`
-                          : `<span class="text-[9px] font-mono text-amber-300 bg-amber-950/80 border border-amber-700/60 px-1.5 py-0.2 rounded flex items-center gap-1"><i data-lucide="alert-circle" class="w-2.5 h-2.5"></i> 1 Feed</span>`)
-                    ) : `
-                      <span class="text-[9px] font-mono text-slate-400 bg-slate-950 border border-slate-800 px-1.5 py-0.2 rounded">Single Cord</span>
-                    `}
+                    ${isHorizontalPdu ? `
+                      <span class="text-[9px] font-mono font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-700/60 px-1.5 py-0.2 rounded flex items-center gap-1">
+                        <i data-lucide="zap" class="w-2.5 h-2.5 text-indigo-400"></i> 1U PDU
+                      </span>
+                    ` : (isSinglePdu ? `
+                      <span class="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-1.5 py-0.2 rounded flex items-center gap-1">
+                        <i data-lucide="zap" class="w-2.5 h-2.5 text-emerald-400"></i> 0U Feed A
+                      </span>
+                    ` : (
+                      isDualPsu ? (
+                        isDualRedundant 
+                          ? `<span class="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-1.5 py-0.2 rounded flex items-center gap-1"><i data-lucide="shield-check" class="w-2.5 h-2.5"></i> Dual-Feed A+B</span>`
+                          : (isSpof 
+                            ? `<span class="text-[9px] font-mono font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 px-1.5 py-0.2 rounded flex items-center gap-1" title="Both power supplies on same PDU! Single point of failure."><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> SPOF</span>`
+                            : `<span class="text-[9px] font-mono text-amber-300 bg-amber-950/80 border border-amber-700/60 px-1.5 py-0.2 rounded flex items-center gap-1"><i data-lucide="alert-circle" class="w-2.5 h-2.5"></i> 1 Feed</span>`)
+                      ) : `
+                        <span class="text-[9px] font-mono text-slate-400 bg-slate-950 border border-slate-800 px-1.5 py-0.2 rounded">Single Cord</span>
+                      `
+                    ))}
                   </div>
                   <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
                     <span>Inlet: ${psuSpecs.inletType}</span>
@@ -1265,17 +1398,27 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
 
               <!-- Power Supply Cord Connectors -->
               <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                <!-- PSU 1 Inlet Button -->
-                <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
-                  <i data-lucide="zap" class="w-3 h-3"></i> PSU 1: ${psuConns.psu1 || 'None'}
-                </button>
-
-                <!-- PSU 2 Inlet Button (for dual modular PSUs) -->
-                ${isDualPsu ? `
-                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 2)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu2)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
-                    <i data-lucide="zap" class="w-3 h-3"></i> PSU 2: ${psuConns.psu2 || 'None'}
+                ${isHorizontalPdu ? `
+                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="Click to toggle power connection">
+                    <i data-lucide="zap" class="w-3 h-3"></i> 1U PDU: ${psuConns.psu1 === 'None' ? 'Unplugged' : 'Connected'}
                   </button>
-                ` : ''}
+                ` : (isSinglePdu ? `
+                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="Click to toggle power connection">
+                    <i data-lucide="zap" class="w-3 h-3"></i> 0U PDU: ${psuConns.psu1 === 'None' ? 'Unplugged' : 'Feed A'}
+                  </button>
+                ` : `
+                  <!-- PSU 1 Inlet Button -->
+                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
+                    <i data-lucide="zap" class="w-3 h-3"></i> PSU 1: ${psuConns.psu1 || 'None'}
+                  </button>
+
+                  <!-- PSU 2 Inlet Button (for dual modular PSUs) -->
+                  ${isDualPsu ? `
+                    <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 2)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu2, pduConfig)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
+                      <i data-lucide="zap" class="w-3 h-3"></i> PSU 2: ${psuConns.psu2 || 'None'}
+                    </button>
+                  ` : ''}
+                `)}
 
                 <!-- Unmount Button -->
                 <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity ml-0.5" title="Unmount to Staging">
@@ -1310,81 +1453,184 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
     }
   }
 
-  // 3-Column Layout: Left PDU-A Strip | Center Rear Equipment Rails | Right PDU-B Strip
-  frame.innerHTML = `
-    <div class="flex gap-2 sm:gap-3 w-full items-stretch">
-      <!-- PDU-A Left Vertical 0U Channel -->
-      <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md">
-        <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
-          <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-400">
-            <i data-lucide="zap" class="w-3 h-3"></i> PDU-A
-          </div>
-          <span class="text-[9px] text-slate-400 uppercase font-mono block">Feed A (Util)</span>
-          <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduA.amps}A / 16A</span>
-          <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}%)</span>
-          <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
-            <div class="${pduMetrics.pduA.pct > 80 ? 'bg-rose-500' : 'bg-emerald-500'} h-1 rounded-full" style="width: ${pduMetrics.pduA.pct}%"></div>
-          </div>
-        </div>
-
-        <!-- Vertical 24-Receptacle Visualizer -->
-        <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
-          ${Array.from({ length: 12 }, (_, oIdx) => {
-            const isOccupied = (oIdx * 2) < pduMetrics.pduA.outletsUsed;
-            return `
-              <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-emerald-500/50 bg-emerald-950/30' : ''}">
-                <span class="text-slate-500">${oIdx + 1}</span>
-                <span class="${isOccupied ? 'text-emerald-400 font-bold' : 'text-slate-700'}">●</span>
+  // Branch layout based on pduConfig:
+  if (isHorizontalPdu) {
+    // 1-Column Full-Width with Top 1U Horizontal PDU Bar
+    frame.innerHTML = `
+      <div class="w-full space-y-2">
+        <!-- 1U Horizontal Rackmount PDU Strip Bar -->
+        <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-indigo-500/50 rounded-xl p-3 shadow-xl select-none">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                <i data-lucide="zap" class="w-4 h-4"></i>
               </div>
-            `;
-          }).join('')}
-        </div>
-
-        <div class="pt-2 border-t border-slate-800 text-center">
-          <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduA.outletsUsed}/24 Outlets</span>
-          <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
-        </div>
-      </div>
-
-      <!-- Center Rear 19" Equipment Rail -->
-      <div class="flex-1 min-w-0 space-y-1">
-        ${rearRailHTML}
-      </div>
-
-      <!-- PDU-B Right Vertical 0U Channel -->
-      <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md">
-        <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
-          <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-sky-400">
-            <i data-lucide="zap" class="w-3 h-3"></i> PDU-B
-          </div>
-          <span class="text-[9px] text-slate-400 uppercase font-mono block">Feed B (UPS)</span>
-          <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduB.amps}A / 16A</span>
-          <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduB.watts}W (${pduMetrics.pduB.pct}%)</span>
-          <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
-            <div class="${pduMetrics.pduB.pct > 80 ? 'bg-rose-500' : 'bg-sky-500'} h-1 rounded-full" style="width: ${pduMetrics.pduB.pct}%"></div>
-          </div>
-        </div>
-
-        <!-- Vertical 24-Receptacle Visualizer -->
-        <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
-          ${Array.from({ length: 12 }, (_, oIdx) => {
-            const isOccupied = (oIdx * 2) < pduMetrics.pduB.outletsUsed;
-            return `
-              <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-sky-500/50 bg-sky-950/30' : ''}">
-                <span class="text-slate-500">${oIdx + 1}</span>
-                <span class="${isOccupied ? 'text-sky-400 font-bold' : 'text-slate-700'}">●</span>
+              <div>
+                <div class="text-xs font-bold text-white flex items-center gap-2">
+                  <span>1U Horizontal Rackmount PDU</span>
+                  <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-600 font-bold">120V / 20A Dedicated</span>
+                  <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600 font-bold">8 Outlets</span>
+                </div>
+                <span class="text-[10px] text-slate-400 font-mono">19" EIA Rackmount Bar &bull; NEMA 5-20R Receptacles &bull; 16A Continuous NEC Max</span>
               </div>
-            `;
-          }).join('')}
+            </div>
+
+            <div class="flex items-center gap-4 text-right">
+              <div>
+                <span class="text-[9px] text-slate-400 uppercase font-mono block">Load Amps</span>
+                <span class="text-xs font-mono font-bold ${pduMetrics.pduA.pct > 80 ? 'text-rose-400' : 'text-white'}">${pduMetrics.pduA.amps}A / 16.0A</span>
+              </div>
+              <div>
+                <span class="text-[9px] text-slate-400 uppercase font-mono block">Power Draw</span>
+                <span class="text-xs font-mono font-bold text-indigo-300">${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}%)</span>
+              </div>
+              <div class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>BREAKER OK</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Receptacle Grid across width -->
+          <div class="grid grid-cols-8 gap-2 pt-2 border-t border-slate-800/80">
+            ${Array.from({ length: 8 }, (_, rIdx) => {
+              const isOccupied = rIdx < pduMetrics.pduA.outletsUsed;
+              return `
+                <div class="px-2 py-1.5 rounded-lg bg-slate-950 border ${isOccupied ? 'border-indigo-500/70 bg-indigo-950/40 text-indigo-300' : 'border-slate-800 text-slate-600'} text-center font-mono text-[9px] transition-all">
+                  <div class="text-[8px] text-slate-500 uppercase">Outlet ${rIdx + 1}</div>
+                  <div class="text-xs mt-0.5 ${isOccupied ? 'text-indigo-400 font-bold' : 'text-slate-700'}">● 5-20R</div>
+                </div>
+              `;
+            }).join('')}
+          </div>
         </div>
 
-        <div class="pt-2 border-t border-slate-800 text-center">
-          <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduB.outletsUsed}/24 Outlets</span>
-          <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
+        <!-- Center Rear 19" Equipment Rail (Full Width) -->
+        <div class="space-y-1 w-full">
+          ${rearRailHTML}
         </div>
       </div>
-    </div>
-  `;
+    `;
+  } else if (isSinglePdu) {
+    // 2-Column Layout: Left Single 0U Vertical PDU Strip | Center Rear Equipment Rails
+    frame.innerHTML = `
+      <div class="flex gap-2 sm:gap-3 w-full items-stretch">
+        <!-- Single 0U Vertical PDU Channel -->
+        <div class="w-24 sm:w-28 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2.5 flex flex-col justify-between select-none shadow-md">
+          <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
+            <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-400">
+              <i data-lucide="zap" class="w-3 h-3"></i> 0U PDU
+            </div>
+            <span class="text-[9px] text-slate-400 uppercase font-mono block">Single Feed A</span>
+            <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduA.amps}A / 16A</span>
+            <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}%)</span>
+            <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
+              <div class="${pduMetrics.pduA.pct > 80 ? 'bg-rose-500' : 'bg-emerald-500'} h-1 rounded-full" style="width: ${pduMetrics.pduA.pct}%"></div>
+            </div>
+          </div>
+
+          <!-- Vertical 24-Receptacle Visualizer -->
+          <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
+            ${Array.from({ length: 12 }, (_, oIdx) => {
+              const isOccupied = (oIdx * 2) < pduMetrics.pduA.outletsUsed;
+              return `
+                <div class="flex items-center justify-between px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-emerald-500/50 bg-emerald-950/30' : ''}">
+                  <span class="text-slate-500">${oIdx + 1}</span>
+                  <span class="${isOccupied ? 'text-emerald-400 font-bold' : 'text-slate-700'}">●</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 text-center">
+            <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduA.outletsUsed}/24 Outlets</span>
+            <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
+          </div>
+        </div>
+
+        <!-- Center Rear 19" Equipment Rail (Expanded) -->
+        <div class="flex-1 min-w-0 space-y-1">
+          ${rearRailHTML}
+        </div>
+      </div>
+    `;
+  } else {
+    // 3-Column Layout: Left PDU-A Strip | Center Rear Equipment Rails | Right PDU-B Strip
+    frame.innerHTML = `
+      <div class="flex gap-2 sm:gap-3 w-full items-stretch">
+        <!-- PDU-A Left Vertical 0U Channel -->
+        <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md">
+          <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
+            <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-400">
+              <i data-lucide="zap" class="w-3 h-3"></i> PDU-A
+            </div>
+            <span class="text-[9px] text-slate-400 uppercase font-mono block">Feed A (Util)</span>
+            <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduA.amps}A / 16A</span>
+            <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}%)</span>
+            <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
+              <div class="${pduMetrics.pduA.pct > 80 ? 'bg-rose-500' : 'bg-emerald-500'} h-1 rounded-full" style="width: ${pduMetrics.pduA.pct}%"></div>
+            </div>
+          </div>
+
+          <!-- Vertical 24-Receptacle Visualizer -->
+          <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
+            ${Array.from({ length: 12 }, (_, oIdx) => {
+              const isOccupied = (oIdx * 2) < pduMetrics.pduA.outletsUsed;
+              return `
+                <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-emerald-500/50 bg-emerald-950/30' : ''}">
+                  <span class="text-slate-500">${oIdx + 1}</span>
+                  <span class="${isOccupied ? 'text-emerald-400 font-bold' : 'text-slate-700'}">●</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 text-center">
+            <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduA.outletsUsed}/24 Outlets</span>
+            <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
+          </div>
+        </div>
+
+        <!-- Center Rear 19" Equipment Rail -->
+        <div class="flex-1 min-w-0 space-y-1">
+          ${rearRailHTML}
+        </div>
+
+        <!-- PDU-B Right Vertical 0U Channel -->
+        <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md">
+          <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
+            <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-sky-400">
+              <i data-lucide="zap" class="w-3 h-3"></i> PDU-B
+            </div>
+            <span class="text-[9px] text-slate-400 uppercase font-mono block">Feed B (UPS)</span>
+            <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduB.amps}A / 16A</span>
+            <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduB.watts}W (${pduMetrics.pduB.pct}%)</span>
+            <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
+              <div class="${pduMetrics.pduB.pct > 80 ? 'bg-rose-500' : 'bg-sky-500'} h-1 rounded-full" style="width: ${pduMetrics.pduB.pct}%"></div>
+            </div>
+          </div>
+
+          <!-- Vertical 24-Receptacle Visualizer -->
+          <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
+            ${Array.from({ length: 12 }, (_, oIdx) => {
+              const isOccupied = (oIdx * 2) < pduMetrics.pduB.outletsUsed;
+              return `
+                <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-sky-500/50 bg-sky-950/30' : ''}">
+                  <span class="text-slate-500">${oIdx + 1}</span>
+                  <span class="${isOccupied ? 'text-sky-400 font-bold' : 'text-slate-700'}">●</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 text-center">
+            <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduB.outletsUsed}/24 Outlets</span>
+            <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 }
 
 // -----------------------------------------------------------
@@ -2721,98 +2967,201 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     if (hostType === "equipment_rack" || (!hostType && !parsed.hostType)) {
       pduContainer.classList.remove("hidden");
       const pduMetrics = calculateRackPduMetrics(assignedItems, activeEnc);
-      const spofCount = pduMetrics.redundancy.singlePointFailureCount;
-      const redundantCount = pduMetrics.redundancy.redundantDeviceCount;
-      const singleCount = pduMetrics.redundancy.singleCordedCount;
+      const pduConfig = getRackPduConfig();
 
       const pduAColor = pduMetrics.pduA.pct > 80 ? "text-rose-400" : (pduMetrics.pduA.pct > 70 ? "text-amber-400" : "text-emerald-400");
       const pduABarColor = pduMetrics.pduA.pct > 80 ? "bg-rose-500" : (pduMetrics.pduA.pct > 70 ? "bg-amber-500" : "bg-emerald-500");
-      const pduBColor = pduMetrics.pduB.pct > 80 ? "text-rose-400" : (pduMetrics.pduB.pct > 70 ? "text-amber-400" : "text-sky-400");
-      const pduBBarColor = pduMetrics.pduB.pct > 80 ? "bg-rose-500" : (pduMetrics.pduB.pct > 70 ? "bg-amber-500" : "bg-sky-500");
 
-      pduContainer.innerHTML = `
-        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-          <span class="flex items-center gap-1.5 text-indigo-400">
-            <i data-lucide="zap" class="w-4 h-4"></i> Dual 0U PDUs &amp; Power Feeds
-          </span>
-          <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
-        </h3>
-
-        <!-- PDU Load Meters -->
-        <div class="space-y-3 pt-1">
-          <!-- Feed A (Utility) -->
-          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <div class="flex items-center justify-between text-xs mb-1">
-              <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Feed A (Primary Utility)
-              </span>
-              <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
-            </div>
-            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
-              <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
-            </div>
-            <div class="flex justify-between text-[10px] font-mono text-slate-400">
-              <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-              <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
-            </div>
-          </div>
-
-          <!-- Feed B (UPS / Generator) -->
-          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-            <div class="flex items-center justify-between text-xs mb-1">
-              <span class="font-bold text-sky-400 flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-sky-400"></span> Feed B (Secondary / UPS)
-              </span>
-              <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
-            </div>
-            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
-              <div class="${pduBBarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduB.pct}%"></div>
-            </div>
-            <div class="flex justify-between text-[10px] font-mono text-slate-400">
-              <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}% continuous)</span>
-              <span>${pduMetrics.pduB.outletsUsed} / 24 Receptacles</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- A+B Redundancy Diagnostic Breakdown -->
-        <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400 text-[11px]">A+B Dual-Feed Redundant:</span>
-            <span class="font-mono font-bold text-emerald-400 text-[11px]">${redundantCount} Unit${redundantCount === 1 ? '' : 's'}</span>
-          </div>
-
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400 text-[11px]">Single Point of Failure (SPOF):</span>
-            <span class="font-mono font-bold ${spofCount > 0 ? 'text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80' : 'text-slate-500'} text-[11px]">
-              ${spofCount > 0 ? `⚠️ ${spofCount} Unit${spofCount === 1 ? '' : 's'}` : '0 None'}
+      if (pduConfig === "horizontal") {
+        pduContainer.innerHTML = `
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+            <span class="flex items-center gap-1.5 text-indigo-400">
+              <i data-lucide="zap" class="w-4 h-4"></i> Horizontal 1U Rackmount PDU
             </span>
-          </div>
+            <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
+          </h3>
 
-          <div class="flex items-center justify-between">
-            <span class="text-slate-400 text-[11px]">Single-Corded Devices:</span>
-            <span class="font-mono text-slate-400 text-[11px]">${singleCount} Unit${singleCount === 1 ? '' : 's'}</span>
-          </div>
-
-          ${spofCount > 0 ? `
-            <div class="text-[10px] text-amber-400/90 bg-amber-950/30 p-2 rounded-lg border border-amber-800/50 mt-1">
-              <strong>SPOF Warning:</strong> ${spofCount} dual-PSU device(s) have both cords plugged into the same PDU feed. Use Auto-Balance to split across Feed A &amp; B.
+          <div class="space-y-3 pt-1">
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-indigo-300 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 1U PDU Load (120V Circuit)
+                </span>
+                <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+                <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+                <span>${pduMetrics.pduA.outletsUsed} / 8 Receptacles</span>
+              </div>
             </div>
-          ` : ''}
-        </div>
+          </div>
 
-        <!-- Auto-Balance Action & Orientation Link -->
-        <div class="pt-2 border-t border-slate-800 space-y-1.5">
-          <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
-            <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance Power Feeds
-          </button>
-          <div class="text-center pt-0.5">
-            <button onclick="switchRackOrientation('${rackViewOrientation === 'rear' ? 'front' : 'rear'}')" class="text-[10px] text-slate-400 hover:text-indigo-300 font-mono transition-colors">
-              ${rackViewOrientation === 'rear' ? 'Switch to Front Faceplates &rarr;' : 'Inspect Rear Cords &amp; PDUs &rarr;'}
+          <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Form Factor:</span>
+              <span class="font-mono font-bold text-indigo-300 text-[11px]">1U Horizontal 19" Rackmount</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Input Plug:</span>
+              <span class="font-mono text-slate-300 text-[11px]">NEMA 5-20P (120V 20A)</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Receptacles:</span>
+              <span class="font-mono text-slate-300 text-[11px]">8x NEMA 5-20R Outlets</span>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800">
+            <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i> View Rear Receptacles
             </button>
           </div>
-        </div>
-      `;
+        `;
+      } else if (pduConfig === "single_vertical") {
+        pduContainer.innerHTML = `
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+            <span class="flex items-center gap-1.5 text-emerald-400">
+              <i data-lucide="zap" class="w-4 h-4"></i> Single 0U Vertical PDU
+            </span>
+            <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
+          </h3>
+
+          <div class="space-y-3 pt-1">
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Primary 0U PDU (Feed A)
+                </span>
+                <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+                <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+                <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Form Factor:</span>
+              <span class="font-mono font-bold text-emerald-300 text-[11px]">Single 0U Vertical Strip</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Circuit:</span>
+              <span class="font-mono text-slate-300 text-[11px]">1x 20A 120V Circuit</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Connected Units:</span>
+              <span class="font-mono text-emerald-400 text-[11px]">${assignedItems.length} Mounted Units</span>
+            </div>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800">
+            <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+              <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-emerald-400"></i> View Rear Channels
+            </button>
+          </div>
+        `;
+      } else {
+        // Dual 0U PDUs (A+B)
+        const spofCount = pduMetrics.redundancy.singlePointFailureCount;
+        const redundantCount = pduMetrics.redundancy.redundantDeviceCount;
+        const singleCount = pduMetrics.redundancy.singleCordedCount;
+
+        const pduBColor = pduMetrics.pduB.pct > 80 ? "text-rose-400" : (pduMetrics.pduB.pct > 70 ? "text-amber-400" : "text-sky-400");
+        const pduBBarColor = pduMetrics.pduB.pct > 80 ? "bg-rose-500" : (pduMetrics.pduB.pct > 70 ? "bg-amber-500" : "bg-sky-500");
+
+        pduContainer.innerHTML = `
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+            <span class="flex items-center gap-1.5 text-indigo-400">
+              <i data-lucide="zap" class="w-4 h-4"></i> Dual 0U PDUs &amp; Power Feeds
+            </span>
+            <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
+          </h3>
+
+          <!-- PDU Load Meters -->
+          <div class="space-y-3 pt-1">
+            <!-- Feed A (Utility) -->
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Feed A (Primary Utility)
+                </span>
+                <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+                <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+                <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+              </div>
+            </div>
+
+            <!-- Feed B (UPS / Generator) -->
+            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+              <div class="flex items-center justify-between text-xs mb-1">
+                <span class="font-bold text-sky-400 flex items-center gap-1.5">
+                  <span class="w-2 h-2 rounded-full bg-sky-400"></span> Feed B (Secondary / UPS)
+                </span>
+                <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
+              </div>
+              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+                <div class="${pduBBarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduB.pct}%"></div>
+              </div>
+              <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}% continuous)</span>
+                <span>${pduMetrics.pduB.outletsUsed} / 24 Receptacles</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- A+B Redundancy Diagnostic Breakdown -->
+          <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">A+B Dual-Feed Redundant:</span>
+              <span class="font-mono font-bold text-emerald-400 text-[11px]">${redundantCount} Unit${redundantCount === 1 ? '' : 's'}</span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Single Point of Failure (SPOF):</span>
+              <span class="font-mono font-bold ${spofCount > 0 ? 'text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80' : 'text-slate-500'} text-[11px]">
+                ${spofCount > 0 ? `⚠️ ${spofCount} Unit${spofCount === 1 ? '' : 's'}` : '0 None'}
+              </span>
+            </div>
+
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px]">Single-Corded Devices:</span>
+              <span class="font-mono text-slate-400 text-[11px]">${singleCount} Unit${singleCount === 1 ? '' : 's'}</span>
+            </div>
+
+            ${spofCount > 0 ? `
+              <div class="text-[10px] text-amber-400/90 bg-amber-950/30 p-2 rounded-lg border border-amber-800/50 mt-1">
+                <strong>SPOF Warning:</strong> ${spofCount} dual-PSU device(s) have both cords plugged into the same PDU feed. Use Auto-Balance to split across Feed A &amp; B.
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Auto-Balance Action & Orientation Link -->
+          <div class="pt-2 border-t border-slate-800 space-y-1.5">
+            <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
+              <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance Power Feeds
+            </button>
+            <div class="text-center pt-0.5">
+              <button onclick="switchRackOrientation('rear')" class="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto">
+                <i data-lucide="rotate-cw" class="w-3 h-3 text-indigo-400"></i>
+                <span>Inspect Receptacles in Rear Elevation</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
     } else {
       pduContainer.classList.add("hidden");
       pduContainer.innerHTML = "";
@@ -2849,8 +3198,43 @@ function updateLegacyTelemetryElements(assignedItems) {
 }
 
 // -----------------------------------------------------------
-// Served Edge Endpoints & Cabling Links
+// Served Edge Endpoints & Drops Drag-and-Drop Handling
 // -----------------------------------------------------------
+function handleServedEndpointsDragOver(event) {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+  event.currentTarget.classList.add("border-indigo-500", "bg-indigo-950/30");
+}
+
+function handleServedEndpointsDragLeave(event) {
+  event.currentTarget.classList.remove("border-indigo-500", "bg-indigo-950/30");
+}
+
+function handleServedEndpointsDrop(event) {
+  event.preventDefault();
+  event.currentTarget.classList.remove("border-indigo-500", "bg-indigo-950/30");
+  const instanceId = event.dataTransfer?.getData("text/plain") || 
+                     event.dataTransfer?.getData("hardwareInstanceId") || 
+                     draggedRackItemInstanceId;
+  if (!instanceId || typeof projectBOM === "undefined") return;
+
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+
+  delete item.rackSlot;
+  item.closetName = activeRackId;
+  item.rackId = activeRackId;
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Homed ${item.model || 'Device'} as a drop to ${activeRackId}`);
+  }
+}
+window.handleServedEndpointsDragOver = handleServedEndpointsDragOver;
+window.handleServedEndpointsDragLeave = handleServedEndpointsDragLeave;
+window.handleServedEndpointsDrop = handleServedEndpointsDrop;
+
 function renderServedEndpoints(parsed, activeEnc) {
   const container = document.getElementById("hostEndpointsContainer");
   const countBadge = document.getElementById("hostEndpointsCount");
@@ -2950,12 +3334,18 @@ function renderServedEndpoints(parsed, activeEnc) {
       </button>
     </div>
 
-    <!-- Endpoints List -->
-    <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+    <!-- Endpoints List (Supports drop targeting) -->
+    <div 
+      ondragover="handleServedEndpointsDragOver(event)"
+      ondragleave="handleServedEndpointsDragLeave(event)"
+      ondrop="handleServedEndpointsDrop(event)"
+      class="space-y-2 max-h-64 overflow-y-auto pr-1 rounded-xl p-1 border border-transparent transition-all"
+    >
       ${totalDrops === 0 ? `
-        <div class="border border-dashed border-slate-800 rounded-xl p-4 text-center text-xs text-slate-500">
+        <div class="border border-dashed border-slate-800 rounded-xl p-4 text-center text-xs text-slate-500 hover:border-indigo-500/50 transition-colors">
           <i data-lucide="network" class="w-5 h-5 mx-auto mb-1 text-slate-600 opacity-60"></i>
           <span>No field drops are currently homed to ${escapeHTML(activeRackId)}.</span>
+          <p class="text-[10px] text-slate-500 mt-0.5">Drag cameras, radios, or sensors here to home them to this enclosure.</p>
           <button onclick="promptAddEndpointToActiveHost()" class="mt-2 block mx-auto text-indigo-400 hover:underline text-[11px]">
             + Add Door, Camera, or Outlet
           </button>
