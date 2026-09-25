@@ -211,8 +211,16 @@ function syncHostDimensionControls(parsed, activeEnc) {
       </select>
     `;
   } else if (hostType === "structural_mount") {
-    const poleHeight = (activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 20);
-    const diam = (activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : 4;
+    let currentSpace = null;
+    if (parsed.spaceId) {
+      currentSpace = FacilityStore.getSpaces().find(s => s.id === parsed.spaceId);
+    }
+    if (!currentSpace && parsed.space) {
+      currentSpace = FacilityStore.getSpaces().find(s => s.name.toLowerCase() === parsed.space.toLowerCase());
+    }
+    const poleHeight = (currentSpace && currentSpace.poleHeightFt) ? currentSpace.poleHeightFt : ((activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 25));
+    const diam = (currentSpace && currentSpace.poleDiameterInches) ? currentSpace.poleDiameterInches : ((activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : 4);
+
     container.innerHTML = `
       <span class="text-slate-400 font-medium">Height:</span>
       <select onchange="updateActiveHostProperty('poleHeightFt', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded px-2 py-0.5 text-xs">
@@ -260,6 +268,8 @@ function updateActiveHostProperty(propKey, value) {
   const parsed = FacilityStore.parse(activeRackId);
   if (parsed.hostId) {
     FacilityStore.updateHost(parsed.hostId, { [propKey]: value });
+  } else if (parsed.spaceId && (parsed.isStructuralMount || parsed.hostType === "structural_mount")) {
+    FacilityStore.updateSpace(parsed.spaceId, { [propKey]: value });
   }
   renderRackVisualizer();
   if (typeof showToast === "function") {
@@ -795,8 +805,17 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
         </div>
       </div>
       <div class="flex items-center gap-2">
+        ${isPoleMounted ? `
+          <button 
+            onclick="switchActiveRackElevation('${parsed.space} • Pole Mount')"
+            class="px-2 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 rounded text-[10px] font-bold flex items-center gap-1 transition-colors shadow-sm"
+            title="View outer Structural Pole elevation and height"
+          >
+            <i data-lucide="radio-tower" class="w-3 h-3"></i> View Pole Elevation
+          </button>
+        ` : ''}
         <span class="text-[10px] font-mono ${isPoleMounted ? 'text-cyan-300 bg-cyan-950/60 border-cyan-800' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800'} px-2 py-0.5 rounded border">
-          ${isPoleMounted ? 'Pole Strapped' : 'Wall Flanged'}
+          ${isPoleMounted ? `Pole Strapped @ ${activeEnc?.mountHeightFt || 10}ft AGL` : 'Wall Flanged'}
         </span>
       </div>
     </div>
@@ -868,8 +887,17 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
 // 4. Host Renderer: Structural Pole / Mast Assembly (Dynamic Height)
 // -----------------------------------------------------------
 function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parsed, activeEnc) {
-  const poleHeight = (activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 20);
-  const diam = (activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : (parsed.poleDiameterInches || 4);
+  let currentSpace = null;
+  if (parsed.spaceId) {
+    currentSpace = FacilityStore.getSpaces().find(s => s.id === parsed.spaceId);
+  }
+  if (!currentSpace && parsed.space) {
+    currentSpace = FacilityStore.getSpaces().find(s => s.name.toLowerCase() === parsed.space.toLowerCase());
+  }
+
+  const poleHeight = (currentSpace && currentSpace.poleHeightFt) ? currentSpace.poleHeightFt : ((activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 25));
+  const diam = (currentSpace && currentSpace.poleDiameterInches) ? currentSpace.poleDiameterInches : ((activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : 4);
+  const poleEnclosures = currentSpace ? FacilityStore.getEnclosures(currentSpace.id) : [];
 
   // Dynamic Height Elevations
   const topElevation = poleHeight;
@@ -917,6 +945,8 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
 
   zones.forEach(z => {
     const itemsInZone = zoneBuckets[z.id];
+    const isMidPole = z.id === "Mid-Pole";
+
     poleHTML += `
       <div 
         class="bg-slate-900 border border-slate-800 rounded-xl p-3"
@@ -930,6 +960,39 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
           <span class="text-[9px] font-mono text-slate-500">${itemsInZone.length} Device${itemsInZone.length === 1 ? '' : 's'}</span>
         </div>
         <p class="text-[10px] text-slate-400 mb-2">${z.desc}</p>
+
+        <!-- Mounted Enclosures on this Pole (Requirement 1) -->
+        ${isMidPole && poleEnclosures.length > 0 ? `
+          <div class="space-y-2 mb-2.5">
+            ${poleEnclosures.map(enc => `
+              <div class="p-2.5 rounded-xl border border-cyan-500/50 bg-slate-950/80 shadow-md flex items-center justify-between">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="p-1.5 rounded-lg bg-cyan-950 border border-cyan-700/60 text-cyan-400 shrink-0">
+                    <i data-lucide="box" class="w-4 h-4"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap">
+                      <span class="text-xs font-bold text-white truncate">${escapeHTML(enc.name)}</span>
+                      <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-cyan-950 border border-cyan-500/50 text-cyan-300">
+                        Banded @ ${enc.mountHeightFt || midElevation} ft AGL
+                      </span>
+                    </div>
+                    <span class="text-[10px] text-slate-400 font-mono block truncate">
+                      ${enc.dinRails || 2}x DIN Rails &bull; ${enc.railLengthMm || 350}mm &bull; Weatherproof NEMA 4X
+                    </span>
+                  </div>
+                </div>
+                <button 
+                  onclick="switchActiveRackElevation('${parsed.space} • ${enc.name}')"
+                  class="px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow shrink-0 ml-2"
+                  title="Open internal DIN rail visualizer for ${escapeHTML(enc.name)}"
+                >
+                  <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Inspect Enclosure (DIN Rails) &rarr;
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
 
         <div class="space-y-1.5 min-h-[44px]">
           ${itemsInZone.length === 0 ? `

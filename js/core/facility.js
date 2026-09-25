@@ -117,21 +117,18 @@ const FacilityStore = {
 
   // Canonical Default Hierarchy Structure
   defaultFloors: [
-    { id: "floor-1", name: "Level 1 - Main Floor", levelIndex: 1, heightFt: 14, scaleFt: 25, slackFt: 15, slabFt: 10 }
+    { id: "floor-1", name: "Main Floor", levelIndex: 1, heightFt: 14, scaleFt: 25, slackFt: 15, slabFt: 10 },
+    { id: "floor-exterior", name: "Exterior", levelIndex: 0, heightFt: 0, scaleFt: 50, slackFt: 25, slabFt: 0 }
   ],
 
   defaultSpaces: [
-    { id: "space-mdf", name: "MDF", floorId: "floor-1", type: "mdf", description: "Main Data Center & Distribution" },
-    { id: "space-idf1", name: "IDF-1", floorId: "floor-1", type: "idf", description: "Floor 1 Telecommunications Closet" },
-    { id: "space-pole1", name: "Pole 1", floorId: "floor-1", type: "pole", description: "Perimeter Security & Wireless Pole" },
-    { id: "space-guard", name: "Guard Shack", floorId: "floor-1", type: "guard_shack", description: "Entrance Security Station" }
+    { id: "space-mdf", name: "MDF", floorId: "floor-1", type: "mdf", description: "Main Equipment Room / Server Room" },
+    { id: "space-exterior-pole1", name: "Pole 1", floorId: "floor-exterior", type: "pole", description: "Perimeter Security & Wireless Pole", poleHeightFt: 25, poleDiameterInches: 4 }
   ],
 
   defaultEnclosures: [
     { id: "enc-mdf-rack1", spaceId: "space-mdf", name: "Rack-1", hostType: "equipment_rack", type: "rack_4post", heightU: 42, maxWatts: 4500, pduCount: 2, isDin: false, depthInches: 36 },
-    { id: "enc-idf1-rack1", spaceId: "space-idf1", name: "Rack-1", hostType: "equipment_rack", type: "rack_4post", heightU: 24, maxWatts: 3000, pduCount: 2, isDin: false, depthInches: 24 },
-    { id: "enc-pole1-nema", spaceId: "space-pole1", name: "NEMA-Box", hostType: "industrial_din", type: "nema_box", heightU: 0, isDin: true, maxWatts: 800, pduCount: 1, dinRails: 2, railLengthMm: 350 },
-    { id: "enc-guard-rack1", spaceId: "space-guard", name: "Rack-1", hostType: "equipment_rack", type: "wall_cabinet", heightU: 12, maxWatts: 1500, pduCount: 1, isDin: false, depthInches: 18 }
+    { id: "enc-pole1-nema", spaceId: "space-exterior-pole1", name: "NEMA-Box", hostType: "industrial_din", type: "nema_box", mountingMethod: "pole", mountHeightFt: 10, heightU: 0, isDin: true, maxWatts: 800, pduCount: 1, dinRails: 2, railLengthMm: 350 }
   ],
 
   getProjectId() {
@@ -156,7 +153,21 @@ const FacilityStore = {
     const projKey = this.getProjectId();
     try {
       const raw = localStorage.getItem(`netselect_fac_floors_${projKey}`);
-      if (raw) return JSON.parse(raw);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Normalize old default name if present
+          parsed.forEach(f => {
+            if (f.name === "Level 1 - Main Floor") f.name = "Main Floor";
+          });
+          // Ensure Exterior floor exists if only Level 1 was stored
+          if (!parsed.some(f => f.name.toLowerCase().includes("exterior"))) {
+            parsed.push({ id: "floor-exterior", name: "Exterior", levelIndex: 0, heightFt: 0, scaleFt: 50, slackFt: 25, slabFt: 0 });
+            this.saveFloors(parsed);
+          }
+          return parsed;
+        }
+      }
     } catch (e) {}
     return JSON.parse(JSON.stringify(this.defaultFloors));
   },
@@ -170,10 +181,15 @@ const FacilityStore = {
 
   addFloor(name, levelIndex = 1, options = {}) {
     const list = this.getFloors();
+    const cleanName = (name || `Level ${list.length + 1}`).trim();
+    if (list.some(f => f.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+      if (typeof showToast === "function") showToast(`A floor named "${cleanName}" already exists.`);
+      return null;
+    }
     const id = `floor-${Date.now()}`;
     const newFloor = {
       id,
-      name: name || `Level ${list.length + 1}`,
+      name: cleanName,
       levelIndex: parseInt(levelIndex, 10) || (list.length + 1),
       heightFt: options.heightFt || 14,
       scaleFt: options.scaleFt || 25,
@@ -184,6 +200,24 @@ const FacilityStore = {
     this.saveFloors(list);
     this.notifyWorkspaceChange();
     return newFloor;
+  },
+
+  updateFloor(floorId, updates = {}) {
+    const list = this.getFloors();
+    const floor = list.find(f => f.id === floorId);
+    if (!floor) return false;
+    if (updates.name) {
+      const cleanName = updates.name.trim();
+      if (list.some(f => f.id !== floorId && f.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+        if (typeof showToast === "function") showToast(`A floor named "${cleanName}" already exists.`);
+        return false;
+      }
+      updates.name = cleanName;
+    }
+    Object.assign(floor, updates);
+    this.saveFloors(list);
+    this.notifyWorkspaceChange();
+    return floor;
   },
 
   deleteFloor(floorId) {
@@ -206,7 +240,7 @@ const FacilityStore = {
     return true;
   },
 
-  getSpaces(floorId = null) {
+    getSpaces(floorId = null) {
     const projKey = this.getProjectId();
     let list = [];
     try {
@@ -215,6 +249,19 @@ const FacilityStore = {
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultSpaces));
     }
+    // Ensure Exterior pole exists if absent (Requirement 6)
+    if (!list.some(s => s.type === "pole" || (s.name && s.name.toLowerCase().includes("pole")))) {
+      list.push({ id: "space-exterior-pole1", name: "Pole 1", floorId: "floor-exterior", type: "pole", description: "Perimeter Security & Wireless Pole", poleHeightFt: 25, poleDiameterInches: 4 });
+      this.saveSpaces(list);
+    }
+    // Ensure all pole spaces have poleHeightFt and poleDiameterInches
+    list.forEach(s => {
+      if (s.type === "pole" || (s.name && s.name.toLowerCase().includes("pole"))) {
+        s.type = "pole";
+        if (!s.poleHeightFt) s.poleHeightFt = 25;
+        if (!s.poleDiameterInches) s.poleDiameterInches = 4;
+      }
+    });
     if (floorId) {
       return list.filter(s => s.floorId === floorId);
     }
@@ -230,21 +277,30 @@ const FacilityStore = {
 
   addSpace(name, type = "idf", floorId = "floor-1", options = {}) {
     if (!name || !name.trim()) return null;
+    const cleanName = name.trim();
     const list = this.getSpaces();
+    // Validate uniqueness on this floor (Requirement 4)
+    if (list.some(s => s.floorId === floorId && s.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+      if (typeof showToast === "function") showToast(`A space named "${cleanName}" already exists on this floor.`);
+      return null;
+    }
     const id = `space-${Date.now()}`;
+    const isPole = type === "pole" || cleanName.toLowerCase().includes("pole");
     const newSpace = {
       id,
-      name: name.trim(),
-      type: type || "idf",
+      name: cleanName,
+      type: isPole ? "pole" : (type || "idf"),
       floorId: floorId || "floor-1",
-      description: options.description || ""
+      description: options.description || "",
+      poleHeightFt: isPole ? (options.poleHeightFt || 25) : null,
+      poleDiameterInches: isPole ? (options.poleDiameterInches || 4) : null
     };
     list.push(newSpace);
     this.saveSpaces(list);
 
     // Create default host for this space (e.g. Rack-1, NEMA-Box, or Security Cabinet)
-    const isOutdoor = type === "pole" || type === "exterior";
-    const isAccess = type === "electrical_room" || type === "security_room";
+    const isOutdoor = newSpace.type === "pole" || newSpace.type === "exterior";
+    const isAccess = newSpace.type === "electrical_room" || newSpace.type === "security_room";
     let hostName = "Rack-1";
     let hostType = "equipment_rack";
     let heightU = 24;
@@ -257,15 +313,38 @@ const FacilityStore = {
       hostName = "AC-Cabinet-1";
       hostType = "security_cabinet";
       heightU = 0;
-    } else if (type === "wallbox") {
+    } else if (newSpace.type === "wallbox") {
       hostName = "Wallbox";
       hostType = "equipment_rack";
       heightU = 12;
     }
 
-    this.addHost(hostName, hostType, id, { heightU });
+    this.addHost(hostName, hostType, id, { 
+      heightU,
+      mountingMethod: isOutdoor ? "pole" : "wall",
+      mountHeightFt: isOutdoor ? 10 : null
+    });
     this.notifyWorkspaceChange();
     return newSpace;
+  },
+
+  updateSpace(spaceId, updates = {}) {
+    const list = this.getSpaces();
+    const space = list.find(s => s.id === spaceId);
+    if (!space) return false;
+    if (updates.name) {
+      const cleanName = updates.name.trim();
+      const floorId = updates.floorId || space.floorId;
+      if (list.some(s => s.id !== spaceId && s.floorId === floorId && s.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+        if (typeof showToast === "function") showToast(`A space named "${cleanName}" already exists on this floor.`);
+        return false;
+      }
+      updates.name = cleanName;
+    }
+    Object.assign(space, updates);
+    this.saveSpaces(list);
+    this.notifyWorkspaceChange();
+    return space;
   },
 
   deleteSpace(spaceId, fallbackSpaceId = null) {
@@ -299,6 +378,12 @@ const FacilityStore = {
       list = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultEnclosures));
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultEnclosures));
+    }
+
+    // Ensure NEMA-Box exists on Pole 1 if absent (Requirement 6)
+    if (!list.some(e => e.spaceId === "space-exterior-pole1")) {
+      list.push({ id: "enc-pole1-nema", spaceId: "space-exterior-pole1", name: "NEMA-Box", hostType: "industrial_din", type: "nema_box", mountingMethod: "pole", mountHeightFt: 10, heightU: 0, isDin: true, maxWatts: 800, pduCount: 1, dinRails: 2, railLengthMm: 350 });
+      this.saveEnclosures(list);
     }
 
     // Ensure all hosts have guaranteed hostType
@@ -338,19 +423,25 @@ const FacilityStore = {
 
   addEnclosure(name, type = "rack_4post", spaceId = "space-mdf", heightU = 24, maxWatts = 3000, options = {}) {
     if (!name || !name.trim()) return null;
+    const cleanName = name.trim();
     const list = this.getEnclosures();
+    // Validate uniqueness in this space (Requirement 4)
+    if (list.some(e => e.spaceId === spaceId && e.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+      if (typeof showToast === "function") showToast(`An enclosure named "${cleanName}" already exists in this space.`);
+      return null;
+    }
     const id = `enc-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
     
     // Resolve hostType from options, type, or name context
     let hostType = options.hostType;
     if (!hostType) {
-      if (type === "nema_box" || type === "din_rail" || name.toLowerCase().includes("nema") || name.toLowerCase().includes("din")) {
+      if (type === "nema_box" || type === "din_rail" || cleanName.toLowerCase().includes("nema") || cleanName.toLowerCase().includes("din")) {
         hostType = "industrial_din";
-      } else if (type === "wall_cabinet" || name.toLowerCase().includes("panel") || name.toLowerCase().includes("trove") || name.toLowerCase().includes("ac-")) {
+      } else if (type === "wall_cabinet" || cleanName.toLowerCase().includes("panel") || cleanName.toLowerCase().includes("trove") || cleanName.toLowerCase().includes("ac-")) {
         hostType = "security_cabinet";
-      } else if (type === "pole" || name.toLowerCase().includes("pole")) {
+      } else if (type === "pole" || cleanName.toLowerCase().includes("pole")) {
         hostType = "structural_mount";
-      } else if (type === "backboard" || name.toLowerCase().includes("backboard") || name.toLowerCase().includes("plywood")) {
+      } else if (type === "backboard" || cleanName.toLowerCase().includes("backboard") || cleanName.toLowerCase().includes("plywood")) {
         hostType = "architectural_backboard";
       } else {
         hostType = "equipment_rack";
@@ -361,13 +452,15 @@ const FacilityStore = {
     const newEnc = {
       id,
       spaceId: spaceId || "space-mdf",
-      name: name.trim(),
+      name: cleanName,
       hostType,
       type: type || (isDin ? "nema_box" : "rack_4post"),
       heightU: parseInt(heightU, 10) || (hostType === "equipment_rack" ? 24 : 0),
       isDin,
       maxWatts: parseInt(maxWatts, 10) || (hostType === "equipment_rack" ? 3000 : (hostType === "security_cabinet" ? 1200 : 800)),
       pduCount: hostType === "equipment_rack" ? 2 : 1,
+      mountingMethod: options.mountingMethod || (hostType === "industrial_din" ? "wall" : null),
+      mountHeightFt: options.mountHeightFt || null,
       // Specific host parameters:
       subplateBays: options.subplateBays || (hostType === "security_cabinet" ? 8 : null),
       dcVoltage: options.dcVoltage || (hostType === "security_cabinet" ? "dual_12_24" : null),
@@ -393,6 +486,15 @@ const FacilityStore = {
     const list = this.getEnclosures();
     const host = list.find(h => h.id === hostId);
     if (!host) return false;
+    if (updates.name) {
+      const cleanName = updates.name.trim();
+      const spaceId = updates.spaceId || host.spaceId;
+      if (list.some(e => e.id !== hostId && e.spaceId === spaceId && e.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+        if (typeof showToast === "function") showToast(`An enclosure named "${cleanName}" already exists in this space.`);
+        return false;
+      }
+      updates.name = cleanName;
+    }
     Object.assign(host, updates);
     this.saveEnclosures(list);
     this.notifyWorkspaceChange();
@@ -499,9 +601,16 @@ const FacilityStore = {
 
     if (trimmed.includes(" • ")) return trimmed;
 
+    // Check if trimmed matches an existing space name
+    const spaces = this.getSpaces();
+    const matchedSpace = spaces.find(s => s.name.toLowerCase() === trimmed.toLowerCase());
+    if (matchedSpace && matchedSpace.type === "pole") {
+      return `${matchedSpace.name} • Pole Mount`;
+    }
+
     // Intelligent suffixing based on naming context
     const lower = trimmed.toLowerCase();
-    if (lower.includes("pole") || lower.includes("exterior")) return `${trimmed} • NEMA-Box`;
+    if (lower.includes("pole") || lower.includes("exterior")) return `${trimmed} • Pole Mount`;
     if (lower.includes("wall") || lower.includes("gate")) return `${trimmed} • Wallbox`;
     return `${trimmed} • Rack-1`;
   },
@@ -532,12 +641,21 @@ const FacilityStore = {
     const encs = this.getEnclosures(space ? space.id : null);
     const enc = encs.find(e => e.name.toLowerCase() === hostName.toLowerCase());
 
+    const isStructuralPole = (hostName.toLowerCase() === "pole mount") || 
+      (space && space.type === "pole" && (hostName.toLowerCase().includes("pole") || hostName === "Pole Mount"));
+
     const hostType = enc ? (enc.hostType || (enc.isDin ? "industrial_din" : "equipment_rack")) : (
+      isStructuralPole ? "structural_mount" :
       hostName.toLowerCase().includes("nema") || hostName.toLowerCase().includes("din") ? "industrial_din" :
       hostName.toLowerCase().includes("panel") || hostName.toLowerCase().includes("trove") || hostName.toLowerCase().includes("ac-") ? "security_cabinet" :
-      hostName.toLowerCase().includes("pole") ? "structural_mount" :
       hostName.toLowerCase().includes("backboard") ? "architectural_backboard" : "equipment_rack"
     );
+
+    const isPoleSpace = space && (space.type === "pole" || space.name.toLowerCase().includes("pole"));
+    const poleHeightFt = isPoleSpace ? (space.poleHeightFt || 25) : ((enc && enc.poleHeightFt) ? enc.poleHeightFt : 25);
+    const poleDiameterInches = isPoleSpace ? (space.poleDiameterInches || 4) : ((enc && enc.poleDiameterInches) ? enc.poleDiameterInches : 4);
+    const mountingMethod = enc ? (enc.mountingMethod || (isPoleSpace ? "pole" : "wall")) : (isPoleSpace ? "pole" : "wall");
+    const mountHeightFt = enc ? (enc.mountHeightFt || (isPoleSpace ? 10 : null)) : (isPoleSpace ? 10 : null);
 
     return {
       fullName: normalized,
@@ -548,9 +666,13 @@ const FacilityStore = {
       enclosureId: enc ? enc.id : null, // backward compat
       hostId: enc ? enc.id : null,      // clean new naming
       floorId: space ? space.floorId : "floor-1",
-      heightU: enc ? enc.heightU : 24,
+      heightU: enc ? enc.heightU : (hostType === "equipment_rack" ? 24 : 0),
       isDin: hostType === "industrial_din" || (enc && enc.isDin),
       hostType,
+      poleHeightFt,
+      poleDiameterInches,
+      mountingMethod,
+      mountHeightFt,
       hostConfig: enc ? (enc.config || {}) : {},
       isRack: hostType === "equipment_rack",
       isSecurityCabinet: hostType === "security_cabinet",
@@ -570,27 +692,51 @@ const FacilityStore = {
     spaces.forEach(s => {
       const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
       const floor = floors.find(f => f.id === s.floorId) || floors[0];
+      const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
 
-      if (spaceEncs.length === 0) {
-        // Fallback default enclosure if none exists
+      if (isPole) {
+        // Structural Pole Mounting Host at the Space level
         list.push({
-          id: `loc-${s.id}-default`,
-          name: `${s.name} • Rack-1`,
+          id: `loc-${s.id}-pole`,
+          name: `${s.name} • Pole Mount`,
           space: s.name,
           spaceId: s.id,
-          enclosure: "Rack-1",
-          hostName: "Rack-1",
+          enclosure: "Pole Mount",
+          hostName: "Pole Mount",
           enclosureId: null,
           hostId: null,
-          hostType: "equipment_rack",
+          hostType: "structural_mount",
           floorId: s.floorId,
-          floorName: floor ? floor.name : "Level 1",
-          heightU: 24,
-          isDin: false
+          floorName: floor ? floor.name : "Exterior",
+          heightU: 0,
+          isDin: false,
+          poleHeightFt: s.poleHeightFt || 25,
+          poleDiameterInches: s.poleDiameterInches || 4
         });
+      }
+
+      if (spaceEncs.length === 0) {
+        if (!isPole) {
+          // Fallback default enclosure if none exists
+          list.push({
+            id: `loc-${s.id}-default`,
+            name: `${s.name} • Rack-1`,
+            space: s.name,
+            spaceId: s.id,
+            enclosure: "Rack-1",
+            hostName: "Rack-1",
+            enclosureId: null,
+            hostId: null,
+            hostType: "equipment_rack",
+            floorId: s.floorId,
+            floorName: floor ? floor.name : "Level 1",
+            heightU: 24,
+            isDin: false
+          });
+        }
       } else {
         spaceEncs.forEach(e => {
-          const hostType = e.hostType || (e.isDin ? "industrial_din" : "equipment_rack");
+          const hostType = e.hostType || (e.isDin ? "industrial_din" : (isPole ? "industrial_din" : "equipment_rack"));
           list.push({
             id: `loc-${s.id}-${e.id}`,
             name: `${s.name} • ${e.name}`,
@@ -601,6 +747,9 @@ const FacilityStore = {
             enclosureId: e.id,
             hostId: e.id,
             hostType,
+            mountingMethod: e.mountingMethod || (isPole ? "pole" : "wall"),
+            mountHeightFt: e.mountHeightFt || (isPole ? 10 : null),
+            parentPoleHeightFt: isPole ? (s.poleHeightFt || 25) : null,
             floorId: s.floorId,
             floorName: floor ? floor.name : "Level 1",
             heightU: e.heightU || (hostType === "equipment_rack" ? 24 : 0),
@@ -858,15 +1007,35 @@ function setFacilityNewHostType(type) {
 function saveInlineFloor() {
   const nameInput = document.getElementById("inlineFloorName");
   const heightInput = document.getElementById("inlineFloorHeight");
+  const errEl = document.getElementById("inlineFloorError");
   const name = nameInput ? nameInput.value.trim() : "";
   const height = heightInput ? parseInt(heightInput.value, 10) : 14;
 
+  if (errEl) errEl.classList.add("hidden");
+
   if (!name) {
-    if (typeof showToast === "function") showToast("Please enter a floor name");
+    if (errEl) {
+      errEl.textContent = "Please enter a floor name.";
+      errEl.classList.remove("hidden");
+    } else if (typeof showToast === "function") {
+      showToast("Please enter a floor name");
+    }
+    return;
+  }
+
+  const floors = FacilityStore.getFloors();
+  if (floors.some(f => f.name.trim().toLowerCase() === name.toLowerCase())) {
+    if (errEl) {
+      errEl.textContent = `A floor named "${name}" already exists.`;
+      errEl.classList.remove("hidden");
+    } else if (typeof showToast === "function") {
+      showToast(`A floor named "${name}" already exists.`);
+    }
     return;
   }
 
   const f = FacilityStore.addFloor(name, height || 14);
+  if (!f) return;
   activeFacilityFloorId = f.id;
   facilityActiveForm = null;
   renderFacilityManager();
@@ -876,15 +1045,37 @@ function saveInlineFloor() {
 function saveInlineSpace() {
   const nameInput = document.getElementById("inlineSpaceName");
   const typeSelect = document.getElementById("inlineSpaceType");
+  const pHeightInput = document.getElementById("inlineSpacePoleHeight");
+  const errEl = document.getElementById("inlineSpaceError");
   const name = nameInput ? nameInput.value.trim() : "";
   const type = typeSelect ? typeSelect.value : "idf";
 
+  if (errEl) errEl.classList.add("hidden");
+
   if (!name) {
-    if (typeof showToast === "function") showToast("Please enter a space name");
+    if (errEl) {
+      errEl.textContent = "Please enter a space name.";
+      errEl.classList.remove("hidden");
+    } else if (typeof showToast === "function") {
+      showToast("Please enter a space name");
+    }
     return;
   }
 
-  const s = FacilityStore.addSpace(name, type, activeFacilityFloorId);
+  const spaces = FacilityStore.getSpaces(activeFacilityFloorId);
+  if (spaces.some(s => s.name.trim().toLowerCase() === name.toLowerCase())) {
+    if (errEl) {
+      errEl.textContent = `A space named "${name}" already exists in this area.`;
+      errEl.classList.remove("hidden");
+    } else if (typeof showToast === "function") {
+      showToast(`A space named "${name}" already exists in this area.`);
+    }
+    return;
+  }
+
+  const poleHeightFt = pHeightInput ? parseInt(pHeightInput.value, 10) : 25;
+  const s = FacilityStore.addSpace(name, type, activeFacilityFloorId, { poleHeightFt, poleDiameterInches: 4 });
+  if (!s) return;
   activeFacilitySpaceId = s.id;
   facilityActiveForm = null;
   renderFacilityManager();
@@ -894,15 +1085,42 @@ function saveInlineSpace() {
 function saveInlineHost() {
   const typeSelect = document.getElementById("inlineHostType");
   const nameInput = document.getElementById("inlineHostName");
+  const errEl = document.getElementById("inlineHostError");
   const hostType = typeSelect ? typeSelect.value : facilityNewHostType;
   const name = nameInput ? nameInput.value.trim() : "";
 
+  if (errEl) errEl.classList.add("hidden");
+
   if (!name) {
-    if (typeof showToast === "function") showToast("Please enter a host name");
+    if (errEl) {
+      errEl.textContent = "Please enter an enclosure name.";
+      errEl.classList.remove("hidden");
+    } else if (typeof showToast === "function") {
+      showToast("Please enter an enclosure name");
+    }
     return;
   }
 
+  const encs = FacilityStore.getEnclosures(activeFacilitySpaceId);
+  if (encs.some(e => e.name.trim().toLowerCase() === name.toLowerCase())) {
+    if (errEl) {
+      errEl.textContent = `An enclosure named "${name}" already exists in this space.`;
+      errEl.classList.remove("hidden");
+    } else if (typeof showToast === "function") {
+      showToast(`An enclosure named "${name}" already exists in this space.`);
+    }
+    return;
+  }
+
+  const currentSpace = FacilityStore.getSpaces().find(s => s.id === activeFacilitySpaceId);
+  const isPoleSpace = currentSpace && currentSpace.type === "pole";
+
   const options = {};
+  if (isPoleSpace) {
+    options.mountingMethod = "pole";
+    const htSelect = document.getElementById("inlineHostMountHeight");
+    options.mountHeightFt = htSelect ? parseInt(htSelect.value, 10) : 10;
+  }
 
   if (hostType === "equipment_rack") {
     const hSelect = document.getElementById("inlineRackHeight");
@@ -918,13 +1136,8 @@ function saveInlineHost() {
     const rSelect = document.getElementById("inlineDinRails");
     options.dinRails = rSelect ? parseInt(rSelect.value, 10) : 2;
     const mSelect = document.getElementById("inlineDinMounting");
-    options.mountingMethod = mSelect ? mSelect.value : "wall";
+    options.mountingMethod = isPoleSpace ? "pole" : (mSelect ? mSelect.value : "wall");
     options.railLengthMm = 350;
-  } else if (hostType === "structural_mount") {
-    const pHeight = document.getElementById("inlinePoleHeight");
-    options.poleHeightFt = pHeight ? parseInt(pHeight.value, 10) : 20;
-    const dSelect = document.getElementById("inlinePoleDiam");
-    options.poleDiameterInches = dSelect ? parseInt(dSelect.value, 10) : 4;
   } else if (hostType === "architectural_backboard") {
     const wSelect = document.getElementById("inlineBackboardSize");
     options.widthFt = wSelect ? parseInt(wSelect.value, 10) : 4;
@@ -936,6 +1149,123 @@ function saveInlineHost() {
   renderFacilityManager();
   if (typeof showToast === "function") {
     showToast(`Added ${name} (${FacilityStore.HOST_TYPES[hostType]?.label || hostType})`);
+  }
+}
+
+function updateSpacePoleHeight(spaceId, heightFt) {
+  FacilityStore.updateSpace(spaceId, { poleHeightFt: heightFt });
+  renderFacilityManager();
+  if (typeof showToast === "function") {
+    showToast(`Updated pole height to ${heightFt} ft AGL`);
+  }
+}
+
+// -----------------------------------------------------------
+// Drag & Drop Enclosures Between Spaces (Requirement 5)
+// -----------------------------------------------------------
+let facilityDraggedEncId = null;
+
+function handleEnclosureDragStart(event, encId) {
+  facilityDraggedEncId = encId;
+  event.dataTransfer.setData("text/plain", encId);
+  event.dataTransfer.effectAllowed = "move";
+  const el = event.currentTarget;
+  if (el) el.style.opacity = "0.4";
+}
+
+function handleEnclosureDragEnd(event) {
+  facilityDraggedEncId = null;
+  const el = event.currentTarget;
+  if (el) el.style.opacity = "1";
+  document.querySelectorAll(".space-drop-target").forEach(card => {
+    card.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+  });
+}
+
+function handleSpaceCardDragOver(event, spaceId) {
+  if (!facilityDraggedEncId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = "move";
+  const card = event.currentTarget;
+  if (card && !card.classList.contains("ring-2")) {
+    card.classList.add("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+  }
+}
+
+function handleSpaceCardDragLeave(event, spaceId) {
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+  }
+}
+
+function handleSpaceCardDrop(event, targetSpaceId) {
+  event.preventDefault();
+  const card = event.currentTarget;
+  if (card) {
+    card.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/60", "border-indigo-400");
+  }
+
+  const encId = event.dataTransfer.getData("text/plain") || facilityDraggedEncId;
+  facilityDraggedEncId = null;
+  if (!encId) return;
+
+  const encs = FacilityStore.getEnclosures();
+  const enc = encs.find(e => e.id === encId);
+  if (!enc) return;
+
+  if (enc.spaceId === targetSpaceId) {
+    return; // Dropped on current space, no change
+  }
+
+  const spaces = FacilityStore.getSpaces();
+  const sourceSpace = spaces.find(s => s.id === enc.spaceId);
+  const targetSpace = spaces.find(s => s.id === targetSpaceId);
+  if (!targetSpace) return;
+
+  // Duplicate name check in destination space (Requirement 4)
+  const duplicate = encs.some(e => e.id !== enc.id && e.spaceId === targetSpaceId && e.name.trim().toLowerCase() === enc.name.trim().toLowerCase());
+  if (duplicate) {
+    const msg = `Cannot move: An enclosure named "${enc.name}" already exists in "${targetSpace.name}". Please rename it first.`;
+    if (typeof showToast === "function") showToast(msg);
+    else alert(msg);
+    return;
+  }
+
+  const oldLoc = sourceSpace ? `${sourceSpace.name} • ${enc.name}` : enc.name;
+  const newLoc = `${targetSpace.name} • ${enc.name}`;
+
+  // Update enclosure spaceId and mountingMethod if moving to a pole
+  const updates = { spaceId: targetSpaceId };
+  if (targetSpace.type === "pole") {
+    updates.mountingMethod = "pole";
+    if (!enc.mountHeightFt) updates.mountHeightFt = 10;
+  }
+  FacilityStore.updateHost(enc.id, updates);
+
+  // Update BOM items
+  let remappedCount = 0;
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    projectBOM.forEach(item => {
+      if (item.closetName === oldLoc || item.rackId === oldLoc) {
+        item.closetName = newLoc;
+        item.rackId = newLoc;
+        remappedCount++;
+      }
+    });
+    if (remappedCount > 0 && typeof saveBOMToLocalStorage === "function") {
+      saveBOMToLocalStorage();
+    }
+  }
+
+  activeFacilitySpaceId = targetSpaceId;
+  activeFacilityFloorId = targetSpace.floorId;
+
+  FacilityStore.notifyWorkspaceChange();
+  renderFacilityManager();
+
+  if (typeof showToast === "function") {
+    showToast(`Moved "${enc.name}" to "${targetSpace.name}" (${remappedCount} devices remapped)`);
   }
 }
 
@@ -1029,6 +1359,7 @@ function renderFacilityManager() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Floor Name:</label>
               <input id="inlineFloorName" type="text" placeholder="e.g. Level 2 - Corporate Offices" value="Level ${floors.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-sky-500 focus:outline-none font-medium">
+              <div id="inlineFloorError" class="hidden text-[10px] text-rose-400 font-medium mt-1"></div>
             </div>
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Ceiling Rise (ft):</label>
@@ -1086,15 +1417,27 @@ function renderFacilityManager() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Space Name:</label>
               <input id="inlineSpaceName" type="text" placeholder="e.g. IDF-2, Pole 2, East Gate Wallbox" value="IDF-${currentFloorSpaces.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none font-medium">
+              <div id="inlineSpaceError" class="hidden text-[10px] text-rose-400 font-medium mt-1"></div>
             </div>
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Space Type:</label>
-              <select id="inlineSpaceType" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+              <select id="inlineSpaceType" onchange="const pF = document.getElementById('inlinePoleHeightRow'); if (pF) pF.style.display = this.value === 'pole' ? 'block' : 'none';" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
                 <option value="idf">IDF (Telecommunications Closet)</option>
-                <option value="mdf">MDF (Main Distribution Facility / Data Center)</option>
+                <option value="mdf">MDF (Main Distribution Facility / Server Room)</option>
                 <option value="pole">Exterior Structural Pole / Mast</option>
                 <option value="wallbox">Gate / Wallbox Enclosure Station</option>
                 <option value="security_room">Security Control & Access Room</option>
+              </select>
+            </div>
+            <div id="inlinePoleHeightRow" style="display: none;">
+              <label class="text-[10px] text-slate-400 block mb-1">Pole Height (ft AGL):</label>
+              <select id="inlineSpacePoleHeight" class="w-full bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded-lg px-2.5 py-1.5 text-xs">
+                <option value="12">12 ft AGL (Pedestal / Short Mast)</option>
+                <option value="15">15 ft AGL (Perimeter Camera Pole)</option>
+                <option value="20">20 ft AGL (Standard Light/Utility Pole)</option>
+                <option value="25" selected>25 ft AGL (Commercial Security Pole)</option>
+                <option value="30">30 ft AGL (High-Mast / Radio Mast)</option>
+                <option value="40">40 ft AGL (Tower / Heavy Industrial)</option>
               </select>
             </div>
             <div class="flex items-center justify-end gap-2 pt-1">
@@ -1118,24 +1461,61 @@ function renderFacilityManager() {
             return `
               <div 
                 onclick="selectFacilitySpace('${s.id}')"
-                class="p-3 rounded-xl border ${isSelected ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'} cursor-pointer transition-all flex items-center justify-between group"
+                ondragover="handleSpaceCardDragOver(event, '${s.id}')"
+                ondragleave="handleSpaceCardDragLeave(event, '${s.id}')"
+                ondrop="handleSpaceCardDrop(event, '${s.id}')"
+                data-space-id="${s.id}"
+                class="space-drop-target p-3 rounded-xl border ${isSelected ? (isPole ? 'border-cyan-500 bg-cyan-950/40 ring-1 ring-cyan-500/40' : 'border-indigo-500 bg-indigo-950/40 ring-1 ring-indigo-500/40') : (isPole ? 'border-cyan-900/60 bg-slate-950/80 hover:border-cyan-700' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700')} cursor-pointer transition-all flex items-center justify-between group"
               >
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2">
+                <div class="min-w-0 pr-2">
+                  <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="text-xs font-bold text-white truncate">${escapeHTML(s.name)}</span>
                     <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${isMdf ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : (isPole ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300')}">
-                      ${s.type.toUpperCase()}
+                      ${isPole ? 'STRUCTURAL POLE' : s.type.toUpperCase()}
                     </span>
                   </div>
-                  <span class="text-[10px] text-slate-400 font-mono block mt-1">
-                    ${spaceEncs.length} ${spaceEncs.length === 1 ? 'Mounting Host' : 'Mounting Hosts'}
-                  </span>
+                  <div class="mt-1 flex items-center gap-2">
+                    <span class="text-[10px] text-slate-400 font-mono">
+                      ${spaceEncs.length} ${spaceEncs.length === 1 ? 'Enclosure' : 'Enclosures'}
+                    </span>
+                    ${isPole ? `
+                      <span class="text-[10px] text-cyan-400 font-mono font-bold">
+                        &bull; ${s.poleHeightFt || 25} ft AGL
+                      </span>
+                    ` : ''}
+                  </div>
                 </div>
-                ${spaces.length > 1 ? `
-                  <button onclick="event.stopPropagation(); deleteFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity" title="Delete Space">
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                  </button>
-                ` : ''}
+
+                <div class="flex items-center gap-1.5 shrink-0">
+                  ${isPole ? `
+                    <button 
+                      onclick="event.stopPropagation(); openRackViewerFor('${s.name} • Pole Mount')"
+                      class="px-2 py-1 bg-cyan-600/30 hover:bg-cyan-600 text-cyan-200 hover:text-white text-[10px] font-bold rounded-lg border border-cyan-500/40 transition-all flex items-center gap-1 shadow-sm"
+                      title="Open Pole Elevation Visualizer for ${escapeHTML(s.name)}"
+                    >
+                      <i data-lucide="radio-tower" class="w-3 h-3"></i> Pole Elevation
+                    </button>
+                    <select 
+                      onclick="event.stopPropagation()"
+                      onchange="updateSpacePoleHeight('${s.id}', parseInt(this.value, 10))" 
+                      class="bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded px-1.5 py-1 text-[10px] focus:outline-none"
+                      title="Adjust Pole Height"
+                    >
+                      <option value="12" ${s.poleHeightFt === 12 ? 'selected' : ''}>12ft</option>
+                      <option value="15" ${s.poleHeightFt === 15 ? 'selected' : ''}>15ft</option>
+                      <option value="20" ${s.poleHeightFt === 20 ? 'selected' : ''}>20ft</option>
+                      <option value="25" ${(s.poleHeightFt || 25) === 25 ? 'selected' : ''}>25ft</option>
+                      <option value="30" ${s.poleHeightFt === 30 ? 'selected' : ''}>30ft</option>
+                      <option value="40" ${s.poleHeightFt === 40 ? 'selected' : ''}>40ft</option>
+                    </select>
+                  ` : ''}
+
+                  ${spaces.length > 1 ? `
+                    <button onclick="event.stopPropagation(); deleteFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity" title="Delete Space">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  ` : ''}
+                </div>
               </div>
             `;
           }).join('')}
@@ -1146,11 +1526,12 @@ function renderFacilityManager() {
       <div class="md:col-span-5 space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i> Mounting Hosts & Enclosures (${currentSpaceEncs.length})
+            <i data-lucide="${currentSpace && currentSpace.type === 'pole' ? 'box' : 'server'}" class="w-3.5 h-3.5 ${currentSpace && currentSpace.type === 'pole' ? 'text-cyan-400' : 'text-emerald-400'}"></i>
+            ${currentSpace && currentSpace.type === 'pole' ? `Enclosures on ${escapeHTML(currentSpace.name)}` : 'Mounting Hosts & Enclosures'} (${currentSpaceEncs.length})
           </span>
           ${currentSpace ? `
             <button onclick="openFacilityAddForm('add_host')" class="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1">
-              <i data-lucide="plus" class="w-3 h-3"></i> Add Host
+              <i data-lucide="plus" class="w-3 h-3"></i> Add Enclosure
             </button>
           ` : ''}
         </div>
@@ -1159,36 +1540,36 @@ function renderFacilityManager() {
           <!-- Inline Add Host Form -->
           <div class="p-3.5 bg-slate-900 border border-emerald-500/60 rounded-xl space-y-3 shadow-xl">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-emerald-400">Add Mounting Host to ${escapeHTML(currentSpace.name)}</span>
+              <span class="text-xs font-bold text-emerald-400">Add Enclosure to ${escapeHTML(currentSpace.name)}</span>
               <button onclick="closeFacilityAddForm()" class="text-slate-500 hover:text-slate-300"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
             </div>
 
-            <!-- Host Type Selector -->
+            <!-- Host Type Selector (Poles are managed at Space level) -->
             <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Host Mounting Type:</label>
+              <label class="text-[10px] text-slate-400 block mb-1">Enclosure Type:</label>
               <select id="inlineHostType" onchange="setFacilityNewHostType(this.value)" class="w-full bg-slate-950 border border-slate-700 text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-none">
-                <option value="equipment_rack" ${facilityNewHostType === 'equipment_rack' ? 'selected' : ''}>19" EIA Equipment Rack (Switches, Servers, UPS)</option>
+                <option value="industrial_din" ${facilityNewHostType === 'industrial_din' || (currentSpace.type === 'pole' && facilityNewHostType === 'equipment_rack') ? 'selected' : ''}>Industrial Weatherproof NEMA Box (DIN Rail)</option>
                 <option value="security_cabinet" ${facilityNewHostType === 'security_cabinet' ? 'selected' : ''}>Security & Access Cabinet (Altronix Trove / LSP)</option>
-                <option value="industrial_din" ${facilityNewHostType === 'industrial_din' ? 'selected' : ''}>Industrial Weatherproof NEMA Box (DIN Rail)</option>
-                <option value="structural_mount" ${facilityNewHostType === 'structural_mount' ? 'selected' : ''}>Structural Pole / Mast Mount (Cameras, Radios)</option>
+                <option value="equipment_rack" ${facilityNewHostType === 'equipment_rack' && currentSpace.type !== 'pole' ? 'selected' : ''}>19" EIA Equipment Rack (Switches, Servers, UPS)</option>
                 <option value="architectural_backboard" ${facilityNewHostType === 'architectural_backboard' ? 'selected' : ''}>Architectural Telecom Backboard (Plywood)</option>
               </select>
             </div>
 
             <!-- Host Name Input -->
             <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Host Name:</label>
-              <input id="inlineHostName" type="text" value="${getSuggestedHostName(facilityNewHostType, currentSpaceEncs.length)}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-none font-medium">
+              <label class="text-[10px] text-slate-400 block mb-1">Enclosure Name:</label>
+              <input id="inlineHostName" type="text" value="${getSuggestedHostName(currentSpace.type === 'pole' && facilityNewHostType === 'equipment_rack' ? 'industrial_din' : facilityNewHostType, currentSpaceEncs.length)}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-none font-medium">
+              <div id="inlineHostError" class="hidden text-[10px] text-rose-400 font-medium mt-1"></div>
             </div>
 
             <!-- Dynamic Form-Factor Fields -->
             <div class="grid grid-cols-2 gap-2 text-xs">
-              ${renderInlineHostSpecificFields(facilityNewHostType)}
+              ${renderInlineHostSpecificFields(currentSpace.type === 'pole' && facilityNewHostType === 'equipment_rack' ? 'industrial_din' : facilityNewHostType, currentSpace)}
             </div>
 
             <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
               <button onclick="closeFacilityAddForm()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Cancel</button>
-              <button onclick="saveInlineHost()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow">Create Host</button>
+              <button onclick="saveInlineHost()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow">Create Enclosure</button>
             </div>
           </div>
         ` : ''}
@@ -1196,34 +1577,52 @@ function renderFacilityManager() {
         <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
           ${currentSpaceEncs.length === 0 ? `
             <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-850">
-              No racks, security cabinets, or mounting hosts in this space yet.
+              No racks or enclosures mounted in this space yet.
             </div>
           ` : currentSpaceEncs.map(e => {
             const locName = `${currentSpace.name} • ${e.name}`;
             const telem = FacilityStore.getLocationTelemetry(locName);
             const hostType = e.hostType || (e.isDin ? "industrial_din" : "equipment_rack");
             const meta = MOUNTING_HOST_TYPES[hostType] || MOUNTING_HOST_TYPES.equipment_rack;
+            const isPoleMounted = e.mountingMethod === "pole" || (currentSpace && currentSpace.type === "pole");
 
             return `
-              <div class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5 hover:border-slate-700 transition-colors">
-                <div class="flex items-start justify-between gap-2">
+              <div 
+                class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5 hover:border-slate-700 transition-colors"
+                draggable="true"
+                ondragstart="handleEnclosureDragStart(event, '${e.id}')"
+                ondragend="handleEnclosureDragEnd(event)"
+                data-enclosure-id="${e.id}"
+              >
+                <!-- Drag Handle Bar (Requirement 5) -->
+                <div class="flex items-center justify-between text-[9px] text-slate-500 font-mono pb-1 border-b border-slate-850 cursor-grab active:cursor-grabbing select-none">
+                  <span class="flex items-center gap-1 text-slate-400 hover:text-indigo-300 transition-colors">
+                    <i data-lucide="grip-vertical" class="w-3 h-3 text-slate-500"></i> Drag to reassign space
+                  </span>
+                  <span class="text-slate-600">ID: ${escapeHTML(e.id)}</span>
+                </div>
+
+                <div class="flex items-start justify-between gap-2 pt-1">
                   <div class="min-w-0">
                     <span class="text-xs font-bold text-white block truncate">${escapeHTML(e.name)}</span>
                     <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 flex items-center gap-1">
                         <i data-lucide="${meta.icon || 'server'}" class="w-2.5 h-2.5"></i> ${meta.badgeLabel}
                       </span>
-                      ${hostType === 'industrial_din' ? `
-                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${e.mountingMethod === 'pole' ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-300'}">
-                          ${e.mountingMethod === 'pole' ? 'Pole Mounted' : 'Wall Mounted'}
+                      ${isPoleMounted ? `
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
+                          Pole Banded @ ${e.mountHeightFt || 10} ft AGL
                         </span>
-                      ` : ''}
+                      ` : (hostType === 'industrial_din' ? `
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border border-amber-500/40 bg-amber-500/10 text-amber-300">
+                          Wall Mounted
+                        </span>
+                      ` : '')}
                       <span class="text-[10px] font-mono text-slate-400">
                         ${hostType === 'equipment_rack' ? `${e.heightU || 24}U EIA &bull; Max ${e.maxWatts || 3000}W` :
                           (hostType === 'security_cabinet' ? `${e.subplateBays || 8} Subplate Bays &bull; ${e.dcVoltage || '12/24V'}` :
                           (hostType === 'industrial_din' ? `${e.dinRails || 2}x DIN (${e.railLengthMm || 350}mm)` :
-                          (hostType === 'structural_mount' ? `${e.poleHeightFt || 20}ft AGL &bull; ${e.poleDiameterInches || 4}" O.D.` :
-                          `${e.widthFt || 4}' x ${e.heightFt || 8}' Backboard`)))}
+                          `${e.widthFt || 4}' x ${e.heightFt || 8}' Backboard`))}
                       </span>
                     </div>
                   </div>
@@ -1236,7 +1635,7 @@ function renderFacilityManager() {
                     >
                       <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Visualizer
                     </button>
-                    <button onclick="deleteFacilityEnclosure('${e.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors" title="Delete Host">
+                    <button onclick="deleteFacilityEnclosure('${e.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors" title="Delete Enclosure">
                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     </button>
                   </div>
@@ -1252,14 +1651,12 @@ function renderFacilityManager() {
                     <span class="text-slate-500 block text-[9px]">
                       ${hostType === 'equipment_rack' ? 'RU Space:' :
                         (hostType === 'security_cabinet' ? 'Subplate Bays:' :
-                        (hostType === 'industrial_din' ? 'DIN Rail:' :
-                        (hostType === 'structural_mount' ? 'Mounting Points:' : 'Backboard:')))}
+                        (hostType === 'industrial_din' ? 'DIN Rail:' : 'Backboard:'))}
                     </span>
                     <span class="text-indigo-300 font-bold">
                       ${hostType === 'equipment_rack' ? `${telem.totalRuOccupied}/${e.heightU || 24}U` :
                         (hostType === 'security_cabinet' ? `${e.subplateBays || 8} Bays` :
-                        (hostType === 'industrial_din' ? `${e.dinRails || 2}x Rails` :
-                        (hostType === 'structural_mount' ? `${e.poleHeightFt || 20}ft Mast` : `${e.widthFt || 4}x${e.heightFt || 8} Ft`)))}
+                        (hostType === 'industrial_din' ? `${e.dinRails || 2}x Rails` : `${e.widthFt || 4}x${e.heightFt || 8} Ft`))}
                     </span>
                   </div>
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
@@ -1290,8 +1687,6 @@ function getSuggestedHostName(hostType, existingCount) {
       return `Security-Cab-${num}`;
     case "industrial_din":
       return `NEMA-Box-${num}`;
-    case "structural_mount":
-      return `Mast-${num}`;
     case "architectural_backboard":
       return `Backboard-${num}`;
     default:
@@ -1299,7 +1694,9 @@ function getSuggestedHostName(hostType, existingCount) {
   }
 }
 
-function renderInlineHostSpecificFields(hostType) {
+function renderInlineHostSpecificFields(hostType, currentSpace = null) {
+  const isPoleSpace = currentSpace && currentSpace.type === "pole";
+
   if (hostType === "security_cabinet") {
     return `
       <div>
@@ -1312,23 +1709,26 @@ function renderInlineHostSpecificFields(hostType) {
         </select>
       </div>
       <div>
-        <label class="text-[10px] text-slate-400 block mb-1">DC Bus Voltage:</label>
-        <select id="inlineCabinetVoltage" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
-          <option value="dual_12_24" selected>Dual 12V / 24VDC</option>
-          <option value="24vdc">24VDC Dedicated</option>
-          <option value="12vdc">12VDC Dedicated</option>
-        </select>
+        ${isPoleSpace ? `
+          <label class="text-[10px] text-cyan-400 block mb-1">Mounting Height (ft AGL):</label>
+          <select id="inlineHostMountHeight" class="w-full bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded-lg px-2 py-1 text-xs">
+            <option value="6">6 ft AGL (Low Band)</option>
+            <option value="8">8 ft AGL (Service Height)</option>
+            <option value="10" selected>10 ft AGL (Standard)</option>
+            <option value="12">12 ft AGL (Elevated)</option>
+          </select>
+        ` : `
+          <label class="text-[10px] text-slate-400 block mb-1">DC Bus Voltage:</label>
+          <select id="inlineCabinetVoltage" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
+            <option value="dual_12_24" selected>Dual 12V / 24VDC</option>
+            <option value="24vdc">24VDC Dedicated</option>
+            <option value="12vdc">12VDC Dedicated</option>
+          </select>
+        `}
       </div>
     `;
   } else if (hostType === "industrial_din") {
     return `
-      <div>
-        <label class="text-[10px] text-slate-400 block mb-1">Mounting Method:</label>
-        <select id="inlineDinMounting" class="w-full bg-slate-950 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1 text-xs">
-          <option value="wall" selected>Wall Mount (Flanges/Strut)</option>
-          <option value="pole">Pole Mount (Stainless Banding)</option>
-        </select>
-      </div>
       <div>
         <label class="text-[10px] text-slate-400 block mb-1">DIN Rails:</label>
         <select id="inlineDinRails" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
@@ -1338,28 +1738,22 @@ function renderInlineHostSpecificFields(hostType) {
           <option value="4">4 Rails (Full Control)</option>
         </select>
       </div>
-    `;
-  } else if (hostType === "structural_mount") {
-    return `
       <div>
-        <label class="text-[10px] text-slate-400 block mb-1">Pole Height (ft AGL):</label>
-        <select id="inlinePoleHeight" class="w-full bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded-lg px-2 py-1 text-xs">
-          <option value="12">12 ft (Bollard / Pedestrian)</option>
-          <option value="15">15 ft (Perimeter Fence)</option>
-          <option value="20" selected>20 ft (Standard Parking Mast)</option>
-          <option value="25">25 ft (High Mast / Wide Angle)</option>
-          <option value="30">30 ft (Highway / Facility Mast)</option>
-          <option value="40">40 ft (Tower / PtP Bridge)</option>
-        </select>
-      </div>
-      <div>
-        <label class="text-[10px] text-slate-400 block mb-1">Mast Diameter:</label>
-        <select id="inlinePoleDiam" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
-          <option value="2">2" Pipe</option>
-          <option value="3">3" Standard Mast</option>
-          <option value="4" selected>4" Heavy Duty Steel</option>
-          <option value="6">6" High Mast / Bollard</option>
-        </select>
+        ${isPoleSpace ? `
+          <label class="text-[10px] text-cyan-400 block mb-1">Mounting Height (ft AGL):</label>
+          <select id="inlineHostMountHeight" class="w-full bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded-lg px-2 py-1 text-xs">
+            <option value="8">8 ft AGL (Accessible)</option>
+            <option value="10" selected>10 ft AGL (Standard Banding)</option>
+            <option value="12">12 ft AGL (High Clearance)</option>
+            <option value="15">15 ft AGL (Mid-Pole)</option>
+          </select>
+        ` : `
+          <label class="text-[10px] text-slate-400 block mb-1">Mounting Method:</label>
+          <select id="inlineDinMounting" class="w-full bg-slate-950 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1 text-xs">
+            <option value="wall" selected>Wall Mount (Flanges/Strut)</option>
+            <option value="pole">Pole Mount (Stainless Banding)</option>
+          </select>
+        `}
       </div>
     `;
   } else if (hostType === "architectural_backboard") {
@@ -1432,7 +1826,7 @@ function promptAddEnclosure(spaceId) {
 }
 
 function deleteFacilityFloor(floorId) {
-  if (confirm("Delete this floor level? All associated spaces and equipment will be moved to Level 1.")) {
+  if (confirm("Delete this floor level? All associated spaces and equipment will be moved to Main Floor.")) {
     FacilityStore.deleteFloor(floorId);
     activeFacilityFloorId = FacilityStore.getFloors()[0].id;
     facilityActiveForm = null;
@@ -1458,15 +1852,25 @@ function deleteFacilityEnclosure(enclosureId) {
 }
 
 function openRackViewerFor(locationName) {
-  toggleFacilityModal(); // Close facility modal
+  const facModal = document.getElementById("facilityModal");
+  if (facModal) {
+    facModal.classList.add("hidden");
+  }
+  facilityActiveForm = null;
+
   if (typeof switchActiveRackElevation === "function") {
     switchActiveRackElevation(locationName);
   }
-  if (typeof toggleRackModal === "function") {
-    const rackModal = document.getElementById("rackModal");
-    if (!rackModal || rackModal.classList.contains("hidden")) {
+  const rackModal = document.getElementById("rackModal");
+  if (rackModal && rackModal.classList.contains("hidden")) {
+    if (typeof toggleRackModal === "function") {
       toggleRackModal();
+    } else {
+      rackModal.classList.remove("hidden");
     }
+  }
+  if (typeof renderRackVisualizer === "function") {
+    renderRackVisualizer();
   }
 }
 
@@ -1493,4 +1897,10 @@ if (typeof window !== "undefined") {
   window.deleteFacilitySpace = deleteFacilitySpace;
   window.deleteFacilityEnclosure = deleteFacilityEnclosure;
   window.openRackViewerFor = openRackViewerFor;
+  window.updateSpacePoleHeight = updateSpacePoleHeight;
+  window.handleEnclosureDragStart = handleEnclosureDragStart;
+  window.handleEnclosureDragEnd = handleEnclosureDragEnd;
+  window.handleSpaceCardDragOver = handleSpaceCardDragOver;
+  window.handleSpaceCardDragLeave = handleSpaceCardDragLeave;
+  window.handleSpaceCardDrop = handleSpaceCardDrop;
 }

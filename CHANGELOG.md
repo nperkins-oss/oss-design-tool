@@ -10,22 +10,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.10.8-alpha] - 2026-09-25
 
 ### Added
+- **Telecom Spaces & Poles Level Architecture (`js/core/facility.js` & `js/tools/rack.js`)**:
+  - Moved Structural Poles exclusively to the **Telecom Spaces & Poles** level (Level 2), eliminating confusing duplicate pole entries at the Enclosure level.
+  - Exterior poles feature configurable AGL heights (12, 15, 20, 25, 30, 40 ft), live AGL height badges, and dedicated **Pole Elevation** visualizer buttons.
+  - Pole Elevation visualizer renders strapped enclosures (e.g. NEMA boxes at 10 ft AGL) directly in Zone 3 (Mid-Pole) with **"Inspect Enclosure (DIN Rails) →"** deep-links.
+  - Enclosure visualizer includes bidirectional **"← View Pole Elevation"** quick-links for pole-banded enclosures.
+- **Enclosure Drag-and-Drop Reassignment (`js/core/facility.js`)**:
+  - Implemented HTML5 drag-and-drop across space cards in the Facility Manager.
+  - Automatically updates `spaceId`, sets `mountingMethod: 'pole'` when dropped onto an exterior pole, and remaps all assigned BOM devices (`oldSpace • enc` to `newSpace • enc`).
+- **Strict Name Uniqueness Enforcement (`js/core/facility.js`)**:
+  - Enforced per-area name uniqueness across floors, spaces on the same floor, and enclosures in the same space.
+  - Inline forms display real-time validation error alerts (`#inlineFloorError`, `#inlineSpaceError`, `#inlineHostError`).
+  - Drag-and-drop target space drop handlers reject duplicate names with toast warnings.
+- **Canonical Default Hierarchy & Project Auto-Migration (`js/core/facility.js`)**:
+  - Defaults established: **Main Floor > MDF** (Rack-1), **Exterior > Pole 1** (NEMA-Box at 10ft AGL, 25ft mast), and **Unassigned**.
+  - Auto-migrates legacy projects to ensure Exterior floor and Pole 1 are present without data loss.
 - **Streamlined Facility, Floors, Spaces & Enclosures Management (`js/core/facility.js`)**:
   - Replaced browser `prompt()` dialogs with seamless, styled inline creation forms (`facilityActiveForm`: `add_floor`, `add_space`, `add_host`) embedded directly in the hierarchy management columns.
-  - Added direct "Elevation Visualizer" action buttons on all mounting host cards, allowing immediate one-click navigation into the visualizer for any rack, cabinet, NEMA box, pole, or wallfield.
-  - Updated all labels, badges, and terminology to consistently match between the Facility Manager and the Elevation Visualizer.
+  - Added direct "Elevation Visualizer" action buttons on all mounting host cards.
 - **NEMA Enclosure Wall and Pole Mounting Options (`js/core/facility.js` & `js/tools/rack.js`)**:
   - Added `mountingMethod` (`wall` | `pole`) configuration to Weatherproof NEMA (`industrial_din`) enclosures.
   - Visualizer renders heavy-duty unistrut wall flanges with anchor points for wall-mounted enclosures, or stainless steel banding straps and standoff brackets for pole-mounted enclosures.
-- **Configurable Structural Pole Heights & Dynamic Elevation Zones (`js/core/facility.js` & `js/tools/rack.js`)**:
-  - Added `poleHeightFt` (12, 15, 20, 25, 30, and 40 ft Above Ground Level) and mast diameter controls for `structural_mount` hosts.
-  - Mounting zones now dynamically scale with pole height: Mast Top ($H$ ft AGL), Upper Pole ($0.8 \times H$ ft AGL), Mid Pole NEMA Box ($0.4 \times H$ ft AGL), and Foundation Base (2 ft AGL).
-  - Wind load and bending moment ($M = F \times H$) calculations dynamically scale with pole height.
-- **Form-Factor Affinity & Device Enclosure Compatibility Engine (`js/tools/rack.js`)**:
-  - Added `checkDeviceHostCompatibility(item, hostType)`: differentiates native form-factor fits from adapter requirements (e.g., 19" rack-mount vs DIN rail switches vs modular subplates vs outdoor pole ratings).
-  - Auto-Mount only mounts compatible hardware to prevent misplacements, while drag-and-drop permits flexible field engineering with real-time visual advisory badges (`● Form-Factor Match` vs `⚠️ Requires Adapter/Bracket Kit`).
 
 ### Fixed
+- **Modal Layering on Visualizer Linking (`js/core/facility.js` & `js/tools/topology.js`)**:
+  - Fixed an issue where opening the visualizer from `#facilityModal` left `#facilityModal` covering `#rackModal` in the background; `openRackViewerFor()` now explicitly hides `#facilityModal` and focuses `#rackModal` in the foreground.
 - **Facility Modal ESC Key Navigation (`js/core/app.js`)**:
   - Registered `#facilityModal` in the universal keyboard ESC listener in `app.js` so pressing Escape smoothly closes the Facility, Floors, Spaces & Enclosures modal.
 - **Rack Elevation Modal Header Layout & Overflow (`index.html` & `js/tools/rack.js`)**:

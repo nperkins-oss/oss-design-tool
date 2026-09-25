@@ -2858,17 +2858,27 @@ function updateDeviceLocation(instanceId, newLoc) {
 }
 
 function openRackViewerFor(loc) {
+  const facModal = document.getElementById("facilityModal");
+  if (facModal && !facModal.classList.contains("hidden")) {
+    facModal.classList.add("hidden");
+    if (typeof facilityActiveForm !== "undefined") facilityActiveForm = null;
+  }
   if (typeof toggleTopologyModal === "function" && isTopologyModalVisible()) {
     toggleTopologyModal();
   }
-  if (typeof toggleRackModal === "function") {
-    const rackModal = document.getElementById("rackModal");
-    if (!rackModal || rackModal.classList.contains("hidden")) {
+  if (typeof switchActiveRackElevation === "function") {
+    switchActiveRackElevation(loc);
+  }
+  const rackModal = document.getElementById("rackModal");
+  if (rackModal && rackModal.classList.contains("hidden")) {
+    if (typeof toggleRackModal === "function") {
       toggleRackModal();
+    } else {
+      rackModal.classList.remove("hidden");
     }
-    if (typeof switchActiveRackElevation === "function") {
-      switchActiveRackElevation(loc);
-    }
+  }
+  if (typeof renderRackVisualizer === "function") {
+    renderRackVisualizer();
   }
 }
 
