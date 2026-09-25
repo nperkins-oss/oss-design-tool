@@ -937,37 +937,6 @@ function switchSidebarTab(tab) {
   renderSidebarTabContent();
 }
 
-function renderSidebarTabContent() {
-  const container = document.getElementById("sidebarTabContent");
-  if (!container) return;
-
-  const floor = getActiveFloor();
-
-  if (activeSidebarTab === "runs") {
-    const drops = floor.nodes.filter(n => n.type === "device");
-    if (drops.length === 0) {
-      container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs"><p>No drops placed on this level.</p></div>`;
-      return;
-    }
-
-    container.innerHTML = drops.map(dev => {
-      const run = dev.calculatedRun || { totalFt: 0, closetName: 'Unassigned', isExceeded: false };
-      return `
-        <div onclick="selectNode('${dev.id}')" class="bg-slate-950 p-2.5 rounded-xl border ${dev.id === selectedNodeId ? 'border-brand-500 bg-brand-500/10' : run.isExceeded ? 'border-rose-500/60 bg-rose-950/20' : 'border-slate-800'} text-xs space-y-1 cursor-pointer hover:border-slate-700 transition-all">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-white">${dev.name}</span>
-            <span class="font-mono font-bold ${run.isExceeded ? 'text-rose-400' : 'text-amber-300'}">
-              ${run.totalFt} ft (${run.totalMeters}m)
-            </span>
-          </div>
-          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-            <span>To: ${run.closetName}</span>
-            <span>${(dev.waypoints || []).length} Bends</span>
-          </div>
-        </div>
-      `;
-    }).join("");
-  } else {
 // -----------------------------------------------------------
 // Field Device Classifier for Physical Floor Drops
 // -----------------------------------------------------------
@@ -1011,6 +980,37 @@ function isFieldDeviceForPhysicalLayout(item) {
   return isEdge || item.isFieldDevice === true;
 }
 
+function renderSidebarTabContent() {
+  const container = document.getElementById("sidebarTabContent");
+  if (!container) return;
+
+  const floor = getActiveFloor();
+
+  if (activeSidebarTab === "runs") {
+    const drops = floor.nodes.filter(n => n.type === "device");
+    if (drops.length === 0) {
+      container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs"><p>No drops placed on this level.</p></div>`;
+      return;
+    }
+
+    container.innerHTML = drops.map(dev => {
+      const run = dev.calculatedRun || { totalFt: 0, closetName: 'Unassigned', isExceeded: false };
+      return `
+        <div onclick="selectNode('${dev.id}')" class="bg-slate-950 p-2.5 rounded-xl border ${dev.id === selectedNodeId ? 'border-brand-500 bg-brand-500/10' : run.isExceeded ? 'border-rose-500/60 bg-rose-950/20' : 'border-slate-800'} text-xs space-y-1 cursor-pointer hover:border-slate-700 transition-all">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-white">${dev.name}</span>
+            <span class="font-mono font-bold ${run.isExceeded ? 'text-rose-400' : 'text-amber-300'}">
+              ${run.totalFt} ft (${run.totalMeters}m)
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+            <span>To: ${run.closetName}</span>
+            <span>${(dev.waypoints || []).length} Bends</span>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } else {
     // Unplaced devices: edge/field hardware in quote not currently placed on canvas
     // Devices in racks/enclosures (switches, servers, storage, UPS, PDU) already live inside their enclosures
     const placedInstanceIds = new Set();
