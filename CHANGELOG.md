@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.16-alpha] - 2026-09-25
+
+### Changed & Enhanced
+- **Floor-Level Field Logic Hierarchy**:
+  - Migrated field hardware logic from individual closet spaces to floors/buildings (e.g. `Main Floor • Field`, `Exterior • Field`, not inside MDF/IDF rooms). Cameras, doors, wireless APs, and outlets are now cataloged at the floor level.
+  - Removed space-level field containers from closet cards; added dedicated floor-level Field Hardware card under Column 3 (`${floor.name} • Field`) with hardware assignment and quick drop linking.
+  - Updated `getLocations()`, `getLocationGroups()`, `normalize()`, and `parse()` to automatically resolve floor-level field paths and backward-map legacy space field items to their parent floor.
+- **Racking & Enclosure Tool Navigation & Terminology Revamp**:
+  - Revamped `#facilityModalHeader`: replaced cluttered multi-line text and disjointed controls with a streamlined header featuring an integrated enclosure dropdown directly in the breadcrumbs (`Spaces / [Floor] / [Space] / [Enclosure ▾] [Badge]`).
+  - Added clean segmented view switcher (`[ Hierarchy & Spaces ] | [ Enclosure Visualizer ]`) and streamlined visualizer action bar (`+ Enclosure`, `Ports`, `Delete`, `Close`).
+  - Standardized terminology across the UI: replaced legacy "Mounting Host" / "Host" phrasing with "Enclosure / Rack" and "Enclosures & Racks".
+- **Dynamic Field Drop Cabling Summary**:
+  - The drop summary header strip (`Served Field Hardware & Cabling` with active drop count) is displayed across all racks and enclosures.
+  - Individual run type tiles (`Composite Banana`, `Cat6A Plenum`, `Fiber Optic`) now render **strictly when count > 0**, eliminating empty "0 Runs" and "0 Drops" clutter.
+- **Enterprise Automount Priority Engine**:
+  - Re-architected `autoMountAllToActiveRack()` in `js/tools/rack.js` with `getDeviceMountPriority()` and `findNextAvailableSlotFromTop()`.
+  - Enforces strict enterprise top-to-bottom sequencing for 19" equipment racks:
+    `ISP Equipment / Demarcs > Firewalls / Security > Core Switches > Aggregation Switches > Access Switches (sorted by port count descending) > Servers & NVRs > UPS Battery Units (mounted bottom-up at U1+)`.
+
+### Fixed
+- **Permanent Deletion of Exterior Pole 1 & NEMA-Box**:
+  - Removed hardcoded auto-injection checks in `getSpaces()` and `getEnclosures()` in `js/core/facility.js` that previously caused `space-exterior-pole1` and `enc-pole1-nema` to respawn immediately after deletion.
+  - Enhanced `deleteSpace()`, `deleteEnclosure()`, and `deleteLocation()` to clean up attached child enclosures and safely unassign quote hardware back to Unassigned Staging.
+
+---
+
 ## [0.10.15-alpha] - 2026-09-25
 
 ### Refactored & Modularized

@@ -160,11 +160,6 @@ const FacilityStore = {
           parsed.forEach(f => {
             if (f.name === "Level 1 - Main Floor") f.name = "Main Floor";
           });
-          // Ensure Exterior floor exists if only Level 1 was stored
-          if (!parsed.some(f => f.name.toLowerCase().includes("exterior"))) {
-            parsed.push({ id: "floor-exterior", name: "Exterior", levelIndex: 0, heightFt: 0, scaleFt: 50, slackFt: 25, slabFt: 0 });
-            this.saveFloors(parsed);
-          }
           return parsed;
         }
       }
@@ -240,7 +235,7 @@ const FacilityStore = {
     return true;
   },
 
-    getSpaces(floorId = null) {
+  getSpaces(floorId = null) {
     const projKey = this.getProjectId();
     let list = [];
     try {
@@ -248,11 +243,6 @@ const FacilityStore = {
       list = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultSpaces));
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultSpaces));
-    }
-    // Ensure Exterior pole exists if absent (Requirement 6)
-    if (!list.some(s => s.type === "pole" || (s.name && s.name.toLowerCase().includes("pole")))) {
-      list.push({ id: "space-exterior-pole1", name: "Pole 1", floorId: "floor-exterior", type: "pole", description: "Perimeter Security & Wireless Pole", poleHeightFt: 25, poleDiameterInches: 4 });
-      this.saveSpaces(list);
     }
     // Ensure all pole spaces have poleHeightFt and poleDiameterInches
     list.forEach(s => {
@@ -356,16 +346,32 @@ const FacilityStore = {
     const targetSpace = spaces.find(s => s.id === spaceId);
     if (!targetSpace) return false;
 
+    // Delete or reassign enclosures belonging to this space
+    let encs = this.getEnclosures();
+    if (fallbackSpaceId) {
+      encs.forEach(e => {
+        if (e.spaceId === spaceId) e.spaceId = fallbackSpaceId;
+      });
+    } else {
+      encs = encs.filter(e => e.spaceId !== spaceId);
+    }
+    this.saveEnclosures(encs);
+
     spaces = spaces.filter(s => s.id !== spaceId);
     this.saveSpaces(spaces);
 
-    // Reassign enclosures
-    const fallback = fallbackSpaceId || spaces[0].id;
-    const encs = this.getEnclosures();
-    encs.forEach(e => {
-      if (e.spaceId === spaceId) e.spaceId = fallback;
-    });
-    this.saveEnclosures(encs);
+    // Reassign orphan hardware in this space to Unassigned
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      projectBOM.forEach(item => {
+        const itemLoc = this.normalize(item.closetName || item.rackId);
+        if (itemLoc.startsWith(`${targetSpace.name} •`) || itemLoc === targetSpace.name) {
+          item.closetName = this.UNASSIGNED;
+          item.rackId = this.UNASSIGNED;
+          item.rackSlot = null;
+        }
+      });
+    }
+
     this.notifyWorkspaceChange();
     return true;
   },
@@ -378,12 +384,6 @@ const FacilityStore = {
       list = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultEnclosures));
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultEnclosures));
-    }
-
-    // Ensure NEMA-Box exists on Pole 1 if absent (Requirement 6)
-    if (!list.some(e => e.spaceId === "space-exterior-pole1")) {
-      list.push({ id: "enc-pole1-nema", spaceId: "space-exterior-pole1", name: "NEMA-Box", hostType: "industrial_din", type: "nema_box", mountingMethod: "pole", mountHeightFt: 10, heightU: 0, isDin: true, maxWatts: 800, pduCount: 1, dinRails: 2, railLengthMm: 350 });
-      this.saveEnclosures(list);
     }
 
     // Ensure all hosts have guaranteed hostType
@@ -510,6 +510,21 @@ const FacilityStore = {
     const targetEnc = encs.find(e => e.id === enclosureId);
     if (!targetEnc) return false;
 
+    // Unassign hardware located in this enclosure
+    const spaces = this.getSpaces();
+    const space = spaces.find(s => s.id === targetEnc.spaceId);
+    const fullLoc = space ? `${space.name} • ${targetEnc.name}` : null;
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      projectBOM.forEach(item => {
+        const itemLoc = this.normalize(item.closetName || item.rackId);
+        if ((fullLoc && itemLoc === fullLoc) || item.rackId === enclosureId) {
+          item.closetName = this.UNASSIGNED;
+          item.rackId = this.UNASSIGNED;
+          item.rackSlot = null;
+        }
+      });
+    }
+
     encs = encs.filter(e => e.id !== enclosureId);
     this.saveEnclosures(encs);
     this.notifyWorkspaceChange();
@@ -590,7 +605,7 @@ const FacilityStore = {
   },
 
   // -----------------------------------------------------------
-  // Canonical Location String Handlers ("Space • Enclosure")
+  // Canonical Location String Handlers ("Space • Enclosure" or "Floor • Field")
   // -----------------------------------------------------------
   normalize(str) {
     if (!str || !str.trim()) return this.UNASSIGNED;
@@ -599,7 +614,36 @@ const FacilityStore = {
       return this.UNASSIGNED;
     }
 
-    if (trimmed.includes(" • ")) return trimmed;
+    if (trimmed.includes(" • ")) {
+      const parts = trimmed.split(" • ");
+      const prefix = parts[0].trim();
+      const suffix = parts[1].trim();
+
+      // Check if field hardware location
+      if (suffix.toLowerCase() === "field" || suffix.toLowerCase() === "space" || suffix.toLowerCase() === "unenclosed") {
+        const floors = this.getFloors();
+        // If prefix matches a floor name
+        const matchFloor = floors.find(f => f.name.toLowerCase() === prefix.toLowerCase());
+        if (matchFloor) return `${matchFloor.name} • Field`;
+
+        // If prefix matches a legacy space name, map to that space's floor
+        const spaces = this.getSpaces();
+        const matchSpace = spaces.find(s => s.name.toLowerCase() === prefix.toLowerCase());
+        if (matchSpace) {
+          const parentFloor = floors.find(f => f.id === matchSpace.floorId) || floors[0];
+          if (parentFloor) return `${parentFloor.name} • Field`;
+        }
+        return `${prefix} • Field`;
+      }
+      return trimmed;
+    }
+
+    // Check if trimmed matches an existing floor name
+    const floors = this.getFloors();
+    const matchedFloor = floors.find(f => f.name.toLowerCase() === trimmed.toLowerCase());
+    if (matchedFloor) {
+      return `${matchedFloor.name} • Field`;
+    }
 
     // Check if trimmed matches an existing space name
     const spaces = this.getSpaces();
@@ -608,12 +652,15 @@ const FacilityStore = {
       if (matchedSpace.type === "pole") {
         return `${matchedSpace.name} • Pole Mount`;
       }
-      return `${matchedSpace.name} • Field`;
+      const encs = this.getEnclosures(matchedSpace.id);
+      if (encs.length > 0) return `${matchedSpace.name} • ${encs[0].name}`;
+      return `${matchedSpace.name} • Rack-1`;
     }
 
     // Intelligent suffixing based on naming context
     const lower = trimmed.toLowerCase();
-    if (lower.includes("pole") || lower.includes("exterior")) return `${trimmed} • Pole Mount`;
+    if (lower.includes("exterior") || lower.includes("outdoor")) return `Exterior • Field`;
+    if (lower.includes("pole") || lower.includes("mast")) return `${trimmed} • Pole Mount`;
     if (lower.includes("wall") || lower.includes("gate")) return `${trimmed} • Wallbox`;
     return `${trimmed} • Rack-1`;
   },
@@ -637,24 +684,62 @@ const FacilityStore = {
       };
     }
     const parts = normalized.split(" • ");
-    const spaceName = parts[0];
-    const hostName = parts[1] || "Field";
+    const firstPart = parts[0];
+    const secondPart = parts[1] || "Field";
 
+    const floors = this.getFloors();
     const spaces = this.getSpaces();
+
+    const isFieldHardware = secondPart.toLowerCase() === "field" || secondPart.toLowerCase() === "space" || secondPart.toLowerCase() === "field hardware" || secondPart.toLowerCase() === "unenclosed";
+
+    if (isFieldHardware) {
+      let floor = floors.find(f => f.name.toLowerCase() === firstPart.toLowerCase());
+      if (!floor) {
+        const legSpace = spaces.find(s => s.name.toLowerCase() === firstPart.toLowerCase());
+        if (legSpace) {
+          floor = floors.find(f => f.id === legSpace.floorId);
+        }
+      }
+      if (!floor && floors.length > 0) floor = floors[0];
+
+      return {
+        fullName: normalized,
+        space: "Field",
+        enclosure: "Field",
+        hostName: "Field Hardware",
+        spaceId: null,
+        enclosureId: null,
+        hostId: null,
+        floorId: floor ? floor.id : "floor-1",
+        floorName: floor ? floor.name : "Facility",
+        heightU: 0,
+        isDin: false,
+        hostType: "field",
+        isRack: false,
+        isSecurityCabinet: false,
+        isStructuralMount: false,
+        isBackboard: false,
+        isField: true,
+        isUnassigned: false
+      };
+    }
+
+    const spaceName = firstPart;
+    const hostName = secondPart;
+
     const space = spaces.find(s => s.name.toLowerCase() === spaceName.toLowerCase());
     const encs = this.getEnclosures(space ? space.id : null);
     const enc = encs.find(e => e.name.toLowerCase() === hostName.toLowerCase());
 
-    const isFieldHardware = hostName.toLowerCase() === "field" || hostName.toLowerCase() === "space" || hostName.toLowerCase() === "field hardware" || hostName.toLowerCase() === "unenclosed";
     const isStructuralPole = (hostName.toLowerCase() === "pole mount") || 
       (space && space.type === "pole" && (hostName.toLowerCase().includes("pole") || hostName === "Pole Mount"));
 
-    const hostType = isFieldHardware ? "field" : (enc ? (enc.hostType || (enc.isDin ? "industrial_din" : "equipment_rack")) : (
+    const hostType = enc ? (enc.hostType || (enc.isDin ? "industrial_din" : "equipment_rack")) : (
       isStructuralPole ? "structural_mount" :
       hostName.toLowerCase().includes("nema") || hostName.toLowerCase().includes("din") ? "industrial_din" :
       hostName.toLowerCase().includes("panel") || hostName.toLowerCase().includes("trove") || hostName.toLowerCase().includes("ac-") ? "security_cabinet" :
       hostName.toLowerCase().includes("backboard") ? "architectural_backboard" : "equipment_rack"
-    ));
+    );
 
     const isPoleSpace = space && (space.type === "pole" || space.name.toLowerCase().includes("pole"));
     const poleHeightFt = isPoleSpace ? (space.poleHeightFt || 25) : ((enc && enc.poleHeightFt) ? enc.poleHeightFt : 25);
@@ -683,7 +768,7 @@ const FacilityStore = {
       isSecurityCabinet: hostType === "security_cabinet",
       isStructuralMount: hostType === "structural_mount",
       isBackboard: hostType === "architectural_backboard",
-      isField: isFieldHardware,
+      isField: false,
       isUnassigned: false
     };
   },
@@ -695,29 +780,33 @@ const FacilityStore = {
     const floors = this.getFloors();
     const list = [];
 
-    spaces.forEach(s => {
-      const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
-      const floor = floors.find(f => f.id === s.floorId) || floors[0];
-      const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
-
-      // Space-level field hardware location (unenclosed devices: PtP radios, cameras, sensors, doors)
+    // 1. Floor-level field hardware locations (cameras, doors, wireless APs, drops)
+    floors.forEach(f => {
       list.push({
-        id: `loc-space-${s.id}`,
-        name: `${s.name} • Field`,
-        displayName: `${s.name} (Space / Field)`,
-        space: s.name,
-        spaceId: s.id,
+        id: `loc-floor-${f.id}-field`,
+        name: `${f.name} • Field`,
+        displayName: `${f.name} (Field / Unenclosed)`,
+        floorId: f.id,
+        floorName: f.name,
+        space: "Field",
+        spaceId: null,
         enclosure: "Field",
         hostName: "Field Hardware",
         enclosureId: null,
         hostId: null,
         hostType: "field",
-        isSpace: true,
-        floorId: s.floorId,
-        floorName: floor ? floor.name : "Level 1",
+        isField: true,
+        isSpace: false,
         heightU: 0,
         isDin: false
       });
+    });
+
+    // 2. Spaces & Mounting Enclosures
+    spaces.forEach(s => {
+      const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
+      const floor = floors.find(f => f.id === s.floorId) || floors[0];
+      const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
 
       if (isPole) {
         // Structural Pole Mounting Host at the Space level
@@ -805,18 +894,19 @@ const FacilityStore = {
           list.push({
             id: `loc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             name: parsed.fullName,
-            displayName: parsed.fullName.endsWith(" • Field") ? `${parsed.space} (Space / Field)` : parsed.fullName,
+            displayName: parsed.isField ? `${parsed.floorName} (Field / Unenclosed)` : parsed.fullName,
             space: parsed.space,
-            spaceId: null,
+            spaceId: parsed.spaceId,
             enclosure: parsed.enclosure,
             hostName: parsed.hostName,
-            enclosureId: null,
-            hostId: null,
+            enclosureId: parsed.enclosureId,
+            hostId: parsed.hostId,
             hostType: parsed.hostType,
-            floorId: "floor-1",
-            floorName: "Level 1",
+            floorId: parsed.floorId || "floor-1",
+            floorName: parsed.floorName || "Level 1",
             heightU: parsed.heightU || 24,
-            isDin: parsed.isDin || false
+            isDin: parsed.isDin || false,
+            isField: parsed.isField || false
           });
         }
       });
@@ -835,13 +925,13 @@ const FacilityStore = {
 
   getLocationGroups(includeUnassigned = true) {
     const locs = this.getLocations();
-    const spaces = [];
+    const fieldLocations = [];
     const enclosures = [];
 
     locs.forEach(l => {
-      if (l.isSpace || l.hostType === "field") {
-        if (!spaces.some(s => s.name === l.name)) {
-          spaces.push(l);
+      if (l.isField || l.hostType === "field") {
+        if (!fieldLocations.some(s => s.name === l.name)) {
+          fieldLocations.push(l);
         }
       } else {
         if (!enclosures.some(e => e.name === l.name)) {
@@ -852,7 +942,8 @@ const FacilityStore = {
 
     return {
       unassigned: includeUnassigned ? this.UNASSIGNED : null,
-      spaces,
+      field: fieldLocations,
+      spaces: fieldLocations, // backward compat alias for BOM / other callers
       enclosures
     };
   },
@@ -865,6 +956,13 @@ const FacilityStore = {
     const spaceName = parts[0];
     const enclosureName = parts[1];
 
+    if (enclosureName && (enclosureName.toLowerCase() === "field" || enclosureName.toLowerCase() === "space")) {
+      const floors = this.getFloors();
+      const floor = floors.find(f => f.name.toLowerCase() === spaceName.toLowerCase()) || floors.find(f => f.id === floorId) || floors[0];
+      this.notifyWorkspaceChange();
+      return `${floor.name} • Field`;
+    }
+
     let spaces = this.getSpaces();
     let space = spaces.find(s => s.name.toLowerCase() === spaceName.toLowerCase());
     if (!space) {
@@ -873,7 +971,7 @@ const FacilityStore = {
       space = this.addSpace(spaceName, isPole ? "pole" : (isWall ? "wallbox" : "idf"), floorId);
     }
 
-    if (enclosureName && enclosureName.toLowerCase() !== "field" && enclosureName.toLowerCase() !== "space") {
+    if (enclosureName) {
       let encs = this.getEnclosures(space.id);
       let enc = encs.find(e => e.name.toLowerCase() === enclosureName.toLowerCase());
       if (!enc) {
@@ -885,7 +983,7 @@ const FacilityStore = {
     }
 
     this.notifyWorkspaceChange();
-    return `${space.name} • Field`;
+    return `${space.name} • Rack-1`;
   },
 
   deleteLocation(locationName, fallbackName = this.UNASSIGNED) {
@@ -895,6 +993,17 @@ const FacilityStore = {
 
     if (parsed.enclosureId) {
       this.deleteEnclosure(parsed.enclosureId);
+    } else if (parsed.isStructuralMount && parsed.spaceId) {
+      this.deleteSpace(parsed.spaceId);
+    }
+
+    // If deleting an enclosure left a pole space with 0 enclosures, clean up pole space
+    if (parsed.spaceId) {
+      const remainingEncs = this.getEnclosures(parsed.spaceId);
+      const spaceObj = this.getSpaces().find(s => s.id === parsed.spaceId);
+      if (spaceObj && spaceObj.type === "pole" && remainingEncs.length === 0) {
+        this.deleteSpace(parsed.spaceId);
+      }
     }
 
     // Reassign orphan hardware in the project quote to Unassigned or fallback
@@ -1642,10 +1751,10 @@ function renderFacilityManager() {
       </div>
 
       <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Mounting Hosts</span>
+        <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Enclosures & Racks</span>
         <div class="flex items-baseline gap-2">
           <span class="text-xl font-extrabold text-indigo-400 font-mono">${enclosures.length}</span>
-          <span class="text-xs text-slate-400">Hosts Active</span>
+          <span class="text-xs text-slate-400">Enclosures Active</span>
         </div>
       </div>
 
@@ -1780,7 +1889,7 @@ function renderFacilityManager() {
 
         <div class="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
           ${currentFloorSpaces.length === 0 ? `
-            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-850">
+            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-855">
               No telecom spaces defined on this floor.
             </div>
           ` : currentFloorSpaces.map(s => {
@@ -1788,12 +1897,6 @@ function renderFacilityManager() {
             const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
             const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
             const isMdf = s.type === "mdf";
-            const spaceFieldHardware = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
-              if (item.parentInstanceId) return false;
-              if (item.rackSlot) return false;
-              const loc = FacilityStore.normalize(item.closetName || item.location || item.rackId);
-              return loc === FacilityStore.normalize(s.name) || loc.startsWith(FacilityStore.normalize(s.name) + ' •');
-            }) : [];
 
             return `
               <div 
@@ -1815,11 +1918,6 @@ function renderFacilityManager() {
                     <span class="text-[10px] text-slate-400 font-mono">
                       ${spaceEncs.length} ${spaceEncs.length === 1 ? 'Enclosure' : 'Enclosures'}
                     </span>
-                    ${spaceFieldHardware.length > 0 ? `
-                      <span class="text-[10px] text-amber-400 font-mono font-bold">
-                        &bull; ${spaceFieldHardware.length} Field Device${spaceFieldHardware.length === 1 ? '' : 's'}
-                      </span>
-                    ` : ''}
                     ${isPole ? `
                       <span class="text-[10px] text-cyan-400 font-mono font-bold">
                         &bull; ${s.poleHeightFt || 25} ft AGL
@@ -2018,39 +2116,45 @@ function renderFacilityManager() {
           }).join('')}
         </div>
 
-        <!-- Unenclosed Field Hardware in this Space (Requirement 5) -->
-        ${currentSpace ? (() => {
-          const fieldHardware = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
+        <!-- Floor Field Hardware (Floors & Buildings, not spaces) -->
+        ${(() => {
+          const floorFieldLoc = FacilityStore.normalize(`${currentFloor.name} • Field`);
+          const floorFieldHardware = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
             if (item.parentInstanceId) return false;
             if (item.rackSlot) return false;
             const loc = FacilityStore.normalize(item.closetName || item.location || item.rackId);
-            return loc === FacilityStore.normalize(currentSpace.name) || loc.startsWith(FacilityStore.normalize(currentSpace.name) + ' •');
+            return loc === floorFieldLoc;
           }) : [];
 
           return `
             <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2.5 shadow-md">
               <div class="flex items-center justify-between">
-                <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <i data-lucide="radio" class="w-3.5 h-3.5 text-amber-400"></i>
-                  Unenclosed Field Hardware in ${escapeHTML(currentSpace.name)} (${fieldHardware.length})
-                </span>
+                <div>
+                  <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <i data-lucide="radio" class="w-3.5 h-3.5 text-amber-400"></i>
+                    Field Hardware on ${escapeHTML(currentFloor.name)} (${floorFieldHardware.length})
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-mono block mt-0.5">
+                    ${escapeHTML(currentFloor.name)} &bull; Field
+                  </span>
+                </div>
                 <button 
                   type="button" 
-                  onclick="promptAssignHardwareToSpace('${escapeHTML(currentSpace.name)}')" 
+                  onclick="promptAssignHardwareToFloorField('${escapeHTML(currentFloor.name)}')" 
                   class="px-2 py-0.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer" 
-                  title="Assign an unassigned P2P radio, camera, or sensor directly to this space"
+                  title="Assign an unassigned camera, door, or sensor to this floor"
                 >
-                  <i data-lucide="plus" class="w-3 h-3"></i> Assign Staged Device
+                  <i data-lucide="plus" class="w-3 h-3"></i> Assign Device
                 </button>
               </div>
 
-              ${fieldHardware.length === 0 ? `
+              ${floorFieldHardware.length === 0 ? `
                 <div class="p-3 bg-slate-950/60 rounded-lg border border-dashed border-slate-800 text-center text-xs text-slate-500">
-                  No unenclosed field devices (cameras, doors, wall radios) assigned directly to this space.
+                  No field devices (cameras, door portals, wireless APs, drops) assigned to ${escapeHTML(currentFloor.name)}.
                 </div>
               ` : `
                 <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                  ${fieldHardware.map(dev => {
+                  ${floorFieldHardware.map(dev => {
                     const mountMethod = dev.mountMethod ? dev.mountMethod.toUpperCase() : "WALL";
                     const isCamera = dev.role === "Camera" || dev.category?.includes("camera");
                     const isDoor = dev.role === "Access Control" || dev.category?.includes("access");
@@ -2089,7 +2193,7 @@ function renderFacilityManager() {
               `}
             </div>
           `;
-        })() : ''}
+        })()}
       </div>
     </div>
 
@@ -2497,10 +2601,12 @@ if (typeof window !== "undefined") {
   window.assignHardwareToLocation = assignHardwareToLocation;
   window.assignAllUnassignedToSpace = assignAllUnassignedToSpace;
   window.promptAssignHardwareToSpace = promptAssignHardwareToSpace;
+  window.promptAssignHardwareToFloorField = promptAssignHardwareToFloorField;
 }
 
-function promptAssignHardwareToSpace(spaceName) {
-  if (!spaceName) return;
+function promptAssignHardwareToFloorField(floorName) {
+  if (!floorName) return;
+  const targetLoc = `${floorName} • Field`;
   const tray = document.getElementById("facilityUnassignedHardwareTray");
   if (tray) {
     tray.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -2509,7 +2615,12 @@ function promptAssignHardwareToSpace(spaceName) {
       tray.classList.remove("ring-2", "ring-amber-400");
     }, 2500);
     if (typeof showToast === "function") {
-      showToast(`Select or drag a staged device below to assign to "${spaceName}".`);
+      showToast(`Select or drag a staged camera, door, or sensor below to assign to "${targetLoc}".`);
     }
   }
+}
+
+function promptAssignHardwareToSpace(spaceName) {
+  if (!spaceName) return;
+  promptAssignHardwareToFloorField(spaceName);
 }

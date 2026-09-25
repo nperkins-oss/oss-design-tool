@@ -129,15 +129,18 @@ function checkDeviceHostCompatibility(item, hostType) {
 }
 
 // -----------------------------------------------------------
-// Host Selector & Taxonomy Synchronization
+// Enclosure Selector & Taxonomy Synchronization
 // -----------------------------------------------------------
 function syncRackSelectorOptions() {
   const sel = document.getElementById("rackLocationSelector");
   const locations = FacilityStore.getLocations();
-  const rackNames = locations.map(l => l.name);
+  // Filter out field hardware from enclosure visualizer dropdown
+  const rackLocations = locations.filter(l => l.hostType !== "field" && !l.isField);
+  const rackNames = rackLocations.map(l => l.name);
 
   activeRackId = FacilityStore.normalize(activeRackId);
-  if (activeRackId === FacilityStore.UNASSIGNED || !rackNames.includes(activeRackId)) {
+  const parsedCheck = FacilityStore.parse(activeRackId);
+  if (activeRackId === FacilityStore.UNASSIGNED || parsedCheck.isField || !rackNames.includes(activeRackId)) {
     activeRackId = rackNames[0] || "MDF • Rack-1";
   }
 
@@ -145,9 +148,9 @@ function syncRackSelectorOptions() {
   const enclosures = FacilityStore.getEnclosures();
   const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === parsed.hostName.toLowerCase()) || null;
 
-  // Populate Host Dropdown with Host-Type Badges
+  // Populate Enclosure Dropdown with Type Badges
   if (sel) {
-    sel.innerHTML = locations.map(loc => {
+    sel.innerHTML = rackLocations.map(loc => {
       const typeDef = FacilityStore.HOST_TYPES[loc.hostType] || FacilityStore.HOST_TYPES.equipment_rack;
       const typeLabel = typeDef.badgeLabel || "Rack";
       const isSel = loc.name === activeRackId;
@@ -350,7 +353,7 @@ function promptCreateNewRack() {
 
   const currentCount = FacilityStore.getLocations().length;
   const name = prompt(
-    "Enter new Mounting Host name (e.g. IDF-2 • Rack-1, MDF • Security-Cab-1, Pole 1 • NEMA-Box):",
+    "Enter new Enclosure name (e.g. IDF-2 • Rack-1, MDF • Security-Cab-1, Pole 1 • NEMA-Box):",
     `IDF-${currentCount} • Rack-1`
   );
   if (!name || !name.trim()) return;
@@ -375,13 +378,13 @@ function promptCreateNewRack() {
 function deleteActiveRackElevation() {
   const locations = FacilityStore.getLocationNames(false);
   if (locations.length <= 1) {
-    alert("You must retain at least one mounting host in the project.");
+    alert("You must retain at least one rack or enclosure in the project.");
     return;
   }
 
   const fallbackRack = locations.find(r => r !== activeRackId) || "MDF • Rack-1";
 
-  if (!confirm(`Delete "${activeRackId}"? All assigned hardware will be moved to "${fallbackRack}".`)) {
+  if (!confirm(`Delete enclosure "${activeRackId}"? All assigned hardware will be moved to "${fallbackRack}".`)) {
     return;
   }
 
@@ -391,13 +394,14 @@ function deleteActiveRackElevation() {
     syncRackSelectorOptions();
     renderRackVisualizer();
     if (typeof showToast === "function") {
-      showToast(`Mounting host removed. Hardware moved to ${fallbackRack}.`);
+      showToast(`Enclosure removed. Hardware moved to ${fallbackRack}.`);
     }
   }
 }
 
 // -----------------------------------------------------------
-// Auto-Mount & Unmount Actions (With Form-Factor Affinity)
+// Auto-Mount & Unmount Actions (With Form-Factor & Priority Alignment)
+// Top-to-Bottom Logic: ISP > Firewalls > Core > Aggregation > Access (by port count desc) > Servers > UPSes
 // -----------------------------------------------------------
 function autoMountAllToActiveRack() {
   if (typeof projectBOM === "undefined") return;
@@ -417,6 +421,22 @@ function autoMountAllToActiveRack() {
     return compat.compatible;
   });
 
+  // Sort according to Enterprise Priority:
+  // ISP Equipment > Firewalls > Core > Aggregation > Access (by port count desc) > Servers > UPSes > Other
+  mountableItems.sort((a, b) => {
+    const pA = getDeviceMountPriority(a);
+    const pB = getDeviceMountPriority(b);
+    if (pA.priority !== pB.priority) {
+      return pA.priority - pB.priority;
+    }
+    // Access switches or switches sort by port count descending
+    if (pA.priority === 5 || pA.portCount || pB.portCount) {
+      const portDiff = (pB.portCount || 0) - (pA.portCount || 0);
+      if (portDiff !== 0) return portDiff;
+    }
+    return (a.model || "").localeCompare(b.model || "");
+  });
+
   let mountedCount = 0;
 
   if (hostType === "equipment_rack") {
@@ -425,7 +445,28 @@ function autoMountAllToActiveRack() {
     for (let u = 1; u <= activeRackHeight; u++) slots[u] = null;
     mountableItems.forEach(i => i.rackSlot = null);
 
-    mountableItems.forEach(item => {
+    // Split UPS / battery units (placed at bottom U1+) from data / network gear (placed top-down)
+    const upsItems = mountableItems.filter(i => getDeviceMountPriority(i).priority === 7);
+    const nonUpsItems = mountableItems.filter(i => getDeviceMountPriority(i).priority !== 7);
+
+    // 1. Mount network & server gear top-to-bottom: ISP > Firewalls > Core > Aggregation > Access > Servers
+    nonUpsItems.forEach(item => {
+      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+      const itemHeight = parseInt(item.rackUnits || 1, 10) * stackUnits;
+      const slot = findNextAvailableSlotFromTop(slots, itemHeight, activeRackHeight);
+      if (slot) {
+        item.rackSlot = slot;
+        item.closetName = activeRackId;
+        item.rackId = activeRackId;
+        for (let offset = 0; offset < itemHeight; offset++) {
+          slots[slot + offset] = item.instanceId;
+        }
+        mountedCount++;
+      }
+    });
+
+    // 2. Mount heavy UPS / battery backup systems at the bottom of the rack (U1+) ascending
+    upsItems.forEach(item => {
       const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       const itemHeight = parseInt(item.rackUnits || 1, 10) * stackUnits;
       const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
@@ -2267,7 +2308,36 @@ function renderServedEndpoints(parsed, activeEnc) {
     if (dev.role === "Access Control" || dev.category?.includes("access")) totalCompositeCables += (dev.qty || 1);
     else if (dev.role === "Camera" || dev.role === "Edge Device" || dev.category?.includes("camera")) totalCat6aDrops += (dev.qty || 1);
     else if (dev.category?.includes("wireless") || dev.category?.includes("ptp")) totalCat6aDrops += (dev.qty || 1);
+    else if (dev.role === "Optics & DAC" || dev.category?.includes("fiber")) totalFiberRuns += (dev.qty || 1);
   });
+
+  const dropTiles = [];
+  if (totalCompositeCables > 0) {
+    dropTiles.push(`
+      <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+        <span class="text-slate-400 block text-[9px] uppercase">Composite Banana</span>
+        <span class="text-white font-bold">${totalCompositeCables} Run${totalCompositeCables === 1 ? '' : 's'}</span>
+      </div>
+    `);
+  }
+  if (totalCat6aDrops > 0) {
+    dropTiles.push(`
+      <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+        <span class="text-slate-400 block text-[9px] uppercase">Cat6A Plenum</span>
+        <span class="text-white font-bold">${totalCat6aDrops} Drop${totalCat6aDrops === 1 ? '' : 's'}</span>
+      </div>
+    `);
+  }
+  if (totalFiberRuns > 0) {
+    dropTiles.push(`
+      <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
+        <span class="text-slate-400 block text-[9px] uppercase">Fiber Optic</span>
+        <span class="text-white font-bold">${totalFiberRuns} Run${totalFiberRuns === 1 ? '' : 's'}</span>
+      </div>
+    `);
+  }
+
+  const dropGridColsClass = dropTiles.length === 1 ? 'grid-cols-1' : (dropTiles.length === 2 ? 'grid-cols-2' : 'grid-cols-3');
 
   container.innerHTML = `
     <!-- Cabling Rollup Header Strip -->
@@ -2276,18 +2346,13 @@ function renderServedEndpoints(parsed, activeEnc) {
         <span class="text-xs font-bold text-white flex items-center gap-1.5">
           <i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i> Served Field Hardware & Cabling
         </span>
-        <span class="text-[10px] font-mono text-emerald-400">${totalDrops} Active Drops</span>
+        <span class="text-[10px] font-mono text-emerald-400">${totalDrops} Active Drop${totalDrops === 1 ? '' : 's'}</span>
       </div>
-      <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
-        <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-          <span class="text-slate-400 block text-[9px] uppercase">Composite Banana</span>
-          <span class="text-white font-bold">${totalCompositeCables} Runs</span>
+      ${dropTiles.length > 0 ? `
+        <div class="grid ${dropGridColsClass} gap-2 text-[11px] font-mono">
+          ${dropTiles.join("")}
         </div>
-        <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
-          <span class="text-slate-400 block text-[9px] uppercase">Cat6A Plenum</span>
-          <span class="text-white font-bold">${totalCat6aDrops} Drops</span>
-        </div>
-      </div>
+      ` : ''}
     </div>
 
     <!-- Quick Add Endpoint Button -->
@@ -2402,8 +2467,91 @@ function unlinkEndpointFromHost(endpointId) {
 // -----------------------------------------------------------
 // Helpers & Utilities
 // -----------------------------------------------------------
+function getItemPortCount(item) {
+  if (item.ports && parseInt(item.ports, 10)) return parseInt(item.ports, 10);
+  if (item.portCount && parseInt(item.portCount, 10)) return parseInt(item.portCount, 10);
+  const text = `${item.model || ''} ${item.description || ''} ${item.name || ''}`;
+  const match = text.match(/(?:^|\b|-)(\d{1,3})\s*(?:port|p\b)/i);
+  if (match) return parseInt(match[1], 10);
+  return 0;
+}
+
+function getDeviceMountPriority(item) {
+  const role = (item.role || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const model = (item.model || "").toLowerCase();
+  const desc = (item.description || "").toLowerCase();
+  const allText = `${role} ${cat} ${model} ${desc}`;
+
+  // 1. ISP Equipment (Carrier Demarc, NID, ISP Modems, ONT)
+  if (role.includes("isp") || role.includes("demarc") || role.includes("nid") ||
+      cat.includes("isp") || cat.includes("demarc") ||
+      allText.includes("isp") || allText.includes("demarc") || allText.includes("nid") ||
+      allText.includes("carrier") || allText.includes("modem") || allText.includes("ont")) {
+    return { priority: 1, group: "isp", portCount: 0 };
+  }
+
+  // 2. Firewalls (Security WAN, NextGen Firewalls, Gateways, Threat Appliances)
+  if (role.includes("security wan") || role.includes("firewall") || role.includes("utm") ||
+      cat.includes("firewall") || cat.includes("security_appliance") ||
+      allText.includes("firewall") || allText.includes("fortigate") || allText.includes("palo alto") ||
+      allText.includes("meraki mx") || allText.includes("firepower") || allText.includes("sonicwall") ||
+      allText.includes("udm-pro") || allText.includes("udm-se") || allText.includes("gateway")) {
+    return { priority: 2, group: "firewall", portCount: 0 };
+  }
+
+  // 3. Core Switches
+  if (role === "core" || role.includes("core & agg") || role.includes("core switch")) {
+    return { priority: 3, group: "core", portCount: getItemPortCount(item) };
+  }
+
+  // 4. Aggregation Switches
+  if (role.includes("aggregation") || role.includes("distribution") || role === "dist" || role.includes("agg switch")) {
+    return { priority: 4, group: "aggregation", portCount: getItemPortCount(item) };
+  }
+
+  // 5. Access Switches (ordered descending by port count)
+  if (role.includes("access") || cat.includes("switch") || allText.includes("switch")) {
+    return { priority: 5, group: "access", portCount: getItemPortCount(item) };
+  }
+
+  // 6. Servers & Storage (Compute, NVRs, NAS, SAN, Appliances)
+  if (role.includes("server") || role.includes("storage") || role.includes("nvr") || role.includes("compute") ||
+      cat.includes("server") || cat.includes("storage") || cat.includes("nvr") ||
+      allText.includes("server") || allText.includes("poweredge") || allText.includes("proliant") ||
+      allText.includes("nvr") || allText.includes("storage") || allText.includes("nas")) {
+    return { priority: 6, group: "server", portCount: 0 };
+  }
+
+  // 7. UPSes & Battery Units (Uninterruptible Power Supplies, battery backups placed at rack bottom U1+)
+  if (role.includes("ups") || role.includes("power") || role.includes("battery") ||
+      cat.includes("ups") || cat.includes("power") ||
+      allText.includes("ups") || allText.includes("smart-ups") || allText.includes("battery") ||
+      allText.includes("apc") || allText.includes("vertiv") || allText.includes("cyberpower") ||
+      allText.includes("tripp lite") || allText.includes("eaton")) {
+    return { priority: 7, group: "ups", portCount: 0 };
+  }
+
+  // 8. Other / Structured Cabling / Patch Panels / Accessories
+  return { priority: 8, group: "other", portCount: getItemPortCount(item) };
+}
+
 function findNextAvailableSlot(slots, heightU, maxU) {
   for (let u = 1; u <= maxU - heightU + 1; u++) {
+    let available = true;
+    for (let offset = 0; offset < heightU; offset++) {
+      if (slots[u + offset] !== null) {
+        available = false;
+        break;
+      }
+    }
+    if (available) return u;
+  }
+  return null;
+}
+
+function findNextAvailableSlotFromTop(slots, heightU, maxU) {
+  for (let u = maxU - heightU + 1; u >= 1; u--) {
     let available = true;
     for (let offset = 0; offset < heightU; offset++) {
       if (slots[u + offset] !== null) {
