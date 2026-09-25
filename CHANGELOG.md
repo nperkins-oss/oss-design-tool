@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.12-alpha] - 2026-09-25
+
+### Added
+- **Direct Space-Level Assignment for Unenclosed Field Hardware (`js/core/facility.js`, `js/tools/bom.js`, `js/tools/topology.js`)**:
+  - Enhanced `FacilityStore.normalize` and `FacilityStore.getLocations` to generate first-class space-level field hardware locations (`${SpaceName} • Field`) for edge devices (P2P Radios, cameras, sensors, doors) that do not require an enclosure.
+  - Implemented `FacilityStore.getLocationGroups` to provide structured `<optgroup>` groupings separating **Spaces & Zones (Field / Unenclosed)** from **Racks & Enclosures** across BOM line items, Topology inspectors, and Physical Layout drop inspectors.
+  - Added interactive **`[+ Assign Staged Device]`** button inside the Facility Space view ("Unenclosed Field Hardware in {Space}" card) to instantly assign any staged hardware directly to that space.
+  - Updated `+ Create New Location...` so Cabinet/Enclosure is optional: leaving it blank creates an unenclosed space location without forcing a dummy rack.
+- **Dedicated Widescreen Port Matrix & Interconnect Studio (`index.html` & `js/tools/topology.js`)**:
+  - Built dedicated full-fidelity **Switch Port Matrix & Interconnect Studio** modal (`#portMatrixStudioModal`) accessible with 1 click from:
+    - **Topology Toolbar**: New `[ ⊞ Port Matrix ]` studio launcher.
+    - **Switch Inspector**: `[ ⛶ Studio ]` expand button beside the physical port matrix.
+    - **Enclosure Visualizer**: `[ ⊞ Ports ]` button in the host toolbar.
+  - Studio displays switch selector dropdown, hardware faceplate view with color-coded PoE/uplink/data status, electrical load bars, active uplinks and trunks, and a full interactive table with 1-click cross-tool navigation to connected remote devices.
+  - Added direct quick-actions to jump from the studio to Rack Elevation or Topology Canvas.
+
+### Changed
+- **Homepage Top Navigation Streamlining (`index.html`)**:
+  - Removed redundant "Enclosure Visualizer" button from the main header navigation, keeping the top bar focused and clean since the visualizer is now unified inside the "Facility & Enclosures" modal.
+- **Quote BOM Card Information Cleanup (`js/tools/bom.js`)**:
+  - Removed unhelpful power type pills (`zap PoE` / `zap AC`) from the card footer to reduce visual clutter.
+  - Removed redundant uppercase `FIELD/DIN` tag from the card header.
+  - Replaced the bulky interactive mounting dropdown with a sleek, compact informational badge (`Mounting: Wall / Ceiling / Pole / Parapet / Corner`) featuring an **`Adjust on Canvas →`** deep-link to Physical Layout, where physical installation coordinates and mounting actually belong.
+
+---
+
 ## [0.10.11-alpha] - 2026-09-25
 
 ### Added

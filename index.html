@@ -168,10 +168,6 @@
           <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
           <span class="hidden sm:inline">Topology Canvas</span>
         </button>
-        <button onclick="toggleRackModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm" title="Open Enclosure Visualizer">
-          <i data-lucide="layout-grid" class="w-4 h-4 text-indigo-400"></i>
-          <span class="hidden sm:inline">Enclosure Visualizer</span>
-        </button>
         <button onclick="toggleCableLayoutModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
           <i data-lucide="map" class="w-4 h-4 text-amber-400"></i>
           <span class="hidden sm:inline">Physical Layout Canvas</span>
@@ -446,6 +442,11 @@
             </select>
           </div>
 
+          <!-- Open Dedicated Port Matrix Studio -->
+          <button onclick="openPortMatrixStudio()" class="px-2.5 py-1.5 bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-sky-700/60 transition-colors shadow-sm cursor-pointer" title="Open Dedicated Widescreen Port Matrix & Interconnect Studio">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-sky-400"></i> Port Matrix
+          </button>
+
           <!-- Toggle Inspector Drawer -->
           <button id="topologyInspectorHeaderBtn" onclick="toggleTopologyInspector()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors" title="Toggle Inspector Panel">
             <i data-lucide="sliders" class="w-3.5 h-3.5 text-brand-400"></i> Inspector
@@ -549,6 +550,46 @@
 
   <!-- Enclosure Visualizer compatibility anchor (legacy scripts) -->
   <div id="rackModal" class="hidden"></div>
+
+  <!-- Dedicated Widescreen Port Matrix Studio Modal -->
+  <div id="portMatrixStudioModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 transition-all">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Header -->
+      <div class="px-5 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/90 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400">
+            <i data-lucide="layout-grid" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <span>Switch Port Matrix & Interconnect Studio</span>
+              <span id="matrixStudioSwitchBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">Port Studio</span>
+            </h2>
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+              <span>Active Switch:</span>
+              <select id="matrixStudioSwitchSelector" onchange="renderPortMatrixStudioContent(this.value)" class="bg-slate-900 border border-slate-700 text-sky-300 font-bold rounded px-2 py-0.5 text-xs focus:outline-none focus:border-sky-500 cursor-pointer"></select>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="jumpFromMatrixStudioToElevation()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> View in Rack
+          </button>
+          <button type="button" onclick="jumpFromMatrixStudioToTopology()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-400"></i> View in Topology
+          </button>
+          <button type="button" onclick="closePortMatrixStudio()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 cursor-pointer">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Studio Content Body -->
+      <div id="portMatrixStudioBody" class="flex-1 overflow-y-auto p-5 space-y-5">
+        <!-- Rendered dynamically by renderPortMatrixStudioContent -->
+      </div>
+    </div>
+  </div>
 
   <!-- Physical Layout & Cable Pathways Modal -->
   <div id="cableLayoutModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-2 transition-all">
@@ -834,6 +875,9 @@
             </select>
             <button onclick="promptCreateNewRack()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold transition-colors" title="Add New Mounting Host">+ Host</button>
             <button onclick="deleteActiveRackElevation()" class="p-1 text-slate-500 hover:text-rose-400 rounded transition-colors" title="Delete This Host"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="openPortMatrixStudio(activeRackId)" class="px-2 py-0.5 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-700/60 rounded text-[10px] font-bold transition-colors flex items-center gap-1 cursor-pointer" title="Inspect Active Port Matrix for Mounted Switches in this Rack">
+              <i data-lucide="layout-grid" class="w-3 h-3"></i> Ports
+            </button>
           </div>
 
           <!-- Close / Back Button -->

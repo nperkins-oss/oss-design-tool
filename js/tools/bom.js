@@ -87,33 +87,72 @@ function getAllDefinedLocations() {
   return ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1", "Exterior Pole • NEMA-Box"];
 }
 
+function renderBomLocationOptions(currentLocationKey) {
+  if (typeof FacilityStore === "undefined") {
+    const locs = ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1"];
+    return locs.map(l => `<option value="${escapeHTML(l)}" ${l === currentLocationKey ? 'selected' : ''}>${escapeHTML(l)}</option>`).join('');
+  }
+
+  const groups = FacilityStore.getLocationGroups(true);
+  let html = `<option value="${FacilityStore.UNASSIGNED}" ${currentLocationKey === FacilityStore.UNASSIGNED ? 'selected' : ''}>Unassigned (Staging)</option>`;
+
+  if (groups.spaces.length > 0) {
+    html += `<optgroup label="Spaces & Zones (Field / Unenclosed)">`;
+    groups.spaces.forEach(s => {
+      const isSel = currentLocationKey === s.name;
+      html += `<option value="${escapeHTML(s.name)}" ${isSel ? 'selected' : ''}>${escapeHTML(s.displayName || s.name)}</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  if (groups.enclosures.length > 0) {
+    html += `<optgroup label="Racks & Enclosures">`;
+    groups.enclosures.forEach(e => {
+      const isSel = currentLocationKey === e.name;
+      html += `<option value="${escapeHTML(e.name)}" ${isSel ? 'selected' : ''}>${escapeHTML(e.displayName || e.name)}</option>`;
+    });
+    html += `</optgroup>`;
+  }
+
+  html += `<option value="new_location">+ Create New Location...</option>`;
+  return html;
+}
+
+function formatMountMethodLabel(m) {
+  if (!m) return "Wall Mount";
+  switch (m.toLowerCase()) {
+    case "ceiling": return "Ceiling / Soffit";
+    case "pole": return "Pole / Mast";
+    case "parapet": return "Parapet Roof";
+    case "corner": return "Corner Bracket";
+    default: return "Wall Mount";
+  }
+}
+
 function handleLocationDropdownChange(selectEl, callback) {
   if (!selectEl) return;
   if (selectEl.value === "new_location") {
-    const c = prompt("Enter New Room / Space Name (e.g. IDF-2, Gate Pole, Server Room):", "IDF-2");
+    const c = prompt("Enter New Room / Space Name (e.g. IDF-2, Gate Pole, Rooftop, Parking Lot):", "Rooftop");
     if (!c || !c.trim()) {
-      selectEl.value = selectEl.getAttribute("data-previous-val") || "MDF • Rack-1";
+      selectEl.value = selectEl.getAttribute("data-previous-val") || "Unassigned";
       return;
     }
-    const r = prompt("Enter Cabinet / Enclosure (e.g. Rack-1, NEMA-Box, Wallbox):", "Rack-1");
-    if (!r || !r.trim()) {
-      selectEl.value = selectEl.getAttribute("data-previous-val") || "MDF • Rack-1";
-      return;
-    }
+    const r = prompt("Enter Cabinet / Enclosure Name (Leave BLANK for Unenclosed Space / Field Mount):", "");
+    const rawTarget = (r && r.trim()) ? `${c.trim()} • ${r.trim()}` : `${c.trim()} • Field`;
 
     const newKey = typeof FacilityStore !== "undefined"
-      ? FacilityStore.addLocation(`${c.trim()} • ${r.trim()}`)
-      : `${c.trim()} • ${r.trim()}`;
+      ? FacilityStore.addLocation(rawTarget)
+      : rawTarget;
 
     const opt = document.createElement("option");
     opt.value = newKey;
-    opt.text = newKey;
+    opt.text = newKey.endsWith(" • Field") ? `${c.trim()} (Space / Field)` : newKey;
     selectEl.insertBefore(opt, selectEl.lastElementChild);
     selectEl.value = newKey;
     selectEl.setAttribute("data-previous-val", newKey);
 
     if (typeof callback === "function") callback(newKey);
-    showToast(`Created new location: ${newKey}`);
+    showToast(`Created location: ${newKey}`);
   } else {
     selectEl.setAttribute("data-previous-val", selectEl.value);
     if (typeof callback === "function") callback(selectEl.value);
@@ -1098,24 +1137,15 @@ function renderBomSingleItemHtml(item) {
       <!-- Location & Rack Fast-Move Header -->
       <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
         <div class="flex items-center gap-1.5 flex-1 min-w-0">
-          <i data-lucide="${currentLocationKey === FacilityStore.UNASSIGNED ? 'inbox' : 'map-pin'}" class="w-3.5 h-3.5 ${currentLocationKey === FacilityStore.UNASSIGNED ? 'text-amber-400' : 'text-indigo-400'} shrink-0"></i>
-          <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[220px] truncate" title="Change Assigned Rack / Location">
-            ${allLocations.map(loc => `
-              <option value="${escapeHTML(loc)}" ${loc === currentLocationKey ? 'selected' : ''}>${escapeHTML(loc)}</option>
-            `).join('')}
-            <option value="new_location">+ Create New Location...</option>
+          <i data-lucide="${currentLocationKey === FacilityStore.UNASSIGNED ? 'inbox' : (currentLocationKey.endsWith(' • Field') ? 'radio' : 'map-pin')}" class="w-3.5 h-3.5 ${currentLocationKey === FacilityStore.UNASSIGNED ? 'text-amber-400' : (currentLocationKey.endsWith(' • Field') ? 'text-cyan-400' : 'text-indigo-400')} shrink-0"></i>
+          <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[240px] truncate cursor-pointer" title="Change Assigned Space or Rack Enclosure">
+            ${renderBomLocationOptions(currentLocationKey)}
           </select>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          ${item.isDinMounted ? `
-            <span class="text-[10px] text-amber-400 border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 rounded font-mono uppercase">
-              Field/DIN
-            </span>
-          ` : `
-            <span class="text-[10px] text-slate-400 font-mono uppercase">
-              ${escapeHTML(item.role || 'Hardware')}
-            </span>
-          `}
+          <span class="text-[10px] text-slate-400 font-mono">
+            ${escapeHTML(item.role || 'Hardware')}
+          </span>
         </div>
       </div>
 
@@ -1183,15 +1213,6 @@ function renderBomSingleItemHtml(item) {
             </span>
           ` : ''}
         </div>
-
-        <div class="flex items-center gap-1.5 shrink-0">
-          ${pwrBadge ? `
-            <span class="text-[9px] ${pwrBadge.badgeClass || 'bg-slate-800 text-slate-300 border-slate-700'} border px-1.5 py-0.5 rounded font-mono font-semibold flex items-center gap-1">
-              <span>${pwrBadge.icon}</span>
-              <span>${pwrBadge.badgeLabel}</span>
-            </span>
-          ` : ''}
-        </div>
       </div>
 
       <!-- Switch Stacking Badge & Topology Config Link -->
@@ -1216,23 +1237,22 @@ function renderBomSingleItemHtml(item) {
         </div>
       ` : ''}
 
-      <!-- Edge Device Mounting Selector (Cameras, PtP Radios, Wireless APs, Sensors, Readers) -->
-      ${(!item.parentInstanceId && item.role !== "Core / Spine" && item.role !== "Aggregation" && item.role !== "Access" && item.role !== "Industrial DIN-Rail Switch" && item.role !== "Structured Cabling" && item.role !== "Optics & DAC" && !item.role?.includes("License")) ? `
-        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
+      <!-- Edge Device Mounting Info Badge (Compact Quoting View) -->
+      ${(!item.parentInstanceId && item.mountMethod && item.role !== "Core / Spine" && item.role !== "Aggregation" && item.role !== "Access" && item.role !== "Industrial DIN-Rail Switch" && item.role !== "Structured Cabling" && item.role !== "Optics & DAC" && !item.role?.includes("License")) ? `
+        <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
           <span class="text-slate-400 flex items-center gap-1.5">
-            <i data-lucide="anchor" class="w-3.5 h-3.5 text-cyan-400"></i> Mounting Method:
+            <i data-lucide="anchor" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Mounting:</span>
+            <span class="text-cyan-300 font-mono font-semibold">${formatMountMethodLabel(item.mountMethod)}</span>
           </span>
-          <select 
-            onchange="updateDeviceMountMethod('${item.instanceId}', this.value)" 
-            class="bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-[11px] rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 cursor-pointer"
-            title="Account for mounting installation: wall, ceiling, pole, parapet, or corner"
+          <button 
+            type="button" 
+            onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
+            class="text-[10px] text-amber-400 hover:text-amber-200 underline font-mono cursor-pointer"
+            title="Adjust physical location, drop coordinates, and mounting in Physical Layout Canvas"
           >
-            <option value="wall" ${(!item.mountMethod || item.mountMethod === 'wall') ? 'selected' : ''}>Wall Mount (Façade)</option>
-            <option value="ceiling" ${item.mountMethod === 'ceiling' ? 'selected' : ''}>Ceiling / Soffit</option>
-            <option value="pole" ${item.mountMethod === 'pole' ? 'selected' : ''}>Pole / Mast Mount</option>
-            <option value="parapet" ${item.mountMethod === 'parapet' ? 'selected' : ''}>Parapet Roof Mount</option>
-            <option value="corner" ${item.mountMethod === 'corner' ? 'selected' : ''}>Corner Mount Bracket</option>
-          </select>
+            Adjust on Canvas &rarr;
+          </button>
         </div>
       ` : ''}
 
