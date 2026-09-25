@@ -89,7 +89,7 @@ function toggleCableLayoutModal() {
     modal.classList.add("hidden");
     isDraggingPhysNode = false;
     isDraggingPhysWaypoint = false;
-    isViewportPanning = false;
+    isPhysViewportPanning = false;
     draggedPhysNode = null;
     draggedPhysWaypoint = null;
     const searchPopup = document.getElementById("physQuickSearchResults");
@@ -148,8 +148,8 @@ function loadFacilityState() {
 // -----------------------------------------------------------
 // Canvas Interaction & Reliable Drag Engine
 // -----------------------------------------------------------
-let isViewportPanning = false;
-let panStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
+let isPhysViewportPanning = false;
+let physPanStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
 
 function initCableCanvas() {
   const svg = document.getElementById("cableSvgCanvas");
@@ -346,8 +346,8 @@ function handlePhysMouseDown(e) {
   // 7. Pan Viewport (Drag Canvas to Pan - identical to Topology Canvas)
   const viewport = document.getElementById("cableCanvasViewport");
   if (viewport && activeCableTool === "select") {
-    isViewportPanning = true;
-    panStart = {
+    isPhysViewportPanning = true;
+    physPanStart = {
       x: e.clientX,
       y: e.clientY,
       scrollLeft: viewport.scrollLeft,
@@ -360,11 +360,11 @@ function handlePhysMouseDown(e) {
 function handlePhysMouseMove(e) {
   if (!isPhysCanvasVisible()) return;
 
-  if (isViewportPanning) {
+  if (isPhysViewportPanning) {
     const viewport = document.getElementById("cableCanvasViewport");
     if (viewport) {
-      viewport.scrollLeft = panStart.scrollLeft - (e.clientX - panStart.x);
-      viewport.scrollTop = panStart.scrollTop - (e.clientY - panStart.y);
+      viewport.scrollLeft = physPanStart.scrollLeft - (e.clientX - physPanStart.x);
+      viewport.scrollTop = physPanStart.scrollTop - (e.clientY - physPanStart.y);
     }
     return;
   }
@@ -389,8 +389,8 @@ function handlePhysMouseMove(e) {
 }
 
 function handlePhysMouseUp() {
-  if (isViewportPanning) {
-    isViewportPanning = false;
+  if (isPhysViewportPanning) {
+    isPhysViewportPanning = false;
     const viewport = document.getElementById("cableCanvasViewport");
     if (viewport) viewport.style.cursor = "default";
   }
