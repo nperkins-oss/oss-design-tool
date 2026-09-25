@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.11-alpha] - 2026-09-25
+
+### Added
+- **Stacked Switch Physical Rack Footprint & Electrical Telemetry (`js/tools/rack.js`, `js/engines/sizer_network.js`, `js/core/facility.js`)**:
+  - Multiplied rack space allocation (`item.rackUnits * stackUnits`) in auto-mounting and elevation rendering, ensuring 2-switch stacks correctly occupy 2U (or 4U for 2U chassis) with full slot span boundaries (`U{u + span - 1} - U{u}`).
+  - Added physical member chassis visual breakdown inside rack frames displaying `Unit 1 (Master / Active)` and `Unit 2 (Member / Standby)` with dedicated 40G/100G DAC link interconnect badges.
+  - Multiplied power draw (`baseWatts * units`), PoE capacity (`poeBudget * units`), and British Thermal Units (`BTU/hr * units`) across all rack telemetry, facility location metrics, and cabinet sizing calculators.
+  - Calculated required AC power outlet drops (`${totalOutlets}x AC Outlets (NEMA 5-15P)`) accounting for individual power supplies per stack chassis.
+  - Enforced drag-and-drop rack slot boundary limit constraints to prevent multi-unit stacks from overflowing rack capacities.
+- **Topology to Enclosures & Spaces Linking (`js/tools/topology.js`)**:
+  - Connected logical switch and device nodes directly to their physical host enclosures (`openRackViewerFor`) and telecom spaces (`jumpToFacilitySpace`).
+  - Added 4-way navigation action bars to node inspector cards (Switch, Server, Radio, and Edge Device) for instantaneous cross-tool transitions.
+  - Added direct deep-linking from optical uplink ports (`inspectSwitchPort`) to zoom and pan to the connected target device on canvas.
+- **Port Matrix Uplink Utilization & Device Navigation (`js/engines/port_engine.js` & `js/tools/topology.js`)**:
+  - Implemented `PortEngine.syncSwitchUplinks(item)` to automatically map upstream distribution/core switches to optical cages on access switches, and vice-versa for downstream homed switches on core switches.
+  - Added **Active Uplinks & Trunks** panel beneath the port matrix showing live port link status, transceiver optic type, connected target device model, location, and 1-click `[Link →]` navigation.
+- **Omnipresent Cross-Navigation Across All Views (`js/tools/bom.js`, `js/tools/rack.js`, `js/tools/topology.js`, `js/tools/physical_layout.js`)**:
+  - Implemented universal 4-way cross-navigation connecting:
+    - **Quote BOM Drawer**: Added `[Enclosure]`, `[Space]`, `[Topology]`, and `[Physical]` buttons to each BOM line item card, and created `jumpToBomTarget(instanceId)` with drawer auto-expansion and smooth scroll highlight animation.
+    - **Enclosure Visualizer**: Added hover navigation buttons on mounted rack equipment frames linking directly to Topology, Physical Layout, and BOM.
+    - **Topology Canvas**: Added inspector action bars with 1-click links to Enclosure elevations, Spaces, BOM drawer, and Blueprint floor drops.
+    - **Physical Layout Canvas**: Added inspector deep-links on telecom closets and field hardware drops jumping directly to Rack elevations, Spaces, BOM, and Topology.
+- **Accounting & Display of Unenclosed Field Hardware (`js/core/facility.js`, `js/tools/rack.js`)**:
+  - Added **Unenclosed Field Hardware in {Space}** card to Facility Space management, listing edge cameras, door access readers, wall-mount radios, and environmental sensors residing in the space without requiring an enclosure.
+  - Displayed mounting method badges (`[WALL MOUNT]`, `[CEILING MOUNT]`, `[POLE MOUNT]`, `[PARAPET]`, `[CORNER]`) and direct cross-nav buttons for all field hardware.
+  - Added `${spaceFieldHardware.length} Field Devices` chip badges to Facility Space selection cards.
+  - Displayed homed unenclosed field hardware alongside patch panel drops in the Enclosure Visualizer **Host Served Endpoints** panel with quick-jump links.
+
+---
+
 ## [0.10.10-alpha] - 2026-09-25
 
 ### Added

@@ -1093,7 +1093,7 @@ function renderBomSingleItemHtml(item) {
   const pwrBadge = (typeof PortEngine !== "undefined" && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
 
   return `
-    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm hover:border-slate-700 transition-colors">
+    <div id="bom-item-${item.instanceId}" data-bom-instance="${item.instanceId}" class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm hover:border-slate-700 transition-colors">
       
       <!-- Location & Rack Fast-Move Header -->
       <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
@@ -1149,6 +1149,24 @@ function renderBomSingleItemHtml(item) {
           >
             <i data-lucide="network" class="w-3 h-3 text-indigo-400"></i>
             <span>Topology</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="openRackViewerFor('${item.closetName || item.rackId}')" 
+            class="text-[10px] text-indigo-300 hover:text-white flex items-center gap-1 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
+            title="Inspect rack slot and cabinet elevation in Enclosure Visualizer"
+          >
+            <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i>
+            <span>Enclosure</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')" 
+            class="text-[10px] text-cyan-300 hover:text-white flex items-center gap-1 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
+            title="View Telecom Space and Field Devices in Facility Manager"
+          >
+            <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i>
+            <span>Space</span>
           </button>
           <button 
             type="button" 
@@ -2039,5 +2057,24 @@ window.autoFixUnassignedGear = autoFixUnassignedGear;
 window.autoAddMissingLicenses = autoAddMissingLicenses;
 window.autoAddMissingDACCables = autoAddMissingDACCables;
 window.autoAddPoeSupplyOrSwitch = autoAddPoeSupplyOrSwitch;
-window.autoFixAllProjectMisses = autoFixAllProjectMisses;
+function jumpToBomTarget(instanceId) {
+  const drawer = document.getElementById("bomDrawer");
+  if (drawer && drawer.classList.contains("translate-x-full")) {
+    toggleBomDrawer();
+  }
+  if (instanceId) {
+    setTimeout(() => {
+      const el = document.getElementById(`bom-item-${instanceId}`) || document.querySelector(`[data-bom-instance="${instanceId}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("ring-2", "ring-indigo-400", "bg-indigo-950/40");
+        setTimeout(() => {
+          el.classList.remove("ring-2", "ring-indigo-400", "bg-indigo-950/40");
+        }, 2500);
+      }
+    }, 150);
+  }
+}
+
+window.jumpToBomTarget = jumpToBomTarget;
 window.jumpToPhysicalLayoutTarget = typeof jumpToPhysicalLayoutTarget !== "undefined" ? jumpToPhysicalLayoutTarget : (typeof window !== "undefined" ? window.jumpToPhysicalLayoutTarget : null);

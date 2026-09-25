@@ -876,10 +876,11 @@ const FacilityStore = {
 
     items.forEach(item => {
       const qty = parseInt(item.qty, 10) || 1;
-      const baseWatts = parseFloat(item.baseWatts) || 0;
-      const poeBudget = parseFloat(item.poeBudget) || 0;
+      const units = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+      const baseWatts = (parseFloat(item.baseWatts) || 0) * units;
+      const poeBudget = (parseFloat(item.poeBudget) || 0) * units;
       const consumedPoE = parseFloat(item.consumedPoEWatts) || 0;
-      const ru = parseInt(item.rackUnits, 10) || 0;
+      const ru = (parseInt(item.rackUnits, 10) || 0) * units;
 
       totalWatts += (baseWatts + consumedPoE) * qty;
       totalPoEBudget += poeBudget * qty;
@@ -1586,6 +1587,12 @@ function renderFacilityManager() {
             const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
             const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
             const isMdf = s.type === "mdf";
+            const spaceFieldHardware = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
+              if (item.parentInstanceId) return false;
+              if (item.rackSlot) return false;
+              const loc = FacilityStore.normalize(item.closetName || item.location || item.rackId);
+              return loc === FacilityStore.normalize(s.name) || loc.startsWith(FacilityStore.normalize(s.name) + ' •');
+            }) : [];
 
             return `
               <div 
@@ -1603,10 +1610,15 @@ function renderFacilityManager() {
                       ${isPole ? 'STRUCTURAL POLE' : s.type.toUpperCase()}
                     </span>
                   </div>
-                  <div class="mt-1 flex items-center gap-2">
+                  <div class="mt-1 flex items-center gap-2 flex-wrap">
                     <span class="text-[10px] text-slate-400 font-mono">
                       ${spaceEncs.length} ${spaceEncs.length === 1 ? 'Enclosure' : 'Enclosures'}
                     </span>
+                    ${spaceFieldHardware.length > 0 ? `
+                      <span class="text-[10px] text-amber-400 font-mono font-bold">
+                        &bull; ${spaceFieldHardware.length} Field Device${spaceFieldHardware.length === 1 ? '' : 's'}
+                      </span>
+                    ` : ''}
                     ${isPole ? `
                       <span class="text-[10px] text-cyan-400 font-mono font-bold">
                         &bull; ${s.poleHeightFt || 25} ft AGL
@@ -1801,6 +1813,72 @@ function renderFacilityManager() {
             `;
           }).join('')}
         </div>
+
+        <!-- Unenclosed Field Hardware in this Space (Requirement 5) -->
+        ${currentSpace ? (() => {
+          const fieldHardware = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
+            if (item.parentInstanceId) return false;
+            if (item.rackSlot) return false;
+            const loc = FacilityStore.normalize(item.closetName || item.location || item.rackId);
+            return loc === FacilityStore.normalize(currentSpace.name) || loc.startsWith(FacilityStore.normalize(currentSpace.name) + ' •');
+          }) : [];
+
+          return `
+            <div class="p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2.5 shadow-md">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="radio" class="w-3.5 h-3.5 text-amber-400"></i>
+                  Unenclosed Field Hardware in ${escapeHTML(currentSpace.name)} (${fieldHardware.length})
+                </span>
+                <span class="text-[10px] font-mono text-slate-400">Wall / Ceiling / Mast Mount</span>
+              </div>
+
+              ${fieldHardware.length === 0 ? `
+                <div class="p-3 bg-slate-950/60 rounded-lg border border-dashed border-slate-800 text-center text-xs text-slate-500">
+                  No unenclosed field devices (cameras, doors, wall radios) assigned directly to this space.
+                </div>
+              ` : `
+                <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  ${fieldHardware.map(dev => {
+                    const mountMethod = dev.mountMethod ? dev.mountMethod.toUpperCase() : "WALL";
+                    const isCamera = dev.role === "Camera" || dev.category?.includes("camera");
+                    const isDoor = dev.role === "Access Control" || dev.category?.includes("access");
+                    const isRadio = dev.role === "Wireless Bridge" || dev.category?.includes("wireless");
+                    const iconName = isCamera ? "camera" : (isDoor ? "door-closed" : (isRadio ? "radio" : "cpu"));
+
+                    return `
+                      <div class="bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition-colors">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <div class="p-1 rounded bg-slate-900 border border-slate-800 text-amber-400 shrink-0">
+                            <i data-lucide="${iconName}" class="w-3 h-3"></i>
+                          </div>
+                          <div class="min-w-0">
+                            <span class="font-bold text-white block truncate">${escapeHTML(dev.model)}</span>
+                            <div class="flex items-center gap-1.5 flex-wrap">
+                              <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-950/80 border border-amber-800/80 text-amber-300 font-bold">${mountMethod} MOUNT</span>
+                              <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(dev.role || 'Field Device')} &bull; ${dev.consumedPoEWatts || 15}W PoE</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                          <button onclick="jumpToTopologyTarget('node:${dev.instanceId}')" class="p-1 text-slate-400 hover:text-indigo-300 transition-colors" title="View in Topology">
+                            <i data-lucide="network" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button onclick="jumpToPhysicalLayoutTarget('${dev.instanceId}')" class="p-1 text-slate-400 hover:text-amber-300 transition-colors" title="View in Physical Layout">
+                            <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                          </button>
+                          <button onclick="jumpToBomTarget('${dev.instanceId}')" class="p-1 text-slate-400 hover:text-emerald-300 transition-colors" title="View in BOM Drawer">
+                            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              `}
+            </div>
+          `;
+        })() : ''}
       </div>
 
     </div>
@@ -1993,6 +2071,28 @@ function openRackViewerFor(locationName) {
   switchFacilityView("visualizer", locationName);
 }
 
+function jumpToFacilitySpace(target) {
+  if (!target) return;
+  const parsed = FacilityStore.parse(target);
+  const spaces = FacilityStore.getSpaces();
+  const space = spaces.find(s => 
+    s.id === target || 
+    s.name.toLowerCase() === target.toLowerCase() || 
+    (parsed.space && s.name.toLowerCase() === parsed.space.toLowerCase())
+  );
+
+  const facModal = document.getElementById("facilityModal");
+  if (facModal && facModal.classList.contains("hidden")) {
+    toggleFacilityModal();
+  }
+  switchFacilityView("hierarchy");
+  if (space) {
+    activeFacilityFloorId = space.floorId;
+    activeFacilitySpaceId = space.id;
+    renderFacilityManager();
+  }
+}
+
 // Window Compatibility Exports
 if (typeof window !== "undefined") {
   window.MOUNTING_HOST_TYPES = MOUNTING_HOST_TYPES;
@@ -2020,6 +2120,7 @@ if (typeof window !== "undefined") {
   window.deleteFacilitySpace = deleteFacilitySpace;
   window.deleteFacilityEnclosure = deleteFacilityEnclosure;
   window.openRackViewerFor = openRackViewerFor;
+  window.jumpToFacilitySpace = jumpToFacilitySpace;
   window.updateSpacePoleHeight = updateSpacePoleHeight;
   window.handleEnclosureDragStart = handleEnclosureDragStart;
   window.handleEnclosureDragEnd = handleEnclosureDragEnd;

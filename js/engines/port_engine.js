@@ -208,6 +208,7 @@ const PortEngine = {
 
       item.physicalPorts = ports;
       item._lastStackUnits = stackUnits;
+      this.syncSwitchUplinks(item);
       return ports;
     }
 
@@ -327,7 +328,79 @@ const PortEngine = {
 
     item.physicalPorts = ports;
     item._lastStackUnits = stackUnits;
+    this.syncSwitchUplinks(item);
     return ports;
+  },
+
+  /**
+   * Synchronizes backbone optical uplinks between access switches and core switches
+   * Ensures uplink cages in the physical port matrix reflect live connected devices with deep-linking
+   * @param {Object} item - Switch BOM item
+   */
+  syncSwitchUplinks(item) {
+    if (!item || !Array.isArray(item.physicalPorts) || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+    const uplinkPorts = item.physicalPorts.filter(p => p.isUplink || p.role === "uplink");
+    if (uplinkPorts.length === 0) return;
+
+    const isCoreOrAgg = item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Spine" || item.role === "Gateways & WAN";
+
+    if (isCoreOrAgg) {
+      // Find downstream access switches homing back to this core/aggregation switch
+      const downstreamSwitches = projectBOM.filter(s => 
+        (s.customUplinkTargetId === item.instanceId || s.uplinkTargetId === item.instanceId) && 
+        s.instanceId !== item.instanceId
+      );
+
+      let portIdx = 0;
+      downstreamSwitches.forEach(childSw => {
+        const linkCount = Math.min(uplinkPorts.length - portIdx, parseInt(childSw.customLinkMultiplier || 1, 10));
+        for (let k = 0; k < linkCount; k++) {
+          if (portIdx < uplinkPorts.length) {
+            const p = uplinkPorts[portIdx];
+            p.connectedDeviceId = childSw.instanceId;
+            p.connectedDeviceModel = childSw.model;
+            p.connectedDeviceRole = childSw.role || "Access Switch";
+            p.connectedLocation = childSw.closetName || childSw.rackId;
+            p.connectedPortNumber = k === 0 ? "Uplink 1" : `Uplink ${k + 1}`;
+            p.linkStatus = "up";
+            portIdx++;
+          }
+        }
+      });
+      // Clear any remaining unassigned uplink cages on this core switch
+      for (let m = portIdx; m < uplinkPorts.length; m++) {
+        if (!uplinkPorts[m].connectedDeviceId || !projectBOM.some(i => i.instanceId === uplinkPorts[m].connectedDeviceId)) {
+          uplinkPorts[m].connectedDeviceId = null;
+          uplinkPorts[m].connectedDeviceModel = null;
+          uplinkPorts[m].connectedDeviceRole = null;
+          uplinkPorts[m].connectedLocation = null;
+          uplinkPorts[m].linkStatus = "down";
+        }
+      }
+    } else {
+      // Access Switch: Uplink homes to Core/Agg switch
+      const targetId = item.customUplinkTargetId || item.uplinkTargetId;
+      const targetSw = targetId ? projectBOM.find(i => i.instanceId === targetId) : null;
+      const linkCount = Math.min(uplinkPorts.length, parseInt(item.customLinkMultiplier || 1, 10));
+
+      uplinkPorts.forEach((p, idx) => {
+        if (targetSw && idx < linkCount) {
+          p.connectedDeviceId = targetSw.instanceId;
+          p.connectedDeviceModel = targetSw.model;
+          p.connectedDeviceRole = targetSw.role || "Core / Aggregation Switch";
+          p.connectedLocation = targetSw.closetName || targetSw.rackId;
+          p.connectedPortNumber = `Cage ${idx + 1}`;
+          p.linkStatus = "up";
+        } else if (!p.connectedDeviceId || p.connectedDeviceId === targetId) {
+          p.connectedDeviceId = null;
+          p.connectedDeviceModel = null;
+          p.connectedDeviceRole = null;
+          p.connectedLocation = null;
+          p.linkStatus = "down";
+        }
+      });
+    }
   },
 
   /**

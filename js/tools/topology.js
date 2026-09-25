@@ -1515,6 +1515,41 @@ function renderTopologyInspector() {
                 `).join('')}
               </select>
             </div>
+            <!-- 4-Way Omnipresent Cross-Navigation Action Buttons -->
+            <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
+              <button 
+                type="button" 
+                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="Open Enclosure Visualizer at this rack"
+              >
+                <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+                class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="View Space Hierarchy & Unenclosed Devices"
+              >
+                <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToBomTarget('${item.instanceId}')"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="Locate item in BOM Drawer"
+              >
+                <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="View in Physical Layout Canvas"
+              >
+                <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+              </button>
+            </div>
             <div>Interfaces: <strong class="text-white">${item.ports || 2}x ${item.portSpeed || '10G'} High-Speed NICs</strong></div>
             ${item.usableStorageTb ? `<div>Video Storage: <strong class="text-emerald-400">${item.usableStorageTb} TB RAID Array</strong></div>` : ''}
           </div>
@@ -1673,6 +1708,41 @@ function renderTopologyInspector() {
                 `).join('')}
               </select>
             </div>
+            <!-- 4-Way Omnipresent Cross-Navigation Action Buttons -->
+            <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
+              <button 
+                type="button" 
+                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="Open Enclosure Visualizer at this rack"
+              >
+                <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+                class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="View Space Hierarchy & Unenclosed Devices"
+              >
+                <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToBomTarget('${item.instanceId}')"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="Locate item in BOM Drawer"
+              >
+                <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="View in Physical Layout Canvas"
+              >
+                <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1777,6 +1847,41 @@ function renderTopologyInspector() {
                   <option value="${escapeHTML(l)}" ${FacilityStore.normalize(item.closetName || item.rackId) === l ? 'selected' : ''}>${escapeHTML(l)}</option>
                 `).join('')}
               </select>
+            </div>
+            <!-- 4-Way Omnipresent Cross-Navigation Action Buttons -->
+            <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
+              <button 
+                type="button" 
+                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="Open Enclosure Visualizer at this rack"
+              >
+                <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+                class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="View Space Hierarchy & Unenclosed Devices"
+              >
+                <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToBomTarget('${item.instanceId}')"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="Locate item in BOM Drawer"
+              >
+                <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
+              </button>
+              <button 
+                type="button" 
+                onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                title="View in Physical Layout Canvas"
+              >
+                <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+              </button>
             </div>
             <div>Hardware Interface: <strong class="text-white">1x 1G RJ-45 (100m Loop)</strong></div>
           </div>
@@ -1937,6 +2042,41 @@ function renderTopologyInspector() {
                 <option value="${escapeHTML(l)}" ${FacilityStore.normalize(item.closetName || item.rackId) === l ? 'selected' : ''}>${escapeHTML(l)}</option>
               `).join('')}
             </select>
+          </div>
+          <!-- 4-Way Omnipresent Cross-Navigation Action Buttons -->
+          <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
+            <button 
+              type="button" 
+              onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+              class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              title="Open Enclosure Visualizer at this rack"
+            >
+              <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
+            </button>
+            <button 
+              type="button" 
+              onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+              class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              title="View Space Hierarchy & Unenclosed Devices"
+            >
+              <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
+            </button>
+            <button 
+              type="button" 
+              onclick="jumpToBomTarget('${item.instanceId}')"
+              class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              title="Locate item in BOM Drawer"
+            >
+              <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
+            </button>
+            <button 
+              type="button" 
+              onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
+              class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              title="View in Physical Layout Canvas"
+            >
+              <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+            </button>
           </div>
           <div>Interface: <strong class="text-white">${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P Stack)` : ''} (${escapeHTML(item.portSpeed || '1G/10G')})</strong></div>
         </div>
@@ -2137,6 +2277,44 @@ function renderTopologyInspector() {
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-amber-500 inline-block"></span> Data Only</span>
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded bg-slate-800 inline-block"></span> Free</span>
             </div>
+
+            <!-- Active Backbone Uplinks & Interconnects (Requirement 3) -->
+            ${opticalCages.some(p => p.connectedDeviceId) ? `
+              <div class="pt-2 border-t border-slate-900 space-y-1.5">
+                <div class="flex items-center justify-between text-[10px] font-mono font-bold text-sky-400 uppercase">
+                  <span class="flex items-center gap-1"><i data-lucide="git-commit" class="w-3 h-3"></i> Uplinks in Use & Trunks</span>
+                  <span class="text-slate-500 font-normal">${opticalCages.filter(p => p.connectedDeviceId).length} Connected</span>
+                </div>
+                <div class="space-y-1">
+                  ${opticalCages.filter(p => p.connectedDeviceId).map(p => {
+                    const targetDev = projectBOM.find(i => i.instanceId === p.connectedDeviceId);
+                    const targetModel = targetDev ? targetDev.model : (p.connectedDeviceModel || 'Connected Switch');
+                    const targetLoc = targetDev ? (targetDev.closetName || targetDev.rackId || 'Space') : (p.connectedLocation || 'Rack');
+                    return `
+                      <div class="p-1.5 rounded-lg bg-slate-900 border border-sky-500/40 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 font-mono font-bold text-[9px] border border-sky-800 shrink-0">${p.shortLabel || `Port ${p.portNumber}`}</span>
+                          <div class="min-w-0">
+                            <span class="font-bold text-white block truncate text-[11px]">${escapeHTML(targetModel)}</span>
+                            <span class="text-[9px] text-slate-400 font-mono block truncate">${escapeHTML(targetLoc)} &bull; ${p.speed} Trunk</span>
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                          <button onclick="selectTopologyNode('${p.connectedDeviceId}'); panNodeIntoView('${p.connectedDeviceId}')" class="px-2 py-0.5 bg-sky-600/30 hover:bg-sky-600 text-sky-200 hover:text-white rounded border border-sky-500/40 text-[10px] font-bold transition-all flex items-center gap-1 shadow-sm" title="Jump to ${escapeHTML(targetModel)} in Topology">
+                            <span>Link</span> &rarr;
+                          </button>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            ` : `
+              <div class="pt-2 border-t border-slate-900 text-[10px] font-mono text-slate-500 flex items-center justify-between">
+                <span>Backbone Optical Uplinks:</span>
+                <span class="text-slate-400">Auto-Homed / Standby</span>
+              </div>
+            `}
           </div>
         </div>
       ` : ''}
@@ -2829,10 +3007,17 @@ function inspectSwitchPort(switchInstanceId, portNum) {
   if (!port) return;
 
   if (port.connectedDeviceId) {
+    const targetDev = projectBOM.find(i => i.instanceId === port.connectedDeviceId);
+    const targetName = targetDev ? targetDev.model : (port.connectedDeviceModel || "Connected Device");
+    const targetLoc = targetDev ? (targetDev.closetName || targetDev.rackId || "Space") : "Location";
     selectTopologyNode(port.connectedDeviceId);
+    panNodeIntoView(port.connectedDeviceId);
+    if (typeof showToast === "function") {
+      showToast(`${port.label} &rarr; Navigated to ${targetName} (${targetLoc})`);
+    }
   } else {
     if (typeof showToast === "function") {
-      showToast(`${port.label} (${port.speed}) is free.`);
+      showToast(`${port.label} (${port.speed}) is free / unpopulated.`);
     }
   }
 }

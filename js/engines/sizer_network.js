@@ -240,17 +240,18 @@ const NetworkSizer = {
       const qty = parseInt(item.qty, 10) || 1;
 
       // Track occupied RU
+      const units = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       if (item.rackSlot) {
-        occupiedU += (parseInt(item.rackUnits, 10) || 1);
+        occupiedU += ((parseInt(item.rackUnits, 10) || 1) * units);
       }
 
       // Base internal chassis power draw (without PoE load)
       const base = parseFloat(item.baseWatts) || 0;
-      chassisBaseWatts += (base * qty);
+      chassisBaseWatts += (base * units * qty);
 
       // Maximum rated PoE power supply budget
       const poeBudget = parseFloat(item.poeBudget) || 0;
-      nameplatePoEWatts += (poeBudget * qty);
+      nameplatePoEWatts += (poeBudget * units * qty);
 
       // Connected field devices PoE draw (if populated by BOM audit)
       const connectedPoE = parseFloat(item.consumedPoEWatts) || 0;

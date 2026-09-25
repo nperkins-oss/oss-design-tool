@@ -424,7 +424,8 @@ function autoMountAllToActiveRack() {
     mountableItems.forEach(i => i.rackSlot = null);
 
     mountableItems.forEach(item => {
-      const itemHeight = parseInt(item.rackUnits || 1, 10);
+      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+      const itemHeight = parseInt(item.rackUnits || 1, 10) * stackUnits;
       const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -740,7 +741,9 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
   for (let u = 1; u <= activeRackHeight; u++) slots[u] = null;
 
   assignedItems.forEach(item => {
-    const itemHeight = parseInt(item.rackUnits || 1, 10);
+    const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+    const baseRU = parseInt(item.rackUnits || 1, 10);
+    const itemHeight = baseRU * stackUnits;
     const assignedU = parseInt(item.rackSlot, 10);
 
     if (assignedU && assignedU >= 1 && (assignedU + itemHeight - 1) <= activeRackHeight) {
@@ -749,7 +752,9 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
           slots[assignedU + offset] = {
             item,
             isBase: offset === 0,
-            span: itemHeight
+            span: itemHeight,
+            baseRU,
+            stackUnits
           };
         }
       }
@@ -765,36 +770,69 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
       if (slotData.isBase) {
         const it = slotData.item;
         const compat = checkDeviceHostCompatibility(it, "equipment_rack");
+        const stackUnits = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
+        const totalBaseWatts = (it.baseWatts || 0) * stackUnits;
+        const totalPoEWatts = (it.poeBudget || 0) * stackUnits;
+        const uLabel = slotData.span > 1 ? `U${u + slotData.span - 1}-U${u}` : `U${u}`;
+
         railHTML += `
           <div 
-            class="group relative bg-slate-900 border ${compat.compatible ? 'border-indigo-500/60 hover:border-indigo-400' : 'border-amber-500/60 hover:border-amber-400'} rounded-lg px-3 py-2 flex items-center justify-between cursor-move shadow-md transition-all select-none"
+            class="group relative bg-slate-900 border ${compat.compatible ? 'border-indigo-500/60 hover:border-indigo-400' : 'border-amber-500/60 hover:border-amber-400'} rounded-lg px-3 py-2 flex flex-col justify-between cursor-move shadow-md transition-all select-none"
             draggable="true"
             ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
             ondragover="handleRackSlotDragOver(event)"
             ondrop="handleRackSlotDrop(event, ${u})"
-            style="min-height: ${Math.max(40, slotData.span * 42)}px;"
+            style="min-height: ${Math.max(42, slotData.span * 44)}px;"
           >
-            <div class="flex items-center gap-3 min-w-0">
-              <span class="text-[11px] font-mono font-bold text-indigo-400 w-7 shrink-0">U${u}</span>
-              <div class="min-w-0">
-                <span class="text-xs font-bold text-white block truncate">${escapeHTML(it.model)}</span>
-                <span class="text-[10px] text-slate-400 font-mono block truncate">${escapeHTML(it.vendor || 'Generic')} &bull; ${slotData.span}U &bull; ${it.baseWatts || 0}W Base</span>
+            <div class="flex items-center justify-between w-full">
+              <div class="flex items-center gap-3 min-w-0">
+                <span class="text-[11px] font-mono font-bold text-indigo-400 w-14 shrink-0">${uLabel}</span>
+                <div class="min-w-0">
+                  <span class="text-xs font-bold text-white block truncate">${escapeHTML(it.model)}</span>
+                  <span class="text-[10px] text-slate-400 font-mono block truncate">
+                    ${escapeHTML(it.vendor || 'Generic')} &bull; ${slotData.span}U &bull; ${totalBaseWatts}W Base ${totalPoEWatts > 0 ? `&bull; ${totalPoEWatts}W PoE (${stackUnits}x PSUs)` : ''}
+                  </span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <!-- Omnipresent Cross-Navigation Action Icons -->
+                <button onclick="event.stopPropagation(); jumpToTopologyTarget('node:${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-indigo-300 transition-opacity" title="Jump to Logical Topology">
+                  <i data-lucide="network" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="event.stopPropagation(); jumpToPhysicalLayoutTarget('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-amber-300 transition-opacity" title="Jump to Physical Layout Canvas">
+                  <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="event.stopPropagation(); jumpToBomTarget('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-emerald-300 transition-opacity" title="Jump to BOM Line Item">
+                  <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                </button>
+                ${stackUnits >= 2 ? `
+                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 flex items-center gap-1" title="${stackUnits}-Switch Virtual Stack (${slotData.span}U total)">
+                    <i data-lucide="layers" class="w-3 h-3"></i> ${stackUnits}x Stack (${slotData.span}U)
+                  </span>
+                ` : ''}
+                ${!compat.compatible ? `
+                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800" title="${compat.advisory}">⚠️ Bracket Req</span>
+                ` : ''}
+                <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 ${getRoleColor(it.role)}">${escapeHTML(it.role || 'Hardware')}</span>
+                <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity" title="Unmount to Staging">
+                  <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+                </button>
               </div>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              ${it.stackedUnits >= 2 ? `
-                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 flex items-center gap-1" title="${it.stackedUnits}-Switch Virtual Stack">
-                  <i data-lucide="layers" class="w-3 h-3"></i> ${it.stackedUnits}x Stack
+
+            ${stackUnits >= 2 ? `
+              <!-- Multi-Chassis Stack Member Breakdown Bar -->
+              <div class="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap text-[9px] font-mono text-slate-400">
+                ${Array.from({ length: stackUnits }, (_, idx) => `
+                  <span class="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800 ${idx === 0 ? 'text-sky-300 font-bold border-sky-500/40' : 'text-slate-300'}">
+                    Unit ${idx + 1} (${idx === 0 ? 'Master Chassis' : 'Member Chassis'} &bull; ${parseInt(it.rackUnits || 1, 10)}U) ⚡ Feed ${idx + 1}
+                  </span>
+                `).join('')}
+                <span class="text-indigo-400 font-semibold flex items-center gap-1">
+                  <i data-lucide="link" class="w-2.5 h-2.5"></i> ${stackUnits === 2 ? '1x 100G DAC Stack Link' : `${stackUnits}x Ring DAC Links`}
                 </span>
-              ` : ''}
-              ${!compat.compatible ? `
-                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800" title="${compat.advisory}">⚠️ Bracket Req</span>
-              ` : ''}
-              <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 ${getRoleColor(it.role)}">${escapeHTML(it.role || 'Hardware')}</span>
-              <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-amber-300 transition-opacity" title="Unmount to Staging">
-                <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
-              </button>
-            </div>
+              </div>
+            ` : ''}
           </div>
         `;
       }
@@ -1433,10 +1471,11 @@ function handleRackSlotDrop(e, targetU) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
-  const itemHeight = parseInt(item.rackUnits || 1, 10);
+  const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+  const itemHeight = (parseInt(item.rackUnits, 10) || 1) * stackUnits;
   if ((targetU + itemHeight - 1) > activeRackHeight) {
     if (typeof showToast === "function") {
-      showToast(`Cannot place ${itemHeight}U device at U${targetU}: exceeds cabinet top.`);
+      showToast(`Cannot place ${itemHeight}U (${stackUnits}x Stack) device at U${targetU}: exceeds cabinet top.`);
     }
     return;
   }
@@ -1815,11 +1854,13 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     // -------------------------------------------------------
     // Standard 19" EIA Rack Elevation Power & Thermal
     // -------------------------------------------------------
-    let occupiedU = 0, totalPoE = 0, totalBaseWatts = 0;
+    let occupiedU = 0, totalPoE = 0, totalBaseWatts = 0, totalOutlets = 0;
     assignedItems.forEach(it => {
-      if (it.rackSlot) occupiedU += parseInt(it.rackUnits || 1, 10);
-      totalPoE += parseFloat(it.poeBudget || 0);
-      totalBaseWatts += parseFloat(it.baseWatts || 0);
+      const units = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
+      if (it.rackSlot) occupiedU += (parseInt(it.rackUnits || 1, 10) * units);
+      totalPoE += parseFloat(it.poeBudget || 0) * units;
+      totalBaseWatts += parseFloat(it.baseWatts || 0) * units;
+      totalOutlets += units;
     });
 
     const operatingAcWatts = Math.round(totalBaseWatts + (totalPoE * 0.5));
@@ -1849,6 +1890,10 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
         <div class="flex justify-between text-slate-400">
           <span>Max PoE Capacity:</span>
           <span class="font-mono text-white font-semibold">${Math.round(totalPoE).toLocaleString()} W</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
+          <span>Chassis Power Feeds:</span>
+          <span class="font-mono text-indigo-300 font-semibold">${totalOutlets}x AC Outlets (NEMA 5-15P)</span>
         </div>
         <div class="flex justify-between text-slate-400">
           <span>Operating Design Load:</span>
@@ -1928,8 +1973,9 @@ function updateLegacyTelemetryElements(assignedItems) {
 
   let totalBase = 0, totalPoE = 0;
   assignedItems.forEach(it => {
-    totalBase += parseFloat(it.baseWatts || 0);
-    totalPoE += parseFloat(it.poeBudget || 0);
+    const units = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
+    totalBase += parseFloat(it.baseWatts || 0) * units;
+    totalPoE += parseFloat(it.poeBudget || 0) * units;
   });
   const operatingWatts = Math.round(totalBase + (totalPoE * 0.5));
   const worstCaseWatts = Math.round(totalBase + totalPoE);
@@ -1957,9 +2003,23 @@ function renderServedEndpoints(parsed, activeEnc) {
     return false;
   });
 
-  if (countBadge) countBadge.innerText = servedEndpoints.length.toString();
+  // Query unenclosed field devices in projectBOM (cameras, radios, readers, sensors) homed to switches in this host or this location
+  const assignedSwitches = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+    ? projectBOM.filter(i => (i.closetName === activeRackId || i.rackId === activeRackId) && (i.role === "Access" || i.role === "Core" || i.role === "Aggregation" || i.role === "Industrial DIN-Rail Switch")).map(s => s.instanceId)
+    : [];
 
-  // Also calculate field cabling rollups
+  const bomFieldDevices = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(dev => {
+    if (dev.parentInstanceId) return false;
+    if (dev.rackSlot) return false; // In a rack unit or bay, not a field device
+    const isHomed = (dev.uplinkTargetId && assignedSwitches.includes(dev.uplinkTargetId)) ||
+                    (FacilityStore.normalize(dev.closetName || dev.rackId) === activeRackId);
+    return isHomed;
+  }) : [];
+
+  const totalDrops = servedEndpoints.length + bomFieldDevices.length;
+  if (countBadge) countBadge.innerText = totalDrops.toString();
+
+  // Field cabling rollups
   let totalCompositeCables = 0;
   let totalCat6aDrops = 0;
   let totalFiberRuns = 0;
@@ -1970,14 +2030,20 @@ function renderServedEndpoints(parsed, activeEnc) {
     else if (ep.mediaType && ep.mediaType.includes("fiber")) totalFiberRuns++;
   });
 
+  bomFieldDevices.forEach(dev => {
+    if (dev.role === "Access Control" || dev.category?.includes("access")) totalCompositeCables += (dev.qty || 1);
+    else if (dev.role === "Camera" || dev.role === "Edge Device" || dev.category?.includes("camera")) totalCat6aDrops += (dev.qty || 1);
+    else if (dev.category?.includes("wireless") || dev.category?.includes("ptp")) totalCat6aDrops += (dev.qty || 1);
+  });
+
   container.innerHTML = `
     <!-- Cabling Rollup Header Strip -->
     <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
       <div class="flex items-center justify-between">
         <span class="text-xs font-bold text-white flex items-center gap-1.5">
-          <i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i> Served Edge Cabling
+          <i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i> Served Field Hardware & Cabling
         </span>
-        <span class="text-[10px] font-mono text-emerald-400">${servedEndpoints.length} Active Drops</span>
+        <span class="text-[10px] font-mono text-emerald-400">${totalDrops} Active Drops</span>
       </div>
       <div class="grid grid-cols-2 gap-2 text-[11px] font-mono">
         <div class="bg-slate-900 p-2 rounded-lg border border-slate-800">
@@ -1993,7 +2059,7 @@ function renderServedEndpoints(parsed, activeEnc) {
 
     <!-- Quick Add Endpoint Button -->
     <div class="flex items-center justify-between pt-1">
-      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Homed Field Devices</span>
+      <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Homed Field Devices (${totalDrops})</span>
       <button onclick="promptAddEndpointToActiveHost()" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-colors">
         <i data-lucide="plus" class="w-3 h-3"></i> Add Drop
       </button>
@@ -2001,7 +2067,7 @@ function renderServedEndpoints(parsed, activeEnc) {
 
     <!-- Endpoints List -->
     <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
-      ${servedEndpoints.length === 0 ? `
+      ${totalDrops === 0 ? `
         <div class="border border-dashed border-slate-800 rounded-xl p-4 text-center text-xs text-slate-500">
           <i data-lucide="network" class="w-5 h-5 mx-auto mb-1 text-slate-600 opacity-60"></i>
           <span>No field drops are currently homed to ${escapeHTML(activeRackId)}.</span>
@@ -2009,27 +2075,62 @@ function renderServedEndpoints(parsed, activeEnc) {
             + Add Door, Camera, or Outlet
           </button>
         </div>
-      ` : servedEndpoints.map(ep => {
-        const typeDef = FacilityStore.ENDPOINT_TYPES[ep.endpointType] || FacilityStore.ENDPOINT_TYPES.door_portal;
-        return `
-          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition-colors">
-            <div class="flex items-center gap-2.5 min-w-0">
-              <div class="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-indigo-400 shrink-0">
-                <i data-lucide="${typeDef.icon || 'circle'}" class="w-3.5 h-3.5"></i>
+      ` : `
+        <!-- Unenclosed BOM Field Hardware -->
+        ${bomFieldDevices.map(dev => {
+          const mountMethod = dev.mountMethod ? dev.mountMethod.toUpperCase() : "WALL";
+          return `
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition-colors group">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-cyan-400 shrink-0">
+                  <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                </div>
+                <div class="min-w-0">
+                  <span class="font-bold text-white block truncate">${escapeHTML(dev.model)}</span>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-cyan-950/80 border border-cyan-800 text-cyan-300 font-bold">${mountMethod} MOUNT</span>
+                    <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(dev.role || 'Field Device')} &bull; ${dev.consumedPoEWatts || 15}W PoE</span>
+                  </div>
+                </div>
               </div>
-              <div class="min-w-0">
-                <span class="font-bold text-white block truncate">${escapeHTML(ep.name)}</span>
-                <span class="text-[10px] text-slate-400 font-mono block">${typeDef.label} &bull; ${escapeHTML(ep.mediaType || 'Cat6A')}</span>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="jumpToTopologyTarget('node:${dev.instanceId}')" class="p-1 text-slate-400 hover:text-indigo-300 transition-colors" title="Jump to Topology">
+                  <i data-lucide="network" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="jumpToPhysicalLayoutTarget('${dev.instanceId}')" class="p-1 text-slate-400 hover:text-amber-300 transition-colors" title="Jump to Physical Layout">
+                  <i data-lucide="map" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="jumpToBomTarget('${dev.instanceId}')" class="p-1 text-slate-400 hover:text-emerald-300 transition-colors" title="Jump to BOM">
+                  <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+                </button>
               </div>
             </div>
-            <div class="flex items-center gap-1 shrink-0">
-              <button onclick="unlinkEndpointFromHost('${ep.id}')" class="p-1 text-slate-500 hover:text-rose-400 rounded transition-colors" title="Unlink from this host">
-                <i data-lucide="x" class="w-3.5 h-3.5"></i>
-              </button>
+          `;
+        }).join('')}
+
+        <!-- Telecom / Facility Outlets -->
+        ${servedEndpoints.map(ep => {
+          const typeDef = FacilityStore.ENDPOINT_TYPES[ep.endpointType] || FacilityStore.ENDPOINT_TYPES.door_portal;
+          return `
+            <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition-colors">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <div class="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-indigo-400 shrink-0">
+                  <i data-lucide="${typeDef.icon || 'circle'}" class="w-3.5 h-3.5"></i>
+                </div>
+                <div class="min-w-0">
+                  <span class="font-bold text-white block truncate">${escapeHTML(ep.name)}</span>
+                  <span class="text-[10px] text-slate-400 font-mono block">${typeDef.label} &bull; ${escapeHTML(ep.mediaType || 'Cat6A')}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-1 shrink-0">
+                <button onclick="unlinkEndpointFromHost('${ep.id}')" class="p-1 text-slate-500 hover:text-rose-400 rounded transition-colors" title="Unlink from this host">
+                  <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
             </div>
-          </div>
-        `;
-      }).join('')}
+          `;
+        }).join('')}
+      `}
     </div>
   `;
 }

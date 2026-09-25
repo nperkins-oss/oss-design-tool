@@ -1069,9 +1069,15 @@ function renderInspector() {
           </div>
         </div>
 
-        <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
-          <button onclick="deepLinkToRackElevation('${node.name}')" class="flex-1 py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
-            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Open Elevation
+        <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-800 flex-wrap">
+          <button onclick="deepLinkToRackElevation('${node.name}')" class="flex-1 min-w-[100px] py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Elevation
+          </button>
+          <button onclick="jumpToFacilitySpace('${node.name}')" class="flex-1 min-w-[90px] py-1.5 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+            <i data-lucide="building-2" class="w-3.5 h-3.5 text-cyan-400"></i> Space
+          </button>
+          <button onclick="jumpToTopologyTarget('loc:${node.name}')" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors" title="View in Topology">
+            <i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i>
           </button>
           <button onclick="deleteClosetWithReassignment('${node.id}')" class="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/60 rounded-lg" title="Delete Closet">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
@@ -1116,6 +1122,34 @@ function renderInspector() {
             ${run.riserFt > 0 ? `<div class="flex justify-between text-[10px] text-sky-400"><span>Vertical Riser:</span><span>+${run.riserFt} ft</span></div>` : ''}
           </div>
         ` : ''}
+
+        <!-- 4-Way Omnipresent Cross-Navigation Action Buttons -->
+        <div class="pt-1 flex items-center gap-1.5 flex-wrap">
+          <button 
+            type="button" 
+            onclick="jumpToTopologyTarget('node:${node.id}')"
+            class="flex-1 min-w-[70px] py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+            title="Inspect logical port and link status in Topology"
+          >
+            <i data-lucide="network" class="w-3 h-3 text-indigo-400"></i> Topology
+          </button>
+          <button 
+            type="button" 
+            onclick="jumpToBomTarget('${node.id}')"
+            class="flex-1 min-w-[70px] py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+            title="Inspect line item in BOM Drawer"
+          >
+            <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
+          </button>
+          <button 
+            type="button" 
+            onclick="const cl = allClosets.find(c => c.id === '${node.assignedClosetId}'); if (cl) deepLinkToRackElevation(cl.name);"
+            class="flex-1 min-w-[70px] py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+            title="Open Terminating Enclosure"
+          >
+            <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
+          </button>
+        </div>
 
         <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
           <button onclick="clearNodeWaypoints('${node.id}')" class="px-2 py-1 bg-slate-800 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px]">
