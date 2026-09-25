@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.17-alpha] - 2026-09-25
+
+### Added & Enhanced
+- **Front & Rear 19" Rack Elevation Views**:
+  - Added clean segmented orientation toggle (`[ Front ] | [ Rear & PDUs ]`) on the rack elevation action bar for all 19" equipment racks.
+  - **Front Elevation View**: Realistic hardware faceplates featuring status LEDs (`PWR`, `SYS`, `POE`), rich port density previews (e.g. `48x 1G/PoE+ • 4x 10G SFP+`, `8x NVMe Hot-Swap`), and omnipresent cross-tool jump links.
+  - **Rear Elevation View**: 3-column layout featuring center 19" rear equipment rails flanked by vertical 0U EIA side channels. Displays chassis grounding lugs (TIA-607-C), cooling exhaust fan bays, C14/C20 power inlets, and dual 100G direct-attach ring interconnect bars for stacked switch chassis.
+- **Dual 0U Vertical PDU Strips & Physical Power Tracking**:
+  - **Left 0U Channel (Feed A - Utility)** & **Right 0U Channel (Feed B - UPS / Generator)**: Live amperage, wattage, NEC 80% continuous continuous load derating bars (16A limit on 20A branch circuits), and 24-receptacle visualizers.
+  - Interactive click-to-cycle power inlet buttons (`PSU 1` and `PSU 2`) allowing instant power circuit assignment (`PDU-A` ⇄ `PDU-B` ⇄ `Unplugged`) directly from the rear elevation.
+- **Circuit Load Balancing & A+B Redundancy Diagnostics**:
+  - Dedicated `#hostPduContainer` sidebar card with live electrical load gauges for Feed A & B, outlet utilization counts, and code compliance ratings.
+  - Real-time Single Point of Failure (SPOF) audit diagnostic with advisory warnings when dual-PSU devices share the same power feed.
+  - 1-Click `Auto-Balance Power Feeds` feature that splits redundant power feeds across Feed A and Feed B while alternating single-corded devices for optimal circuit distribution.
+
+---
+
 ## [0.10.16-alpha] - 2026-09-25
 
 ### Changed & Enhanced

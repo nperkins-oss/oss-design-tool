@@ -12,7 +12,26 @@
 let activeRackId = "MDF • Rack-1";
 let activeRackHeight = 24;
 let activeHostTab = "telemetry"; // "telemetry" | "endpoints"
+let rackViewOrientation = "front"; // "front" | "rear"
 let draggedRackItemInstanceId = null;
+
+function switchRackOrientation(orientation) {
+  rackViewOrientation = (orientation === "rear") ? "rear" : "front";
+  const frontBtn = document.getElementById("rackViewBtn-front");
+  const rearBtn = document.getElementById("rackViewBtn-rear");
+  if (frontBtn && rearBtn) {
+    if (rackViewOrientation === "front") {
+      frontBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
+      rearBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
+    } else {
+      frontBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
+      rearBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
+    }
+  }
+  renderRackVisualizer();
+  if (window.lucide) lucide.createIcons();
+}
+window.switchRackOrientation = switchRackOrientation;
 
 function isRackModalVisible() {
   const modal = document.getElementById("facilityModal");
@@ -126,6 +145,249 @@ function checkDeviceHostCompatibility(item, hostType) {
   }
 
   return { compatible: true, matchBadge: "Universal", advisory: "" };
+}
+
+// -----------------------------------------------------------
+// Power Supply Units (PSU), Power Feeds & PDU Sizing Models
+// -----------------------------------------------------------
+function getPsuBtnClass(feed) {
+  if (feed === "PDU-A") return "bg-emerald-950/80 border-emerald-500/70 text-emerald-300 hover:border-emerald-400";
+  if (feed === "PDU-B") return "bg-sky-950/80 border-sky-500/70 text-sky-300 hover:border-sky-400";
+  return "bg-slate-900 border-slate-700 text-slate-500 hover:text-slate-300";
+}
+
+function getDevicePsuSpecs(item) {
+  if (!item) return { psuCount: 1, isDualModular: false, inletType: "C14", cordType: "C13-to-C14", stackUnits: 1 };
+  const role = item.role || "";
+  const model = (item.model || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+
+  let psuCount = 1;
+  let isDualModular = false;
+
+  if (stackUnits > 1) {
+    psuCount = stackUnits;
+    isDualModular = true;
+  } else if (
+    role === "Core" || 
+    role === "Aggregation" || 
+    role === "Server" || 
+    role.includes("Storage") ||
+    cat.includes("server") ||
+    cat.includes("san") ||
+    model.includes("catalyst") ||
+    model.includes("nexus") ||
+    model.includes("aruba-cx") ||
+    model.includes("ex4") ||
+    model.includes("x530") ||
+    model.includes("redundant") ||
+    model.includes("dual") ||
+    (role === "Firewall" && !model.includes("40f") && !model.includes("60f"))
+  ) {
+    psuCount = 2;
+    isDualModular = true;
+  }
+
+  const baseW = parseFloat(item.baseWatts) || 0;
+  const inletType = (baseW > 1200) ? "C20 (16A/20A)" : "C14 (10A/15A)";
+  const cordType = inletType.startsWith("C20") ? "C19-to-C20" : "C13-to-C14";
+
+  return {
+    psuCount,
+    isDualModular,
+    inletType,
+    cordType,
+    stackUnits
+  };
+}
+
+function getDevicePowerConnections(item) {
+  if (!item) return { psu1: "PDU-A" };
+  const specs = getDevicePsuSpecs(item);
+  if (!item.powerConnections || typeof item.powerConnections !== "object") {
+    item.powerConnections = {};
+  }
+  if (!item.powerConnections.psu1) {
+    item.powerConnections.psu1 = "PDU-A";
+  }
+  if (specs.psuCount >= 2 && !item.powerConnections.psu2) {
+    item.powerConnections.psu2 = "PDU-B";
+  }
+  return item.powerConnections;
+}
+
+function toggleDevicePsuFeed(instanceId, psuNum) {
+  if (typeof projectBOM === "undefined") return;
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+
+  const conns = getDevicePowerConnections(item);
+  const key = `psu${psuNum}`;
+  const current = conns[key] || (psuNum === 1 ? "PDU-A" : "PDU-B");
+
+  // Cycle: PDU-A -> PDU-B -> None -> PDU-A
+  let next = "PDU-A";
+  if (current === "PDU-A") next = "PDU-B";
+  else if (current === "PDU-B") next = "None";
+  else next = "PDU-A";
+
+  item.powerConnections[key] = next;
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+}
+window.toggleDevicePsuFeed = toggleDevicePsuFeed;
+
+function autoBalanceRackPowerFeeds() {
+  if (typeof projectBOM === "undefined") return;
+  const assigned = projectBOM.filter(i => (FacilityStore.normalize(i.closetName || i.rackId) === activeRackId) && i.rackSlot);
+  let singleCounter = 0;
+
+  assigned.forEach(item => {
+    const specs = getDevicePsuSpecs(item);
+    if (!item.powerConnections) item.powerConnections = {};
+    if (specs.psuCount >= 2) {
+      item.powerConnections.psu1 = "PDU-A";
+      item.powerConnections.psu2 = "PDU-B";
+    } else {
+      singleCounter++;
+      item.powerConnections.psu1 = (singleCounter % 2 === 1) ? "PDU-A" : "PDU-B";
+      delete item.powerConnections.psu2;
+    }
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Balanced power feeds across ${assigned.length} mounted units.`);
+  }
+}
+window.autoBalanceRackPowerFeeds = autoBalanceRackPowerFeeds;
+
+function calculateRackPduMetrics(assignedItems, activeEnc) {
+  const voltage = 120;
+  const circuitBreakerAmps = 20;
+  const maxSafeAmps = 16.0; // 80% continuous NEC
+  const maxSafeWatts = 1920;
+
+  let pduALoadWatts = 0;
+  let pduBLoadWatts = 0;
+  let pduAOutletCount = 0;
+  let pduBOutletCount = 0;
+  let redundantDeviceCount = 0;
+  let singlePointFailureCount = 0;
+  let singleCordedCount = 0;
+
+  assignedItems.forEach(item => {
+    if (!item.rackSlot) return;
+    const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+    const baseW = (parseFloat(item.baseWatts) || 0) * stackUnits;
+    const poeW = (parseFloat(item.poeBudget) || 0) * stackUnits;
+    const itemOperatingWatts = Math.round(baseW + (poeW * 0.5));
+
+    const specs = getDevicePsuSpecs(item);
+    const psuConn = getDevicePowerConnections(item);
+
+    if (specs.psuCount >= 2) {
+      const p1 = psuConn.psu1;
+      const p2 = psuConn.psu2;
+
+      if ((p1 === "PDU-A" && p2 === "PDU-B") || (p1 === "PDU-B" && p2 === "PDU-A")) {
+        pduALoadWatts += (itemOperatingWatts * 0.5);
+        pduBLoadWatts += (itemOperatingWatts * 0.5);
+        pduAOutletCount++;
+        pduBOutletCount++;
+        redundantDeviceCount++;
+      } else if (p1 === p2 && (p1 === "PDU-A" || p1 === "PDU-B")) {
+        if (p1 === "PDU-A") {
+          pduALoadWatts += itemOperatingWatts;
+          pduAOutletCount += 2;
+        } else {
+          pduBLoadWatts += itemOperatingWatts;
+          pduBOutletCount += 2;
+        }
+        singlePointFailureCount++;
+      } else {
+        if (p1 === "PDU-A" || p2 === "PDU-A") {
+          pduALoadWatts += itemOperatingWatts;
+          pduAOutletCount++;
+        } else if (p1 === "PDU-B" || p2 === "PDU-B") {
+          pduBLoadWatts += itemOperatingWatts;
+          pduBOutletCount++;
+        }
+        singleCordedCount++;
+      }
+    } else {
+      singleCordedCount++;
+      if (psuConn.psu1 === "PDU-A") {
+        pduALoadWatts += itemOperatingWatts;
+        pduAOutletCount++;
+      } else if (psuConn.psu1 === "PDU-B") {
+        pduBLoadWatts += itemOperatingWatts;
+        pduBOutletCount++;
+      }
+    }
+  });
+
+  const pduAAmps = parseFloat((pduALoadWatts / voltage).toFixed(1));
+  const pduBAmps = parseFloat((pduBLoadWatts / voltage).toFixed(1));
+  const pduAPct = Math.min(100, Math.round((pduAAmps / maxSafeAmps) * 100));
+  const pduBPct = Math.min(100, Math.round((pduBAmps / maxSafeAmps) * 100));
+
+  return {
+    voltage,
+    circuitBreakerAmps,
+    maxSafeAmps,
+    maxSafeWatts,
+    pduA: {
+      watts: Math.round(pduALoadWatts),
+      amps: pduAAmps,
+      pct: pduAPct,
+      outletsUsed: pduAOutletCount,
+      totalOutlets: 24,
+      isOverloaded: pduAAmps > maxSafeAmps
+    },
+    pduB: {
+      watts: Math.round(pduBLoadWatts),
+      amps: pduBAmps,
+      pct: pduBPct,
+      outletsUsed: pduBOutletCount,
+      totalOutlets: 24,
+      isOverloaded: pduBAmps > maxSafeAmps
+    },
+    redundancy: {
+      redundantDeviceCount,
+      singlePointFailureCount,
+      singleCordedCount
+    }
+  };
+}
+
+function getDeviceFrontPortPreview(item) {
+  const model = (item.model || "").toLowerCase();
+  const role = item.role || "";
+  const portCount = getItemPortCount(item);
+
+  if (role === "Access" || role === "Core" || role === "Aggregation" || role.includes("Switch")) {
+    if (portCount >= 48) return "48x 1G/PoE+ &bull; 4x 10G/25G SFP+";
+    if (portCount >= 24) return "24x 1G/PoE+ &bull; 4x 10G SFP+";
+    if (portCount >= 16) return "16x 1G/PoE+ &bull; 2x 10G SFP+";
+    if (portCount >= 8) return "8x 1G/PoE+ &bull; 2x SFP";
+    return `${portCount || 24}x Ethernet Ports`;
+  }
+  if (role === "Server" || item.category?.includes("server")) {
+    return "8x 2.5\" Hot-Swap SAS/NVMe &bull; Dual 10G NIC";
+  }
+  if (role === "Firewall") {
+    return "2x 10G WAN &bull; 1x DMZ &bull; 8x 1G LAN &bull; Mgmt Console";
+  }
+  if (role === "UPS" || item.category?.includes("ups")) {
+    return "Smart-UPS LCD Diagnostics &bull; SmartSlot Card &bull; EPO";
+  }
+  if (role === "Structured Cabling" || item.category?.includes("patch")) {
+    return "24-Port High-Density Keystone RJ45 Panel";
+  }
+  return null;
 }
 
 // -----------------------------------------------------------
@@ -750,10 +1012,28 @@ function renderRackVisualizer() {
   const titleEl = document.getElementById("elevationFrameTitle");
   const hostTypeDef = FacilityStore.HOST_TYPES[hostType] || FacilityStore.HOST_TYPES.equipment_rack;
 
+  const orientControl = document.getElementById("rackOrientationControl");
+  if (orientControl) {
+    orientControl.style.display = (hostType === "equipment_rack") ? "flex" : "none";
+  }
+
+  const frontBtn = document.getElementById("rackViewBtn-front");
+  const rearBtn = document.getElementById("rackViewBtn-rear");
+  if (frontBtn && rearBtn) {
+    if (rackViewOrientation === "front") {
+      frontBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
+      rearBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
+    } else {
+      frontBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
+      rearBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
+    }
+  }
+
   if (titleEl) {
+    const orientLabel = (hostType === "equipment_rack" && rackViewOrientation === "rear") ? "Rear View & 0U PDUs" : "Front Elevation";
     titleEl.innerHTML = `
       <i data-lucide="${hostTypeDef.icon || 'server'}" class="w-3.5 h-3.5 text-indigo-400"></i>
-      <span>${escapeHTML(activeRackId)} &bull; ${hostTypeDef.label}</span>
+      <span>${escapeHTML(activeRackId)} &bull; ${hostTypeDef.label} &bull; <span class="text-indigo-400 font-mono">${orientLabel}</span></span>
     `;
   }
 
@@ -781,7 +1061,7 @@ function renderRackVisualizer() {
 }
 
 // -----------------------------------------------------------
-// 1. Host Renderer: 19" EIA Equipment Rack
+// 1. Host Renderer: 19" EIA Equipment Rack (Front & Rear Views with 0U PDUs)
 // -----------------------------------------------------------
 function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed, activeEnc) {
   const slots = {};
@@ -808,9 +1088,21 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
     }
   });
 
+  if (rackViewOrientation === "rear") {
+    renderEquipmentRackRearFrame(frame, assignedItems, slots, activeRackHeight, activeEnc);
+  } else {
+    renderEquipmentRackFrontFrame(frame, assignedItems, slots, activeRackHeight);
+  }
+
+  const badgeEl = document.getElementById("rackUtilizationBadge");
+  const occupiedU = Object.values(slots).filter(s => s && s.isBase).reduce((acc, s) => acc + s.span, 0);
+  if (badgeEl) badgeEl.innerText = `${occupiedU} / ${activeRackHeight} U Used`;
+}
+
+function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
   let railHTML = "";
 
-  for (let u = activeRackHeight; u >= 1; u--) {
+  for (let u = maxU; u >= 1; u--) {
     const slotData = slots[u];
 
     if (slotData) {
@@ -821,6 +1113,7 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
         const totalBaseWatts = (it.baseWatts || 0) * stackUnits;
         const totalPoEWatts = (it.poeBudget || 0) * stackUnits;
         const uLabel = slotData.span > 1 ? `U${u + slotData.span - 1}-U${u}` : `U${u}`;
+        const portPreview = getDeviceFrontPortPreview(it);
 
         railHTML += `
           <div 
@@ -829,16 +1122,30 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
             ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
             ondragover="handleRackSlotDragOver(event)"
             ondrop="handleRackSlotDrop(event, ${u})"
-            style="min-height: ${Math.max(42, slotData.span * 44)}px;"
+            style="min-height: ${Math.max(44, slotData.span * 46)}px;"
           >
             <div class="flex items-center justify-between w-full">
               <div class="flex items-center gap-3 min-w-0">
                 <span class="text-[11px] font-mono font-bold text-indigo-400 w-14 shrink-0">${uLabel}</span>
                 <div class="min-w-0">
-                  <span class="text-xs font-bold text-white block truncate">${escapeHTML(it.model)}</span>
-                  <span class="text-[10px] text-slate-400 font-mono block truncate">
-                    ${escapeHTML(it.vendor || 'Generic')} &bull; ${slotData.span}U &bull; ${totalBaseWatts}W Base ${totalPoEWatts > 0 ? `&bull; ${totalPoEWatts}W PoE (${stackUnits}x PSUs)` : ''}
-                  </span>
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-white truncate">${escapeHTML(it.model)}</span>
+                    <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">FRONT</span>
+                    <!-- Status LEDs -->
+                    <div class="flex items-center gap-1 text-[8px] font-mono">
+                      <span class="px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold" title="Power Supply Good">PWR ●</span>
+                      <span class="px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold" title="System Normal">SYS ●</span>
+                      ${totalPoEWatts > 0 ? `<span class="px-1 py-0.2 rounded bg-sky-950 text-sky-400 border border-sky-800/60 font-bold" title="PoE Active">POE ●</span>` : ''}
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                    <span>${escapeHTML(it.vendor || 'Generic')}</span>
+                    <span>&bull;</span>
+                    <span>${slotData.span}U</span>
+                    <span>&bull;</span>
+                    ${portPreview ? `<span class="text-indigo-300 font-semibold">${portPreview}</span><span>&bull;</span>` : ''}
+                    <span>${totalBaseWatts}W Base${totalPoEWatts > 0 ? ` + ${totalPoEWatts}W PoE` : ''}</span>
+                  </div>
                 </div>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
@@ -854,7 +1161,7 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
                 </button>
                 ${stackUnits >= 2 ? `
                   <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-indigo-950/80 text-indigo-300 border border-indigo-700/60 flex items-center gap-1" title="${stackUnits}-Switch Virtual Stack (${slotData.span}U total)">
-                    <i data-lucide="layers" class="w-3 h-3"></i> ${stackUnits}x Stack (${slotData.span}U)
+                    <i data-lucide="layers" class="w-3 h-3"></i> ${stackUnits}x Stack
                   </span>
                 ` : ''}
                 ${!compat.compatible ? `
@@ -872,11 +1179,11 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
               <div class="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap text-[9px] font-mono text-slate-400">
                 ${Array.from({ length: stackUnits }, (_, idx) => `
                   <span class="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800 ${idx === 0 ? 'text-sky-300 font-bold border-sky-500/40' : 'text-slate-300'}">
-                    Unit ${idx + 1} (${idx === 0 ? 'Master Chassis' : 'Member Chassis'} &bull; ${parseInt(it.rackUnits || 1, 10)}U) ⚡ Feed ${idx + 1}
+                    Unit ${idx + 1} (${idx === 0 ? 'Master Chassis' : 'Member Chassis'} &bull; ${parseInt(it.rackUnits || 1, 10)}U)
                   </span>
                 `).join('')}
                 <span class="text-indigo-400 font-semibold flex items-center gap-1">
-                  <i data-lucide="link" class="w-2.5 h-2.5"></i> ${stackUnits === 2 ? '1x 100G DAC Stack Link' : `${stackUnits}x Ring DAC Links`}
+                  <i data-lucide="link" class="w-2.5 h-2.5"></i> ${stackUnits === 2 ? '1x 100G Stack Link' : `${stackUnits}x Ring Stack Links`}
                 </span>
               </div>
             ` : ''}
@@ -891,17 +1198,193 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
           ondrop="handleRackSlotDrop(event, ${u})"
         >
           <span class="text-[10px] font-mono text-slate-600 font-bold">U${u}</span>
-          <span class="text-[9px] font-mono text-slate-700 uppercase tracking-wider">Empty Slot</span>
+          <span class="text-[9px] font-mono text-slate-700 uppercase tracking-wider">Empty Front Slot</span>
         </div>
       `;
     }
   }
 
-  frame.innerHTML = railHTML;
+  frame.innerHTML = `<div class="space-y-1 w-full">${railHTML}</div>`;
+}
 
-  const badgeEl = document.getElementById("rackUtilizationBadge");
-  const occupiedU = Object.values(slots).filter(s => s && s.isBase).reduce((acc, s) => acc + s.span, 0);
-  if (badgeEl) badgeEl.innerText = `${occupiedU} / ${activeRackHeight} U Used`;
+function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeEnc) {
+  const pduMetrics = calculateRackPduMetrics(assignedItems, activeEnc);
+  let rearRailHTML = "";
+
+  for (let u = maxU; u >= 1; u--) {
+    const slotData = slots[u];
+
+    if (slotData) {
+      if (slotData.isBase) {
+        const it = slotData.item;
+        const stackUnits = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
+        const uLabel = slotData.span > 1 ? `U${u + slotData.span - 1}-U${u}` : `U${u}`;
+        const psuSpecs = getDevicePsuSpecs(it);
+        const psuConns = getDevicePowerConnections(it);
+
+        const isDualPsu = psuSpecs.psuCount >= 2;
+        const isDualRedundant = isDualPsu && ((psuConns.psu1 === "PDU-A" && psuConns.psu2 === "PDU-B") || (psuConns.psu1 === "PDU-B" && psuConns.psu2 === "PDU-A"));
+        const isSpof = isDualPsu && (psuConns.psu1 === psuConns.psu2) && (psuConns.psu1 === "PDU-A" || psuConns.psu1 === "PDU-B");
+
+        rearRailHTML += `
+          <div 
+            class="group relative bg-slate-900 border border-slate-700/80 hover:border-slate-500 rounded-lg px-3 py-2 flex flex-col justify-between cursor-move shadow-md transition-all select-none"
+            draggable="true"
+            ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+            ondragover="handleRackSlotDragOver(event)"
+            ondrop="handleRackSlotDrop(event, ${u})"
+            style="min-height: ${Math.max(48, slotData.span * 48)}px;"
+          >
+            <div class="flex items-center justify-between w-full gap-2">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="text-[11px] font-mono font-bold text-slate-400 w-12 shrink-0">${uLabel}</span>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="text-xs font-bold text-white truncate">${escapeHTML(it.model)}</span>
+                    <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">REAR</span>
+                    <!-- Redundancy Badge -->
+                    ${isDualPsu ? (
+                      isDualRedundant 
+                        ? `<span class="text-[9px] font-mono font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-700/60 px-1.5 py-0.2 rounded flex items-center gap-1"><i data-lucide="shield-check" class="w-2.5 h-2.5"></i> Dual-Feed A+B</span>`
+                        : (isSpof 
+                          ? `<span class="text-[9px] font-mono font-bold text-rose-300 bg-rose-950/80 border border-rose-700/60 px-1.5 py-0.2 rounded flex items-center gap-1" title="Both power supplies on same PDU! Single point of failure."><i data-lucide="alert-triangle" class="w-2.5 h-2.5"></i> SPOF</span>`
+                          : `<span class="text-[9px] font-mono text-amber-300 bg-amber-950/80 border border-amber-700/60 px-1.5 py-0.2 rounded flex items-center gap-1"><i data-lucide="alert-circle" class="w-2.5 h-2.5"></i> 1 Feed</span>`)
+                    ) : `
+                      <span class="text-[9px] font-mono text-slate-400 bg-slate-950 border border-slate-800 px-1.5 py-0.2 rounded">Single Cord</span>
+                    `}
+                  </div>
+                  <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                    <span>Inlet: ${psuSpecs.inletType}</span>
+                    <span>&bull;</span>
+                    <span class="text-cyan-400 flex items-center gap-0.5" title="Front-to-Back cooling exhaust"><i data-lucide="wind" class="w-3 h-3"></i> Exhaust</span>
+                    <span>&bull;</span>
+                    <span class="text-amber-400/90 flex items-center gap-0.5" title="Chassis Grounding Lug (TIA-607-C)">⏚ GND Lug</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Power Supply Cord Connectors -->
+              <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                <!-- PSU 1 Inlet Button -->
+                <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
+                  <i data-lucide="zap" class="w-3 h-3"></i> PSU 1: ${psuConns.psu1 || 'None'}
+                </button>
+
+                <!-- PSU 2 Inlet Button (for dual modular PSUs) -->
+                ${isDualPsu ? `
+                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 2)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu2)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
+                    <i data-lucide="zap" class="w-3 h-3"></i> PSU 2: ${psuConns.psu2 || 'None'}
+                  </button>
+                ` : ''}
+
+                <!-- Unmount Button -->
+                <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity ml-0.5" title="Unmount to Staging">
+                  <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+            </div>
+
+            ${stackUnits >= 2 ? `
+              <!-- Rear Stack Member Interconnect Bar -->
+              <div class="mt-1.5 pt-1.5 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
+                <span class="text-indigo-400 font-semibold flex items-center gap-1">
+                  <i data-lucide="link" class="w-2.5 h-2.5"></i> Dual 100G Direct-Attach Ring Cables
+                </span>
+                <span class="text-slate-500">${stackUnits}x Chassis Connected</span>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }
+    } else {
+      rearRailHTML += `
+        <div 
+          class="h-8 border border-dashed border-slate-800/80 hover:border-indigo-500/50 hover:bg-indigo-950/10 rounded-lg px-3 flex items-center justify-between transition-colors select-none"
+          ondragover="handleRackSlotDragOver(event)"
+          ondrop="handleRackSlotDrop(event, ${u})"
+        >
+          <span class="text-[10px] font-mono text-slate-600 font-bold">U${u}</span>
+          <span class="text-[9px] font-mono text-slate-700 uppercase tracking-wider">Empty Rear Slot</span>
+        </div>
+      `;
+    }
+  }
+
+  // 3-Column Layout: Left PDU-A Strip | Center Rear Equipment Rails | Right PDU-B Strip
+  frame.innerHTML = `
+    <div class="flex gap-2 sm:gap-3 w-full items-stretch">
+      <!-- PDU-A Left Vertical 0U Channel -->
+      <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md">
+        <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
+          <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-400">
+            <i data-lucide="zap" class="w-3 h-3"></i> PDU-A
+          </div>
+          <span class="text-[9px] text-slate-400 uppercase font-mono block">Feed A (Util)</span>
+          <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduA.amps}A / 16A</span>
+          <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}%)</span>
+          <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
+            <div class="${pduMetrics.pduA.pct > 80 ? 'bg-rose-500' : 'bg-emerald-500'} h-1 rounded-full" style="width: ${pduMetrics.pduA.pct}%"></div>
+          </div>
+        </div>
+
+        <!-- Vertical 24-Receptacle Visualizer -->
+        <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
+          ${Array.from({ length: 12 }, (_, oIdx) => {
+            const isOccupied = (oIdx * 2) < pduMetrics.pduA.outletsUsed;
+            return `
+              <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-emerald-500/50 bg-emerald-950/30' : ''}">
+                <span class="text-slate-500">${oIdx + 1}</span>
+                <span class="${isOccupied ? 'text-emerald-400 font-bold' : 'text-slate-700'}">●</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 text-center">
+          <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduA.outletsUsed}/24 Outlets</span>
+          <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
+        </div>
+      </div>
+
+      <!-- Center Rear 19" Equipment Rail -->
+      <div class="flex-1 min-w-0 space-y-1">
+        ${rearRailHTML}
+      </div>
+
+      <!-- PDU-B Right Vertical 0U Channel -->
+      <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md">
+        <div class="space-y-1 border-b border-slate-800 pb-2 text-center">
+          <div class="flex items-center justify-center gap-1 text-[11px] font-bold text-sky-400">
+            <i data-lucide="zap" class="w-3 h-3"></i> PDU-B
+          </div>
+          <span class="text-[9px] text-slate-400 uppercase font-mono block">Feed B (UPS)</span>
+          <span class="text-[10px] font-mono font-bold text-white block">${pduMetrics.pduB.amps}A / 16A</span>
+          <span class="text-[9px] font-mono text-slate-500 block">${pduMetrics.pduB.watts}W (${pduMetrics.pduB.pct}%)</span>
+          <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
+            <div class="${pduMetrics.pduB.pct > 80 ? 'bg-rose-500' : 'bg-sky-500'} h-1 rounded-full" style="width: ${pduMetrics.pduB.pct}%"></div>
+          </div>
+        </div>
+
+        <!-- Vertical 24-Receptacle Visualizer -->
+        <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
+          ${Array.from({ length: 12 }, (_, oIdx) => {
+            const isOccupied = (oIdx * 2) < pduMetrics.pduB.outletsUsed;
+            return `
+              <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? 'border-sky-500/50 bg-sky-950/30' : ''}">
+                <span class="text-slate-500">${oIdx + 1}</span>
+                <span class="${isOccupied ? 'text-sky-400 font-bold' : 'text-slate-700'}">●</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="pt-2 border-t border-slate-800 text-center">
+          <span class="text-[8px] font-mono text-slate-400 block">${pduMetrics.pduB.outletsUsed}/24 Outlets</span>
+          <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R</span>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // -----------------------------------------------------------
@@ -2229,6 +2712,110 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
           `).join('')}
         </div>
       `;
+    }
+  }
+
+  // Dual 0U PDU & Redundancy Card (equipment_rack only)
+  const pduContainer = document.getElementById("hostPduContainer");
+  if (pduContainer) {
+    if (hostType === "equipment_rack" || (!hostType && !parsed.hostType)) {
+      pduContainer.classList.remove("hidden");
+      const pduMetrics = calculateRackPduMetrics(assignedItems, activeEnc);
+      const spofCount = pduMetrics.redundancy.singlePointFailureCount;
+      const redundantCount = pduMetrics.redundancy.redundantDeviceCount;
+      const singleCount = pduMetrics.redundancy.singleCordedCount;
+
+      const pduAColor = pduMetrics.pduA.pct > 80 ? "text-rose-400" : (pduMetrics.pduA.pct > 70 ? "text-amber-400" : "text-emerald-400");
+      const pduABarColor = pduMetrics.pduA.pct > 80 ? "bg-rose-500" : (pduMetrics.pduA.pct > 70 ? "bg-amber-500" : "bg-emerald-500");
+      const pduBColor = pduMetrics.pduB.pct > 80 ? "text-rose-400" : (pduMetrics.pduB.pct > 70 ? "text-amber-400" : "text-sky-400");
+      const pduBBarColor = pduMetrics.pduB.pct > 80 ? "bg-rose-500" : (pduMetrics.pduB.pct > 70 ? "bg-amber-500" : "bg-sky-500");
+
+      pduContainer.innerHTML = `
+        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+          <span class="flex items-center gap-1.5 text-indigo-400">
+            <i data-lucide="zap" class="w-4 h-4"></i> Dual 0U PDUs &amp; Power Feeds
+          </span>
+          <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
+        </h3>
+
+        <!-- PDU Load Meters -->
+        <div class="space-y-3 pt-1">
+          <!-- Feed A (Utility) -->
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Feed A (Primary Utility)
+              </span>
+              <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+              <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] font-mono text-slate-400">
+              <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+              <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+            </div>
+          </div>
+
+          <!-- Feed B (UPS / Generator) -->
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="font-bold text-sky-400 flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-sky-400"></span> Feed B (Secondary / UPS)
+              </span>
+              <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
+            </div>
+            <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+              <div class="${pduBBarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduB.pct}%"></div>
+            </div>
+            <div class="flex justify-between text-[10px] font-mono text-slate-400">
+              <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}% continuous)</span>
+              <span>${pduMetrics.pduB.outletsUsed} / 24 Receptacles</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- A+B Redundancy Diagnostic Breakdown -->
+        <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400 text-[11px]">A+B Dual-Feed Redundant:</span>
+            <span class="font-mono font-bold text-emerald-400 text-[11px]">${redundantCount} Unit${redundantCount === 1 ? '' : 's'}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400 text-[11px]">Single Point of Failure (SPOF):</span>
+            <span class="font-mono font-bold ${spofCount > 0 ? 'text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80' : 'text-slate-500'} text-[11px]">
+              ${spofCount > 0 ? `⚠️ ${spofCount} Unit${spofCount === 1 ? '' : 's'}` : '0 None'}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span class="text-slate-400 text-[11px]">Single-Corded Devices:</span>
+            <span class="font-mono text-slate-400 text-[11px]">${singleCount} Unit${singleCount === 1 ? '' : 's'}</span>
+          </div>
+
+          ${spofCount > 0 ? `
+            <div class="text-[10px] text-amber-400/90 bg-amber-950/30 p-2 rounded-lg border border-amber-800/50 mt-1">
+              <strong>SPOF Warning:</strong> ${spofCount} dual-PSU device(s) have both cords plugged into the same PDU feed. Use Auto-Balance to split across Feed A &amp; B.
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Auto-Balance Action & Orientation Link -->
+        <div class="pt-2 border-t border-slate-800 space-y-1.5">
+          <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
+            <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance Power Feeds
+          </button>
+          <div class="text-center pt-0.5">
+            <button onclick="switchRackOrientation('${rackViewOrientation === 'rear' ? 'front' : 'rear'}')" class="text-[10px] text-slate-400 hover:text-indigo-300 font-mono transition-colors">
+              ${rackViewOrientation === 'rear' ? 'Switch to Front Faceplates &rarr;' : 'Inspect Rear Cords &amp; PDUs &rarr;'}
+            </button>
+          </div>
+        </div>
+      `;
+    } else {
+      pduContainer.classList.add("hidden");
+      pduContainer.innerHTML = "";
     }
   }
 
