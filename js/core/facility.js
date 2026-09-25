@@ -908,10 +908,14 @@ const FacilityStore = {
       if (typeof updateBOMView === "function") updateBOMView();
       if (typeof runActiveFilter === "function") runActiveFilter();
 
-      // 1. Live update Rack Visualizer if open
-      const rackModal = document.getElementById("rackModal");
-      if (rackModal && !rackModal.classList.contains("hidden")) {
-        if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+      // 1. Live update Facility Modal (Visualizer or Hierarchy)
+      const facModal = document.getElementById("facilityModal");
+      if (facModal && !facModal.classList.contains("hidden")) {
+        if (typeof facilityActiveView !== "undefined" && facilityActiveView === "visualizer") {
+          if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+        } else {
+          if (typeof renderFacilityManager === "function") renderFacilityManager();
+        }
       }
 
       // 2. Live update Topology if open
@@ -928,12 +932,6 @@ const FacilityStore = {
         if (typeof renderCableCanvas === "function") renderCableCanvas();
         if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
       }
-
-      // 4. Live update Facility Hierarchy Manager if open
-      const facModal = document.getElementById("facilityModal");
-      if (facModal && !facModal.classList.contains("hidden")) {
-        if (typeof renderFacilityManager === "function") renderFacilityManager();
-      }
     } catch (e) {
       console.error("Error in FacilityStore.notifyWorkspaceChange:", e);
     }
@@ -943,14 +941,146 @@ const FacilityStore = {
 // -----------------------------------------------------------
 // FACILITY HIERARCHY MANAGER MODAL CONTROLLER
 // -----------------------------------------------------------
-let activeFacilityFloorId = "floor-1";
+let activeFacilityFloorId = "floor-main";
 let activeFacilitySpaceId = "space-mdf";
 let facilityActiveForm = null; // null | "add_floor" | "add_space" | "add_host"
 let facilityNewHostType = "equipment_rack";
+let facilityActiveView = "hierarchy"; // "hierarchy" | "visualizer"
+let previousFacilityFloorId = null;
+let previousFacilitySpaceId = null;
 
 function isFacilityModalVisible() {
   const modal = document.getElementById("facilityModal");
   return modal && !modal.classList.contains("hidden");
+}
+
+function syncVisualizerBreadcrumbs() {
+  const currentHost = (typeof activeRackId !== "undefined") ? activeRackId : "MDF • Rack-1";
+  const parsed = FacilityStore.parse(currentHost);
+  const floors = FacilityStore.getFloors();
+  const spaces = FacilityStore.getSpaces();
+
+  let floorObj = null;
+  let spaceObj = null;
+
+  if (parsed.spaceId) {
+    spaceObj = spaces.find(s => s.id === parsed.spaceId);
+  }
+  if (!spaceObj && parsed.space) {
+    spaceObj = spaces.find(s => s.name.toLowerCase() === parsed.space.toLowerCase());
+  }
+
+  if (spaceObj) {
+    floorObj = floors.find(f => f.id === spaceObj.floorId);
+  }
+  if (!floorObj && parsed.floorId) {
+    floorObj = floors.find(f => f.id === parsed.floorId);
+  }
+  if (!floorObj && floors.length > 0) {
+    floorObj = floors[0];
+  }
+
+  const floorEl = document.getElementById("facilityBreadcrumbFloor");
+  const spaceEl = document.getElementById("facilityBreadcrumbSpace");
+  const hostEl = document.getElementById("facilityBreadcrumbHost");
+  const badgeEl = document.getElementById("hostTypeBadge");
+  const subtitleEl = document.getElementById("hostModalSubtitle");
+
+  const floorName = floorObj ? floorObj.name : "Facility";
+  const spaceName = spaceObj ? spaceObj.name : (parsed.space || "Telecom Space");
+  const hostName = parsed.hostName || "Enclosure";
+
+  if (floorEl) floorEl.textContent = floorName;
+  if (spaceEl) spaceEl.textContent = spaceName;
+  if (hostEl) hostEl.textContent = hostName;
+
+  const hostTypeDef = FacilityStore.HOST_TYPES[parsed.hostType] || FacilityStore.HOST_TYPES.equipment_rack;
+  if (badgeEl) {
+    badgeEl.textContent = hostTypeDef.label;
+    if (typeof getHostBadgeStyles === "function") {
+      badgeEl.className = `text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${getHostBadgeStyles(parsed.hostType)} ml-1`;
+    }
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = `${hostTypeDef.label} • ${spaceName} • Level ${floorObj?.levelIndex || 1} (${floorName})`;
+  }
+}
+
+function switchFacilityView(viewName, targetLocName) {
+  facilityActiveView = viewName === "visualizer" ? "visualizer" : "hierarchy";
+  const hierarchyView = document.getElementById("facilityHierarchyView");
+  const visualizerView = document.getElementById("facilityVisualizerView");
+  const titleHierarchy = document.getElementById("facilityTitleHierarchy");
+  const titleVisualizer = document.getElementById("facilityTitleVisualizer");
+  const tabBtnHierarchy = document.getElementById("facilityTabBtnHierarchy");
+  const tabBtnVisualizer = document.getElementById("facilityTabBtnVisualizer");
+  const visualizerControls = document.getElementById("facilityVisualizerControls");
+
+  if (facilityActiveView === "visualizer") {
+    // Record current position for smooth back button navigation
+    if (activeFacilityFloorId) previousFacilityFloorId = activeFacilityFloorId;
+    if (activeFacilitySpaceId) previousFacilitySpaceId = activeFacilitySpaceId;
+
+    if (hierarchyView) hierarchyView.classList.add("hidden");
+    if (visualizerView) visualizerView.classList.remove("hidden");
+    if (titleHierarchy) titleHierarchy.classList.add("hidden");
+    if (titleVisualizer) titleVisualizer.classList.remove("hidden");
+    if (visualizerControls) visualizerControls.classList.remove("hidden");
+
+    if (tabBtnHierarchy) {
+      tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
+    }
+    if (tabBtnVisualizer) {
+      tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-white bg-indigo-600 transition-all flex items-center gap-1.5 shadow";
+    }
+
+    if (targetLocName && typeof switchActiveRackElevation === "function") {
+      switchActiveRackElevation(targetLocName);
+    } else {
+      if (typeof syncRackSelectorOptions === "function") syncRackSelectorOptions();
+      if (typeof loadRackSettings === "function") loadRackSettings();
+      if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+    }
+    syncVisualizerBreadcrumbs();
+  } else {
+    // Return to hierarchy & spaces
+    if (hierarchyView) hierarchyView.classList.remove("hidden");
+    if (visualizerView) visualizerView.classList.add("hidden");
+    if (titleHierarchy) titleHierarchy.classList.remove("hidden");
+    if (titleVisualizer) titleVisualizer.classList.add("hidden");
+    if (visualizerControls) visualizerControls.classList.add("hidden");
+
+    if (tabBtnHierarchy) {
+      tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-white bg-sky-600 transition-all flex items-center gap-1.5 shadow";
+    }
+    if (tabBtnVisualizer) {
+      tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
+    }
+
+    // Restore previous floor and space if set
+    const floors = FacilityStore.getFloors();
+    if (previousFacilityFloorId && floors.some(f => f.id === previousFacilityFloorId)) {
+      activeFacilityFloorId = previousFacilityFloorId;
+    }
+    const spaces = FacilityStore.getSpaces();
+    if (previousFacilitySpaceId && spaces.some(s => s.id === previousFacilitySpaceId)) {
+      activeFacilitySpaceId = previousFacilitySpaceId;
+    }
+
+    renderFacilityManager();
+  }
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleFacilityModalCloseOrBack() {
+  if (facilityActiveView === "visualizer") {
+    // Navigate back to spaces view without closing the modal
+    switchFacilityView("hierarchy");
+  } else {
+    const modal = document.getElementById("facilityModal");
+    if (modal) modal.classList.add("hidden");
+  }
 }
 
 function toggleFacilityModal() {
@@ -962,14 +1092,13 @@ function toggleFacilityModal() {
     facilityActiveForm = null;
     const floors = FacilityStore.getFloors();
     if (!floors.some(f => f.id === activeFacilityFloorId)) {
-      activeFacilityFloorId = floors[0] ? floors[0].id : "floor-1";
+      activeFacilityFloorId = floors[0] ? floors[0].id : "floor-main";
     }
     const spaces = FacilityStore.getSpaces(activeFacilityFloorId);
     if (!spaces.some(s => s.id === activeFacilitySpaceId)) {
       activeFacilitySpaceId = spaces[0] ? spaces[0].id : (FacilityStore.getSpaces()[0] ? FacilityStore.getSpaces()[0].id : "space-mdf");
     }
-    renderFacilityManager();
-    if (window.lucide) lucide.createIcons();
+    switchFacilityView("hierarchy");
   } else {
     modal.classList.add("hidden");
     facilityActiveForm = null;
@@ -1852,26 +1981,16 @@ function deleteFacilityEnclosure(enclosureId) {
 }
 
 function openRackViewerFor(locationName) {
-  const facModal = document.getElementById("facilityModal");
-  if (facModal) {
-    facModal.classList.add("hidden");
-  }
+  previousFacilityFloorId = activeFacilityFloorId;
+  previousFacilitySpaceId = activeFacilitySpaceId;
   facilityActiveForm = null;
 
-  if (typeof switchActiveRackElevation === "function") {
-    switchActiveRackElevation(locationName);
+  const facModal = document.getElementById("facilityModal");
+  if (facModal && facModal.classList.contains("hidden")) {
+    facModal.classList.remove("hidden");
   }
-  const rackModal = document.getElementById("rackModal");
-  if (rackModal && rackModal.classList.contains("hidden")) {
-    if (typeof toggleRackModal === "function") {
-      toggleRackModal();
-    } else {
-      rackModal.classList.remove("hidden");
-    }
-  }
-  if (typeof renderRackVisualizer === "function") {
-    renderRackVisualizer();
-  }
+
+  switchFacilityView("visualizer", locationName);
 }
 
 // Window Compatibility Exports
@@ -1879,6 +1998,10 @@ if (typeof window !== "undefined") {
   window.MOUNTING_HOST_TYPES = MOUNTING_HOST_TYPES;
   window.EDGE_ENDPOINT_TYPES = EDGE_ENDPOINT_TYPES;
   window.FacilityStore = FacilityStore;
+  window.facilityActiveView = facilityActiveView;
+  window.switchFacilityView = switchFacilityView;
+  window.syncVisualizerBreadcrumbs = syncVisualizerBreadcrumbs;
+  window.handleFacilityModalCloseOrBack = handleFacilityModalCloseOrBack;
   window.toggleFacilityModal = toggleFacilityModal;
   window.toggleFacilityManager = toggleFacilityModal; // Alias for seamless navigation
   window.renderFacilityManager = renderFacilityManager;

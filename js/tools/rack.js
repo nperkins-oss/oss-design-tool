@@ -15,23 +15,33 @@ let activeHostTab = "telemetry"; // "telemetry" | "endpoints"
 let draggedRackItemInstanceId = null;
 
 function isRackModalVisible() {
-  const modal = document.getElementById("rackModal");
-  return modal && !modal.classList.contains("hidden");
+  const modal = document.getElementById("facilityModal");
+  return modal && !modal.classList.contains("hidden") && (typeof facilityActiveView === "undefined" || facilityActiveView === "visualizer");
 }
 
 function toggleRackModal() {
-  const modal = document.getElementById("rackModal");
+  const modal = document.getElementById("facilityModal");
   if (!modal) return;
 
   if (modal.classList.contains("hidden")) {
     modal.classList.remove("hidden");
-    syncRackSelectorOptions();
-    loadRackSettings();
-    renderRackVisualizer();
-    if (window.lucide) lucide.createIcons();
+    if (typeof switchFacilityView === "function") {
+      switchFacilityView("visualizer");
+    } else {
+      syncRackSelectorOptions();
+      loadRackSettings();
+      renderRackVisualizer();
+      if (window.lucide) lucide.createIcons();
+    }
   } else {
-    modal.classList.add("hidden");
-    draggedRackItemInstanceId = null;
+    if (typeof facilityActiveView !== "undefined" && facilityActiveView === "visualizer") {
+      modal.classList.add("hidden");
+      draggedRackItemInstanceId = null;
+    } else {
+      if (typeof switchFacilityView === "function") {
+        switchFacilityView("visualizer");
+      }
+    }
   }
 }
 
@@ -281,6 +291,9 @@ function switchActiveRackElevation(rackName) {
   activeRackId = FacilityStore.normalize(rackName);
   loadRackSettings();
   syncRackSelectorOptions();
+  if (typeof syncVisualizerBreadcrumbs === "function") {
+    syncVisualizerBreadcrumbs();
+  }
   renderRackVisualizer();
 }
 
@@ -486,6 +499,149 @@ function unmountRackItem(instanceId) {
 }
 
 // -----------------------------------------------------------
+// Cross-Location Hardware Transfer Bar & Mechanics
+// -----------------------------------------------------------
+function handleLocationTransferDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const el = e.currentTarget;
+  if (el) {
+    el.classList.add("ring-2", "ring-indigo-400", "scale-[1.02]", "bg-indigo-950/80");
+  }
+}
+
+function handleLocationTransferDragLeave(e) {
+  const el = e.currentTarget;
+  if (el) {
+    el.classList.remove("ring-2", "ring-indigo-400", "scale-[1.02]", "bg-indigo-950/80");
+  }
+}
+
+function handleLocationTransferDrop(e, targetLocationName) {
+  e.preventDefault();
+  const el = e.currentTarget;
+  if (el) {
+    el.classList.remove("ring-2", "ring-indigo-400", "scale-[1.02]", "bg-indigo-950/80");
+  }
+
+  const instanceId = draggedRackItemInstanceId || e.dataTransfer.getData("text/plain");
+  if (!instanceId || typeof projectBOM === "undefined") return;
+
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+
+  const prevLocation = item.closetName || item.rackId || "Unassigned";
+  const targetNorm = FacilityStore.normalize(targetLocationName);
+
+  if (targetNorm === FacilityStore.UNASSIGNED) {
+    item.closetName = FacilityStore.UNASSIGNED;
+    item.rackId = FacilityStore.UNASSIGNED;
+    item.rackSlot = null;
+  } else {
+    item.closetName = targetNorm;
+    item.rackId = targetNorm;
+    item.rackSlot = null;
+  }
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof showToast === "function") {
+    showToast(`Transferred ${item.model} to ${targetNorm}`);
+  }
+  draggedRackItemInstanceId = null;
+}
+
+function renderRackLocationTransferBar() {
+  const container = document.getElementById("rackLocationTransferBar");
+  if (!container) return;
+
+  const locations = FacilityStore.getLocations(false);
+  if (locations.length === 0) {
+    container.innerHTML = "";
+    return;
+  }
+
+  const counts = {};
+  let unassignedCount = 0;
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    projectBOM.forEach(item => {
+      if (item.parentInstanceId) return;
+      const rawLoc = item.closetName || item.rackId;
+      const norm = FacilityStore.normalize(rawLoc);
+      if (norm === FacilityStore.UNASSIGNED) {
+        unassignedCount++;
+      } else {
+        counts[norm] = (counts[norm] || 0) + 1;
+      }
+    });
+  }
+
+  let html = `
+    <div class="p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl shadow-inner">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+          <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>Mounting Locations (Drag hardware here to transfer)</span>
+        </span>
+        <span class="text-[10px] font-mono text-slate-500">
+          ${locations.length} Location${locations.length === 1 ? '' : 's'}
+        </span>
+      </div>
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+  `;
+
+  locations.forEach(loc => {
+    const isCurrent = loc.name === activeRackId;
+    const typeDef = FacilityStore.HOST_TYPES[loc.hostType] || FacilityStore.HOST_TYPES.equipment_rack;
+    const count = counts[loc.name] || 0;
+
+    if (isCurrent) {
+      html += `
+        <div class="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-950/90 border-2 border-indigo-500 text-white flex items-center gap-2 shadow-sm select-none">
+          <i data-lucide="${typeDef.icon || 'server'}" class="w-3.5 h-3.5 text-indigo-300"></i>
+          <span class="text-xs font-bold font-mono">${escapeHTML(loc.name)}</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-indigo-800 text-indigo-200 font-bold">${count}</span>
+          <span class="text-[9px] font-mono uppercase bg-indigo-500/30 text-indigo-200 px-1 rounded border border-indigo-400/40">Active</span>
+        </div>
+      `;
+    } else {
+      html += `
+        <div 
+          class="group shrink-0 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-700/80 text-slate-300 hover:text-white flex items-center gap-2 transition-all cursor-pointer shadow-sm select-none"
+          title="Click to view or drag equipment here to transfer"
+          onclick="switchActiveRackElevation('${escapeHTML(loc.name)}')"
+          ondragover="handleLocationTransferDragOver(event)"
+          ondragleave="handleLocationTransferDragLeave(event)"
+          ondrop="handleLocationTransferDrop(event, '${escapeHTML(loc.name)}')"
+        >
+          <i data-lucide="${typeDef.icon || 'server'}" class="w-3.5 h-3.5 text-slate-400 group-hover:text-indigo-400 transition-colors"></i>
+          <span class="text-xs font-medium font-mono">${escapeHTML(loc.name)}</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 group-hover:text-slate-200 font-bold">${count}</span>
+        </div>
+      `;
+    }
+  });
+
+  html += `
+        <div 
+          class="shrink-0 px-3 py-1.5 rounded-lg bg-amber-950/30 hover:bg-amber-950/50 border border-dashed border-amber-600/50 text-amber-300 flex items-center gap-2 transition-all cursor-pointer shadow-sm select-none ml-auto"
+          title="Drag equipment here to unmount and return to Unassigned shelf"
+          ondragover="handleLocationTransferDragOver(event)"
+          ondragleave="handleLocationTransferDragLeave(event)"
+          ondrop="handleLocationTransferDrop(event, 'Unassigned')"
+        >
+          <i data-lucide="inbox" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span class="text-xs font-semibold font-mono">Unassigned Bin</span>
+          <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-900/60 text-amber-200 font-bold">${unassignedCount}</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+}
+
+// -----------------------------------------------------------
 // Main Visualizer Router
 // -----------------------------------------------------------
 function renderRackVisualizer() {
@@ -493,6 +649,7 @@ function renderRackVisualizer() {
   if (!frame) return;
 
   syncRackSelectorOptions();
+  renderRackLocationTransferBar();
 
   const parsed = FacilityStore.parse(activeRackId);
   const enclosures = FacilityStore.getEnclosures();
@@ -808,8 +965,11 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
         ${isPoleMounted ? `
           <button 
             onclick="switchActiveRackElevation('${parsed.space} • Pole Mount')"
+            ondragover="handleLocationTransferDragOver(event)"
+            ondragleave="handleLocationTransferDragLeave(event)"
+            ondrop="handleLocationTransferDrop(event, '${parsed.space} • Pole Mount')"
             class="px-2 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 rounded text-[10px] font-bold flex items-center gap-1 transition-colors shadow-sm"
-            title="View outer Structural Pole elevation and height"
+            title="View outer Structural Pole elevation or drop hardware here to mount onto pole mast"
           >
             <i data-lucide="radio-tower" class="w-3 h-3"></i> View Pole Elevation
           </button>
@@ -965,7 +1125,13 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
         ${isMidPole && poleEnclosures.length > 0 ? `
           <div class="space-y-2 mb-2.5">
             ${poleEnclosures.map(enc => `
-              <div class="p-2.5 rounded-xl border border-cyan-500/50 bg-slate-950/80 shadow-md flex items-center justify-between">
+              <div 
+                class="p-2.5 rounded-xl border border-cyan-500/50 hover:border-cyan-400 bg-slate-950/80 shadow-md flex items-center justify-between transition-all"
+                ondragover="handleLocationTransferDragOver(event)"
+                ondragleave="handleLocationTransferDragLeave(event)"
+                ondrop="handleLocationTransferDrop(event, '${escapeHTML(parsed.space)} • ${escapeHTML(enc.name)}')"
+                title="Drop hardware here to transfer and mount inside ${escapeHTML(enc.name)}"
+              >
                 <div class="flex items-center gap-2.5 min-w-0">
                   <div class="p-1.5 rounded-lg bg-cyan-950 border border-cyan-700/60 text-cyan-400 shrink-0">
                     <i data-lucide="box" class="w-4 h-4"></i>
@@ -1136,7 +1302,13 @@ function renderArchitecturalBackboardFrame(frame, assignedItems, unassignedItems
 // -----------------------------------------------------------
 function renderUnassignedTrayHTML(unassignedItems, activeHostType = "equipment_rack", instructionText = "Drag into empty slot above") {
   return `
-    <div class="pt-3 mt-3 border-t border-slate-800">
+    <div 
+      class="pt-3 mt-3 border-t border-slate-800 transition-all rounded-xl p-1"
+      ondragover="handleLocationTransferDragOver(event)"
+      ondragleave="handleLocationTransferDragLeave(event)"
+      ondrop="handleLocationTransferDrop(event, 'Unassigned')"
+      title="Drop mounted hardware here to unmount and return to Unassigned staging area"
+    >
       <div class="flex items-center justify-between mb-2">
         <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
           <i data-lucide="inbox" class="w-3.5 h-3.5"></i> Unassigned Staging Area (${unassignedItems.length})
@@ -1912,4 +2084,29 @@ function loadRackSettings() {
   } catch (e) {
     activeRackHeight = 24;
   }
+}
+
+// Window Compatibility Exports
+if (typeof window !== "undefined") {
+  window.isRackModalVisible = isRackModalVisible;
+  window.toggleRackModal = toggleRackModal;
+  window.switchActiveRackElevation = switchActiveRackElevation;
+  window.renderRackVisualizer = renderRackVisualizer;
+  window.renderRackLocationTransferBar = renderRackLocationTransferBar;
+  window.handleLocationTransferDragOver = handleLocationTransferDragOver;
+  window.handleLocationTransferDragLeave = handleLocationTransferDragLeave;
+  window.handleLocationTransferDrop = handleLocationTransferDrop;
+  window.handleRackItemDragStart = handleRackItemDragStart;
+  window.handleRackSlotDragOver = handleRackSlotDragOver;
+  window.handleRackSlotDrop = handleRackSlotDrop;
+  window.handleBaySlotDrop = handleBaySlotDrop;
+  window.handleDinRailDrop = handleDinRailDrop;
+  window.handlePoleZoneDrop = handlePoleZoneDrop;
+  window.handleBackboardQuadDrop = handleBackboardQuadDrop;
+  window.unmountRackItem = unmountRackItem;
+  window.autoMountAllToActiveRack = autoMountAllToActiveRack;
+  window.unmountAllFromActiveRack = unmountAllFromActiveRack;
+  window.promptCreateNewRack = promptCreateNewRack;
+  window.deleteActiveRackElevation = deleteActiveRackElevation;
+  window.setHostSidebarTab = setHostSidebarTab;
 }

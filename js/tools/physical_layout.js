@@ -616,25 +616,149 @@ function toggleModalFullscreen() {
 // Telemetry & Calculations
 // -----------------------------------------------------------
 function syncBOMClosetsToFloors() {
-  let definedLocations = typeof FacilityStore !== "undefined"
-    ? FacilityStore.getLocationNames(false) // Exclude Unassigned
-    : ["MDF • Rack-1", "IDF-1 • Rack-1"];
+  if (typeof FacilityStore === "undefined") return;
 
-  const existingClosetNames = new Set();
-  facilityFloors.forEach(f => {
-    f.nodes.filter(n => n.type === "closet").forEach(c => existingClosetNames.add(c.name));
+  // 1. Synchronize facilityFloors with FacilityStore floors
+  const storeFloors = FacilityStore.getFloors();
+  if (Array.isArray(storeFloors) && storeFloors.length > 0) {
+    // If we have legacy floor-1, migrate it to floor-main
+    const legacyFloor1 = facilityFloors.find(f => f.id === "floor-1");
+    const hasMainInStore = storeFloors.some(sf => sf.id === "floor-main");
+    if (legacyFloor1 && hasMainInStore) {
+      legacyFloor1.id = "floor-main";
+      legacyFloor1.name = "Main Floor";
+      legacyFloor1.nodes.forEach(n => { n.floorId = "floor-main"; });
+      if (activeFloorId === "floor-1") activeFloorId = "floor-main";
+    }
+
+    // Ensure all store floors exist in facilityFloors
+    storeFloors.forEach(sf => {
+      let existingFloor = facilityFloors.find(f => f.id === sf.id);
+      if (!existingFloor) {
+        existingFloor = {
+          id: sf.id,
+          name: sf.name,
+          levelIndex: typeof sf.levelIndex === "number" ? sf.levelIndex : (sf.id === "floor-exterior" ? 0 : 1),
+          image: null,
+          opacity: 0.7,
+          scaleFt: sf.id === "floor-exterior" ? 50 : 25,
+          slackFt: 15,
+          slabFt: sf.ceilingHeightFt || 14,
+          nodes: [],
+          fiberBackbones: []
+        };
+        facilityFloors.push(existingFloor);
+      } else {
+        existingFloor.name = sf.name;
+        if (typeof sf.levelIndex === "number") existingFloor.levelIndex = sf.levelIndex;
+      }
+    });
+
+    // Remove any floors that no longer exist in FacilityStore
+    const validFloorIds = new Set(storeFloors.map(sf => sf.id));
+    const fallbackFloor = facilityFloors.find(f => validFloorIds.has(f.id)) || facilityFloors[0];
+
+    facilityFloors = facilityFloors.filter(f => {
+      if (!validFloorIds.has(f.id)) {
+        if (f.nodes && f.nodes.length > 0 && fallbackFloor) {
+          f.nodes.forEach(n => {
+            n.floorId = fallbackFloor.id;
+            fallbackFloor.nodes.push(n);
+          });
+        }
+        return false;
+      }
+      return true;
+    });
+
+    if (!facilityFloors.some(f => f.id === activeFloorId)) {
+      activeFloorId = facilityFloors[0] ? facilityFloors[0].id : "floor-main";
+    }
+  }
+
+  // 2. Synchronize active locations with accurate floors
+  const activeLocations = FacilityStore.getLocations(false); // excludes Unassigned
+  const validLocMap = new Map();
+  activeLocations.forEach(loc => validLocMap.set(loc.name, loc));
+
+  // A. Purge stale closet nodes across all floors
+  const allCurrentClosets = getAllClosetsAcrossFacility();
+  const validRemainingCloset = allCurrentClosets.find(c => validLocMap.has(c.name));
+
+  facilityFloors.forEach(fl => {
+    fl.nodes = fl.nodes.filter(n => {
+      if (n.type === "closet" && !validLocMap.has(n.name)) {
+        // Re-route devices on this closet to a valid remaining closet
+        if (validRemainingCloset) {
+          fl.nodes.filter(d => d.type === "device" && d.assignedClosetId === n.id).forEach(d => {
+            d.assignedClosetId = validRemainingCloset.id;
+          });
+        }
+        return false;
+      }
+      return true;
+    });
   });
 
-  const targetFloor = facilityFloors[0];
-  definedLocations.forEach((locName, idx) => {
-    if (!existingClosetNames.has(locName)) {
+  // B. Ensure each active location exists on its correct floor
+  activeLocations.forEach((loc, idx) => {
+    // Determine accurate target floor
+    let targetFloor = null;
+    if (loc.floorId) {
+      targetFloor = facilityFloors.find(f => f.id === loc.floorId);
+    }
+    if (!targetFloor && loc.spaceId) {
+      const spaceObj = FacilityStore.getSpaces().find(s => s.id === loc.spaceId);
+      if (spaceObj && spaceObj.floorId) {
+        targetFloor = facilityFloors.find(f => f.id === spaceObj.floorId);
+      }
+    }
+    if (!targetFloor) {
+      if (loc.name.toLowerCase().includes("exterior") || loc.name.toLowerCase().includes("pole")) {
+        targetFloor = facilityFloors.find(f => f.id === "floor-exterior");
+      }
+    }
+    if (!targetFloor) {
+      targetFloor = facilityFloors[0];
+    }
+    if (!targetFloor) return;
+
+    // Check if closet node already exists anywhere
+    let existingNode = null;
+    let currentFloor = null;
+    for (const fl of facilityFloors) {
+      const found = fl.nodes.find(n => n.type === "closet" && n.name === loc.name);
+      if (found) {
+        existingNode = found;
+        currentFloor = fl;
+        break;
+      }
+    }
+
+    if (existingNode) {
+      existingNode.hostType = loc.hostType || "equipment_rack";
+      // If node is on the wrong floor, move it to the accurate floor
+      if (currentFloor.id !== targetFloor.id) {
+        currentFloor.nodes = currentFloor.nodes.filter(n => n.id !== existingNode.id);
+        existingNode.floorId = targetFloor.id;
+        targetFloor.nodes.push(existingNode);
+      }
+    } else {
+      // Create new closet node accurately on targetFloor
+      const closetsOnTarget = targetFloor.nodes.filter(n => n.type === "closet");
+      const col = closetsOnTarget.length % 3;
+      const row = Math.floor(closetsOnTarget.length / 3);
+      const x = 200 + (col * 280);
+      const y = 180 + (row * 180);
+
       targetFloor.nodes.push({
-        id: `closet-${Date.now()}-${idx}`,
-        name: locName,
+        id: `closet-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        name: loc.name,
         type: "closet",
+        hostType: loc.hostType || "equipment_rack",
         floorId: targetFloor.id,
-        x: 240 + (idx * 450),
-        y: 190
+        x,
+        y
       });
     }
   });
@@ -1011,18 +1135,11 @@ function clearNodeWaypoints(id) {
 
 function deepLinkToRackElevation(closetName) {
   toggleCableLayoutModal();
-  if (typeof toggleRackModal === "function") {
+  if (typeof openRackViewerFor === "function") {
+    openRackViewerFor(closetName);
+  } else if (typeof toggleRackModal === "function") {
     toggleRackModal();
-    const sel = document.getElementById("rackLocationSelector"); // Correct element ID
-    if (sel) {
-      for (let opt of sel.options) {
-        if (opt.value.toLowerCase().includes(closetName.toLowerCase()) || opt.text.toLowerCase().includes(closetName.toLowerCase())) {
-          sel.value = opt.value;
-          if (typeof switchActiveRackElevation === "function") switchActiveRackElevation(opt.value);
-          break;
-        }
-      }
-    }
+    if (typeof switchActiveRackElevation === "function") switchActiveRackElevation(closetName);
   }
 }
 
@@ -1030,7 +1147,12 @@ function updateNodeName(id, val) {
   const floor = getActiveFloor();
   const node = floor.nodes.find(n => n.id === id);
   if (node && val && val.trim()) {
-    node.name = val.trim();
+    const oldName = node.name;
+    const newName = val.trim();
+    node.name = newName;
+    if (node.type === "closet" && typeof FacilityStore !== "undefined") {
+      FacilityStore.renameLocation(oldName, newName);
+    }
     recalculateCurrentFloorCables();
     renderCableCanvas();
     renderFloorSelector();
@@ -1064,6 +1186,12 @@ function moveClosetToFloor(closetId, newFloorId) {
     const destFloor = facilityFloors.find(f => f.id === newFloorId);
     if (destFloor) {
       destFloor.nodes.push(foundCloset);
+      if (typeof FacilityStore !== "undefined") {
+        const parsed = FacilityStore.parse(foundCloset.name);
+        if (parsed.spaceId) {
+          FacilityStore.updateSpace(parsed.spaceId, { floorId: newFloorId });
+        }
+      }
       recalculateCurrentFloorCables();
       renderCableCanvas();
       renderInspector();
@@ -1199,7 +1327,7 @@ function renderCableCanvas() {
     svg.appendChild(tag);
   });
 
-  // 3. Closets
+  // 3. Closets & Mounting Hosts (Poles, NEMA Boxes, Cabinets, Racks, Backboards)
   floor.nodes.filter(n => n.type === "closet").forEach(closet => {
     const isSelected = closet.id === selectedNodeId;
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -1207,17 +1335,150 @@ function renderCableCanvas() {
     g.setAttribute("data-node-id", closet.id);
     g.setAttribute("transform", `translate(${closet.x}, ${closet.y})`);
 
-    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-    rect.setAttribute("x", -24);
-    rect.setAttribute("y", -24);
-    rect.setAttribute("width", 48);
-    rect.setAttribute("height", 48);
-    rect.setAttribute("rx", 10);
-    rect.setAttribute("fill", isSelected ? "#312e81" : "#1e1b4b");
-    rect.setAttribute("stroke", isSelected ? "#818cf8" : "#6366f1");
-    rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-    g.appendChild(rect);
+    let hostType = closet.hostType;
+    if (!hostType && typeof FacilityStore !== "undefined") {
+      const parsed = FacilityStore.parse(closet.name);
+      hostType = parsed.hostType;
+    }
+    hostType = hostType || "equipment_rack";
 
+    if (hostType === "structural_mount") {
+      // 1. Structural Pole Mast (Circular Base with Mast Crosshairs & Radar Boundary)
+      const outerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      outerCircle.setAttribute("r", isSelected ? "32" : "28");
+      outerCircle.setAttribute("fill", "none");
+      outerCircle.setAttribute("stroke", isSelected ? "#38bdf8" : "#0284c7");
+      outerCircle.setAttribute("stroke-width", "1.5");
+      outerCircle.setAttribute("stroke-dasharray", "4 2");
+      g.appendChild(outerCircle);
+
+      const mastCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      mastCircle.setAttribute("r", "20");
+      mastCircle.setAttribute("fill", isSelected ? "#0c4a6e" : "#082f49");
+      mastCircle.setAttribute("stroke", isSelected ? "#38bdf8" : "#0284c7");
+      mastCircle.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+      g.appendChild(mastCircle);
+
+      const lineH = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      lineH.setAttribute("x1", "-12"); lineH.setAttribute("y1", "0");
+      lineH.setAttribute("x2", "12"); lineH.setAttribute("y2", "0");
+      lineH.setAttribute("stroke", "#38bdf8"); lineH.setAttribute("stroke-width", "1.5");
+      g.appendChild(lineH);
+
+      const lineV = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      lineV.setAttribute("x1", "0"); lineV.setAttribute("y1", "-12");
+      lineV.setAttribute("x2", "0"); lineV.setAttribute("y2", "12");
+      lineV.setAttribute("stroke", "#38bdf8"); lineV.setAttribute("stroke-width", "1.5");
+      g.appendChild(lineV);
+
+      const centerDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      centerDot.setAttribute("r", "3.5");
+      centerDot.setAttribute("fill", "#38bdf8");
+      g.appendChild(centerDot);
+
+    } else if (hostType === "industrial_din") {
+      // 2. Weatherproof DIN / NEMA Box (Industrial Enclosure with Dual Rails)
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
+      rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
+      rect.setAttribute("rx", "8");
+      rect.setAttribute("fill", isSelected ? "#78350f" : "#451a03");
+      rect.setAttribute("stroke", isSelected ? "#fbbf24" : "#d97706");
+      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+      g.appendChild(rect);
+
+      const r1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      r1.setAttribute("x1", "-16"); r1.setAttribute("y1", "-8");
+      r1.setAttribute("x2", "16"); r1.setAttribute("y2", "-8");
+      r1.setAttribute("stroke", "#fbbf24"); r1.setAttribute("stroke-width", "2.5");
+      g.appendChild(r1);
+
+      const r2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      r2.setAttribute("x1", "-16"); r2.setAttribute("y1", "8");
+      r2.setAttribute("x2", "16"); r2.setAttribute("y2", "8");
+      r2.setAttribute("stroke", "#fbbf24"); r2.setAttribute("stroke-width", "2.5");
+      g.appendChild(r2);
+
+    } else if (hostType === "security_cabinet") {
+      // 3. Security Cabinet (Trove Subplate Bay Grid)
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
+      rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
+      rect.setAttribute("rx", "8");
+      rect.setAttribute("fill", isSelected ? "#064e3b" : "#022c22");
+      rect.setAttribute("stroke", isSelected ? "#34d399" : "#059669");
+      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+      g.appendChild(rect);
+
+      [[-16, -16], [2, -16], [-16, 2], [2, 2]].forEach(([bx, by]) => {
+        const bay = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        bay.setAttribute("x", bx); bay.setAttribute("y", by);
+        bay.setAttribute("width", "14"); bay.setAttribute("height", "14");
+        bay.setAttribute("rx", "2");
+        bay.setAttribute("fill", "#047857");
+        bay.setAttribute("opacity", "0.7");
+        g.appendChild(bay);
+      });
+
+    } else if (hostType === "architectural_backboard") {
+      // 4. Architectural Backboard (Plywood Wallfield)
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", "-26"); rect.setAttribute("y", "-20");
+      rect.setAttribute("width", "52"); rect.setAttribute("height", "40");
+      rect.setAttribute("rx", "4");
+      rect.setAttribute("fill", isSelected ? "#581c87" : "#3b0764");
+      rect.setAttribute("stroke", isSelected ? "#d8b4fe" : "#a855f7");
+      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+      g.appendChild(rect);
+
+      [-6, 6].forEach(py => {
+        const pb = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        pb.setAttribute("x1", "-18"); pb.setAttribute("y1", py);
+        pb.setAttribute("x2", "18"); pb.setAttribute("y2", py);
+        pb.setAttribute("stroke", "#e9d5ff");
+        pb.setAttribute("stroke-width", "1.5");
+        pb.setAttribute("stroke-dasharray", "4 2");
+        g.appendChild(pb);
+      });
+
+    } else {
+      // 5. Standard 19" EIA Rack Chassis
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", "-22"); rect.setAttribute("y", "-26");
+      rect.setAttribute("width", "44"); rect.setAttribute("height", "52");
+      rect.setAttribute("rx", "6");
+      rect.setAttribute("fill", isSelected ? "#312e81" : "#1e1b4b");
+      rect.setAttribute("stroke", isSelected ? "#a5b4fc" : "#6366f1");
+      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+      g.appendChild(rect);
+
+      [-16, -7, 2, 11].forEach(ry => {
+        const ru = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        ru.setAttribute("x", "-15"); ru.setAttribute("y", ry);
+        ru.setAttribute("width", "30"); ru.setAttribute("height", "5");
+        ru.setAttribute("rx", "1");
+        ru.setAttribute("fill", "#4338ca");
+        ru.setAttribute("opacity", "0.8");
+        g.appendChild(ru);
+      });
+    }
+
+    // Host Type Badge
+    const typeLabel = hostType === "structural_mount" ? "POLE" : (hostType === "industrial_din" ? "NEMA" : (hostType === "security_cabinet" ? "SEC-CAB" : (hostType === "architectural_backboard" ? "BOARD" : "RACK")));
+    const badgeColor = hostType === "structural_mount" ? "#38bdf8" : (hostType === "industrial_din" ? "#fbbf24" : (hostType === "security_cabinet" ? "#34d399" : (hostType === "architectural_backboard" ? "#d8b4fe" : "#a5b4fc")));
+
+    const badgeTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    badgeTxt.setAttribute("x", 0);
+    badgeTxt.setAttribute("y", -30);
+    badgeTxt.setAttribute("text-anchor", "middle");
+    badgeTxt.setAttribute("fill", badgeColor);
+    badgeTxt.setAttribute("font-size", "9");
+    badgeTxt.setAttribute("font-weight", "bold");
+    badgeTxt.setAttribute("font-family", "monospace");
+    badgeTxt.textContent = `[${typeLabel}]`;
+    g.appendChild(badgeTxt);
+
+    // Label with clean styling
     const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
     txt.setAttribute("x", 0);
     txt.setAttribute("y", 38);

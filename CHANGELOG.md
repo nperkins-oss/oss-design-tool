@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.9-alpha] - 2026-09-25
+
+### Added
+- **Unified Enclosure Visualizer inside Facilities Tool (`index.html` & `js/core/facility.js`)**:
+  - Moved the Rack Elevations visualizer directly inside the Facilities tool as the **"Enclosure Visualizer"**, replacing disjointed modal popups with a seamless unified dialog (`#facilityModal`).
+  - Updated the top navbar navigation button from "Rack Elevations" to **"Enclosure Visualizer"**.
+  - Added segmented view switcher (`[ Hierarchy & Spaces ]` vs `[ Enclosure Visualizer ]`) for instantaneous switching between taxonomy management and physical equipment elevation frames.
+  - Added live dynamic breadcrumbs in the visualizer header (`[Back to Spaces] / Floor / Space / Host [Type Badge]`) showing exact hierarchical context.
+- **Intuitive Back-to-Spaces Navigation on Exit/Close (`js/core/facility.js` & `js/core/app.js`)**:
+  - Implemented `handleFacilityModalCloseOrBack()`: When navigating from a space or pole to a rack or enclosure visualizer, clicking the close button ("X"), the "Back to Spaces" breadcrumb button, or pressing `Escape` returns smoothly back to the exact floor and space previously viewed, without closing completely out of the tool.
+  - Retained project-wide backward compatibility for `window.toggleRackModal()`, `window.switchActiveRackElevation()`, and `window.openRackViewerFor()`.
+- **Cross-Location Hardware Drag-and-Drop (`js/tools/rack.js` & `index.html`)**:
+  - Built interactive Quick Location Transfer Bar (`#rackLocationTransferBar`) in all elevation visualizers, rendering all project mounting locations (racks, cabinets, NEMA boxes, pole masts, backboards, and unassigned bin) as active drag-and-drop targets with live device counters.
+  - Implemented `handleLocationTransferDragOver()`, `handleLocationTransferDragLeave()`, and `handleLocationTransferDrop()` enabling devices to be dragged and reassigned between any mounting locations or returned to the unassigned staging area in real time.
+  - Added direct drop-mount targets on mid-pole mounted enclosure cards in `renderStructuralMountFrame()` (allowing devices to be dropped directly into pole-banded NEMA boxes).
+  - Added direct drop-mount target on the "View Pole Elevation" banner in `renderIndustrialDinFrame()` (allowing devices to be moved from NEMA enclosures onto the pole mast).
+- **Physical Layout Canvas Location & Floor Accuracy (`js/tools/physical_layout.js`)**:
+  - Completely revamped `syncBOMClosetsToFloors()` to synchronize `facilityFloors` with `FacilityStore.getFloors()`, migrating legacy dummy floors to canonical floors (`floor-main`, `floor-exterior`).
+  - Accurately routed all closets and enclosures to their real assigned floors (e.g. `Pole 1 • Pole Mount` and `Pole 1 • NEMA-Box` on the Exterior floor; `MDF • Rack-1` on Main Floor).
+  - Added automatic purging of stale closet nodes whose locations no longer exist in `FacilityStore`.
+  - Upgraded canvas rendering in `renderCableCanvas()` with distinctive, host-specific SVG geometry and colors:
+    - **Structural Pole Mounts**: High-visibility cyan circular mast base (`#083344`, `#0284c7`, `#38bdf8`) with mast crosshairs, center dot, radar boundary ring, and `[POLE]` badge.
+    - **Industrial Weatherproof NEMA Enclosures**: Industrial amber enclosure (`#451a03`, `#d97706`, `#fbbf24`) with dual DIN rail crossbars and `[NEMA]` badge.
+    - **Security Cabinets**: Emerald access control cabinet (`#022c22`, `#059669`, `#34d399`) with Trove subplate quadrant grid and `[SEC-CAB]` badge.
+    - **19" EIA Equipment Racks**: Indigo server chassis (`#1e1b4b`, `#6366f1`, `#a5b4fc`) with horizontal RU slot rails and `[RACK]` badge.
+    - **Architectural Backboards**: Purple plywood wallfield (`#3b0764`, `#a855f7`, `#d8b4fe`) with punchblock dash grid and `[BOARD]` badge.
+  - Synchronized `deepLinkToRackElevation()` to launch directly into the unified Enclosure Visualizer.
+  - Bi-directionally synchronized floor reassignment (`moveClosetToFloor`) and location renaming (`updateNodeName`) with `FacilityStore`.
+
+---
+
 ## [0.10.8-alpha] - 2026-09-25
 
 ### Added
