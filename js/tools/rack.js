@@ -3,8 +3,8 @@
 // Unified Visualizer for 5 Physical Mounting Hosts:
 // 1. 19" EIA Equipment Racks (RU Rails, Depth Compliance, AC Power)
 // 2. Security Cabinets (Trove / LSP Subplate Bays, DC Power, Standby Batteries)
-// 3. Industrial DIN-Rail NEMA Enclosures (Weatherproof DIN Tracks, Hardened Hardware)
-// 4. Structural Mounts (Poles, Masts, Parapets, Bollards, Wind/EPA)
+// 3. Industrial DIN-Rail NEMA Enclosures (Wall or Pole Mount, DIN Tracks, Hardened Hardware)
+// 4. Structural Mounts (Configurable Pole Height AGL, Masts, Parapets, Bollards, Wind/EPA)
 // 5. Architectural Backboards (Plywood Wallfields, Telecom Punchblocks)
 // Tied directly with FacilityStore & Served Edge Endpoints
 // =========================================================================
@@ -68,6 +68,52 @@ function setHostSidebarTab(tabName) {
   }
 
   if (window.lucide) lucide.createIcons();
+}
+
+// -----------------------------------------------------------
+// Device & Form-Factor Compatibility Verification
+// -----------------------------------------------------------
+function checkDeviceHostCompatibility(item, hostType) {
+  if (!item) return { compatible: true, matchBadge: "Universal", advisory: "" };
+
+  const role = item.role || "";
+  const cat = item.category || "";
+  const model = item.model || "";
+  const isRackDev = (item.rackUnits && parseInt(item.rackUnits, 10) > 0) || role === "Access" || role === "Core" || role === "Aggregation" || role === "Server" || role === "Storage" || role === "UPS" || role === "Structured Cabling" || role === "Core & Agg";
+  const isSecurityDev = cat === "access_control" || role === "Access Control" || item.doorCapacity || item.controllerType || model.includes("LP") || model.includes("MR") || model.includes("Trove") || model.includes("FPO") || model.includes("eFlow");
+  const isDinDev = item.isDinMounted || model.includes("DIN") || item.mounting === "DIN" || cat === "industrial_din";
+  const isEdgeField = role === "Surveillance" || role === "Video" || role === "Wireless Bridge" || role === "Wireless" || role === "Accessory" || model.includes("Cam") || model.includes("Dome") || model.includes("Bullet") || model.includes("PTZ") || model.includes("NanoBeam") || model.includes("GigaBeam") || model.includes("AP");
+
+  if (hostType === "equipment_rack") {
+    if (isRackDev) return { compatible: true, matchBadge: "19\" EIA Match", advisory: "" };
+    if (isDinDev) return { compatible: false, matchBadge: "DIN Form Factor", advisory: "Requires 19\" DIN bracket shelf to rack-mount" };
+    if (isEdgeField) return { compatible: false, matchBadge: "Field Device", advisory: "Outdoor/Edge device — typically mounted on pole or wall" };
+    return { compatible: true, matchBadge: "Hardware", advisory: "" };
+  } else if (hostType === "security_cabinet") {
+    if (isSecurityDev) return { compatible: true, matchBadge: "Subplate Match", advisory: "" };
+    if (isRackDev) return { compatible: false, matchBadge: "Rackmount Chassis", advisory: "Large chassis requires 19\" EIA rack rails" };
+    return { compatible: true, matchBadge: "Module", advisory: "" };
+  } else if (hostType === "industrial_din") {
+    if (isDinDev) return { compatible: true, matchBadge: "DIN-Rail Match", advisory: "" };
+    if (isRackDev && (item.depthInches > 12 || parseInt(item.rackUnits, 10) > 1)) {
+      return { compatible: false, matchBadge: "Exceeds Depth", advisory: "Full-depth 19\" unit exceeds NEMA box dimensions" };
+    }
+    return { compatible: true, matchBadge: "Hardened", advisory: "" };
+  } else if (hostType === "structural_mount") {
+    if (isEdgeField || isDinDev) return { compatible: true, matchBadge: "Pole Compatible", advisory: "" };
+    if (isRackDev) return { compatible: false, matchBadge: "Indoor Rackmount", advisory: "Indoor chassis cannot withstand outdoor pole exposure" };
+    return { compatible: true, matchBadge: "Edge Mount", advisory: "" };
+  } else if (hostType === "architectural_backboard") {
+    if (role === "Structured Cabling" || isSecurityDev || isDinDev || item.shallowDepth) {
+      return { compatible: true, matchBadge: "Wallfield Match", advisory: "" };
+    }
+    if (isRackDev && parseInt(item.rackUnits, 10) > 2) {
+      return { compatible: false, matchBadge: "Heavy Rackmount", advisory: "Deep chassis requires floor-standing rack" };
+    }
+    return { compatible: true, matchBadge: "Wallfield", advisory: "" };
+  }
+
+  return { compatible: true, matchBadge: "Universal", advisory: "" };
 }
 
 // -----------------------------------------------------------
@@ -141,32 +187,48 @@ function syncHostDimensionControls(parsed, activeEnc) {
     container.innerHTML = `
       <span class="text-slate-400 font-medium">Bays:</span>
       <select onchange="updateActiveHostProperty('subplateBays', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-emerald-300 font-mono rounded px-2 py-0.5 text-xs">
-        <option value="4" ${bays === 4 ? 'selected' : ''}>4 Bays (Trove 1 / Compact)</option>
-        <option value="8" ${bays === 8 ? 'selected' : ''}>8 Bays (Trove 2 / Standard)</option>
-        <option value="12" ${bays === 12 ? 'selected' : ''}>12 Bays (Trove 3 / High Density)</option>
+        <option value="4" ${bays === 4 ? 'selected' : ''}>4 Bays (Trove 1)</option>
+        <option value="8" ${bays === 8 ? 'selected' : ''}>8 Bays (Trove 2)</option>
+        <option value="12" ${bays === 12 ? 'selected' : ''}>12 Bays (Trove 3)</option>
         <option value="16" ${bays === 16 ? 'selected' : ''}>16 Bays (LifeSafety ProWire)</option>
       </select>
     `;
   } else if (hostType === "industrial_din") {
     const rails = (activeEnc && activeEnc.dinRails) ? activeEnc.dinRails : 2;
+    const mounting = (activeEnc && activeEnc.mountingMethod) ? activeEnc.mountingMethod : (parsed.mountingMethod || "wall");
     container.innerHTML = `
-      <span class="text-slate-400 font-medium">DIN Rails:</span>
-      <select onchange="updateActiveHostProperty('dinRails', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-amber-300 font-mono rounded px-2 py-0.5 text-xs">
-        <option value="1" ${rails === 1 ? 'selected' : ''}>1 Rail (Compact NEMA)</option>
-        <option value="2" ${rails === 2 ? 'selected' : ''}>2 Rails (Standard NEMA 4X)</option>
-        <option value="3" ${rails === 3 ? 'selected' : ''}>3 Rails (Deep Industrial)</option>
-        <option value="4" ${rails === 4 ? 'selected' : ''}>4 Rails (Full Control Enclosure)</option>
+      <span class="text-slate-400 font-medium">Mount:</span>
+      <select onchange="updateActiveHostProperty('mountingMethod', this.value)" class="bg-slate-950 border border-slate-700 text-amber-300 font-bold rounded px-2 py-0.5 text-xs">
+        <option value="wall" ${mounting === 'wall' ? 'selected' : ''}>Wall Flange</option>
+        <option value="pole" ${mounting === 'pole' ? 'selected' : ''}>Pole Banding</option>
+      </select>
+      <span class="text-slate-400 font-medium">Rails:</span>
+      <select onchange="updateActiveHostProperty('dinRails', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-white font-mono rounded px-2 py-0.5 text-xs">
+        <option value="1" ${rails === 1 ? 'selected' : ''}>1 Rail</option>
+        <option value="2" ${rails === 2 ? 'selected' : ''}>2 Rails</option>
+        <option value="3" ${rails === 3 ? 'selected' : ''}>3 Rails</option>
+        <option value="4" ${rails === 4 ? 'selected' : ''}>4 Rails</option>
       </select>
     `;
   } else if (hostType === "structural_mount") {
+    const poleHeight = (activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 20);
     const diam = (activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : 4;
     container.innerHTML = `
+      <span class="text-slate-400 font-medium">Height:</span>
+      <select onchange="updateActiveHostProperty('poleHeightFt', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded px-2 py-0.5 text-xs">
+        <option value="12" ${poleHeight === 12 ? 'selected' : ''}>12 ft AGL</option>
+        <option value="15" ${poleHeight === 15 ? 'selected' : ''}>15 ft AGL</option>
+        <option value="20" ${poleHeight === 20 ? 'selected' : ''}>20 ft AGL</option>
+        <option value="25" ${poleHeight === 25 ? 'selected' : ''}>25 ft AGL</option>
+        <option value="30" ${poleHeight === 30 ? 'selected' : ''}>30 ft AGL</option>
+        <option value="40" ${poleHeight === 40 ? 'selected' : ''}>40 ft AGL</option>
+      </select>
       <span class="text-slate-400 font-medium">Mast O.D.:</span>
-      <select onchange="updateActiveHostProperty('poleDiameterInches', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-cyan-300 font-mono rounded px-2 py-0.5 text-xs">
-        <option value="2" ${diam === 2 ? 'selected' : ''}>2" Schedule 40 Pipe</option>
-        <option value="3" ${diam === 3 ? 'selected' : ''}>3" Standard Mast</option>
-        <option value="4" ${diam === 4 ? 'selected' : ''}>4" Heavy Duty Steel</option>
-        <option value="6" ${diam === 6 ? 'selected' : ''}>6" Parking Lot Bollard/Mast</option>
+      <select onchange="updateActiveHostProperty('poleDiameterInches', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-white font-mono rounded px-2 py-0.5 text-xs">
+        <option value="2" ${diam === 2 ? 'selected' : ''}>2" Pipe</option>
+        <option value="3" ${diam === 3 ? 'selected' : ''}>3" Mast</option>
+        <option value="4" ${diam === 4 ? 'selected' : ''}>4" Mast</option>
+        <option value="6" ${diam === 6 ? 'selected' : ''}>6" Bollard</option>
       </select>
     `;
   } else if (hostType === "architectural_backboard") {
@@ -176,7 +238,7 @@ function syncHostDimensionControls(parsed, activeEnc) {
       <select onchange="updateActiveHostProperty('widthFt', parseInt(this.value, 10))" class="bg-slate-950 border border-slate-700 text-purple-300 font-mono rounded px-2 py-0.5 text-xs">
         <option value="4" ${w === 4 ? 'selected' : ''}>4' x 8' Sheet (32 sq ft)</option>
         <option value="8" ${w === 8 ? 'selected' : ''}>8' x 8' Wallfield (64 sq ft)</option>
-        <option value="12" ${w === 12 ? 'selected' : ''}>12' x 8' Telecom Room (96 sq ft)</option>
+        <option value="12" ${w === 12 ? 'selected' : ''}>12' x 8' Room Field (96 sq ft)</option>
       </select>
     `;
   } else {
@@ -226,6 +288,14 @@ function setRackHeight(heightVal) {
 }
 
 function promptCreateNewRack() {
+  if (typeof openFacilityAddForm === "function") {
+    openFacilityAddForm("add_host");
+    if (typeof toggleFacilityModal === "function") {
+      toggleFacilityModal();
+    }
+    return;
+  }
+
   const currentCount = FacilityStore.getLocations().length;
   const name = prompt(
     "Enter new Mounting Host name (e.g. IDF-2 • Rack-1, MDF • Security-Cab-1, Pole 1 • NEMA-Box):",
@@ -275,7 +345,7 @@ function deleteActiveRackElevation() {
 }
 
 // -----------------------------------------------------------
-// Auto-Mount & Unmount Actions (Across all 5 Host Types)
+// Auto-Mount & Unmount Actions (With Form-Factor Affinity)
 // -----------------------------------------------------------
 function autoMountAllToActiveRack() {
   if (typeof projectBOM === "undefined") return;
@@ -283,13 +353,16 @@ function autoMountAllToActiveRack() {
   const parsed = FacilityStore.parse(activeRackId);
   const hostType = parsed.hostType;
 
-  // Filter mountable items for this specific host
+  // Filter mountable items: Only auto-mount form-factor compatible hardware
   const mountableItems = projectBOM.filter(item => {
     if (item.parentInstanceId) return false;
     if (item.role === "Optics & DAC" || item.role === "Mgmt License" || item.role === "Security License") return false;
 
     const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
-    return itemLoc === activeRackId || itemLoc === FacilityStore.UNASSIGNED;
+    if (itemLoc !== activeRackId && itemLoc !== FacilityStore.UNASSIGNED) return false;
+
+    const compat = checkDeviceHostCompatibility(item, hostType);
+    return compat.compatible;
   });
 
   let mountedCount = 0;
@@ -362,7 +435,7 @@ function autoMountAllToActiveRack() {
   FacilityStore.notifyWorkspaceChange();
   renderRackVisualizer();
   if (typeof showToast === "function") {
-    showToast(`Mounted ${mountedCount} unit${mountedCount === 1 ? '' : 's'} into ${activeRackId}.`);
+    showToast(`Mounted ${mountedCount} compatible unit${mountedCount === 1 ? '' : 's'} into ${activeRackId}.`);
   }
 }
 
@@ -497,9 +570,10 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
     if (slotData) {
       if (slotData.isBase) {
         const it = slotData.item;
+        const compat = checkDeviceHostCompatibility(it, "equipment_rack");
         railHTML += `
           <div 
-            class="group relative bg-slate-900 border border-indigo-500/60 hover:border-indigo-400 rounded-lg px-3 py-2 flex items-center justify-between cursor-move shadow-md transition-all select-none"
+            class="group relative bg-slate-900 border ${compat.compatible ? 'border-indigo-500/60 hover:border-indigo-400' : 'border-amber-500/60 hover:border-amber-400'} rounded-lg px-3 py-2 flex items-center justify-between cursor-move shadow-md transition-all select-none"
             draggable="true"
             ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
             ondragover="handleRackSlotDragOver(event)"
@@ -514,6 +588,9 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
               </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
+              ${!compat.compatible ? `
+                <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800" title="${compat.advisory}">⚠️ Bracket Req</span>
+              ` : ''}
               <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 ${getRoleColor(it.role)}">${escapeHTML(it.role || 'Hardware')}</span>
               <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-amber-300 transition-opacity" title="Unmount to Staging">
                 <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
@@ -537,7 +614,7 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
   }
 
   // Append Unassigned Staging Tray
-  railHTML += renderUnassignedTrayHTML(unassignedItems, "Drag into empty U-slot above");
+  railHTML += renderUnassignedTrayHTML(unassignedItems, "equipment_rack", "Drag into empty U-slot above");
   frame.innerHTML = railHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -559,7 +636,6 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
   assignedItems.forEach((item, idx) => {
     let bNum = parseInt(String(item.rackSlot).replace("Bay-", ""), 10);
     if (!bNum || bNum < 1 || bNum > totalBays || baySlots[bNum] !== null) {
-      // Find next free bay
       bNum = null;
       for (let b = 1; b <= totalBays; b++) {
         if (baySlots[b] === null) {
@@ -598,9 +674,10 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
   for (let b = 1; b <= totalBays; b++) {
     const item = baySlots[b];
     if (item) {
+      const compat = checkDeviceHostCompatibility(item, "security_cabinet");
       bayGridHTML += `
         <div 
-          class="group bg-slate-900 border border-emerald-600/50 hover:border-emerald-400 p-2.5 rounded-xl shadow-md flex flex-col justify-between select-none relative"
+          class="group bg-slate-900 border ${compat.compatible ? 'border-emerald-600/50 hover:border-emerald-400' : 'border-amber-500/50 hover:border-amber-400'} p-2.5 rounded-xl shadow-md flex flex-col justify-between select-none relative"
           draggable="true"
           ondragstart="handleRackItemDragStart(event, '${item.instanceId}')"
           ondragover="handleRackSlotDragOver(event)"
@@ -609,6 +686,9 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
           <div class="flex items-center justify-between mb-1.5">
             <span class="text-[10px] font-mono font-bold text-emerald-400 px-1.5 py-0.5 rounded bg-emerald-950/60 border border-emerald-800/80">Bay ${b}</span>
             <div class="flex items-center gap-1">
+              ${!compat.compatible ? `
+                <span class="text-[9px] font-mono font-bold text-amber-400" title="${compat.advisory}">⚠️</span>
+              ` : ''}
               <span class="text-[9px] font-mono font-bold text-slate-400 uppercase">${escapeHTML(item.category || item.role || 'Module')}</span>
               <button onclick="unmountRackItem('${item.instanceId}')" class="opacity-0 group-hover:opacity-100 p-0.5 text-slate-400 hover:text-amber-300 transition-opacity" title="Unmount">
                 <i data-lucide="inbox" class="w-3 h-3"></i>
@@ -670,7 +750,7 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
   `;
 
   // Append Unassigned Staging Tray
-  bayGridHTML += renderUnassignedTrayHTML(unassignedItems, "Drag into empty Bay slot above");
+  bayGridHTML += renderUnassignedTrayHTML(unassignedItems, "security_cabinet", "Drag into empty Bay slot above");
   frame.innerHTML = bayGridHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -679,11 +759,13 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
 }
 
 // -----------------------------------------------------------
-// 3. Host Renderer: Industrial DIN-Rail NEMA Enclosure
+// 3. Host Renderer: Industrial DIN-Rail NEMA Enclosure (Wall or Pole Mount)
 // -----------------------------------------------------------
 function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed, activeEnc) {
   const numRails = (activeEnc && activeEnc.dinRails) ? activeEnc.dinRails : 2;
   const railLengthMm = (activeEnc && activeEnc.railLengthMm) ? activeEnc.railLengthMm : 350;
+  const mounting = (activeEnc && activeEnc.mountingMethod) ? activeEnc.mountingMethod : (parsed.mountingMethod || "wall");
+  const isPoleMounted = mounting === "pole";
 
   // Distribute items across DIN rails
   const railBuckets = {};
@@ -700,18 +782,22 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
 
   let dinHTML = `
     <!-- Weatherproof NEMA Enclosure Outer Frame -->
-    <div class="p-3 bg-slate-900 border border-amber-900/60 rounded-xl mb-3 flex items-center justify-between">
+    <div class="p-3 bg-slate-900 border ${isPoleMounted ? 'border-cyan-900/60' : 'border-amber-900/60'} rounded-xl mb-3 flex items-center justify-between">
       <div class="flex items-center gap-2.5">
-        <div class="p-1.5 rounded-lg bg-amber-950 border border-amber-700/60 text-amber-400">
-          <i data-lucide="box" class="w-4 h-4"></i>
+        <div class="p-1.5 rounded-lg ${isPoleMounted ? 'bg-cyan-950 border border-cyan-700/60 text-cyan-400' : 'bg-amber-950 border border-amber-700/60 text-amber-400'}">
+          <i data-lucide="${isPoleMounted ? 'radio-tower' : 'box'}" class="w-4 h-4"></i>
         </div>
         <div>
           <span class="text-xs font-bold text-white block">NEMA 4X / IP66 Weatherproof Enclosure</span>
-          <span class="text-[10px] text-amber-400 font-mono">${numRails}x 35mm Top-Hat DIN Rails &bull; ${railLengthMm}mm Rail Width &bull; Gasket Sealed</span>
+          <span class="text-[10px] ${isPoleMounted ? 'text-cyan-400' : 'text-amber-400'} font-mono">
+            ${isPoleMounted ? 'Pole Mount (Stainless Steel Banding)' : 'Wall Mount (Heavy-Duty Strut Flanges)'} &bull; ${numRails}x 35mm Rails &bull; ${railLengthMm}mm Width
+          </span>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800">-40°C to +75°C</span>
+        <span class="text-[10px] font-mono ${isPoleMounted ? 'text-cyan-300 bg-cyan-950/60 border-cyan-800' : 'text-emerald-400 bg-emerald-950/60 border-emerald-800'} px-2 py-0.5 rounded border">
+          ${isPoleMounted ? 'Pole Strapped' : 'Wall Flanged'}
+        </span>
       </div>
     </div>
   `;
@@ -769,7 +855,7 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
   }
 
   // Append Unassigned Staging Tray
-  dinHTML += renderUnassignedTrayHTML(unassignedItems, "Drag into empty DIN rail above");
+  dinHTML += renderUnassignedTrayHTML(unassignedItems, "industrial_din", "Drag into empty DIN rail above");
   frame.innerHTML = dinHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -779,15 +865,23 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
 }
 
 // -----------------------------------------------------------
-// 4. Host Renderer: Structural Pole / Mast Assembly
+// 4. Host Renderer: Structural Pole / Mast Assembly (Dynamic Height)
 // -----------------------------------------------------------
 function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parsed, activeEnc) {
-  const diam = (activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : 4;
+  const poleHeight = (activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 20);
+  const diam = (activeEnc && activeEnc.poleDiameterInches) ? activeEnc.poleDiameterInches : (parsed.poleDiameterInches || 4);
+
+  // Dynamic Height Elevations
+  const topElevation = poleHeight;
+  const upperElevation = Math.max(8, Math.round(poleHeight * 0.8));
+  const midElevation = Math.max(4, Math.round(poleHeight * 0.4));
+  const baseElevation = 2;
+
   const zones = [
-    { id: "Top-Mast", label: "Zone 1: Top of Mast (20 ft AGL)", desc: "Antennas, PTZ dome, wireless PtP dish", icon: "radio" },
-    { id: "Upper-Pole", label: "Zone 2: Upper Pole (16 ft AGL)", desc: "Fixed cameras, illuminators", icon: "video" },
-    { id: "Mid-Pole", label: "Zone 3: Mid Pole (8 ft AGL)", desc: "Weatherproof NEMA Box with stainless steel banding", icon: "box" },
-    { id: "Base-Handhole", label: "Zone 4: Pole Base (2 ft AGL)", desc: "Handhole cover, conduit stub-ups, ground rod lug", icon: "zap" }
+    { id: "Top-Mast", heightFt: topElevation, label: `Zone 1: Top of Mast (${topElevation} ft AGL)`, desc: "High-elevation antennas, PTZ dome, wireless PtP dish", icon: "radio" },
+    { id: "Upper-Pole", heightFt: upperElevation, label: `Zone 2: Upper Pole (${upperElevation} ft AGL)`, desc: "Fixed cameras, illuminators, floodlights", icon: "video" },
+    { id: "Mid-Pole", heightFt: midElevation, label: `Zone 3: Mid Pole (${midElevation} ft AGL)`, desc: "Weatherproof NEMA Box with stainless steel banding", icon: "box" },
+    { id: "Base-Handhole", heightFt: baseElevation, label: `Zone 4: Pole Base (${baseElevation} ft AGL)`, desc: "Handhole cover, conduit stub-ups, ground rod lug", icon: "zap" }
   ];
 
   const zoneBuckets = { "Top-Mast": [], "Upper-Pole": [], "Mid-Pole": [], "Base-Handhole": [] };
@@ -808,8 +902,8 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
           <i data-lucide="radio-tower" class="w-4 h-4"></i>
         </div>
         <div>
-          <span class="text-xs font-bold text-white block">Structural Steel Pole & Mast Assembly</span>
-          <span class="text-[10px] text-cyan-400 font-mono">${diam}" O.D. Sch 40 Steel &bull; Stainless Steel Strapping Bands</span>
+          <span class="text-xs font-bold text-white block">Structural Steel Pole & Mast Assembly (${poleHeight} ft AGL)</span>
+          <span class="text-[10px] text-cyan-400 font-mono">${diam}" O.D. Sch 40 Steel &bull; Stainless Steel Strapping Bands &bull; Base Flange</span>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -840,7 +934,7 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
         <div class="space-y-1.5 min-h-[44px]">
           ${itemsInZone.length === 0 ? `
             <div class="border border-dashed border-slate-800 rounded-lg p-2 text-center text-[10px] text-slate-600 font-mono">
-              Available mounting zone. Drag cameras or radios here.
+              Available mounting zone at ${z.heightFt} ft elevation. Drag cameras or radios here.
             </div>
           ` : itemsInZone.map(it => `
             <div 
@@ -849,7 +943,7 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
               ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
             >
               <div class="flex items-center gap-2 min-w-0">
-                <span class="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800/80">Mounted</span>
+                <span class="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950 px-1.5 py-0.5 rounded border border-cyan-800/80">@ ${z.heightFt}ft</span>
                 <span class="text-xs font-bold text-white truncate">${escapeHTML(it.model)}</span>
               </div>
               <div class="flex items-center gap-2 shrink-0">
@@ -868,11 +962,11 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
   poleHTML += `</div>`;
 
   // Append Unassigned Staging Tray
-  poleHTML += renderUnassignedTrayHTML(unassignedItems, "Drag into elevation zone above");
+  poleHTML += renderUnassignedTrayHTML(unassignedItems, "structural_mount", "Drag into elevation zone above");
   frame.innerHTML = poleHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
-  if (badgeEl) badgeEl.innerText = `${assignedItems.length} Devices Mounted`;
+  if (badgeEl) badgeEl.innerText = `${assignedItems.length} Devices @ ${poleHeight}ft`;
 }
 
 // -----------------------------------------------------------
@@ -967,7 +1061,7 @@ function renderArchitecturalBackboardFrame(frame, assignedItems, unassignedItems
   boardHTML += `</div>`;
 
   // Append Unassigned Staging Tray
-  boardHTML += renderUnassignedTrayHTML(unassignedItems, "Drag into backboard quadrant above");
+  boardHTML += renderUnassignedTrayHTML(unassignedItems, "architectural_backboard", "Drag into backboard quadrant above");
   frame.innerHTML = boardHTML;
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -975,9 +1069,9 @@ function renderArchitecturalBackboardFrame(frame, assignedItems, unassignedItems
 }
 
 // -----------------------------------------------------------
-// Shared Unassigned Staging Tray Component
+// Shared Unassigned Staging Tray Component (With Compatibility Badges)
 // -----------------------------------------------------------
-function renderUnassignedTrayHTML(unassignedItems, instructionText = "Drag into empty slot above") {
+function renderUnassignedTrayHTML(unassignedItems, activeHostType = "equipment_rack", instructionText = "Drag into empty slot above") {
   return `
     <div class="pt-3 mt-3 border-t border-slate-800">
       <div class="flex items-center justify-between mb-2">
@@ -991,19 +1085,31 @@ function renderUnassignedTrayHTML(unassignedItems, instructionText = "Drag into 
           <div class="p-2.5 rounded-lg border border-dashed border-slate-800 text-center text-[10px] text-slate-500">
             No unassigned items. All hardware is currently mounted or mapped.
           </div>
-        ` : unassignedItems.map(it => `
-          <div 
-            class="bg-slate-900/90 border border-amber-500/40 hover:border-amber-400 p-2 rounded-lg flex items-center justify-between cursor-move shadow-sm select-none"
-            draggable="true"
-            ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
-          >
-            <div class="min-w-0 flex items-center gap-2">
-              <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/40 px-1 py-0.5 rounded border border-amber-800/60">${it.rackUnits ? `${it.rackUnits}U` : (it.role || 'Device')}</span>
-              <span class="text-xs font-bold text-slate-200 truncate block">${escapeHTML(it.model)}</span>
+        ` : unassignedItems.map(it => {
+          const compat = checkDeviceHostCompatibility(it, activeHostType);
+          return `
+            <div 
+              class="bg-slate-900/90 border ${compat.compatible ? 'border-amber-500/40 hover:border-amber-400' : 'border-slate-800 hover:border-slate-700 opacity-80'} p-2 rounded-lg flex items-center justify-between cursor-move shadow-sm select-none"
+              draggable="true"
+              ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+            >
+              <div class="min-w-0 flex items-center gap-2">
+                <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/40 px-1 py-0.5 rounded border border-amber-800/60 shrink-0">
+                  ${it.rackUnits ? `${it.rackUnits}U` : (it.role || 'Device')}
+                </span>
+                <span class="text-xs font-bold text-slate-200 truncate block">${escapeHTML(it.model)}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                ${compat.compatible ? `
+                  <span class="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-800/80">● Form-Factor Match</span>
+                ` : `
+                  <span class="text-[9px] font-mono font-bold text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80" title="${compat.advisory}">⚠️ ${compat.matchBadge}</span>
+                `}
+                <span class="text-[10px] font-mono text-slate-400">${escapeHTML(it.vendor || '')}</span>
+              </div>
             </div>
-            <span class="text-[10px] font-mono text-slate-400 shrink-0">${escapeHTML(it.vendor || '')}</span>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
   `;
@@ -1232,6 +1338,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     // -------------------------------------------------------
     // Industrial DIN NEMA Thermal & DC Power
     // -------------------------------------------------------
+    const mounting = (activeEnc && activeEnc.mountingMethod) ? activeEnc.mountingMethod : (parsed.mountingMethod || "wall");
     let totalBaseWatts = 0;
     let totalPoEWatts = 0;
     assignedItems.forEach(it => {
@@ -1240,7 +1347,6 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     });
 
     const totalOperatingWatts = Math.round(totalBaseWatts + (totalPoEWatts * 0.5));
-    // Enclosure thermal rise: ~0.15°C per watt in typical sealed NEMA 4X
     const deltaT = Math.round(totalOperatingWatts * 0.15);
     const internalTemp = 25 + deltaT;
 
@@ -1252,6 +1358,10 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
         <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEMA 4X / IP66</span>
       </h3>
       <div class="space-y-2 text-xs">
+        <div class="flex justify-between text-slate-400">
+          <span>Mounting Configuration:</span>
+          <span class="font-mono text-white font-semibold">${mounting === 'pole' ? 'Pole Mounted (Stainless Banding)' : 'Wall Mounted (Heavy Flanges)'}</span>
+        </div>
         <div class="flex justify-between text-slate-400">
           <span>DIN Internal Heat Dissipation:</span>
           <span class="font-mono text-white font-semibold">${totalOperatingWatts} W (${Math.round(totalOperatingWatts * 3.412)} BTU/hr)</span>
@@ -1289,9 +1399,9 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     if (fieldContainer) {
       fieldContainer.innerHTML = `
         <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-          <i data-lucide="shield" class="w-4 h-4 text-amber-400"></i> Surge & Grounding
+          <i data-lucide="shield" class="w-4 h-4 text-amber-400"></i> Mounting Hardware & Grounding
         </h3>
-        <p class="text-[11px] text-slate-400">External copper ground stud connected to #6 AWG chassis ground electrode.</p>
+        <p class="text-[11px] text-slate-400">${mounting === 'pole' ? 'Stainless steel strapping clamps with rubber isolation pads for pole mounting.' : 'Heavy-duty 316 stainless wall-mount unistrut brackets.'}</p>
       `;
     }
 
@@ -1299,8 +1409,11 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     // -------------------------------------------------------
     // Structural Pole Mount Wind Load & Cables
     // -------------------------------------------------------
+    const poleHeight = (activeEnc && activeEnc.poleHeightFt) ? activeEnc.poleHeightFt : (parsed.poleHeightFt || 20);
     const epaTotal = Math.round(assignedItems.length * 0.45 * 10) / 10;
     const cableDropCount = assignedItems.length * 2;
+    // Bending moment: EPA * force_factor * height
+    const windBendingMoment = Math.round(epaTotal * 25.6 * (poleHeight * 0.6));
 
     container.innerHTML = `
       <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
@@ -1311,12 +1424,16 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
       </h3>
       <div class="space-y-2 text-xs">
         <div class="flex justify-between text-slate-400">
+          <span>Structural Height AGL:</span>
+          <span class="font-mono text-white font-semibold">${poleHeight} ft Tower Elevation</span>
+        </div>
+        <div class="flex justify-between text-slate-400">
           <span>Effective Projected Area (EPA):</span>
           <span class="font-mono text-cyan-300 font-semibold">${epaTotal} sq ft</span>
         </div>
         <div class="flex justify-between text-slate-400">
-          <span>Max Wind Velocity Rating:</span>
-          <span class="font-mono text-white font-semibold">120 MPH Basic Wind</span>
+          <span>Base Bending Moment:</span>
+          <span class="font-mono text-white font-semibold">${windBendingMoment.toLocaleString()} ft-lbs @ 100 MPH</span>
         </div>
         <div class="flex justify-between text-slate-400">
           <span>Down-Mast Cable Drops:</span>
@@ -1343,7 +1460,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
         <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
           <i data-lucide="arrow-down" class="w-4 h-4 text-cyan-400"></i> Conduit Penetrations
         </h3>
-        <p class="text-[11px] text-slate-400">2" Schedule 40 PVC sweep conduit stub-up through foundation center into base handhole.</p>
+        <p class="text-[11px] text-slate-400">2" Schedule 40 PVC sweep conduit stub-up through foundation center into base handhole at 2 ft AGL.</p>
       `;
     }
 
@@ -1351,7 +1468,9 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     // -------------------------------------------------------
     // Architectural Backboard Surface Utilization
     // -------------------------------------------------------
-    const totalSqFt = 32;
+    const widthFt = (activeEnc && activeEnc.widthFt) ? activeEnc.widthFt : 4;
+    const heightFt = (activeEnc && activeEnc.heightFt) ? activeEnc.heightFt : 8;
+    const totalSqFt = widthFt * heightFt;
     const usedSqFt = Math.min(totalSqFt, Math.round(assignedItems.length * 3.5 * 10) / 10);
     const pct = Math.round((usedSqFt / totalSqFt) * 100);
 
@@ -1579,7 +1698,7 @@ function renderServedEndpoints(parsed, activeEnc) {
     <!-- Quick Add Endpoint Button -->
     <div class="flex items-center justify-between pt-1">
       <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Homed Field Devices</span>
-      <button onclick="promptAddEndpointToActiveHost()" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1">
+      <button onclick="promptAddEndpointToActiveHost()" class="px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-[10px] font-bold flex items-center gap-1 shadow-sm transition-colors">
         <i data-lucide="plus" class="w-3 h-3"></i> Add Drop
       </button>
     </div>
@@ -1608,7 +1727,7 @@ function renderServedEndpoints(parsed, activeEnc) {
               </div>
             </div>
             <div class="flex items-center gap-1 shrink-0">
-              <button onclick="unlinkEndpointFromHost('${ep.id}')" class="p-1 text-slate-500 hover:text-rose-400 rounded" title="Unlink from this host">
+              <button onclick="unlinkEndpointFromHost('${ep.id}')" class="p-1 text-slate-500 hover:text-rose-400 rounded transition-colors" title="Unlink from this host">
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
               </button>
             </div>

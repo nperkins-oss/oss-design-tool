@@ -547,70 +547,70 @@
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[90vh] flex flex-col shadow-2xl overflow-hidden">
       
       <!-- Modal Header with Host Selector & Quick Tools -->
-      <div class="px-6 py-3 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0 gap-3">
-        <div class="flex items-center gap-3">
-          <div class="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+      <div class="px-6 py-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between bg-slate-950/70 shrink-0 gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shrink-0">
             <i data-lucide="server" id="hostHeaderIcon" class="w-5 h-5"></i>
           </div>
-          <div>
-            <h2 id="hostModalTitle" class="text-sm font-bold text-white flex items-center gap-2">
+          <div class="min-w-0">
+            <h2 id="hostModalTitle" class="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
               <span>Mounting Host & Elevation Visualizer</span>
               <span id="hostTypeBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-700/60">19" EIA Rack</span>
             </h2>
-            <p id="hostModalSubtitle" class="text-xs text-slate-400">Density audit, subplate layout, and electrical sizing across 5 physical mounting host types.</p>
+            <p id="hostModalSubtitle" class="text-xs text-slate-400 truncate max-w-lg">Mechanical density, physical mounting, and electrical sizing across 5 canonical host types.</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <!-- Cabinet / Host Location Selector -->
-          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
+        <div class="flex items-center gap-2 shrink-0">
+          <!-- Host Location Selector -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs shadow-sm">
             <span class="text-slate-400 font-medium">Host:</span>
-            <select id="rackLocationSelector" onchange="switchActiveRackElevation(this.value)" class="bg-slate-950 border border-slate-700 text-indigo-300 font-bold rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 max-w-[200px] truncate">
+            <select id="rackLocationSelector" onchange="switchActiveRackElevation(this.value)" class="bg-slate-950 border border-slate-700 text-indigo-300 font-bold rounded px-2 py-0.5 focus:outline-none focus:border-indigo-500 max-w-[210px] truncate text-xs">
               <!-- Dynamically populated -->
             </select>
-            <button onclick="promptCreateNewRack()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-[10px] font-bold" title="Add New Mounting Host">+ Host</button>
-            <button onclick="toggleFacilityManager()" class="px-2 py-0.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800/60 rounded text-[10px] font-bold flex items-center gap-1" title="Open Full Facility Hierarchy Manager">
+            <button onclick="promptCreateNewRack()" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-[10px] font-bold transition-colors" title="Add New Mounting Host">+ Host</button>
+            <button onclick="toggleFacilityModal()" class="px-2 py-0.5 bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-800/60 rounded text-[10px] font-bold flex items-center gap-1 transition-colors" title="Open Full Facility Hierarchy Manager">
               <i data-lucide="network" class="w-3 h-3"></i> Hierarchy
             </button>
-            <button onclick="deleteActiveRackElevation()" class="p-1 text-slate-500 hover:text-rose-400" title="Delete This Host"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="deleteActiveRackElevation()" class="p-1 text-slate-500 hover:text-rose-400 rounded transition-colors" title="Delete This Host"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
           </div>
 
-          <!-- Dynamic Host Dimension Selector (switches depending on hostType) -->
-          <div id="hostDimensionControl" class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl text-xs">
-            <span class="text-slate-400 font-medium">Height:</span>
-            <select id="rackHeightSelector" onchange="setRackHeight(this.value)" class="bg-slate-950 border border-slate-700 text-white font-mono rounded px-2 py-0.5">
-              <option value="12">12U Wallbox</option>
-              <option value="18">18U Wallbox</option>
-              <option value="24">24U Half-Rack</option>
-              <option value="42">42U Full-Rack</option>
-              <option value="48">48U Enterprise</option>
-            </select>
-          </div>
-
-          <!-- Auto-Mount & Unmount All Action Buttons -->
-          <button onclick="autoMountAllToActiveRack()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow" title="Automatically slot all unmounted equipment into available units">
-            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Auto-Mount
-          </button>
-          <button onclick="unmountAllFromActiveRack()" class="px-3 py-1.5 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors" title="Clear all equipment slots in this host">
-            <i data-lucide="eraser" class="w-3.5 h-3.5"></i> Unmount All
-          </button>
-
-          <button onclick="toggleRackModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 ml-1">
+          <button onclick="toggleRackModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 ml-1 transition-colors">
             <i data-lucide="x" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6 bg-slate-950">
+      <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-6 bg-slate-950">
         <!-- Host Frame Elevation Column -->
-        <div class="flex-1 flex flex-col items-center">
-          <div class="w-full max-w-xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
-            <div class="flex justify-between items-center pb-2 mb-2 border-b border-slate-800 text-[11px] font-mono text-slate-400">
-              <span id="elevationFrameTitle" class="flex items-center gap-1.5 font-bold text-slate-200">
-                <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Standard 19" Equipment Rail
-              </span>
-              <span id="rackUtilizationBadge" class="text-indigo-400 font-bold">0 / 24 U Used</span>
+        <div class="flex-1 flex flex-col items-center min-w-0">
+          <div class="w-full max-w-2xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
+            <!-- Elevation Action Toolbar: Title + Dimension Selectors + Auto-Mount/Unmount -->
+            <div class="pb-3 mb-3 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div class="flex items-center gap-2">
+                <span id="elevationFrameTitle" class="flex items-center gap-1.5 font-bold text-slate-200 text-xs">
+                  <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Standard 19" Equipment Rail
+                </span>
+                <span id="rackUtilizationBadge" class="text-indigo-400 font-bold font-mono text-[11px] bg-slate-950 px-2 py-0.5 rounded border border-slate-800">0 / 24 U Used</span>
+              </div>
+
+              <!-- Dedicated Controls: Dimensions + Auto-Mount/Unmount Actions -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <div id="hostDimensionControl" class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 px-2 py-1 rounded-xl text-xs">
+                  <!-- Dynamically populated based on hostType -->
+                </div>
+                <div class="flex items-center gap-1">
+                  <button onclick="autoMountAllToActiveRack()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow transition-colors" title="Automatically slot all compatible unmounted equipment">
+                    <i data-lucide="layout-grid" class="w-3 h-3"></i> Auto-Mount
+                  </button>
+                  <button onclick="unmountAllFromActiveRack()" class="px-2.5 py-1 bg-slate-800 hover:bg-rose-950/40 text-slate-300 hover:text-rose-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors" title="Clear all equipment slots in this host">
+                    <i data-lucide="eraser" class="w-3 h-3"></i> Clear
+                  </button>
+                </div>
+              </div>
             </div>
+
+            <!-- Elevation Visualizer Canvas -->
             <div id="rackElevationFrame" class="space-y-1 bg-slate-950 p-2 rounded-xl border border-slate-800/80 min-h-[480px]"></div>
           </div>
         </div>

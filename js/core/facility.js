@@ -796,6 +796,8 @@ const FacilityStore = {
 // -----------------------------------------------------------
 let activeFacilityFloorId = "floor-1";
 let activeFacilitySpaceId = "space-mdf";
+let facilityActiveForm = null; // null | "add_floor" | "add_space" | "add_host"
+let facilityNewHostType = "equipment_rack";
 
 function isFacilityModalVisible() {
   const modal = document.getElementById("facilityModal");
@@ -808,6 +810,7 @@ function toggleFacilityModal() {
 
   if (modal.classList.contains("hidden")) {
     modal.classList.remove("hidden");
+    facilityActiveForm = null;
     const floors = FacilityStore.getFloors();
     if (!floors.some(f => f.id === activeFacilityFloorId)) {
       activeFacilityFloorId = floors[0] ? floors[0].id : "floor-1";
@@ -820,6 +823,119 @@ function toggleFacilityModal() {
     if (window.lucide) lucide.createIcons();
   } else {
     modal.classList.add("hidden");
+    facilityActiveForm = null;
+  }
+}
+
+function openFacilityAddForm(formType) {
+  facilityActiveForm = formType;
+  renderFacilityManager();
+  // Focus the first input of the open form
+  setTimeout(() => {
+    if (formType === "add_floor") {
+      const el = document.getElementById("inlineFloorName");
+      if (el) el.focus();
+    } else if (formType === "add_space") {
+      const el = document.getElementById("inlineSpaceName");
+      if (el) el.focus();
+    } else if (formType === "add_host") {
+      const el = document.getElementById("inlineHostName");
+      if (el) el.focus();
+    }
+  }, 50);
+}
+
+function closeFacilityAddForm() {
+  facilityActiveForm = null;
+  renderFacilityManager();
+}
+
+function setFacilityNewHostType(type) {
+  facilityNewHostType = type;
+  renderFacilityManager();
+}
+
+function saveInlineFloor() {
+  const nameInput = document.getElementById("inlineFloorName");
+  const heightInput = document.getElementById("inlineFloorHeight");
+  const name = nameInput ? nameInput.value.trim() : "";
+  const height = heightInput ? parseInt(heightInput.value, 10) : 14;
+
+  if (!name) {
+    if (typeof showToast === "function") showToast("Please enter a floor name");
+    return;
+  }
+
+  const f = FacilityStore.addFloor(name, height || 14);
+  activeFacilityFloorId = f.id;
+  facilityActiveForm = null;
+  renderFacilityManager();
+  if (typeof showToast === "function") showToast(`Added floor level "${name}"`);
+}
+
+function saveInlineSpace() {
+  const nameInput = document.getElementById("inlineSpaceName");
+  const typeSelect = document.getElementById("inlineSpaceType");
+  const name = nameInput ? nameInput.value.trim() : "";
+  const type = typeSelect ? typeSelect.value : "idf";
+
+  if (!name) {
+    if (typeof showToast === "function") showToast("Please enter a space name");
+    return;
+  }
+
+  const s = FacilityStore.addSpace(name, type, activeFacilityFloorId);
+  activeFacilitySpaceId = s.id;
+  facilityActiveForm = null;
+  renderFacilityManager();
+  if (typeof showToast === "function") showToast(`Added space "${name}"`);
+}
+
+function saveInlineHost() {
+  const typeSelect = document.getElementById("inlineHostType");
+  const nameInput = document.getElementById("inlineHostName");
+  const hostType = typeSelect ? typeSelect.value : facilityNewHostType;
+  const name = nameInput ? nameInput.value.trim() : "";
+
+  if (!name) {
+    if (typeof showToast === "function") showToast("Please enter a host name");
+    return;
+  }
+
+  const options = {};
+
+  if (hostType === "equipment_rack") {
+    const hSelect = document.getElementById("inlineRackHeight");
+    options.heightU = hSelect ? parseInt(hSelect.value, 10) : 24;
+    const dSelect = document.getElementById("inlineRackDepth");
+    options.depthInches = dSelect ? parseInt(dSelect.value, 10) : 36;
+  } else if (hostType === "security_cabinet") {
+    const bSelect = document.getElementById("inlineCabinetBays");
+    options.subplateBays = bSelect ? parseInt(bSelect.value, 10) : 8;
+    const vSelect = document.getElementById("inlineCabinetVoltage");
+    options.dcVoltage = vSelect ? vSelect.value : "dual_12_24";
+  } else if (hostType === "industrial_din") {
+    const rSelect = document.getElementById("inlineDinRails");
+    options.dinRails = rSelect ? parseInt(rSelect.value, 10) : 2;
+    const mSelect = document.getElementById("inlineDinMounting");
+    options.mountingMethod = mSelect ? mSelect.value : "wall";
+    options.railLengthMm = 350;
+  } else if (hostType === "structural_mount") {
+    const pHeight = document.getElementById("inlinePoleHeight");
+    options.poleHeightFt = pHeight ? parseInt(pHeight.value, 10) : 20;
+    const dSelect = document.getElementById("inlinePoleDiam");
+    options.poleDiameterInches = dSelect ? parseInt(dSelect.value, 10) : 4;
+  } else if (hostType === "architectural_backboard") {
+    const wSelect = document.getElementById("inlineBackboardSize");
+    options.widthFt = wSelect ? parseInt(wSelect.value, 10) : 4;
+    options.heightFt = 8;
+  }
+
+  FacilityStore.addHost(name, hostType, activeFacilitySpaceId, options);
+  facilityActiveForm = null;
+  renderFacilityManager();
+  if (typeof showToast === "function") {
+    showToast(`Added ${name} (${FacilityStore.HOST_TYPES[hostType]?.label || hostType})`);
   }
 }
 
@@ -865,18 +981,18 @@ function renderFacilityManager() {
       </div>
 
       <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Racks & Enclosures</span>
+        <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Mounting Hosts</span>
         <div class="flex items-baseline gap-2">
           <span class="text-xl font-extrabold text-indigo-400 font-mono">${enclosures.length}</span>
-          <span class="text-xs text-slate-400">Enclosures Active</span>
+          <span class="text-xs text-slate-400">Hosts Active</span>
         </div>
       </div>
 
       <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
-        <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Deployed Hardware</span>
+        <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Assigned Hardware</span>
         <div class="flex items-baseline gap-2">
           <span class="text-xl font-extrabold text-emerald-400 font-mono">${totalEquipmentCount}</span>
-          <span class="text-xs text-slate-400">BOM Units Assigned</span>
+          <span class="text-xs text-slate-400">BOM Units Housed</span>
         </div>
       </div>
 
@@ -898,10 +1014,32 @@ function renderFacilityManager() {
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i> Floor Levels (${floors.length})
           </span>
-          <button onclick="promptAddFloor()" class="px-2 py-1 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded-lg text-[10px] font-bold transition-all">
-            + Floor
+          <button onclick="openFacilityAddForm('add_floor')" class="px-2 py-1 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1">
+            <i data-lucide="plus" class="w-3 h-3"></i> Add Floor
           </button>
         </div>
+
+        ${facilityActiveForm === 'add_floor' ? `
+          <!-- Inline Add Floor Form -->
+          <div class="p-3 bg-slate-900 border border-sky-500/60 rounded-xl space-y-2.5 shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-sky-400">New Floor Level</span>
+              <button onclick="closeFacilityAddForm()" class="text-slate-500 hover:text-slate-300"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Floor Name:</label>
+              <input id="inlineFloorName" type="text" placeholder="e.g. Level 2 - Corporate Offices" value="Level ${floors.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-sky-500 focus:outline-none font-medium">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Ceiling Rise (ft):</label>
+              <input id="inlineFloorHeight" type="number" value="14" min="8" max="50" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:border-sky-500 focus:outline-none font-mono">
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button onclick="closeFacilityAddForm()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Cancel</button>
+              <button onclick="saveInlineFloor()" class="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow">Save Floor</button>
+            </div>
+          </div>
+        ` : ''}
 
         <div class="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
           ${floors.map(f => {
@@ -917,7 +1055,7 @@ function renderFacilityManager() {
                   <span class="text-[10px] text-slate-400 font-mono block mt-0.5">${floorSpaces.length} Spaces &bull; ${f.heightFt || 14}' Rise</span>
                 </div>
                 ${floors.length > 1 ? `
-                  <button onclick="event.stopPropagation(); deleteFacilityFloor('${f.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity">
+                  <button onclick="event.stopPropagation(); deleteFacilityFloor('${f.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity" title="Delete Floor">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
                 ` : ''}
@@ -933,10 +1071,38 @@ function renderFacilityManager() {
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="door-open" class="w-3.5 h-3.5 text-indigo-400"></i> Telecom Spaces & Poles (${currentFloorSpaces.length})
           </span>
-          <button onclick="promptAddSpace('${currentFloor.id}')" class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold transition-all">
-            + Space / Pole
+          <button onclick="openFacilityAddForm('add_space')" class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1">
+            <i data-lucide="plus" class="w-3 h-3"></i> Add Space
           </button>
         </div>
+
+        ${facilityActiveForm === 'add_space' ? `
+          <!-- Inline Add Space Form -->
+          <div class="p-3 bg-slate-900 border border-indigo-500/60 rounded-xl space-y-2.5 shadow-lg">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-400">New Space on ${escapeHTML(currentFloor.name)}</span>
+              <button onclick="closeFacilityAddForm()" class="text-slate-500 hover:text-slate-300"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Space Name:</label>
+              <input id="inlineSpaceName" type="text" placeholder="e.g. IDF-2, Pole 2, East Gate Wallbox" value="IDF-${currentFloorSpaces.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none font-medium">
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Space Type:</label>
+              <select id="inlineSpaceType" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+                <option value="idf">IDF (Telecommunications Closet)</option>
+                <option value="mdf">MDF (Main Distribution Facility / Data Center)</option>
+                <option value="pole">Exterior Structural Pole / Mast</option>
+                <option value="wallbox">Gate / Wallbox Enclosure Station</option>
+                <option value="security_room">Security Control & Access Room</option>
+              </select>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button onclick="closeFacilityAddForm()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Cancel</button>
+              <button onclick="saveInlineSpace()" class="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold shadow">Save Space</button>
+            </div>
+          </div>
+        ` : ''}
 
         <div class="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
           ${currentFloorSpaces.length === 0 ? `
@@ -948,6 +1114,7 @@ function renderFacilityManager() {
             const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
             const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
             const isMdf = s.type === "mdf";
+
             return `
               <div 
                 onclick="selectFacilitySpace('${s.id}')"
@@ -956,16 +1123,16 @@ function renderFacilityManager() {
                 <div class="min-w-0">
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-white truncate">${escapeHTML(s.name)}</span>
-                    <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${isMdf ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : (isPole ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300')}">
+                    <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${isMdf ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : (isPole ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300')}">
                       ${s.type.toUpperCase()}
                     </span>
                   </div>
                   <span class="text-[10px] text-slate-400 font-mono block mt-1">
-                    ${spaceEncs.length} ${spaceEncs.length === 1 ? 'Enclosure' : 'Enclosures'}
+                    ${spaceEncs.length} ${spaceEncs.length === 1 ? 'Mounting Host' : 'Mounting Hosts'}
                   </span>
                 </div>
                 ${spaces.length > 1 ? `
-                  <button onclick="event.stopPropagation(); deleteFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity">
+                  <button onclick="event.stopPropagation(); deleteFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity" title="Delete Space">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
                 ` : ''}
@@ -975,18 +1142,56 @@ function renderFacilityManager() {
         </div>
       </div>
 
-      <!-- Col 3: Enclosures & Racks with Live Telemetry (5 cols) -->
+      <!-- Col 3: Mounting Hosts & Enclosures (5 cols) -->
       <div class="md:col-span-5 space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i> Mounting Hosts & Enclosures (${currentSpaceEncs.length})
           </span>
           ${currentSpace ? `
-            <button onclick="promptAddEnclosure('${currentSpace.id}')" class="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold transition-all">
-              + Host / Enclosure
+            <button onclick="openFacilityAddForm('add_host')" class="px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1">
+              <i data-lucide="plus" class="w-3 h-3"></i> Add Host
             </button>
           ` : ''}
         </div>
+
+        ${facilityActiveForm === 'add_host' && currentSpace ? `
+          <!-- Inline Add Host Form -->
+          <div class="p-3.5 bg-slate-900 border border-emerald-500/60 rounded-xl space-y-3 shadow-xl">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-emerald-400">Add Mounting Host to ${escapeHTML(currentSpace.name)}</span>
+              <button onclick="closeFacilityAddForm()" class="text-slate-500 hover:text-slate-300"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+            </div>
+
+            <!-- Host Type Selector -->
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Host Mounting Type:</label>
+              <select id="inlineHostType" onchange="setFacilityNewHostType(this.value)" class="w-full bg-slate-950 border border-slate-700 text-emerald-300 font-bold rounded-lg px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-none">
+                <option value="equipment_rack" ${facilityNewHostType === 'equipment_rack' ? 'selected' : ''}>19" EIA Equipment Rack (Switches, Servers, UPS)</option>
+                <option value="security_cabinet" ${facilityNewHostType === 'security_cabinet' ? 'selected' : ''}>Security & Access Cabinet (Altronix Trove / LSP)</option>
+                <option value="industrial_din" ${facilityNewHostType === 'industrial_din' ? 'selected' : ''}>Industrial Weatherproof NEMA Box (DIN Rail)</option>
+                <option value="structural_mount" ${facilityNewHostType === 'structural_mount' ? 'selected' : ''}>Structural Pole / Mast Mount (Cameras, Radios)</option>
+                <option value="architectural_backboard" ${facilityNewHostType === 'architectural_backboard' ? 'selected' : ''}>Architectural Telecom Backboard (Plywood)</option>
+              </select>
+            </div>
+
+            <!-- Host Name Input -->
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Host Name:</label>
+              <input id="inlineHostName" type="text" value="${getSuggestedHostName(facilityNewHostType, currentSpaceEncs.length)}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-emerald-500 focus:outline-none font-medium">
+            </div>
+
+            <!-- Dynamic Form-Factor Fields -->
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              ${renderInlineHostSpecificFields(facilityNewHostType)}
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-1 border-t border-slate-800">
+              <button onclick="closeFacilityAddForm()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Cancel</button>
+              <button onclick="saveInlineHost()" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold shadow">Create Host</button>
+            </div>
+          </div>
+        ` : ''}
 
         <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
           ${currentSpaceEncs.length === 0 ? `
@@ -1000,32 +1205,38 @@ function renderFacilityManager() {
             const meta = MOUNTING_HOST_TYPES[hostType] || MOUNTING_HOST_TYPES.equipment_rack;
 
             return `
-              <div class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5">
-                <div class="flex items-start justify-between">
+              <div class="p-3.5 rounded-xl border border-slate-800 bg-slate-950/90 space-y-2.5 hover:border-slate-700 transition-colors">
+                <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0">
                     <span class="text-xs font-bold text-white block truncate">${escapeHTML(e.name)}</span>
-                    <div class="flex items-center gap-1.5 mt-0.5">
+                    <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 flex items-center gap-1">
                         <i data-lucide="${meta.icon || 'server'}" class="w-2.5 h-2.5"></i> ${meta.badgeLabel}
                       </span>
+                      ${hostType === 'industrial_din' ? `
+                        <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${e.mountingMethod === 'pole' ? 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-300'}">
+                          ${e.mountingMethod === 'pole' ? 'Pole Mounted' : 'Wall Mounted'}
+                        </span>
+                      ` : ''}
                       <span class="text-[10px] font-mono text-slate-400">
                         ${hostType === 'equipment_rack' ? `${e.heightU || 24}U EIA &bull; Max ${e.maxWatts || 3000}W` :
                           (hostType === 'security_cabinet' ? `${e.subplateBays || 8} Subplate Bays &bull; ${e.dcVoltage || '12/24V'}` :
                           (hostType === 'industrial_din' ? `${e.dinRails || 2}x DIN (${e.railLengthMm || 350}mm)` :
-                          (hostType === 'structural_mount' ? `${e.poleDiameterInches || 4}" Pole Mount` :
+                          (hostType === 'structural_mount' ? `${e.poleHeightFt || 20}ft AGL &bull; ${e.poleDiameterInches || 4}" O.D.` :
                           `${e.widthFt || 4}' x ${e.heightFt || 8}' Backboard`)))}
                       </span>
                     </div>
                   </div>
-                  <div class="flex items-center gap-1 shrink-0">
+
+                  <div class="flex items-center gap-1.5 shrink-0">
                     <button 
                       onclick="openRackViewerFor('${locName}')"
-                      class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold rounded-lg border border-slate-700 transition-colors"
-                      title="Inspect equipment in Visualizer"
+                      class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white text-[10px] font-bold rounded-xl border border-indigo-500/40 transition-all flex items-center gap-1.5 shadow-sm"
+                      title="Open Elevation Visualizer for ${escapeHTML(e.name)}"
                     >
-                      Inspect
+                      <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Visualizer
                     </button>
-                    <button onclick="deleteFacilityEnclosure('${e.id}')" class="p-1 text-slate-500 hover:text-rose-400">
+                    <button onclick="deleteFacilityEnclosure('${e.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors" title="Delete Host">
                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     </button>
                   </div>
@@ -1048,7 +1259,7 @@ function renderFacilityManager() {
                       ${hostType === 'equipment_rack' ? `${telem.totalRuOccupied}/${e.heightU || 24}U` :
                         (hostType === 'security_cabinet' ? `${e.subplateBays || 8} Bays` :
                         (hostType === 'industrial_din' ? `${e.dinRails || 2}x Rails` :
-                        (hostType === 'structural_mount' ? `${e.poleDiameterInches || 4}" Mast` : `${e.widthFt || 4}x${e.heightFt || 8} Ft`)))}
+                        (hostType === 'structural_mount' ? `${e.poleHeightFt || 20}ft Mast` : `${e.widthFt || 4}x${e.heightFt || 8} Ft`)))}
                     </span>
                   </div>
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
@@ -1072,90 +1283,159 @@ function renderFacilityManager() {
   if (window.lucide) lucide.createIcons();
 }
 
+function getSuggestedHostName(hostType, existingCount) {
+  const num = existingCount + 1;
+  switch (hostType) {
+    case "security_cabinet":
+      return `Security-Cab-${num}`;
+    case "industrial_din":
+      return `NEMA-Box-${num}`;
+    case "structural_mount":
+      return `Mast-${num}`;
+    case "architectural_backboard":
+      return `Backboard-${num}`;
+    default:
+      return `Rack-${num}`;
+  }
+}
+
+function renderInlineHostSpecificFields(hostType) {
+  if (hostType === "security_cabinet") {
+    return `
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Subplate Bays:</label>
+        <select id="inlineCabinetBays" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
+          <option value="4">4 Bays (Trove 1 / Compact)</option>
+          <option value="8" selected>8 Bays (Trove 2 / Standard)</option>
+          <option value="12">12 Bays (Trove 3 / High Density)</option>
+          <option value="16">16 Bays (LifeSafety ProWire)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">DC Bus Voltage:</label>
+        <select id="inlineCabinetVoltage" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
+          <option value="dual_12_24" selected>Dual 12V / 24VDC</option>
+          <option value="24vdc">24VDC Dedicated</option>
+          <option value="12vdc">12VDC Dedicated</option>
+        </select>
+      </div>
+    `;
+  } else if (hostType === "industrial_din") {
+    return `
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Mounting Method:</label>
+        <select id="inlineDinMounting" class="w-full bg-slate-950 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1 text-xs">
+          <option value="wall" selected>Wall Mount (Flanges/Strut)</option>
+          <option value="pole">Pole Mount (Stainless Banding)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">DIN Rails:</label>
+        <select id="inlineDinRails" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
+          <option value="1">1 Rail (Compact NEMA)</option>
+          <option value="2" selected>2 Rails (Standard NEMA 4X)</option>
+          <option value="3">3 Rails (Deep Industrial)</option>
+          <option value="4">4 Rails (Full Control)</option>
+        </select>
+      </div>
+    `;
+  } else if (hostType === "structural_mount") {
+    return `
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Pole Height (ft AGL):</label>
+        <select id="inlinePoleHeight" class="w-full bg-slate-950 border border-slate-700 text-cyan-300 font-bold rounded-lg px-2 py-1 text-xs">
+          <option value="12">12 ft (Bollard / Pedestrian)</option>
+          <option value="15">15 ft (Perimeter Fence)</option>
+          <option value="20" selected>20 ft (Standard Parking Mast)</option>
+          <option value="25">25 ft (High Mast / Wide Angle)</option>
+          <option value="30">30 ft (Highway / Facility Mast)</option>
+          <option value="40">40 ft (Tower / PtP Bridge)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Mast Diameter:</label>
+        <select id="inlinePoleDiam" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
+          <option value="2">2" Pipe</option>
+          <option value="3">3" Standard Mast</option>
+          <option value="4" selected>4" Heavy Duty Steel</option>
+          <option value="6">6" High Mast / Bollard</option>
+        </select>
+      </div>
+    `;
+  } else if (hostType === "architectural_backboard") {
+    return `
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Plywood Dimensions:</label>
+        <select id="inlineBackboardSize" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs">
+          <option value="4" selected>4' x 8' Sheet (32 sq ft)</option>
+          <option value="8">8' x 8' Wallfield (64 sq ft)</option>
+          <option value="12">12' x 8' Room Field (96 sq ft)</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Rating Stamp:</label>
+        <input type="text" disabled value="3/4\" AC Fire-Retardant" class="w-full bg-slate-950/60 border border-slate-800 text-slate-400 rounded-lg px-2 py-1 text-xs">
+      </div>
+    `;
+  } else {
+    // 19" Equipment Rack
+    return `
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Rack Height:</label>
+        <select id="inlineRackHeight" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs font-mono">
+          <option value="12">12U Wallbox</option>
+          <option value="18">18U Wallbox</option>
+          <option value="24" selected>24U Half-Rack</option>
+          <option value="42">42U Full-Rack</option>
+          <option value="48">48U Enterprise</option>
+        </select>
+      </div>
+      <div>
+        <label class="text-[10px] text-slate-400 block mb-1">Frame Depth:</label>
+        <select id="inlineRackDepth" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs font-mono">
+          <option value="24">24" Shallow</option>
+          <option value="36" selected>36" Standard</option>
+          <option value="42">42" Deep Server</option>
+        </select>
+      </div>
+    `;
+  }
+}
+
 function selectFacilityFloor(floorId) {
   activeFacilityFloorId = floorId;
   const spaces = FacilityStore.getSpaces(floorId);
   activeFacilitySpaceId = spaces[0] ? spaces[0].id : null;
+  facilityActiveForm = null;
   renderFacilityManager();
 }
 
 function selectFacilitySpace(spaceId) {
   activeFacilitySpaceId = spaceId;
+  facilityActiveForm = null;
   renderFacilityManager();
 }
 
+// Backward-compatible Prompt Callbacks delegating to streamlined inline forms
 function promptAddFloor() {
-  const name = prompt("Enter Floor / Level Name (e.g. Level 2 - Corporate Offices, Campus Exterior):", `Level ${FacilityStore.getFloors().length + 1}`);
-  if (!name || !name.trim()) return;
-  const f = FacilityStore.addFloor(name.trim());
-  activeFacilityFloorId = f.id;
-  renderFacilityManager();
-  if (typeof showToast === "function") showToast(`Added floor level "${name.trim()}"`);
+  openFacilityAddForm("add_floor");
 }
 
 function promptAddSpace(floorId) {
-  const name = prompt("Enter Space / Room / Pole Name (e.g. IDF-2, Pole 2, East Gate Wallbox, Security Hub):", `IDF-${FacilityStore.getSpaces().length + 1}`);
-  if (!name || !name.trim()) return;
-  const lower = name.toLowerCase();
-  const type = lower.includes("pole") ? "pole" : (lower.includes("wall") ? "wallbox" : (lower.includes("security") || lower.includes("access") ? "security_room" : "idf"));
-  const s = FacilityStore.addSpace(name.trim(), type, floorId);
-  activeFacilitySpaceId = s.id;
-  renderFacilityManager();
-  if (typeof showToast === "function") showToast(`Added space "${name.trim()}"`);
+  if (floorId) activeFacilityFloorId = floorId;
+  openFacilityAddForm("add_space");
 }
 
 function promptAddEnclosure(spaceId) {
-  const space = FacilityStore.getSpaces().find(s => s.id === spaceId);
-  const isPole = space && (space.type === "pole" || space.name.toLowerCase().includes("pole"));
-  const isSecurity = space && (space.type === "security_room" || space.name.toLowerCase().includes("security") || space.name.toLowerCase().includes("access"));
-
-  const typeChoice = prompt(
-    "Choose Mounting Host Type:\n1 = 19\" Equipment Rack (EIA RU)\n2 = Security & Control Cabinet (Altronix Trove / LSP)\n3 = Industrial Weatherproof NEMA Box (DIN Rail)\n4 = Structural Pole / Mast Mount\n5 = Architectural Backboard (Plywood)",
-    isPole ? "3" : (isSecurity ? "2" : "1")
-  );
-
-  let hostType = "equipment_rack";
-  let defaultName = `Rack-${FacilityStore.getEnclosures(spaceId).length + 1}`;
-  let options = {};
-
-  if (typeChoice === "2") {
-    hostType = "security_cabinet";
-    defaultName = `AC-Cabinet-${FacilityStore.getEnclosures(spaceId).length + 1}`;
-    options.subplateBays = 8;
-    options.dcVoltage = "dual_12_24";
-  } else if (typeChoice === "3") {
-    hostType = "industrial_din";
-    defaultName = `NEMA-Box-${FacilityStore.getEnclosures(spaceId).length + 1}`;
-    options.dinRails = 2;
-    options.railLengthMm = 350;
-  } else if (typeChoice === "4") {
-    hostType = "structural_mount";
-    defaultName = `Pole-${FacilityStore.getEnclosures(spaceId).length + 1}`;
-    options.poleDiameterInches = 4;
-  } else if (typeChoice === "5") {
-    hostType = "architectural_backboard";
-    defaultName = "Telecom-Backboard";
-    options.widthFt = 4;
-    options.heightFt = 8;
-  }
-
-  const name = prompt("Enter Name for this Mounting Host:", defaultName);
-  if (!name || !name.trim()) return;
-
-  if (hostType === "equipment_rack") {
-    const heightStr = prompt("Enter Rack Height (e.g. 42, 24, 12, 6 RU):", "24");
-    options.heightU = parseInt(heightStr, 10) || 24;
-  }
-
-  FacilityStore.addHost(name.trim(), hostType, spaceId, options);
-  renderFacilityManager();
-  if (typeof showToast === "function") showToast(`Added ${name.trim()} (${MOUNTING_HOST_TYPES[hostType]?.label || hostType})`);
+  if (spaceId) activeFacilitySpaceId = spaceId;
+  openFacilityAddForm("add_host");
 }
 
 function deleteFacilityFloor(floorId) {
   if (confirm("Delete this floor level? All associated spaces and equipment will be moved to Level 1.")) {
     FacilityStore.deleteFloor(floorId);
     activeFacilityFloorId = FacilityStore.getFloors()[0].id;
+    facilityActiveForm = null;
     renderFacilityManager();
   }
 }
@@ -1164,6 +1444,7 @@ function deleteFacilitySpace(spaceId) {
   if (confirm("Delete this telecom space? All associated equipment will be unassigned.")) {
     FacilityStore.deleteSpace(spaceId);
     activeFacilitySpaceId = FacilityStore.getSpaces()[0].id;
+    facilityActiveForm = null;
     renderFacilityManager();
   }
 }
@@ -1171,6 +1452,7 @@ function deleteFacilitySpace(spaceId) {
 function deleteFacilityEnclosure(enclosureId) {
   if (confirm("Delete this host / enclosure? Assigned hardware will be moved to Unassigned.")) {
     FacilityStore.deleteEnclosure(enclosureId);
+    facilityActiveForm = null;
     renderFacilityManager();
   }
 }
@@ -1194,9 +1476,16 @@ if (typeof window !== "undefined") {
   window.EDGE_ENDPOINT_TYPES = EDGE_ENDPOINT_TYPES;
   window.FacilityStore = FacilityStore;
   window.toggleFacilityModal = toggleFacilityModal;
+  window.toggleFacilityManager = toggleFacilityModal; // Alias for seamless navigation
   window.renderFacilityManager = renderFacilityManager;
   window.selectFacilityFloor = selectFacilityFloor;
   window.selectFacilitySpace = selectFacilitySpace;
+  window.openFacilityAddForm = openFacilityAddForm;
+  window.closeFacilityAddForm = closeFacilityAddForm;
+  window.setFacilityNewHostType = setFacilityNewHostType;
+  window.saveInlineFloor = saveInlineFloor;
+  window.saveInlineSpace = saveInlineSpace;
+  window.saveInlineHost = saveInlineHost;
   window.promptAddFloor = promptAddFloor;
   window.promptAddSpace = promptAddSpace;
   window.promptAddEnclosure = promptAddEnclosure;

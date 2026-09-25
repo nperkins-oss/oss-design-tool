@@ -7,25 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.10.8-alpha] - 2026-09-24
+## [0.10.8-alpha] - 2026-09-25
 
 ### Added
-- **Unified Physical Hierarchy & 5 Mounting Host Engines (`js/core/facility.js`, `js/tools/rack.js`, & `index.html`)**:
-  - **Full Overhaul of Location & Rack Engines**: Combined the disparate location and rack concepts into a unified physical hierarchy supporting **5 Canonical Mounting Host Types**:
-    1. **19" EIA Equipment Racks (`equipment_rack`)**: 4-post, 2-post, and wall cabinets with $1\text{U}..48\text{U}$ vertical rails, front/rear depth compliance, AC branch circuit sizing (120V/208V), and line-interactive/online UPS battery sizing.
-    2. **Security Cabinets (`security_cabinet`)**: Subplate bay modular enclosures (e.g. Altronix Trove & LifeSafety Power ProWire) for access control master controllers (Mercury LP1502), sub-controllers (MR52), and lock power supplies with standby AGM battery calculation compliant with NFPA 731 / UL 294 (4-hr standby + 15-min alarm).
-    3. **Industrial Weatherproof DIN Enclosures (`industrial_din`)**: NEMA 4X / IP66 enclosures with horizontal 35mm top-hat DIN rails, millimeter width tracking, internal temperature rise / delta-T thermal calculations, and dual redundant 48VDC terminals.
-    4. **Structural Mounts (`structural_mount`)**: Exterior poles, masts, parapets, and bollards with 4 vertical elevation zones (Mast Top, Upper Pole, Mid Pole NEMA Box, Base Handhole), Effective Projected Area (EPA) wind loading, and lightning ground rod specs (NEC 800/810).
-    5. **Architectural Backboards (`architectural_backboard`)**: Fire-rated 3/4" plywood wallfield layouts with demarc/NID, 66/110 punchdown fields, hinged brackets, and low-voltage power zones with 36" NEC 110.26 working clearance compliance.
-  - **Served Edge Endpoints & Field Drops Integration**:
-    - Modeled 5 canonical edge endpoints (`door_portal`, `surveillance_point`, `wireless_node`, `telecom_outlet`, `sensor_point`).
-    - Added dedicated "Field Drops" tab in the elevation visualizer right sidebar, reporting home-run composite "banana" cable runs, Cat6A plenum drops, and fiber counts served by the active host.
-    - Added 1-click endpoint homing and unlinking directly inside the elevation visualizer.
-  - **Interactive Unassigned Staging & Auto-Mount Across All Host Types**:
-    - Auto-Mount intelligently adapts to host type: filling U-slots in racks, modular bays in security cabinets, DIN tracks in NEMA boxes, vertical zones on poles, and quadrant zones on backboards.
-    - Drag-and-drop support across all host types with real-time collision detection and slot persistence.
-  - **Strict Backward Compatibility**:
-    - Preserved legacy `item.closetName = "Space • Enclosure"` and `FacilityStore.parse()` fields (`enclosure`, `isDin`, `enclosureId`) while providing modern `hostType`, `hostName`, `hostId`, and typed configuration accessors.
+- **Streamlined Facility, Floors, Spaces & Enclosures Management (`js/core/facility.js`)**:
+  - Replaced browser `prompt()` dialogs with seamless, styled inline creation forms (`facilityActiveForm`: `add_floor`, `add_space`, `add_host`) embedded directly in the hierarchy management columns.
+  - Added direct "Elevation Visualizer" action buttons on all mounting host cards, allowing immediate one-click navigation into the visualizer for any rack, cabinet, NEMA box, pole, or wallfield.
+  - Updated all labels, badges, and terminology to consistently match between the Facility Manager and the Elevation Visualizer.
+- **NEMA Enclosure Wall and Pole Mounting Options (`js/core/facility.js` & `js/tools/rack.js`)**:
+  - Added `mountingMethod` (`wall` | `pole`) configuration to Weatherproof NEMA (`industrial_din`) enclosures.
+  - Visualizer renders heavy-duty unistrut wall flanges with anchor points for wall-mounted enclosures, or stainless steel banding straps and standoff brackets for pole-mounted enclosures.
+- **Configurable Structural Pole Heights & Dynamic Elevation Zones (`js/core/facility.js` & `js/tools/rack.js`)**:
+  - Added `poleHeightFt` (12, 15, 20, 25, 30, and 40 ft Above Ground Level) and mast diameter controls for `structural_mount` hosts.
+  - Mounting zones now dynamically scale with pole height: Mast Top ($H$ ft AGL), Upper Pole ($0.8 \times H$ ft AGL), Mid Pole NEMA Box ($0.4 \times H$ ft AGL), and Foundation Base (2 ft AGL).
+  - Wind load and bending moment ($M = F \times H$) calculations dynamically scale with pole height.
+- **Form-Factor Affinity & Device Enclosure Compatibility Engine (`js/tools/rack.js`)**:
+  - Added `checkDeviceHostCompatibility(item, hostType)`: differentiates native form-factor fits from adapter requirements (e.g., 19" rack-mount vs DIN rail switches vs modular subplates vs outdoor pole ratings).
+  - Auto-Mount only mounts compatible hardware to prevent misplacements, while drag-and-drop permits flexible field engineering with real-time visual advisory badges (`● Form-Factor Match` vs `⚠️ Requires Adapter/Bracket Kit`).
+
+### Fixed
+- **Facility Modal ESC Key Navigation (`js/core/app.js`)**:
+  - Registered `#facilityModal` in the universal keyboard ESC listener in `app.js` so pressing Escape smoothly closes the Facility, Floors, Spaces & Enclosures modal.
+- **Rack Elevation Modal Header Layout & Overflow (`index.html` & `js/tools/rack.js`)**:
+  - Moved dimension selectors (`#hostDimensionControl`) and mounting action buttons out of the top modal header into a dedicated, clean elevation toolbar directly above `#rackElevationFrame`.
+  - Eliminated text wrapping, truncation, and control overflow in `#rackModal`.
 
 ---
 

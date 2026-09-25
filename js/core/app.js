@@ -923,6 +923,7 @@ document.addEventListener("keydown", (e) => {
       { id: "cableLayoutModal", closeFn: () => typeof toggleCableLayoutModal === "function" && toggleCableLayoutModal() },
       { id: "topologyModal", closeFn: () => typeof toggleTopologyModal === "function" && toggleTopologyModal() },
       { id: "rackModal", closeFn: () => typeof toggleRackModal === "function" && toggleRackModal() },
+      { id: "facilityModal", closeFn: () => typeof toggleFacilityModal === "function" && toggleFacilityModal() },
       { id: "compareModal", closeFn: () => typeof toggleCompareModal === "function" && toggleCompareModal() },
       { id: "projectModal", closeFn: () => typeof toggleProjectModal === "function" && toggleProjectModal() },
       { id: "licenseModal", closeFn: () => typeof toggleLicenseModal === "function" && toggleLicenseModal() },
