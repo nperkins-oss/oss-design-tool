@@ -19,6 +19,34 @@ let selectedTopologyNodeId = null;
 let selectedTopologyRackLoc = null;
 let selectedTopologyLinkId = null;
 let isTopologyInspectorVisible = true;
+let showTopologyFieldDevices = typeof localStorage !== "undefined" ? (localStorage.getItem("netselect_topology_show_field") === "true") : false;
+
+function toggleTopologyFieldDevices() {
+  showTopologyFieldDevices = !showTopologyFieldDevices;
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("netselect_topology_show_field", showTopologyFieldDevices ? "true" : "false");
+  }
+  updateTopologyFieldDevicesButton();
+  renderTopology();
+  if (typeof showToast === "function") {
+    showToast(showTopologyFieldDevices ? "Showing field devices & drops" : "Hiding field devices (showing backbone infrastructure)");
+  }
+}
+
+function updateTopologyFieldDevicesButton() {
+  const btn = document.getElementById("btnToggleTopologyFieldDevices");
+  const lbl = document.getElementById("lblTopologyFieldDevices");
+  if (!btn) return;
+  if (showTopologyFieldDevices) {
+    btn.classList.add("bg-cyan-600/30", "border-cyan-500/60", "text-cyan-200");
+    btn.classList.remove("bg-slate-900", "border-slate-800", "text-slate-300");
+    if (lbl) lbl.textContent = "Hide Field Drops";
+  } else {
+    btn.classList.remove("bg-cyan-600/30", "border-cyan-500/60", "text-cyan-200");
+    btn.classList.add("bg-slate-900", "border-slate-800", "text-slate-300");
+    if (lbl) lbl.textContent = "Show Field Drops";
+  }
+}
 
 function isTopologyModalVisible() {
   const modal = document.getElementById("topologyModal");
@@ -347,6 +375,15 @@ function renderTopology() {
 
     const loc = FacilityStore.normalize(item.closetName || item.rackId);
     if (loc === FacilityStore.UNASSIGNED) return false; // Staging items are mapped only once assigned
+
+    // Field Devices filter (Cameras, Access Readers, Door Controllers, Intercoms, and field drops)
+    const isFieldDevice = item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" ||
+                          (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom"))) ||
+                          (typeof isFieldLocation === "function" ? isFieldLocation(loc) : (loc.endsWith("• Field") || loc.toLowerCase().includes("field")));
+    if (!showTopologyFieldDevices && isFieldDevice) {
+      return false;
+    }
+
     return true;
   });
 
@@ -550,6 +587,42 @@ function renderTopology() {
                   </div>
                   <span class="text-slate-300">${item.baseWatts || 300}W Base</span>
                 </div>
+              </div>
+            `;
+          }
+
+          // Render Field Device Card (Cameras, Access Readers, Intercoms)
+          const isFieldDev = item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" || (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom")));
+          if (isFieldDev) {
+            const isCam = item.role === "Camera" || (item.category && item.category.includes("camera"));
+            const hostSw = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
+            const pWatts = item.consumedPoEWatts || item.powerConsumptionWatts || item.baseWatts || 0;
+            return `
+              <div 
+                class="topo-node-card text-xs space-y-1.5 p-2.5 rounded-xl border ${isSelected ? 'border-cyan-400 ring-2 ring-cyan-400/30 bg-slate-850' : 'border-slate-800 bg-slate-950/80 hover:border-slate-700'} transition-all cursor-pointer shadow-md select-none"
+                id="topo-card-${item.instanceId}"
+                onclick="selectTopologyNode('${item.instanceId}', event)"
+              >
+                <div class="flex items-start justify-between gap-1.5">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="p-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400 shrink-0">
+                      <i data-lucide="${isCam ? 'camera' : 'shield'}" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+                      <span class="text-[10px] text-slate-400 font-mono block">${escapeHTML(item.role || 'Field Drop')} &bull; ${pWatts}W PoE</span>
+                    </div>
+                  </div>
+                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shrink-0">
+                    Field Drop
+                  </span>
+                </div>
+                ${hostSw ? `
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono text-slate-400">
+                    <span>Host Switch:</span>
+                    <span class="text-sky-300 font-semibold truncate max-w-[150px]">${escapeHTML(hostSw.model)}</span>
+                  </div>
+                ` : ''}
               </div>
             `;
           }
@@ -953,7 +1026,44 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     }
   }
 
-  // 7. Detect Resilient Ring Loops & Peer Links (e.g. Access switches connected in a loop)
+  // 7. Field Device Cable Drops (When Field Devices are toggled ON)
+  if (showTopologyFieldDevices) {
+    const fieldDevices = nodes.filter(n => 
+      n.role === "Camera" || (n.category && n.category.includes("camera")) ||
+      n.role === "Access Control" || (n.category && n.category.includes("access")) ||
+      n.role === "Intercom" || (n.category && n.category.includes("intercom")) ||
+      (n.closetName && isFieldLocation(n.closetName))
+    );
+
+    fieldDevices.forEach(dev => {
+      let host = null;
+      if (dev.uplinkTargetId) {
+        host = nodes.find(n => n.instanceId === dev.uplinkTargetId) || projectBOM.find(n => n.instanceId === dev.uplinkTargetId);
+      }
+      if (!host && access.length > 0) {
+        const devLoc = FacilityStore.normalize(dev.closetName || dev.rackId);
+        host = access.find(a => FacilityStore.normalize(a.closetName || a.rackId) === devLoc) || access[0];
+      }
+      if (host && host.instanceId !== dev.instanceId) {
+        const isPoE = (dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.maxPowerWatts || 0) > 0;
+        const watts = dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.maxPowerWatts || 0;
+        topologyLinks.push({
+          id: `link-field-${host.instanceId}-${dev.instanceId}`,
+          fromId: host.instanceId,
+          toId: dev.instanceId,
+          multiplier: 1,
+          isLAG: false,
+          speedLabel: isPoE ? `Cat6 PoE Drop (${watts}W)` : "Cat6 Drop",
+          rawSpeed: "1G",
+          category: "field_drop",
+          isFieldDrop: true,
+          isPoEDelivery: isPoE
+        });
+      }
+    });
+  }
+
+  // 8. Detect Resilient Ring Loops & Peer Links (e.g. Access switches connected in a loop)
   topologyLinks.forEach(link => {
     const nodeA = nodes.find(n => n.instanceId === link.fromId);
     const nodeB = nodes.find(n => n.instanceId === link.toId);
@@ -1018,18 +1128,40 @@ function renderTopologyLinks() {
     if (!fromCluster || !toCluster) return;
 
     // Calculate edge anchor points (snapping to border edges instead of centers)
-    const fromBox = {
-      x: fromCluster.offsetLeft + fromCard.offsetLeft,
-      y: fromCluster.offsetTop + fromCard.offsetTop,
-      w: fromCard.offsetWidth,
-      h: fromCard.offsetHeight
-    };
-    const toBox = {
-      x: toCluster.offsetLeft + toCard.offsetLeft,
-      y: toCluster.offsetTop + toCard.offsetTop,
-      w: toCard.offsetWidth,
-      h: toCard.offsetHeight
-    };
+    const container = document.getElementById("topologyNodesContainer");
+    const zoom = topologyZoomLevel || 1.0;
+
+    let fromBox, toBox;
+    if (container) {
+      const cRect = container.getBoundingClientRect();
+      const fRect = fromCard.getBoundingClientRect();
+      const tRect = toCard.getBoundingClientRect();
+      fromBox = {
+        x: (fRect.left - cRect.left) / zoom,
+        y: (fRect.top - cRect.top) / zoom,
+        w: fRect.width / zoom,
+        h: fRect.height / zoom
+      };
+      toBox = {
+        x: (tRect.left - cRect.left) / zoom,
+        y: (tRect.top - cRect.top) / zoom,
+        w: tRect.width / zoom,
+        h: tRect.height / zoom
+      };
+    } else {
+      fromBox = {
+        x: fromCluster.offsetLeft + fromCard.offsetLeft,
+        y: fromCluster.offsetTop + fromCard.offsetTop,
+        w: fromCard.offsetWidth,
+        h: fromCard.offsetHeight
+      };
+      toBox = {
+        x: toCluster.offsetLeft + toCard.offsetLeft,
+        y: toCluster.offsetTop + toCard.offsetTop,
+        w: toCard.offsetWidth,
+        h: toCard.offsetHeight
+      };
+    }
 
     let x1, y1, x2, y2;
     let cx1, cy1, cx2, cy2;
@@ -1105,7 +1237,11 @@ function renderTopologyLinks() {
     let strokeWidth = link.isLAG ? "3.5" : "2.5";
     let isDashed = false;
 
-    if (link.isCrossStack) {
+    if (link.isFieldDrop) {
+      strokeColor = "#06b6d4"; // Cyan: Field Device Drop (PoE/Data)
+      strokeWidth = "2.0";
+      isDashed = true;
+    } else if (link.isCrossStack) {
       strokeColor = "#818cf8"; // Indigo / Violet: Redundant Cross-Stack LACP LAG
       strokeWidth = "4.0";
     } else if (link.isRing) {
@@ -3472,3 +3608,5 @@ window.toggleRadioUplinkRole = toggleRadioUplinkRole;
 window.updateRadioPartner = updateRadioPartner;
 window.inspectSwitchPort = inspectSwitchPort;
 window.updateSwitchStackFromTopology = updateSwitchStackFromTopology;
+window.toggleTopologyFieldDevices = toggleTopologyFieldDevices;
+window.updateTopologyFieldDevicesButton = updateTopologyFieldDevicesButton;

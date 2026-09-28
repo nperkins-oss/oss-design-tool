@@ -132,6 +132,57 @@ function renderPortMatrixStudioContent(switchInstanceId) {
         </div>
       </div>
 
+      ${isStacked ? `
+        <!-- Stacking Interconnect Fabric Banner -->
+        <div class="bg-indigo-950/40 border border-indigo-500/40 rounded-xl p-3.5 space-y-2">
+          <div class="flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300">
+                <i data-lucide="layers" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-white tracking-wide">High-Speed Resilient Stacking Interconnect Fabric</span>
+                <span class="text-[10px] text-indigo-300 font-mono block">Unified Logical Control Plane &bull; ${stackUnits * 80} Gbps Bi-Directional Stack Fabric</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700 text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                RING CLOSED / REDUNDANT
+              </span>
+              <span class="text-[10px] font-mono text-indigo-300 bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-700/60">
+                ${stackUnits}x Dedicated Stacking DACs Active
+              </span>
+            </div>
+          </div>
+
+          <!-- Stacking Ring Topology Visualizer -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(stackUnits, 4)} gap-2 pt-1 border-t border-indigo-900/60">
+            ${Array.from({ length: stackUnits }, (_, uIdx) => {
+              const u = uIdx + 1;
+              const nextU = u === stackUnits ? 1 : u + 1;
+              const prevU = u === 1 ? stackUnits : u - 1;
+              return `
+                <div class="bg-slate-950/80 p-2 rounded-lg border border-indigo-800/40 text-[10px] font-mono space-y-1">
+                  <div class="flex items-center justify-between text-indigo-300 font-bold">
+                    <span>Unit ${u} Stack Interface</span>
+                    <span class="text-emerald-400 font-normal">UP</span>
+                  </div>
+                  <div class="text-slate-400 text-[9px] flex items-center justify-between">
+                    <span>Stk-1 (Cable Out):</span>
+                    <span class="text-sky-300 font-bold">&rarr; Unit ${nextU} (Stk-2)</span>
+                  </div>
+                  <div class="text-slate-400 text-[9px] flex items-center justify-between">
+                    <span>Stk-2 (Cable Return):</span>
+                    <span class="text-purple-300 font-bold">&larr; Unit ${prevU} (Stk-1)</span>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+
       <!-- Render units (if stacked, multiple faceplates) -->
       <div class="space-y-4">
         ${Array.from({ length: stackUnits }, (_, uIdx) => {
@@ -196,6 +247,31 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                   </div>
                 </div>
               ` : ''}
+
+              <!-- Stacking Ports (for Stacked Switches) -->
+              ${isStacked ? `
+                <div class="pt-2 border-t border-indigo-900/40 flex items-center justify-between gap-3">
+                  <div class="flex items-center gap-1.5 text-[10px] font-mono text-indigo-300 uppercase font-bold shrink-0">
+                    <i data-lucide="link" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>Stacking Interconnect:</span>
+                  </div>
+                  <div class="flex items-center gap-2 flex-wrap flex-1">
+                    <div class="px-2.5 py-1 rounded-lg border bg-indigo-500/20 border-indigo-500/70 text-indigo-200 font-mono text-[10px] flex items-center gap-1.5 cursor-pointer hover:border-indigo-400 transition-all shadow-sm"
+                         title="Stack Port 1: Connected via High-Speed DAC Cable to Unit ${u === stackUnits ? 1 : u + 1} Port 2">
+                      <i data-lucide="zap" class="w-3 h-3 text-indigo-400"></i>
+                      <span>Stk-1 &bull; Unit ${u}</span>
+                      <span class="text-[8px] bg-indigo-950 border border-indigo-700 px-1 rounded text-emerald-300 font-bold">UP &rarr; U${u === stackUnits ? 1 : u + 1}</span>
+                    </div>
+                    <div class="px-2.5 py-1 rounded-lg border bg-indigo-500/20 border-indigo-500/70 text-indigo-200 font-mono text-[10px] flex items-center gap-1.5 cursor-pointer hover:border-indigo-400 transition-all shadow-sm"
+                         title="Stack Port 2: Connected via High-Speed DAC Cable to Unit ${u === 1 ? stackUnits : u - 1} Port 1">
+                      <i data-lucide="zap" class="w-3 h-3 text-indigo-400"></i>
+                      <span>Stk-2 &bull; Unit ${u}</span>
+                      <span class="text-[8px] bg-indigo-950 border border-indigo-700 px-1 rounded text-purple-300 font-bold">UP &larr; U${u === 1 ? stackUnits : u - 1}</span>
+                    </div>
+                    <span class="text-[10px] text-indigo-400/80 font-mono">Dedicated 0.5m/1m Stacking DAC Loop Active</span>
+                  </div>
+                </div>
+              ` : ''}
             </div>
           `;
         }).join('')}
@@ -209,7 +285,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
           <i data-lucide="list" class="w-4 h-4 text-emerald-400"></i>
           <span class="text-xs font-bold text-white uppercase tracking-wider">Connected Devices & Interconnects</span>
         </div>
-        <span class="text-xs font-mono text-slate-400">${ports.filter(p => p.connectedDeviceId).length} Active Connections</span>
+        <span class="text-xs font-mono text-slate-400">${ports.filter(p => p.connectedDeviceId).length + (isStacked ? stackUnits : 0)} Active Connections</span>
       </div>
 
       <div class="overflow-x-auto">
@@ -226,6 +302,42 @@ function renderPortMatrixStudioContent(switchInstanceId) {
             </tr>
           </thead>
           <tbody class="divide-y divide-slate-800/60">
+            ${isStacked ? Array.from({ length: stackUnits }, (_, uIdx) => {
+              const u = uIdx + 1;
+              const nextU = u === stackUnits ? 1 : u + 1;
+              return `
+                <tr class="bg-indigo-950/20 hover:bg-indigo-950/40 transition-colors">
+                  <td class="p-2.5 font-bold text-indigo-300 flex items-center gap-1.5">
+                    <i data-lucide="link" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    Unit ${u} Stk-1 &bull; Stacking Port 1
+                  </td>
+                  <td class="p-2.5 text-indigo-200">
+                    High-Speed Stacking Ring DAC (80G Bi-Dir)
+                  </td>
+                  <td class="p-2.5">
+                    <span class="px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-700 text-emerald-400 font-bold text-[9px] flex items-center gap-1 w-fit">
+                      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      STACK UP
+                    </span>
+                  </td>
+                  <td class="p-2.5">
+                    <div class="font-bold text-white">Chassis Unit ${nextU} (Stack Member)</div>
+                    <div class="text-[10px] text-indigo-400">Virtual Chassis Ring Interconnect</div>
+                  </td>
+                  <td class="p-2.5 text-slate-400">
+                    ${escapeHTML(loc)} [Rack Stacking Bus]
+                  </td>
+                  <td class="p-2.5 text-slate-500">
+                    High-Speed Copper DAC
+                  </td>
+                  <td class="p-2.5 text-right">
+                    <span class="px-2 py-0.5 rounded bg-indigo-900/60 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono">
+                      Cable Ring #${u}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join('') : ''}
             ${ports.map(p => {
               const hasDev = !!p.connectedDeviceId;
               const targetDev = hasDev ? projectBOM.find(i => i.instanceId === p.connectedDeviceId) : null;

@@ -3221,6 +3221,14 @@ function handleServedEndpointsDrop(event) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
+  const isServer = typeof isServerDevice === "function" ? isServerDevice(item) : (item.role === "Server" || item.category === "servers" || /server/i.test(item.role || ''));
+  if (isServer) {
+    if (typeof showToast === "function") {
+      showToast("Servers must be mounted directly into rack slots, not assigned as field drops.", 4000);
+    }
+    return;
+  }
+
   delete item.rackSlot;
   item.closetName = activeRackId;
   item.rackId = activeRackId;

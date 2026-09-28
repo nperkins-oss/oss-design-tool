@@ -87,16 +87,18 @@ function getAllDefinedLocations() {
   return ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1", "Exterior Pole • NEMA-Box"];
 }
 
-function renderBomLocationOptions(currentLocationKey) {
+function renderBomLocationOptions(currentLocationKey, item = null) {
   if (typeof FacilityStore === "undefined") {
     const locs = ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1"];
     return locs.map(l => `<option value="${escapeHTML(l)}" ${l === currentLocationKey ? 'selected' : ''}>${escapeHTML(l)}</option>`).join('');
   }
 
+  const isServer = item ? (typeof isServerDevice === "function" ? isServerDevice(item) : (item.role === "Server" || item.category === "servers" || /server/i.test(item.role || ''))) : false;
   const groups = FacilityStore.getLocationGroups(true);
   let html = `<option value="${FacilityStore.UNASSIGNED}" ${currentLocationKey === FacilityStore.UNASSIGNED ? 'selected' : ''}>Unassigned (Staging)</option>`;
 
-  if (groups.spaces.length > 0) {
+  // Spaces & Zones (Field locations) are prohibited for server-class hardware
+  if (!isServer && groups.spaces.length > 0) {
     html += `<optgroup label="Spaces & Zones (Field / Unenclosed)">`;
     groups.spaces.forEach(s => {
       const isSel = currentLocationKey === s.name;
@@ -182,6 +184,16 @@ function setItemLocation(instanceId, combinedKey) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   
   if (item) {
+    const isServer = (typeof isServerDevice === "function" ? isServerDevice(item) : (item.role === "Server" || item.category === "servers" || /server/i.test(item.role || '')));
+    const isField = typeof isFieldLocation === "function" ? isFieldLocation(normalized) : (normalized.endsWith("• Field") || normalized.toLowerCase().includes("field"));
+    if (isServer && isField) {
+      if (typeof showToast === "function") {
+        showToast("Servers cannot be added to field locations. Please assign to an enclosure or rack.", 4000);
+      }
+      if (typeof updateBOMView === "function") updateBOMView();
+      return;
+    }
+
     item.closetName = normalized;
     item.rackId = normalized;
     item.rackSlot = null; // Unslot from physical rail to avoid collisions in the new rack
@@ -1146,7 +1158,7 @@ function renderBomSingleItemHtml(item) {
         <div class="flex items-center gap-1.5 flex-1 min-w-0">
           <i data-lucide="${currentLocationKey === FacilityStore.UNASSIGNED ? 'inbox' : (currentLocationKey.endsWith(' • Field') ? 'radio' : 'map-pin')}" class="w-3.5 h-3.5 ${currentLocationKey === FacilityStore.UNASSIGNED ? 'text-amber-400' : (currentLocationKey.endsWith(' • Field') ? 'text-cyan-400' : 'text-indigo-400')} shrink-0"></i>
           <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[240px] truncate cursor-pointer" title="Change Assigned Space or Rack Enclosure">
-            ${renderBomLocationOptions(currentLocationKey)}
+            ${renderBomLocationOptions(currentLocationKey, item)}
           </select>
         </div>
         <div class="flex items-center gap-1 shrink-0">
@@ -1161,7 +1173,7 @@ function renderBomSingleItemHtml(item) {
         <div class="flex-1 min-w-0">
           <span class="text-xs font-bold text-white truncate block">${escapeHTML(item.model)}</span>
           <div class="text-[10px] font-mono text-slate-400">SKU: ${escapeHTML(item.sku)}</div>
-          <div class="text-[11px] text-emerald-400 font-mono mt-0.5 font-semibold">$${(item.msrp * item.qty).toLocaleString()} <span class="text-slate-500 font-normal">($${item.msrp.toLocaleString()} ea)</span></div>
+          <div class="text-[11px] text-emerald-400 font-mono mt-0.5 font-semibold">$${((item.msrp || 0) * (item.qty || 1)).toLocaleString()} <span class="text-slate-500 font-normal">($${(item.msrp || 0).toLocaleString()} ea)</span></div>
         </div>
         <div class="flex items-center gap-2 shrink-0">
           <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg">

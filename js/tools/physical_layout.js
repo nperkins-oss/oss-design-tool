@@ -1065,7 +1065,22 @@ function renderSidebarTabContent() {
       return;
     }
 
-    container.innerHTML = unplacedBOM.map(item => {
+    const unplacedThisLocation = getUnplacedDevicesForFloor(floor);
+    const countThisLocation = unplacedThisLocation.length;
+
+    container.innerHTML = `
+      <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 shrink-0">
+        <div>
+          <span class="text-[11px] font-bold text-slate-300">Level: ${escapeHTML(floor.name)}</span>
+          <span class="text-[10px] text-slate-500 block">${countThisLocation} for this location (${unplacedBOM.length} total)</span>
+        </div>
+        ${countThisLocation > 0 ? `
+          <button onclick="placeAllUnplacedOnActiveFloor()" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[10px] font-bold shadow flex items-center gap-1 transition-colors cursor-pointer" title="Place all ${countThisLocation} unplaced devices for this location">
+            <i data-lucide="layout-grid" class="w-3 h-3"></i> Place All (${countThisLocation})
+          </button>
+        ` : ''}
+      </div>
+    ` + unplacedBOM.map(item => {
       const rawLoc = item.closetName || item.rackId;
       const isUnassigned = FacilityStore.normalize(rawLoc) === FacilityStore.UNASSIGNED;
       const mount = (item.mountMethod || "wall").toUpperCase();
@@ -1095,6 +1110,211 @@ function renderSidebarTabContent() {
   if (window.lucide) lucide.createIcons();
 }
 
+function findNextAvailableGridSpot(floor, startIndex = 0) {
+  const cols = 12;
+  const startX = 350;
+  const startY = 420;
+  const stepX = 180;
+  const stepY = 140;
+
+  let index = startIndex;
+  while (index < 600) {
+    const col = index % cols;
+    const row = Math.floor(index / cols);
+    const x = startX + (col * stepX);
+    const y = startY + (row * stepY);
+
+    const collides = (floor.nodes || []).some(n => {
+      const dx = n.x - x;
+      const dy = n.y - y;
+      return (dx * dx + dy * dy) < (65 * 65);
+    });
+
+    if (!collides) {
+      return { x, y, nextIndex: index + 1 };
+    }
+    index++;
+  }
+  return { x: startX + (index % cols) * stepX, y: startY + Math.floor(index / cols) * stepY, nextIndex: index + 1 };
+}
+
+function getUnplacedDevicesForFloor(floor) {
+  if (!floor) floor = getActiveFloor();
+  if (!floor) return [];
+
+  const placedInstanceIds = new Set();
+  facilityFloors.forEach(fl => {
+    (fl.nodes || []).forEach(n => {
+      if (n.instanceId) placedInstanceIds.add(n.instanceId);
+      if (n.id && n.id.startsWith("dev-")) placedInstanceIds.add(n.id.replace("dev-", ""));
+      if (n.id) placedInstanceIds.add(n.id);
+    });
+  });
+
+  const allUnplaced = (typeof projectBOM !== "undefined" ? projectBOM : []).filter(item => {
+    if (!isFieldDeviceForPhysicalLayout(item)) return false;
+    return !placedInstanceIds.has(item.instanceId);
+  });
+
+  if (allUnplaced.length === 0) return [];
+
+  // Gather identifiers for this floor
+  const spacesThisFloor = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getSpaces === "function")
+    ? FacilityStore.getSpaces().filter(s => s.floorId === floor.id)
+    : [];
+  const spaceIdsThisFloor = new Set(spacesThisFloor.map(s => s.id));
+  const spaceNamesThisFloor = new Set(spacesThisFloor.map(s => s.name.toLowerCase()));
+
+  const encsThisFloor = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getEnclosures === "function")
+    ? FacilityStore.getEnclosures().filter(e => spaceIdsThisFloor.has(e.spaceId))
+    : [];
+  const encNamesThisFloor = new Set(encsThisFloor.map(e => e.name.toLowerCase()));
+
+  const allClosets = getAllClosetsAcrossFacility();
+  const closetsThisFloor = allClosets.filter(c => c.floorId === floor.id);
+  const closetNamesThisFloor = new Set(closetsThisFloor.map(c => c.name.toLowerCase()));
+
+  // Other floors
+  const otherFloors = facilityFloors.filter(f => f.id !== floor.id);
+  const otherFloorNames = otherFloors.map(f => f.name.toLowerCase());
+  const floorNameLower = (floor.name || "").toLowerCase();
+
+  function belongsToThisFloor(item) {
+    if (item.floorId && item.floorId === floor.id) return true;
+    if (item.floor && item.floor.toLowerCase() === floorNameLower) return true;
+
+    const loc = (item.closetName || item.rackId || "").trim();
+    if (!loc || loc === FacilityStore.UNASSIGNED) return false;
+    const locLower = loc.toLowerCase();
+
+    // Check if explicitly on another floor
+    for (const ofn of otherFloorNames) {
+      if (locLower === ofn || locLower.startsWith(ofn + " •") || locLower.startsWith(ofn + " -") || locLower.startsWith(ofn + " ")) {
+        return false;
+      }
+    }
+
+    // Check if on this floor
+    if (locLower === floorNameLower || locLower.startsWith(floorNameLower + " •") || locLower.startsWith(floorNameLower + " -") || locLower.startsWith(floorNameLower + " ")) {
+      return true;
+    }
+
+    // Check space, enclosure, or closet name
+    const parts = locLower.split("•").map(p => p.trim());
+    for (const p of parts) {
+      if (spaceNamesThisFloor.has(p) || encNamesThisFloor.has(p) || closetNamesThisFloor.has(p)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  function belongsToOtherFloor(item) {
+    if (item.floorId && item.floorId !== floor.id) return true;
+    const loc = (item.closetName || item.rackId || "").trim();
+    if (!loc || loc === FacilityStore.UNASSIGNED) return false;
+    const locLower = loc.toLowerCase();
+
+    for (const ofn of otherFloorNames) {
+      if (locLower === ofn || locLower.startsWith(ofn + " •") || locLower.startsWith(ofn + " -") || locLower.startsWith(ofn + " ")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // 1. If items explicitly match this floor, return those
+  const thisFloorMatches = allUnplaced.filter(item => belongsToThisFloor(item));
+  if (thisFloorMatches.length > 0) {
+    return thisFloorMatches;
+  }
+
+  // 2. If no items explicitly belong to this floor, include items not explicitly assigned to another floor (unassigned)
+  return allUnplaced.filter(item => !belongsToOtherFloor(item));
+}
+
+function placeAllUnplacedOnActiveFloor() {
+  const floor = getActiveFloor();
+  if (!floor) {
+    if (typeof showToast === "function") showToast("No active floor found to place devices.", "warning");
+    return;
+  }
+
+  const unplacedForFloor = getUnplacedDevicesForFloor(floor);
+  if (!unplacedForFloor || unplacedForFloor.length === 0) {
+    if (typeof showToast === "function") {
+      showToast(`No unplaced field devices found for ${floor.name}.`, "info");
+    }
+    return;
+  }
+
+  const allClosets = getAllClosetsAcrossFacility();
+  let nextGridIndex = (floor.nodes || []).filter(n => n.type === "device").length;
+  let placedCount = 0;
+  let didUpdateWorkspace = false;
+
+  unplacedForFloor.forEach(item => {
+    // Find matching closet on this floor if item already has a location assigned
+    let matchingCloset = null;
+    if (item.closetName && item.closetName !== FacilityStore.UNASSIGNED) {
+      matchingCloset = allClosets.find(c => c.name === item.closetName && c.floorId === floor.id);
+      if (!matchingCloset) {
+        const prefix = item.closetName.split("•")[0].trim();
+        matchingCloset = allClosets.find(c => (c.name === prefix || item.closetName.startsWith(c.name)) && c.floorId === floor.id);
+      }
+      if (!matchingCloset) {
+        matchingCloset = allClosets.find(c => c.name === item.closetName);
+      }
+    }
+    if (!matchingCloset) {
+      matchingCloset = allClosets.find(c => c.floorId === floor.id) || allClosets[0] || null;
+    }
+
+    const spot = findNextAvailableGridSpot(floor, nextGridIndex);
+    nextGridIndex = spot.nextIndex;
+
+    const newDrop = {
+      id: `dev-${item.instanceId}`,
+      instanceId: item.instanceId,
+      name: item.model,
+      type: "device",
+      floorId: floor.id,
+      x: spot.x,
+      y: spot.y,
+      assignedClosetId: matchingCloset ? matchingCloset.id : null,
+      mountMethod: item.mountMethod || "wall",
+      waypoints: []
+    };
+
+    floor.nodes.push(newDrop);
+    placedCount++;
+
+    // If item was unassigned, assign it to the matching closet's location
+    if ((!item.closetName || item.closetName === FacilityStore.UNASSIGNED) && matchingCloset) {
+      item.closetName = matchingCloset.name;
+      item.rackId = matchingCloset.name;
+      didUpdateWorkspace = true;
+    }
+  });
+
+  if (didUpdateWorkspace) {
+    FacilityStore.notifyWorkspaceChange();
+  }
+
+  selectedNodeId = null;
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  switchSidebarTab("runs");
+  saveFacilityState();
+
+  if (typeof showToast === "function") {
+    showToast(`Successfully placed ${placedCount} devices onto ${floor.name}!`);
+  }
+}
+
 function placeBomItemOnFloor(instanceId) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
@@ -1107,6 +1327,10 @@ function placeBomItemOnFloor(instanceId) {
   if (item.closetName && item.closetName !== FacilityStore.UNASSIGNED) {
     matchingCloset = allClosets.find(c => c.name === item.closetName && c.floorId === floor.id);
     if (!matchingCloset) {
+      const prefix = item.closetName.split("•")[0].trim();
+      matchingCloset = allClosets.find(c => (c.name === prefix || item.closetName.startsWith(c.name)) && c.floorId === floor.id);
+    }
+    if (!matchingCloset) {
       matchingCloset = allClosets.find(c => c.name === item.closetName);
     }
   }
@@ -1114,14 +1338,16 @@ function placeBomItemOnFloor(instanceId) {
     matchingCloset = allClosets.find(c => c.floorId === floor.id) || allClosets[0] || null;
   }
 
+  const spot = findNextAvailableGridSpot(floor);
+
   const newDrop = {
     id: `dev-${item.instanceId}`,
     instanceId: item.instanceId,
     name: item.model,
     type: "device",
     floorId: floor.id,
-    x: 350 + (Math.random() * 150),
-    y: 350 + (Math.random() * 150),
+    x: spot.x,
+    y: spot.y,
     assignedClosetId: matchingCloset ? matchingCloset.id : null,
     mountMethod: item.mountMethod || "wall",
     waypoints: []
@@ -1527,7 +1753,7 @@ function renderCableCanvas() {
     <rect width="100%" height="100%" fill="url(#cableGrid)" />
 
     ${floor.image ? `
-      <image id="svgFloorPlanImage" href="${floor.image}" x="0" y="0" width="2800" height="2000" preserveAspectRatio="xMidYMid meet" opacity="${floor.opacity || 0.7}" />
+      <image id="svgFloorPlanImage" href="${floor.image}" x="0" y="0" width="4500" height="2800" preserveAspectRatio="xMidYMid meet" opacity="${floor.opacity || 0.7}" />
     ` : ''}
   `;
 
@@ -2320,4 +2546,8 @@ if (typeof window !== "undefined") {
   window.filterPhysCanvasSearch = filterPhysCanvasSearch;
   window.selectAndCenterPhysNode = selectAndCenterPhysNode;
   window.isFieldDeviceForPhysicalLayout = isFieldDeviceForPhysicalLayout;
+  window.findNextAvailableGridSpot = findNextAvailableGridSpot;
+  window.getUnplacedDevicesForFloor = getUnplacedDevicesForFloor;
+  window.placeAllUnplacedOnActiveFloor = placeAllUnplacedOnActiveFloor;
+  window.placeBomItemOnFloor = placeBomItemOnFloor;
 }

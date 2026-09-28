@@ -1267,6 +1267,22 @@ function toggleFacilityModal() {
   }
 }
 
+function openFacilityModal(view = "hierarchy") {
+  const modal = document.getElementById("facilityModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  facilityActiveForm = null;
+  const floors = FacilityStore.getFloors();
+  if (!floors.some(f => f.id === activeFacilityFloorId)) {
+    activeFacilityFloorId = floors[0] ? floors[0].id : "floor-main";
+  }
+  const spaces = FacilityStore.getSpaces(activeFacilityFloorId);
+  if (!spaces.some(s => s.id === activeFacilitySpaceId)) {
+    activeFacilitySpaceId = spaces[0] ? spaces[0].id : (FacilityStore.getSpaces()[0] ? FacilityStore.getSpaces()[0].id : "space-mdf");
+  }
+  switchFacilityView(view);
+}
+
 function openFacilityAddForm(formType) {
   facilityActiveForm = formType;
   renderFacilityManager();
@@ -1570,6 +1586,27 @@ function handleFloorFieldDragLeave(event) {
   }
 }
 
+function isServerDevice(item) {
+  if (!item) return false;
+  const role = (item.role || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const model = (item.model || "").toLowerCase();
+  const desc = (item.description || "").toLowerCase();
+  return role.includes("server") || 
+         role.includes("compute") || 
+         cat.includes("server") || 
+         cat.includes("compute") || 
+         Boolean(item.serverType) || 
+         /poweredge|proliant|supermicro|thinksystem|hyperconverged/i.test(model) || 
+         /poweredge|proliant|supermicro|thinksystem/i.test(desc);
+}
+
+function isFieldLocation(targetLoc) {
+  if (!targetLoc) return false;
+  const str = String(targetLoc).trim();
+  return str.endsWith("• Field") || str.toLowerCase().includes("• field") || str.toLowerCase() === "field";
+}
+
 function handleFloorFieldDrop(event, floorName) {
   event.preventDefault();
   const card = event.currentTarget;
@@ -1579,6 +1616,11 @@ function handleFloorFieldDrop(event, floorName) {
   const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
   facilityDraggedHardwareId = null;
   if (hwId && floorName) {
+    const item = typeof projectBOM !== "undefined" ? projectBOM.find(i => i.instanceId === hwId) : null;
+    if (item && isServerDevice(item)) {
+      if (typeof showToast === "function") showToast("Servers cannot be added to field locations. Please mount in an enclosure or rack.", 4000);
+      return;
+    }
     assignHardwareToLocation(hwId, `${floorName} • Field`);
   }
 }
@@ -1609,6 +1651,11 @@ function handleFloorCardDrop(event, floorName) {
   const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
   facilityDraggedHardwareId = null;
   if (hwId && floorName) {
+    const item = typeof projectBOM !== "undefined" ? projectBOM.find(i => i.instanceId === hwId) : null;
+    if (item && isServerDevice(item)) {
+      if (typeof showToast === "function") showToast("Servers cannot be added to field locations. Please mount in an enclosure or rack.", 4000);
+      return;
+    }
     assignHardwareToLocation(hwId, `${floorName} • Field`);
   }
 }
@@ -1649,6 +1696,14 @@ function assignHardwareToLocation(instanceId, targetLoc) {
   if (!item) return;
 
   const normalized = FacilityStore.normalize(targetLoc);
+
+  if (isServerDevice(item) && isFieldLocation(normalized)) {
+    if (typeof showToast === "function") {
+      showToast("Servers cannot be added to field locations. Please mount in an enclosure or rack.", 4000);
+    }
+    return;
+  }
+
   item.closetName = normalized;
   item.rackId = normalized;
   item.rackSlot = null;
@@ -1669,6 +1724,7 @@ function assignAllUnassignedToSpace(spaceName) {
 
   projectBOM.forEach(item => {
     if (item.parentInstanceId) return;
+    if (isServerDevice(item)) return; // Servers must be mounted in enclosures, not field drops
     const loc = FacilityStore.normalize(item.closetName || item.rackId);
     if (loc === FacilityStore.UNASSIGNED) {
       item.closetName = targetLoc;
@@ -1700,6 +1756,11 @@ function handleSpaceCardDrop(event, targetSpaceId) {
   const hwId = event.dataTransfer.getData("hardwareInstanceId") || event.dataTransfer.getData("text/plain") || facilityDraggedHardwareId;
   facilityDraggedHardwareId = null;
   if (hwId) {
+    const item = typeof projectBOM !== "undefined" ? projectBOM.find(i => i.instanceId === hwId) : null;
+    if (item && isServerDevice(item)) {
+      if (typeof showToast === "function") showToast("Servers cannot be added to field locations. Please mount in an enclosure or rack.", 4000);
+      return;
+    }
     const targetSpace = FacilityStore.getSpaces().find(s => s.id === targetSpaceId);
     if (targetSpace) {
       assignHardwareToLocation(hwId, `${targetSpace.name} • Field`);
@@ -2351,7 +2412,7 @@ function renderFacilityManager() {
                     </div>
 
                     <div class="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-900 text-xs">
-                      ${currentSpace ? `
+                      ${(currentSpace && !(isServer || isServerDevice(item))) ? `
                         <button 
                           onclick="assignHardwareToLocation('${item.instanceId}', '${escapeHTML(currentSpace.name)} • Field')" 
                           class="flex-1 px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[10px] font-bold border border-indigo-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
@@ -2359,7 +2420,11 @@ function renderFacilityManager() {
                         >
                           <i data-lucide="plus" class="w-3 h-3"></i> To ${escapeHTML(currentSpace.name)}
                         </button>
-                      ` : ''}
+                      ` : ((isServer || isServerDevice(item)) ? `
+                        <span class="flex-1 px-1.5 py-1 bg-purple-950/60 border border-purple-800/60 text-purple-300 rounded text-[9px] font-mono font-bold text-center truncate" title="Servers must be mounted into a rack/enclosure">
+                          Enclosure Required
+                        </span>
+                      ` : '')}
 
                       <!-- Enclosure Quick Dropdown -->
                       <select 
@@ -2640,6 +2705,7 @@ if (typeof window !== "undefined") {
   window.handleFacilityModalCloseOrBack = handleFacilityModalCloseOrBack;
   window.toggleFacilityModal = toggleFacilityModal;
   window.toggleFacilityManager = toggleFacilityModal; // Alias for seamless navigation
+  window.openFacilityModal = openFacilityModal;
   window.renderFacilityManager = renderFacilityManager;
   window.selectFacilityFloor = selectFacilityFloor;
   window.selectFacilitySpace = selectFacilitySpace;
@@ -2682,6 +2748,8 @@ if (typeof window !== "undefined") {
   window.closeQuickAddEnclosureModal = closeQuickAddEnclosureModal;
   window.updateQuickAddTypeFields = updateQuickAddTypeFields;
   window.submitQuickAddEnclosure = submitQuickAddEnclosure;
+  window.isServerDevice = isServerDevice;
+  window.isFieldLocation = isFieldLocation;
 }
 
 function promptAssignHardwareToFloorField(floorName) {
