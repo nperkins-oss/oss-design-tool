@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.38-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Global Catalog Search & Command Palette Navigation (`js/engines/global_search.js`, `index.html`)**:
+  - Implemented an omnichannel search engine indexing all 657 enterprise catalog products across every domain and sub-mode (access switches, core backbone switches, gateways & firewalls, wireless PtP/PtMP radios, transceivers & DAC optics, power & accessories, equipment racks, rack UPS power, pathways, and structured cabling).
+  - Engineered high-precision scoring combining exact SKU match ($+1000$), model prefix match ($+500$), alphanumeric normalization (e.g. `mx-85` matches `MX85-HW`, `8010fx` matches `EH-8010FX-ODU-H-EXT`, `v5000` matches `C060084A004A`), vendor matching, and specification token scanning.
+  - **Instant Cross-Domain Navigation (`GlobalSearchEngine.navigateTo`)**:
+    - Automatically closes blocking modals, resets conflicting sidebar filters, and switches active domain and catalog mode (`switchMode`) seamlessly.
+    - Smoothly scrolls the target hardware product card directly to viewport center with precision DOM anchoring (`#product-card-${id}`).
+    - Applies a prominent luminous cyan/blue pulse highlight animation (`.global-search-highlight`) to instantly draw the user's eye to the exact selected product card.
+    - Displays informative toast notifications detailing target domain, category, model, and SKU.
+  - **Header Omnibox Quick-Search**:
+    - Integrated real-time search input directly into the top navigation header with keyboard navigation ($\uparrow$, $\downarrow$, Enter, Esc) and instant clearing.
+    - Responsive 560px floating dropdown with category filter tabs (`All`, `Switches`, `Gateways`, `Wireless`, `Power & Accessories`, `Racks & UPS`, `Optics`, `Cabling`), product image thumbnails, real-time match counters, and MSRP display.
+  - **Command Palette Modal (`Ctrl+K` / `⌘K` or `/`)**:
+    - Full-screen modal overlay with category chips, keyboard shortcut hints, expanded result details with technical spec snippets, and direct-jump action buttons.
+  - **Cross-Domain Empty-State Suggestion Bridge (`js/core/app.js`)**:
+    - When a user filters or searches within an individual sub-bar (e.g., `#filterSearch` in Access Switches) and finds 0 matches in that category, the catalog empty-state automatically analyzes other catalog categories and surfaces interactive one-click jump pills to matching hardware in other catalog domains (e.g. typing "MX85" in Access Switches displays a direct shortcut to Meraki MX85 in Gateways & Firewalls).
+
 ## [0.10.37-alpha] - 2026-10-06
 
 ### Added & Enhanced

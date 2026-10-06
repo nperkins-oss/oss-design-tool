@@ -228,7 +228,7 @@ function renderSwitchCard(sw) {
   }
 
   return `
-    <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md group">
+    <div id="product-card-${sw.id}" data-item-id="${sw.id}" data-item-sku="${escapeHTML(sw.sku || '')}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md group">
       <div>
         ${sw.image ? `
           <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${sw.image}', '${escapeHTML(sw.model)}', '${escapeHTML(sw.sku)}')" title="Click to view full photo">
@@ -472,7 +472,7 @@ function renderFirewallCard(fw) {
   const hasStorage = (fw.keyFeatures || []).some(k => /3\.5"|hdd|ssd|nvr|storage/i.test(k));
 
   return `
-    <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
+    <div id="product-card-${fw.id || fw.sku}" data-item-id="${fw.id || fw.sku}" data-item-sku="${safeSku}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
       <div>
         ${fw.image ? `
           <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${fw.image}', '${safeModel}', '${safeSku}')" title="Click to view full photo">
@@ -584,7 +584,7 @@ function renderOpticCard(opt) {
   const isBiDi = opt.bidi || /bidi|simplex|single[\s-]strand|wdm/i.test((opt.name || '') + ' ' + (opt.description || '') + ' ' + (opt.sku || ''));
 
   return `
-    <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
+    <div id="product-card-${opt.id || opt.sku}" data-item-id="${opt.id || opt.sku}" data-item-sku="${safeSku}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
       <div>
         <div class="flex items-start justify-between gap-2 mb-2">
           <div>
@@ -640,7 +640,7 @@ function renderWirelessCard(radio) {
   const roleName = radio.topologyRole === "ptp" ? "PtP Link" : radio.topologyRole === "ap" ? "PtMP Base AP" : radio.topologyRole === "station" ? "Station CPE" : safeTopology;
 
   return `
-    <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
+    <div id="product-card-${safeId || safeSku}" data-item-id="${safeId || safeSku}" data-item-sku="${safeSku}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
       <div>
         ${radio.image ? `
           <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${radio.image}', '${safeModel}', '${safeSku}')" title="Click to view full photo">
@@ -774,7 +774,7 @@ function renderAccessoryCard(acc) {
   else if (acc.vendor === "UniFi") vendorBadgeStyle = "border-sky-500/30 bg-sky-500/10 text-sky-400";
 
   return `
-    <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
+    <div id="product-card-${acc.id || acc.sku}" data-item-id="${acc.id || acc.sku}" data-item-sku="${safeSku}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
       <div>
         ${acc.image ? `
           <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${acc.image}', '${safeModel}', '${safeSku}')" title="Click to view full photo">
@@ -1015,7 +1015,7 @@ function renderCardByDomain(item, mode) {
   const isRiser = /riser|cmr/i.test((item.name || '') + ' ' + (item.standard || '') + ' ' + (item.jacketType || '') + ' ' + (item.rating || ''));
 
   return `
-    <div class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
+    <div id="product-card-${item.id || item.sku}" data-item-id="${item.id || item.sku}" data-item-sku="${safeSku}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md">
       <div>
         ${item.image ? `
           <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${item.image}', '${safeModel}', '${safeSku}')" title="Click to view full photo">

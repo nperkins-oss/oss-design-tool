@@ -1032,13 +1032,49 @@ function runActiveFilter() {
         const currentLabel = (currentMode || "hardware").replace(/_/g, " ");
         if (emptyTitle) {
           emptyTitle.innerText = activeSearchQuery 
-            ? "No matching hardware found"
+            ? "No matching hardware found in this category"
             : `No ${currentLabel} models loaded yet`;
         }
         if (emptyDesc) {
           emptyDesc.innerText = activeSearchQuery
-            ? "Try clearing search terms or resetting sidebar filters."
+            ? "Try clearing search terms or explore matching products found in other categories below."
             : `Catalog database for ${currentLabel} will populate once its domain data payload is configured.`;
+        }
+
+        // Render cross-domain matches if found
+        const suggestBox = document.getElementById("noResultsCrossCategorySuggestions");
+        if (suggestBox) {
+          if (activeSearchQuery && typeof GlobalSearchEngine !== "undefined" && typeof GlobalSearchEngine.search === "function") {
+            const searchData = GlobalSearchEngine.search(activeSearchQuery, "all", 6);
+            const otherMatches = (searchData.results || []).filter(r => r.target?.mode !== currentMode);
+            if (otherMatches.length > 0) {
+              suggestBox.classList.remove("hidden");
+              suggestBox.innerHTML = `
+                <div class="p-3.5 bg-brand-950/40 border border-brand-800/60 rounded-2xl text-xs text-brand-300 space-y-2.5">
+                  <div class="font-bold flex items-center justify-center gap-1.5 text-white">
+                    <i data-lucide="compass" class="w-4 h-4 text-brand-400"></i>
+                    Found ${otherMatches.length} matching product${otherMatches.length === 1 ? '' : 's'} in other catalog sections:
+                  </div>
+                  <div class="flex flex-wrap items-center justify-center gap-2">
+                    ${otherMatches.map(m => `
+                      <button onclick="GlobalSearchEngine.navigateTo('${escapeHTML(m.sku)}')" class="px-3 py-1.5 bg-slate-900 hover:bg-brand-600 border border-slate-700 hover:border-brand-500 rounded-xl text-white font-medium flex items-center gap-1.5 transition-all shadow-sm cursor-pointer group">
+                        <span class="text-[10px] text-brand-300 font-mono font-bold">${escapeHTML(m.target.modeLabel)}:</span>
+                        <span class="font-bold">${escapeHTML(m.model)}</span>
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors"></i>
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              `;
+              if (typeof safeCreateIcons === "function") safeCreateIcons(suggestBox);
+            } else {
+              suggestBox.classList.add("hidden");
+              suggestBox.innerHTML = "";
+            }
+          } else {
+            suggestBox.classList.add("hidden");
+            suggestBox.innerHTML = "";
+          }
         }
       }
       return;
