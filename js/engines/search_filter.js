@@ -204,6 +204,22 @@ function checkSwitchLayer3(sw) {
 }
 window.checkSwitchLayer3 = checkSwitchLayer3;
 
+function getSwitchManagementLayer(sw) {
+  const mgmt = (sw.mgmtLabel || "").toLowerCase();
+  const desc = (sw.description || "").toLowerCase();
+  const model = (sw.model || "").toLowerCase();
+  const kf = (sw.keyFeatures || []).join(" ").toLowerCase();
+
+  if (sw.unmanaged === true || mgmt.includes("unmanaged") || model.includes("unmanaged") || desc.includes("unmanaged") || kf.includes("unmanaged")) {
+    return "unmanaged";
+  }
+  if (typeof checkSwitchLayer3 === "function" && checkSwitchLayer3(sw)) {
+    return "l3";
+  }
+  return "l2";
+}
+window.getSwitchManagementLayer = getSwitchManagementLayer;
+
 function checkOpticReach(opt, reach) {
   if (!reach || reach === "all") return true;
   const name = (opt.name || "").toLowerCase();
@@ -325,14 +341,39 @@ function filterSwitchesStrategy(items, ctx) {
     results = results.filter(s => checkSwitchMultiGig(s));
   }
 
+  const selectedSwitchLayers = ctx.selectedSwitchLayers || (typeof selectedSwitchLayers !== "undefined" ? selectedSwitchLayers : []);
+  if (selectedSwitchLayers.length > 0 && typeof getSwitchManagementLayer === "function") {
+    results = results.filter(s => {
+      const lay = getSwitchManagementLayer(s);
+      return selectedSwitchLayers.includes(lay);
+    });
+  }
+
   if (poeClasses.includes("at")) {
     results = results.filter(s => (s.poeAtPorts || 0) > 0 || (s.poeBt60Ports || 0) > 0 || (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && s.poeStandardsSupported.includes("802.3at")));
   }
   if (poeClasses.includes("bt60")) {
     results = results.filter(s => (s.poeBt60Ports || 0) > 0 || (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && s.poeStandardsSupported.includes("802.3bt-Type3")));
   }
-  if (poeClasses.includes("bt90")) {
-    results = results.filter(s => (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && (s.poeStandardsSupported.includes("802.3bt-Type4") || s.poeStandardsSupported.includes("PoH"))));
+  const isPoEBt90Req = typeof ctx.requirePoEBt90 !== "undefined" ? ctx.requirePoEBt90 : (typeof requirePoEBt90 !== "undefined" && requirePoEBt90);
+  if (poeClasses.includes("bt90") || isPoEBt90Req) {
+    results = results.filter(s => 
+      (s.poeBt90Ports || 0) > 0 || 
+      (s.poeStandardsSupported && (s.poeStandardsSupported.includes("802.3bt-Type4") || s.poeStandardsSupported.includes("PoH") || s.poeStandardsSupported.includes("bt90"))) ||
+      (s.keyFeatures || []).some(k => /90w|95w|poh|bt\s*type\s*4|class\s*8/i.test(k)) ||
+      /90w|95w|poh/i.test(s.description || "") ||
+      /bt-90|bt90/i.test(s.sku || "")
+    );
+  }
+
+  const isIndustrialReq = typeof ctx.requireIndustrialHardened !== "undefined" ? ctx.requireIndustrialHardened : (typeof requireIndustrialHardened !== "undefined" && requireIndustrialHardened);
+  if (isIndustrialReq) {
+    results = results.filter(s => 
+      s.isDinMounted === true || 
+      (s.operatingTempMinC !== undefined && s.operatingTempMinC <= -20) || 
+      (s.keyFeatures || []).some(k => /hardened|industrial|substation/i.test(k)) ||
+      s.substationCertified === true
+    );
   }
 
   const formFactors = ctx.selectedFormFactors || (typeof selectedFormFactors !== "undefined" ? selectedFormFactors : []);
@@ -719,6 +760,14 @@ function renderActiveFilterPills() {
     if (typeof requirePoEPowered !== "undefined" && requirePoEPowered) pills.push({ label: "PoE-Powered In", onRemove: () => { requirePoEPowered = false; } });
     if (typeof requireDcPower !== "undefined" && requireDcPower) pills.push({ label: "DC Terminal (12-48V)", onRemove: () => { requireDcPower = false; } });
     if (typeof requireLayer3 !== "undefined" && requireLayer3) pills.push({ label: "Layer 3 Routing", onRemove: () => { requireLayer3 = false; } });
+    if (typeof selectedSwitchLayers !== "undefined" && selectedSwitchLayers.length > 0) {
+      const layerNames = { l3: "Layer 3 Routing", l2: "Layer 2 Managed", unmanaged: "Unmanaged" };
+      selectedSwitchLayers.forEach(l => {
+        pills.push({ label: `Layer: ${layerNames[l] || l}`, onRemove: () => toggleFilterItem('switchLayer', l) });
+      });
+    }
+    if (typeof requirePoEBt90 !== "undefined" && requirePoEBt90) pills.push({ label: "90W 802.3bt / PoH", onRemove: () => { requirePoEBt90 = false; } });
+    if (typeof requireIndustrialHardened !== "undefined" && requireIndustrialHardened) pills.push({ label: "Industrial Hardened", onRemove: () => { requireIndustrialHardened = false; } });
   }
 
   // Firewall Pills

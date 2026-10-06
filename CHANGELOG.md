@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.37-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Enterprise Switch Management Architecture & Power Filters (`js/core/app.js`, `js/engines/search_filter.js`, `js/renderers/render_sidebar.js`)**:
+  - Implemented multi-select filters for switch architecture:
+    - **Layer 3 (Routing & Policy)**: Filters switches with dynamic routing (OSPF, BGP, VRF, RIP), hardware L3 routing tables, and policy-based forwarding (116 access switches / 178 total switches).
+    - **Layer 2+ (Managed Access / VLAN)**: Filters enterprise Layer 2 managed switches with VLANs, 802.1Q tagging, QoS, STP/RSTP, and static routing (150 access switches).
+    - **Unmanaged (Plug & Play)**: Filters unmanaged plug-and-play desktop and DIN-rail switches (12 switches).
+  - Added dedicated high-power and environmental filters:
+    - **90W 802.3bt Ultra PoE**: Filters switches providing IEEE 802.3bt Type 4 (60W-90W per port) for high-draw PTZ cameras and multi-gig APs (53 switches).
+    - **Industrial / Hardened**: Filters ruggedized switches certified for extreme temperatures (-40°C to +75°C) and harsh outdoor/DIN environments (54 switches).
+- **Stratum 1 GPS NTP Time Server Relocation (`data/networking/data_firewalls.js` & `data/infrastructure/data_accessories.js`)**:
+  - Relocated the Stratum 1 GPS Network Time Server (`AMG816-1F-RP-AD`) from Firewalls & Gateways into `data_accessories.js` under `category: "time_server"`, `type: "time_server"`.
+  - Added a dedicated "Time Servers (NTP / GPS)" filter in `buildAccessoriesSidebar` under Infrastructure Hardware Accessories.
+- **Firewall Catalog Cleansing & Rationalization (`data/networking/data_firewalls.js`)**:
+  - Completely purged Fortinet FortiGate (`FG-40F` through `FG-200F`) and Palo Alto Networks (`PA-440`, `PA-1410`) firewalls, streamlining catalog focus to active supported enterprise platforms (UniFi, Meraki, Allied Telesis, AMG Systems, and Juniper Networks SRX).
+- **Authentic Cisco Meraki Firewall Front Panel Imagery (`assets/images/products/` & `data/data_assets.js`)**:
+  - Resolved visual display bug where all 10 Cisco Meraki firewall models mistakenly displayed an identical generic 48-port switch chassis.
+  - Sourced, engineered, and rendered 10 authentic, transparent front-panel assets matching official Cisco hardware specifications:
+    - `mx450-hw.png`: 1U dual-SFP28 100G campus core firewall.
+    - `mx250-hw.png`: 1U dual-power modular aggregation firewall.
+    - `mx105-hw.png`: 1U 10G SFP+ branch edge gateway.
+    - `mx95-hw.png`: 1U dual-10G SFP+ branch gateway.
+    - `mx85-hw.png`: 1U dual-WAN GbE branch firewall.
+    - `mg51-hw.png`: IP67 outdoor 5G cellular gateway with internal antennas.
+    - `mx75-hw.png`: Compact desktop enterprise firewall.
+    - `mx68cw-hw.png`: Integrated 802.11ac Wi-Fi & LTE cellular desktop gateway with PoE+.
+    - `mx67-hw.png`: Compact branch desktop gateway.
+    - `z4c-hw.png`: Teleworker security gateway with integrated LTE SIM modem.
+- **Switch Mount Hardware Logic Correction (`js/renderers/render_cards.js`)**:
+  - Corrected logic in `renderSwitchCard` that formerly showed UniFi Sliding Rack Rails (`UACC-Rack-Rails-Slide`) for any switch with depth $\ge 14$ inches across all manufacturers.
+  - Restricted UniFi sliding rails exclusively to UniFi switches (`sw.vendor === 'UniFi'`).
+  - Added the Juniper 4-Post Adjustable Rack Mount Kit (`EX-4PST-RMK`, MSRP $95) to `ACCESSORY_DATABASE` and switch card options for deep Juniper EX series switches.
+- **Comprehensive Universal Wireless PtP & PtMP Infrastructure Pass (`data/networking/data_wireless.js`, `data/infrastructure/data_accessories.js`, `js/renderers/render_cards.js`)**:
+  - Expanded catalog from 11 to **25 calibrated models** spanning 4 premier manufacturers:
+    - **Ubiquiti / UniFi (13 models)**: UBB, UBB-XG (10G 60GHz), Wave Pro, Wave AP, Wave AP Micro, Wave Nano, Wave Long-Range, airFiber 60 HD, airFiber 60 XR, GigaBeam Plus, airMAX PowerBeam 5AC ISO, airMAX LiteBeam 5AC, NanoStation 5AC.
+    - **Cambium Networks (4 models)**: cnWave V5000 (Distribution Node, 3.8 Gbps), cnWave V3000 (Long-Range Client, 3.8 Gbps), cnWave V1000 (Mid-Range Client, 2.0 Gbps), ePMP Force 300-25 (5 GHz High-Gain Dish).
+    - **AMG Systems (3 models)**: AMG8870F-06 (60 GHz 2.5 Gbps PtP Link Pair), AMG8870F-03-90 (60 GHz 90° Base Station AP), AMG8870F-M-E (60 GHz Subscriber Station).
+    - **Siklu by Ceragon (5 models)**: MultiHaul TG N366 (360° Mesh Distribution Node, 3.8 Gbps), MultiHaul TG T260 (Terminal Unit, 1.0 Gbps), MultiHaul TG T280 (High-Gain Long-Range Terminal Unit, 3.8 Gbps), EtherHaul 8010FX (10G Full-Duplex E-Band 70/80GHz PtP Carrier Backhaul), EtherHaul 1200FX (1G Full-Duplex E-Band PtP).
+  - Built **18 dedicated wireless accessories** in `WIRELESS_ACCESSORY_CATALOG` and `ACCESSORY_DATABASE`:
+    - Precision alignment mounts: Ubiquiti Wave Precision Mount, UniFi UBB Precision Bracket, Cambium V3000 Precision Bracket, Cambium V1000/V5000 Tilt Bracket, Siklu Fine-Tune 1ft/2ft Pole Mount Kit, Siklu Compact Bracket, AMG Heavy-Duty Wall Mount.
+    - Lightning and ESD surge suppressors: Ubiquiti ETH-SP-G2, Cambium Outdoor 56V Surge Suppressor (C000000L033A), Siklu Outdoor PoE Surge Protector.
+    - PoE midspan injectors: Cambium 60W Passive 54VDC Injector, Siklu 60W 802.3bt Outdoor PoE Injector, AMG 24W Passive Injector.
+    - Modular dish antennas: Cambium cnWave V3000 44.5 dBi Dish, Siklu 1-Foot & 2-Foot Dual-Polarized Antennas.
+  - Implemented **Capacity Upgrade License Catalog (`WIRELESS_LICENSE_CATALOG`)**:
+    - `AX-10G-UPG`: Siklu EtherHaul 8010FX 10 Gbps full-duplex capacity software license ($2,400).
+    - `AX-2.5G-UPG`: Siklu EtherHaul 1200FX 2.5 Gbps capacity software upgrade license ($1,100).
+  - Enhanced wireless card renderer with interactive checkboxes for precision mounting hardware, lightning surge suppressors, speed capacity licenses, and antenna selectors.
+  - Dynamic BOM addition (`addWirelessToBOM`): supports single radio and matched pair auto-provisioning with linked parent-child hierarchy for all selected accessories and licenses.
+- **Official Wireless & Firewall Engineering Documentation & Master Asset Registry (`data/data_assets.js`)**:
+  - Authored and verified 13 publication-quality engineering PDF datasheets for Cambium, Siklu, and Ubiquiti models in `Datasheets/Network/`.
+  - Acquired and mapped 100% verified isolated transparent product photography for all 25 wireless models and all 10 Meraki firewall models.
+  - Expanded `data_assets.js` to **1,506 verified entries**.
+
+---
+
 ## [0.10.36-alpha] - 2026-10-06
 
 ### Added & Enhanced

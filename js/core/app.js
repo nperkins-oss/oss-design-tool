@@ -122,6 +122,9 @@ let requireFanless = false;
 let requirePoEPowered = false;
 let requireDcPower = false;
 let requireLayer3 = false;
+let selectedSwitchLayers = [];
+let requirePoEBt90 = false;
+let requireIndustrialHardened = false;
 
 // 2. Firewall / Gateway Filters
 let selectedFwCategories = [];
@@ -356,6 +359,9 @@ function resetCurrentFilters() {
   requirePoEPowered = false;
   requireDcPower = false;
   requireLayer3 = false;
+  selectedSwitchLayers = [];
+  requirePoEBt90 = false;
+  requireIndustrialHardened = false;
 
   selectedFwVendors = [];
   selectedFwCategories = [];
@@ -877,6 +883,8 @@ function setUplinkSpeedFilter(speed) {
 function toggleFilterItem(type, val) {
   if (type === "vendor") {
     selectedVendors = selectedVendors.includes(val) ? selectedVendors.filter(v => v !== val) : [...selectedVendors, val];
+  } else if (type === "switchLayer") {
+    selectedSwitchLayers = selectedSwitchLayers.includes(val) ? selectedSwitchLayers.filter(l => l !== val) : [...selectedSwitchLayers, val];
   } else if (type === "ports") {
     selectedPortCounts = selectedPortCounts.includes(val) ? selectedPortCounts.filter(p => p !== val) : [...selectedPortCounts, val];
   } else if (type === "poeClass") {
@@ -954,6 +962,9 @@ function runActiveFilter() {
           requirePoEPowered,
           requireDcPower,
           requireLayer3,
+          selectedSwitchLayers,
+          requirePoEBt90,
+          requireIndustrialHardened,
           selectedFwVendors,
           selectedFwCategories,
           fwTargetThroughputGbps,

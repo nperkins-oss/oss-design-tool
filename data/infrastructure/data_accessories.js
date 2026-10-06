@@ -1458,6 +1458,25 @@ const ACCESSORY_DATABASE = [
     ]
   },
   {
+    id: "juniper-ex-4pst-rmk",
+    sku: "EX-4PST-RMK",
+    model: "Juniper Adjustable 4-Post Rack Mount Kit",
+    name: "Juniper Adjustable 4-Post Rack Mount Kit",
+    vendor: "Juniper",
+    category: "mounting",
+    type: "rack_kit",
+    mounting: "Rack (4-Post)",
+    rackUnits: 0,
+    msrp: 95,
+    description: "Adjustable 4-post rack mount kit for 1U Juniper EX-series and SRX-series equipment in 24-inch to 36-inch deep standard 19-inch equipment racks.",
+    keyFeatures: [
+      "Heavy-duty steel sliding brackets for secure 4-post equipment support",
+      "Adjustable rail depth from 24 inches to 36 inches",
+      "Compatible with deep chassis EX3400, EX4100, EX4300, EX4400, and SRX models",
+      "Prevents chassis sag in heavy PoE enterprise rack installations"
+    ]
+  },
+  {
     id: "amg-2035",
     sku: "AMG2035",
     model: "AMG Universal Side Mounted Wall Bracket Adapter Kit",
@@ -1517,6 +1536,269 @@ const ACCESSORY_DATABASE = [
       "Compatible with all AMG570, AMG560, and AMG350 series products"
     ]
   },
+  {
+    id: "amg-816-1f-rp-ad",
+    sku: "AMG816-1F-RP-AD",
+    model: "AMG Industrial NTP Network Time Server (1U)",
+    name: "AMG Industrial Stratum 1 GPS NTP Network Time Server (1U)",
+    vendor: "AMG",
+    category: "time_server",
+    type: "time_server",
+    mounting: "Rack (1U)",
+    rackUnits: 1,
+    ports: 1,
+    dualPsu: true,
+    msrp: 2800,
+    baseWatts: 20,
+    maxPowerWatts: 35,
+    powerWatts: 35,
+    weightLbs: 8.5,
+    depthInches: 9.8,
+    shallowDepth: true,
+    fanless: true,
+    operatingTempMinC: -20,
+    operatingTempMaxC: 70,
+    isDinMounted: false,
+    description: "Stratum 1 GPS hardware master clock network time server with dual redundant AC/DC power supplies for air-gapped security networks and legal CCTV timestamping.",
+    keyFeatures: [
+      "Stratum 1 GPS hardware master clock for air-gapped physical security and VMS networks",
+      "Guarantees legal admissibility of CCTV video timestamps across disparate systems",
+      "Dual hot-swappable AC/DC redundant power supplies",
+      "Eliminates reliance on external public internet NTP servers"
+    ]
+  },
+
+  // ==========================================
+  // 16. WIRELESS PRECISION MOUNTS, SURGE & POWER
+  // ==========================================
+  {
+    id: "ubnt-wave-prec-mount",
+    sku: "Wave-Precision-Mount",
+    model: "Ubiquiti Wave Precision Alignment Mount",
+    name: "Ubiquiti Wave Precision Alignment Mount (Fine Azimuth/Elevation)",
+    vendor: "Ubiquiti",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Pole / Mast",
+    msrp: 99,
+    description: "Heavy-duty cast aluminum precision alignment bracket with micrometer adjustment for Wave AP, Wave Pro, Wave LR, and airFiber 60 XR millimeter-wave links.",
+    keyFeatures: [
+      "Micrometer azimuth and elevation fine adjustment for pencil-beam 60 GHz links",
+      "Cast aluminum weather-treated alloy resistant to high winds",
+      "Supports 25mm to 76.2mm (1\" to 3\") outer diameter mast poles",
+      "Compatible with Wave-AP, Wave-Pro, Wave-LR, and AF60-XR"
+    ]
+  },
+  {
+    id: "unifi-ubb-xg-mount",
+    sku: "UBB-XG-Mount",
+    model: "UniFi Building Bridge Precision Alignment Bracket",
+    name: "UniFi Building Bridge Precision Alignment Bracket",
+    vendor: "UniFi",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Pole / Wall",
+    msrp: 79,
+    description: "Precision alignment mounting accessory engineered specifically for UBB and UBB-XG 60 GHz wireless bridge links.",
+    keyFeatures: [
+      "Precision fine tilt and pan adjustment",
+      "Compatible with UBB and UBB-XG",
+      "Outdoor UV stabilized and powder-coated steel hardware"
+    ]
+  },
+  {
+    id: "cambium-v3000-mount",
+    sku: "N000045L002A",
+    model: "Cambium cnWave V3000 Precision Mounting Bracket",
+    name: "Cambium cnWave V3000 Precision Fine-Adjustment Bracket",
+    vendor: "Cambium",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Pole / Mast",
+    msrp: 165,
+    description: "High-precision mechanical bracket providing sub-degree alignment capability for Cambium cnWave V3000 60 GHz high-gain dishes.",
+    keyFeatures: [
+      "Sub-degree azimuth and elevation fine tuning for long-range mmWave links",
+      "Ruggedized galvanized steel construction survives 200 km/h winds",
+      "Supports 40mm to 90mm pole diameters"
+    ]
+  },
+  {
+    id: "cambium-v1000-mount",
+    sku: "N000000L125A",
+    model: "Cambium cnWave V1000/V5000 Adjustable Tilt Bracket",
+    name: "Cambium cnWave V1000 / V5000 Adjustable Tilt Bracket Mount",
+    vendor: "Cambium",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Wall / Pole",
+    msrp: 49,
+    description: "Adjustable tilt mounting kit for cnWave V1000 subscriber nodes and V5000 distribution nodes on poles and walls.",
+    keyFeatures: [
+      "±30° azimuth and ±30° elevation tilt adjustment",
+      "Supports street furniture, lighting poles, and wall anchors",
+      "Corrosion-resistant powder-coated finish"
+    ]
+  },
+  {
+    id: "siklu-ax-mk-1ft",
+    sku: "AX-MK-1FT-B",
+    model: "Siklu Precision Fine-Tune Pole Mount Kit (1ft/2ft)",
+    name: "Siklu Precision Fine-Tune Pole / Tower Mount Kit (1ft/2ft)",
+    vendor: "Siklu",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Tower / Mast",
+    msrp: 280,
+    description: "Carrier-grade precision alignment bracket for Siklu EtherHaul 8010FX, EH-1200FX, and MultiHaul N366/T280 millimeter wave radios.",
+    keyFeatures: [
+      "Micrometer adjustment screws for precise pencil-beam millimeter wave alignment",
+      "Essential for 70/80 GHz E-Band links operating across multi-kilometer distances",
+      "Survives 220 km/h hurricane-force winds with zero beam deflection"
+    ]
+  },
+  {
+    id: "siklu-eh-mk-sm",
+    sku: "EH-MK-SM",
+    model: "Siklu Compact Wall & Pole Mounting Bracket",
+    name: "Siklu Compact Wall & Pole Mounting Bracket (T260 / EH-600)",
+    vendor: "Siklu",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Wall / Pole",
+    msrp: 95,
+    description: "Compact mounting bracket for MultiHaul TG T260 terminal units and EH-600 small form factor radios.",
+    keyFeatures: [
+      "Compact footprint for discreet municipal and building façade installations",
+      "Tilt and pan ball-joint adjustment with locking clamp",
+      "Includes hose clamps for mast poles up to 3 inches"
+    ]
+  },
+  {
+    id: "amg-8870f-wall",
+    sku: "AMG8870F-WALL",
+    model: "AMG SkyWave Heavy-Duty Wall Mounting Bracket",
+    name: "AMG SkyWave Heavy-Duty Wall Mounting Bracket",
+    vendor: "AMG",
+    category: "mounting",
+    type: "mounting",
+    mounting: "Wall / Flat Surface",
+    msrp: 45,
+    description: "Heavy-duty outdoor stainless/powder-coated wall mounting bracket for AMG8870 SkyWave III series wireless radios.",
+    keyFeatures: [
+      "Provides stand-off clearance for wall-mounted wireless links",
+      "Compatible with AMG8870F-06, AMG8870F-03-90, and AMG8870F-M-E",
+      "Integrated cable routing conduit passage"
+    ]
+  },
+  {
+    id: "ubnt-eth-sp-g2",
+    sku: "ETH-SP-G2",
+    model: "Ubiquiti Ethernet Surge Protector Gen2",
+    name: "Ubiquiti Ethernet Surge Protector Gen2 (Outdoor PoE ESD Suppressor)",
+    vendor: "Ubiquiti",
+    category: "surge_protector",
+    type: "surge_protector",
+    mounting: "Pole / Wall",
+    msrp: 19,
+    description: "Outdoor Gigabit Ethernet surge protector designed to protect exterior wireless radios and IP cameras against damaging ESD electrostatic discharges and lightning strikes.",
+    keyFeatures: [
+      "Protects outdoor Ethernet lines and PoE up to 50V",
+      "Dual RJ45 female connectors with grounding lug",
+      "Absorbs transient surge voltages up to 100V/s"
+    ]
+  },
+  {
+    id: "cambium-surge-c000000l065a",
+    sku: "C000000L065A",
+    model: "Cambium Outdoor Gigabit 56V Surge Suppressor",
+    name: "Cambium Outdoor Gigabit 56V Surge Suppressor",
+    vendor: "Cambium",
+    category: "surge_protector",
+    type: "surge_protector",
+    mounting: "Pole / Wall",
+    msrp: 75,
+    description: "Carrier-grade outdoor Gigabit surge suppressor engineered to protect cnWave 60 GHz and ePMP radios against lightning and power surges.",
+    keyFeatures: [
+      "Supports 10/100/1000Base-T with high-power 56V PoE pass-through",
+      "IP55 weatherproof housing with integrated ground wire lug",
+      "Meets GR-1089 and IEC 61000-4-5 lightning protection standards"
+    ]
+  },
+  {
+    id: "siklu-ax-sp-01",
+    sku: "AX-SP-01",
+    model: "Siklu Outdoor Gigabit PoE Surge Protector",
+    name: "Siklu Outdoor Gigabit PoE Surge Protector",
+    vendor: "Siklu",
+    category: "surge_protector",
+    type: "surge_protector",
+    mounting: "Pole / Wall",
+    msrp: 85,
+    description: "Outdoor lightning and power surge protector for Siklu EtherHaul and MultiHaul millimeter wave radios.",
+    keyFeatures: [
+      "Supports high-draw 802.3bt PoE power levels up to 90W",
+      "Heavy-duty cast aluminum enclosure with IP67 sealing",
+      "Protects all 8 signal/power conductors"
+    ]
+  },
+  {
+    id: "cambium-psu-n000065l001c",
+    sku: "N000065L001C",
+    model: "Cambium 60W Gigabit Passive PoE Injector (54VDC)",
+    name: "Cambium 60W Gigabit Passive PoE Injector (54VDC)",
+    vendor: "Cambium",
+    category: "power_injector",
+    type: "poe_injector",
+    mounting: "Desktop / Wall",
+    msrp: 85,
+    baseWatts: 5,
+    powerWatts: 60,
+    description: "High-power 60W Gigabit passive PoE power supply (54VDC 1.1A) designed for Cambium cnWave V5000 distribution nodes and V3000 clients.",
+    keyFeatures: [
+      "54VDC 1.1A high-power output (60W total budget)",
+      "Gigabit data pass-through with low insertion loss",
+      "Includes AC line cord and integrated mounting ears"
+    ]
+  },
+  {
+    id: "siklu-eh-poe-ac-60w",
+    sku: "EH-POE-AC-60W",
+    model: "Siklu 60W Outdoor 802.3bt PoE Power Injector",
+    name: "Siklu 60W Outdoor 802.3bt PoE Power Injector (100-240VAC)",
+    vendor: "Siklu",
+    category: "power_injector",
+    type: "poe_injector",
+    mounting: "Wall / Pole",
+    msrp: 145,
+    baseWatts: 5,
+    powerWatts: 60,
+    description: "Industrial all-weather 60W 802.3bt PoE power injector for powering Siklu MultiHaul TG and EtherHaul radios directly at the pole.",
+    keyFeatures: [
+      "Universal 100-240VAC input with IP67 weatherproof cable gland seals",
+      "Delivers up to 60W 802.3bt power to remote radio units",
+      "Wide operating temperature range (-40°C to +60°C)"
+    ]
+  },
+  {
+    id: "amg-psu-t24-p24",
+    sku: "AMGPSU-T24-P24",
+    model: "AMG 24VDC 24W Passive Gigabit PoE Injector",
+    name: "AMG 24VDC 24W Passive Gigabit PoE Injector",
+    vendor: "AMG",
+    category: "power_injector",
+    type: "poe_injector",
+    mounting: "Desktop / Wall",
+    msrp: 35,
+    baseWatts: 2,
+    powerWatts: 24,
+    description: "24VDC 1A passive Gigabit PoE power injector with IEC power cord for AMG SkyWave III series wireless links.",
+    keyFeatures: [
+      "24VDC 1A (24W) passive power delivery",
+      "10/100/1000Base-T Gigabit Ethernet pass-through",
+      "Includes grounding plug and surge suppression circuitry"
+    ]
+  }
 ];
 
 if (typeof window !== "undefined") {

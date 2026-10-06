@@ -352,8 +352,11 @@ function renderSwitchCard(sw) {
                     <option value="UACC-Rack-Shelf-SD">1U Cantilever Rack Shelf [UACC-Rack-Shelf-SD] (+$49)</option>
                   ` : `
                     <option value="included">Standard 19" Ears / Bracket (Included)</option>
-                    ${(sw.mountSku === 'UACC-Rack-Rails-Slide' || sw.compatibleAccessories?.includes('UACC-Rack-Rails-Slide') || sw.depthInches >= 14) ? `
+                    ${(sw.vendor === 'UniFi' && (sw.mountSku === 'UACC-Rack-Rails-Slide' || sw.compatibleAccessories?.includes('UACC-Rack-Rails-Slide') || sw.depthInches >= 14)) ? `
                       <option value="UACC-Rack-Rails-Slide">UniFi Sliding Rack Rails [UACC-Rack-Rails-Slide] (+$99)</option>
+                    ` : ''}
+                    ${(sw.vendor === 'Juniper' && sw.depthInches >= 14) ? `
+                      <option value="EX-4PST-RMK">Juniper 4-Post Adjustable Rack Mount Kit [EX-4PST-RMK] (+$95)</option>
                     ` : ''}
                   `}
                 </select>
@@ -673,24 +676,59 @@ function renderWirelessCard(radio) {
           <div class="flex justify-between"><span class="text-slate-500">Power Consumption:</span><span class="text-amber-300 font-bold">${watts} W (${escapeHTML(standard)})</span></div>
         </div>
 
-        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-855 mb-3 space-y-1.5 text-xs">
-          ${radio.precisionMountSku ? `
-            <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white">
-              <div class="flex items-center gap-1.5">
-                <input type="checkbox" id="wl-prec-${safeId}" checked class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
-                <span class="text-[11px]">Precision Alignment Bracket</span>
-              </div>
-              <span class="font-mono text-slate-400">+$99</span>
-            </label>
-          ` : ''}
-          ${radio.surgeSku ? `
-            <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white">
-              <div class="flex items-center gap-1.5">
-                <input type="checkbox" id="wl-surge-${safeId}" checked class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
-                <span class="text-[11px]">Outdoor PoE Surge Suppressor</span>
-              </div>
-              <span class="font-mono text-slate-400">+$19</span>
-            </label>
+        <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800 mb-3 space-y-1.5 text-xs">
+          ${radio.precisionMountSku ? (() => {
+            const precItem = typeof WIRELESS_ACCESSORY_CATALOG !== "undefined" ? WIRELESS_ACCESSORY_CATALOG[radio.precisionMountSku] : null;
+            const precPrice = precItem ? precItem.msrp : 99;
+            const precName = precItem ? precItem.name : "Precision Alignment Bracket";
+            return `
+              <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white" title="${escapeHTML(precName)}">
+                <div class="flex items-center gap-1.5 truncate">
+                  <input type="checkbox" id="wl-prec-${safeId}" checked class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
+                  <span class="text-[11px] truncate">Precision Alignment Mount</span>
+                </div>
+                <span class="font-mono text-slate-400 shrink-0">+$${precPrice}</span>
+              </label>
+            `;
+          })() : ''}
+          ${radio.surgeSku ? (() => {
+            const surgeItem = typeof WIRELESS_ACCESSORY_CATALOG !== "undefined" ? WIRELESS_ACCESSORY_CATALOG[radio.surgeSku] : null;
+            const surgePrice = surgeItem ? surgeItem.msrp : 19;
+            return `
+              <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white" title="Outdoor PoE Lightning / ESD Surge Suppressor">
+                <div class="flex items-center gap-1.5 truncate">
+                  <input type="checkbox" id="wl-surge-${safeId}" checked class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
+                  <span class="text-[11px] truncate">Outdoor PoE Surge Protector</span>
+                </div>
+                <span class="font-mono text-slate-400 shrink-0">+$${surgePrice}</span>
+              </label>
+            `;
+          })() : ''}
+          ${radio.licenseSku ? (() => {
+            const licItem = typeof WIRELESS_LICENSE_CATALOG !== "undefined" ? WIRELESS_LICENSE_CATALOG[radio.licenseSku] : null;
+            const licPrice = licItem ? licItem.msrp : 0;
+            const licName = licItem ? licItem.name : "Capacity Upgrade License";
+            return `
+              <label class="flex items-center justify-between text-slate-300 cursor-pointer hover:text-white" title="${escapeHTML(licName)}">
+                <div class="flex items-center gap-1.5 truncate">
+                  <input type="checkbox" id="wl-lic-${safeId}" class="rounded border-slate-700 bg-slate-950 text-indigo-500" />
+                  <span class="text-[11px] truncate text-emerald-300 font-semibold">Speed / Capacity Upgrade License</span>
+                </div>
+                <span class="font-mono text-emerald-400 shrink-0">+$${licPrice.toLocaleString()}</span>
+              </label>
+            `;
+          })() : ''}
+          ${radio.antennaOptions && radio.antennaOptions.length > 0 ? `
+            <div class="pt-1 border-t border-slate-800/80 flex items-center justify-between gap-1 text-[11px]">
+              <span class="text-slate-400 font-medium">Antenna:</span>
+              <select id="wl-ant-${safeId}" class="bg-slate-900 border border-slate-700 text-slate-200 rounded px-1.5 py-0.5 text-[10px] max-w-[170px] truncate focus:outline-none">
+                <option value="">None (Existing / Radio-Only)</option>
+                ${radio.antennaOptions.map(antSku => {
+                  const ant = (typeof WIRELESS_ACCESSORY_CATALOG !== 'undefined' ? WIRELESS_ACCESSORY_CATALOG[antSku] : null) || { sku: antSku, name: antSku, msrp: 0 };
+                  return `<option value="${ant.sku}">${ant.name} (+$${ant.msrp})</option>`;
+                }).join('')}
+              </select>
+            </div>
           ` : ''}
         </div>
       </div>

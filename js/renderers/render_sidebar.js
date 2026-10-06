@@ -165,6 +165,27 @@ function buildSwitchSidebar(container, baseSet) {
         </div>
       </div>
 
+      <!-- Management & Switching Architecture -->
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Management Architecture</span>
+        <div class="grid grid-cols-3 gap-1 font-semibold">
+          ${[
+            { id: "l3", label: "Layer 3", sub: "Routing" },
+            { id: "l2", label: "Layer 2", sub: "Managed" },
+            { id: "unmanaged", label: "Unmanaged", sub: "Air-Gapped" }
+          ].map(lay => {
+            const isSel = typeof selectedSwitchLayers !== "undefined" && selectedSwitchLayers.includes(lay.id);
+            const count = baseSet.filter(s => (typeof getSwitchManagementLayer === "function") && getSwitchManagementLayer(s) === lay.id).length;
+            return `
+              <button onclick="toggleFilterItem('switchLayer', '${lay.id}')" class="py-1 px-1 rounded-lg border text-center transition-all ${isSel ? 'bg-indigo-600 border-indigo-500 text-white font-bold shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+                <span class="block text-[11px] leading-tight">${lay.label}</span>
+                <span class="block text-[9px] opacity-75">${count}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
       <!-- PoE Capabilities -->
       <div class="pt-3 border-t border-slate-800">
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">PoE Standards</span>
@@ -263,6 +284,18 @@ function buildSwitchSidebar(container, baseSet) {
             <div class="flex items-center gap-2">
               <input type="checkbox" onchange="requireSubstation = this.checked; runActiveFilter();" ${(typeof requireSubstation !== "undefined" && requireSubstation) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
               <span>Substation Certified (IEC 61850)</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireIndustrialHardened = this.checked; runActiveFilter();" ${(typeof requireIndustrialHardened !== "undefined" && requireIndustrialHardened) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-400 focus:ring-0">
+              <span class="text-amber-300 font-medium">Industrial Hardened (-40°C to +75°C)</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requirePoEBt90 = this.checked; runActiveFilter();" ${(typeof requirePoEBt90 !== "undefined" && requirePoEBt90) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-rose-400 focus:ring-0">
+              <span class="text-rose-300 font-medium">90W 802.3bt Type 4 / PoH</span>
             </div>
           </label>
         </div>
@@ -611,9 +644,11 @@ function buildAccessoriesSidebar(container, baseSet) {
     { id: "power_supply", label: "Power Supplies (DIN/AC)" },
     { id: "poe_injector", label: "PoE Midspan Injectors" },
     { id: "media_converter", label: "Media Converters" },
+    { id: "time_server", label: "Time Servers (NTP / GPS)" },
     { id: "power_distribution", label: "Managed PDUs" },
     { id: "enclosure", label: "Weatherproof Enclosures" },
-    { id: "surge_protector", label: "Surge Suppressors" }
+    { id: "surge_protector", label: "Surge Suppressors" },
+    { id: "mounting", label: "Mounting Kits & Shelves" }
   ];
 
   container.innerHTML = `
