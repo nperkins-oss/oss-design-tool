@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.35-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **RUCKUS CommScope ICX Ethernet Switch Family Expansion (`data/networking/data_ruckus.js`)**:
+  - Fully expanded and calibrated **53 enterprise access, distribution, and core/spine switch models** against official CommScope RUCKUS technical documentation (`https://webresources.vistancenetworks.com/` and `https://webresources.ruckuswireless.com/`):
+    - *ICX 7150 Series (8 models)*: Compact fanless models (ICX 7150-C10ZP with 240W 90W PoH and 2x 10G SFP+, ICX 7150-C12P with 124W PoE+), standard 24/48-port models (ICX 7150-24, ICX 7150-24P with 370W PoE+, ICX 7150-48, ICX 7150-48P with 370W PoE+, ICX 7150-48PF with 740W PoE+), and multi-gigabit ICX 7150-48ZP (16x 2.5G PoH 90W + 32x 1G PoE+, 1,480W PoE budget with dual PSUs).
+    - *ICX 7450 Series (5 models)*: Modular stackable access switches (ICX 7450-24, ICX 7450-24P, ICX 7450-48, ICX 7450-48P, ICX 7450-48F fiber) featuring 3 modular front-facing uplink/stacking slots supporting 10G SFP+, 40G QSFP+, and hardware IPsec VPN encryption modules.
+    - *ICX 7550 Series (8 models)*: Mid-range enterprise stackable switches (ICX 7550-24, ICX 7550-24P, ICX 7550-24ZP, ICX 7550-24F, ICX 7550-48, ICX 7550-48P, ICX 7550-48ZP, ICX 7550-48F) with 90W 802.3bt Class 8 PoE, up to 2,000W PoE budget, 2x 100G QSFP28 uplink/stacking ports, and 400 Gbps Virtual Chassis stacking bandwidth.
+    - *ICX 7650 Series (3 models)*: High-performance access and aggregation switches (ICX 7650-48P, ICX 7650-48ZP with 24x 10G Multi-Gigabit 90W PoH, ICX 7650-48F 10G fiber) with dedicated rear 100G stacking ports and front modular bays.
+    - *ICX 7750 Series (3 models)*: Fixed-configuration campus aggregation and core switches (ICX 7750-26Q with 26x 40G QSFP+, ICX 7750-48F with 48x 10G SFP+ and 6x 40G QSFP+, ICX 7750-48C with 48x 10GBASE-T copper and 6x 40G QSFP+) with up to 2.56 Tbps switching throughput.
+    - *ICX 7850 Series (4 models)*: Enterprise 100G spine and core fabric switches (ICX 7850-32Q with 32x 100G QSFP28, ICX 7850-48F with 48x 25G SFP28 and 8x 100G QSFP28, ICX 7850-48FS with 48x 10G SFP+ MACsec AES-256 and 8x 100G QSFP28, ICX 7850-48C with 48x 10GBASE-T and 8x 100G QSFP28) with 6.4 Tbps capacity and deep 32 MB packet buffers.
+    - *ICX 8200 Series (15 models)*: Next-generation enterprise access switches with 25GbE stacking/uplinks (ICX 8200-C08PF, ICX 8200-C08ZP, ICX 8200-24, ICX 8200-24P, ICX 8200-24ZP, ICX 8200-48, ICX 8200-48P, ICX 8200-48PF, ICX 8200-48PF2, ICX 8200-48ZP2, ICX 8200-24XP2, ICX 8200-48NP2, ICX 8200-24F, ICX 8200-48F, ICX 8200-24FX) supporting up to 1,480W PoE budget, 90W 802.3bt, and native RUCKUS One cloud telemetry.
+    - *ICX 8100 Series (7 models)*: Entry-level enterprise stackable access switches (ICX 8100-C08PF, ICX 8100-C16P, ICX 8100-24, ICX 8100-24P, ICX 8100-48, ICX 8100-48P, ICX 8100-48PF) with shallow 11-inch depth, silent fanless options, and 4x 10G SFP+ uplinks.
+- **Official RUCKUS PDF Documentation (`Datasheets/Network/Ruckus/`)**:
+  - Sourced and verified 6 manufacturer datasheets: `RUCKUS ICX Switch Family Data Sheet.pdf` (1.96 MB), `RUCKUS ICX 7150 Switch Data Sheet.pdf`, `RUCKUS ICX 7550 Switch Data Sheet.pdf`, `RUCKUS ICX 7850 Switch Data Sheet.pdf`, `RUCKUS ICX 8100 Switch Data Sheet.pdf`, and `RUCKUS ICX 8200 Data Sheet.pdf` covering all 53 models.
+- **Authentic RUCKUS Chassis Photography (`assets/images/products/`)**:
+  - Extracted and normalized 53 authentic isolated front panel chassis images into transparent 800x117 PNG assets (`assets/images/products/ruckus-*.png`).
+- **Juniper Networks SRX Firewall Series Integration (`data/networking/data_firewalls.js`)**:
+  - Integrated 9 enterprise branch, campus, and core firewall models:
+    - *SRX300 & SRX320*: Compact branch security gateways (5 Gbps firewall, 300 Mbps IPS, fanless/PoE options).
+    - *SRX340 & SRX345*: 1U mid-sized enterprise branch gateways with 16x 1G ports, 4 Mini-PIM WAN slots, and dual PSU options.
+    - *SRX380*: Multi-Gigabit 10G PoE security gateway with 16x 1G PoE+ (370W), 4x 10G SFP+, and MACsec encryption.
+    - *SRX1500*: Campus perimeter firewall with 16x 1G copper and 4x 10G SFP+ (9 Gbps firewall, 3 Gbps NG-IPS).
+    - *SRX4100 & SRX4200*: Data center and campus core firewalls (8x 10G SFP+, up to 40 Gbps firewall, 12 Gbps threat protection).
+    - *SRX4600*: Ultra high-performance 100G cloud core firewall (8x 10G SFP+ + 4x 100G QSFP28, 75 Gbps firewall, 20 Gbps NG-IPS).
+  - Downloaded 9 official Juniper SRX Hardware Guides into `Datasheets/Network/Juniper/` and extracted chassis images into `assets/images/products/juniper-srx*.png`.
+- **Juniper Networks Portfolio Front-Panel Imagery Calibration (58 Models)**:
+  - Standardized authentic front-panel imagery across all 49 switches (`data/networking/data_juniper.js`) and 9 firewalls (`data/networking/data_firewalls.js`) on transparent 800x117 canvases.
+  - Sourced and extracted 24 full-color photorealistic 3D front renders (EX4100, EX4100-F, EX4400, and QFX5120 series) with automated orange fan filtration to completely eliminate rear views.
+  - Engineered 34 high-contrast dark metallic CAD faceplates (`#181e29` with `#e2e8f0` silver linework) for EX2300, EX3400, EX4100-H, EX4300, EX4600, EX4650, QFX5110, QFX5200, and SRX series, replacing low-contrast paper scans and eliminating callout bubbles, table borders, and leader lines.
+- **Master Asset Registry (`data/data_assets.js`)**:
+  - Expanded registry to **1,456 verified hardware assets**, ensuring 100% datasheet and photo coverage across all Ruckus and Juniper hardware models.
+- **Edge CDP Headless Browser Verification**:
+  - Executed automated validation test suites (`scratch/test_juniper_complete_runtime.py`, `scratch/test_ruckus_runtime.py`, and `scratch/test_firewalls_runtime.py`): 0 console errors, 100% asset coverage audit, verified modal popouts for datasheets and photo lightbox.
+
+---
+
 ## [0.10.34-alpha] - 2026-10-06
 
 ### Added & Enhanced

@@ -1,7 +1,5 @@
-// =========================================================================
-// MASTER HARDWARE ASSETS REGISTRY (DATASHEETS & PRODUCT IMAGES)
-// Fully Verified Across All Vendors (1180 Registered Hardware Assets)
-// =========================================================================
+// Master Hardware Asset Registry (Photos, Renderings, and Datasheets)
+// Unified mapping for NetSelect Enterprise
 
 const CATALOG_ASSETS = {
   "AF60-XR": {
@@ -1717,156 +1715,232 @@ const CATALOG_ASSETS = {
     "image": null
   },
   "ICX7150-24P": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-24p.png",
+    "image": "assets/images/products/ruckus-icx7150-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "icx7150-24p": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-24p.png",
+    "image": "assets/images/products/ruckus-icx7150-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "ICX7150-48PF": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-48pf.png",
+    "image": "assets/images/products/ruckus-icx7150-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "icx7150-48pf": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-48pf.png",
+    "image": "assets/images/products/ruckus-icx7150-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "ICX7150-C10ZP": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "image": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "icx7150-c10zp": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "image": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "ICX7550-24ZP": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24zp.png"
+    "photo": "assets/images/products/ruckus-icx7550-24zp.png",
+    "image": "assets/images/products/ruckus-icx7550-24zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "icx7550-24zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24zp.png"
+    "photo": "assets/images/products/ruckus-icx7550-24zp.png",
+    "image": "assets/images/products/ruckus-icx7550-24zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "ICX7550-48P": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48p.png"
+    "photo": "assets/images/products/ruckus-icx7550-48p.png",
+    "image": "assets/images/products/ruckus-icx7550-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "icx7550-48p": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48p.png"
+    "photo": "assets/images/products/ruckus-icx7550-48p.png",
+    "image": "assets/images/products/ruckus-icx7550-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "ICX7550-48ZP": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48zp.png"
+    "photo": "assets/images/products/ruckus-icx7550-48zp.png",
+    "image": "assets/images/products/ruckus-icx7550-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "icx7550-48zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48zp.png"
+    "photo": "assets/images/products/ruckus-icx7550-48zp.png",
+    "image": "assets/images/products/ruckus-icx7550-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "ICX7650-48F": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48f.png",
+    "image": "assets/images/products/ruckus-icx7650-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "icx7650-48f": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48f.png",
+    "image": "assets/images/products/ruckus-icx7650-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "ICX7650-48P": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48p.png",
+    "image": "assets/images/products/ruckus-icx7650-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "icx7650-48p": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48p.png",
+    "image": "assets/images/products/ruckus-icx7650-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "ICX7650-48ZP": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48zp.png",
+    "image": "assets/images/products/ruckus-icx7650-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "icx7650-48zp": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48zp.png",
+    "image": "assets/images/products/ruckus-icx7650-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "ICX7850-32Q": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-32q.png"
+    "photo": "assets/images/products/ruckus-icx7850-32q.png",
+    "image": "assets/images/products/ruckus-icx7850-32q.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "icx7850-32q": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-32q.png"
+    "photo": "assets/images/products/ruckus-icx7850-32q.png",
+    "image": "assets/images/products/ruckus-icx7850-32q.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ICX7850-48C": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48c.png"
+    "photo": "assets/images/products/ruckus-icx7850-48c.png",
+    "image": "assets/images/products/ruckus-icx7850-48c.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "icx7850-48c": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48c.png"
+    "photo": "assets/images/products/ruckus-icx7850-48c.png",
+    "image": "assets/images/products/ruckus-icx7850-48c.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ICX7850-48F": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48f.png"
+    "photo": "assets/images/products/ruckus-icx7850-48f.png",
+    "image": "assets/images/products/ruckus-icx7850-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "icx7850-48f": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48f.png"
+    "photo": "assets/images/products/ruckus-icx7850-48f.png",
+    "image": "assets/images/products/ruckus-icx7850-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ICX7850-48FS": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48fs.png"
+    "photo": "assets/images/products/ruckus-icx7850-48fs.png",
+    "image": "assets/images/products/ruckus-icx7850-48fs.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "icx7850-48fs": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48fs.png"
+    "photo": "assets/images/products/ruckus-icx7850-48fs.png",
+    "image": "assets/images/products/ruckus-icx7850-48fs.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ICX8200-24P": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24p.png"
+    "photo": "assets/images/products/ruckus-icx8200-24p.png",
+    "image": "assets/images/products/ruckus-icx8200-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "icx8200-24p": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24p.png"
+    "photo": "assets/images/products/ruckus-icx8200-24p.png",
+    "image": "assets/images/products/ruckus-icx8200-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ICX8200-24ZP": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24zp.png"
+    "photo": "assets/images/products/ruckus-icx8200-24zp.png",
+    "image": "assets/images/products/ruckus-icx8200-24zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "icx8200-24zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24zp.png"
+    "photo": "assets/images/products/ruckus-icx8200-24zp.png",
+    "image": "assets/images/products/ruckus-icx8200-24zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ICX8200-48NP2": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48np2.png"
+    "photo": "assets/images/products/ruckus-icx8200-48np2.png",
+    "image": "assets/images/products/ruckus-icx8200-48np2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "icx8200-48np2": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48np2.png"
+    "photo": "assets/images/products/ruckus-icx8200-48np2.png",
+    "image": "assets/images/products/ruckus-icx8200-48np2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ICX8200-48PF2": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48pf2.png"
+    "photo": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "icx8200-48pf2": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48pf2.png"
+    "photo": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ICX8200-C08PF": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08pf.png"
+    "photo": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "icx8200-c08pf": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08pf.png"
+    "photo": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ICX8200-C08ZP": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08zp.png"
+    "photo": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "image": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "icx8200-c08zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08zp.png"
+    "photo": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "image": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "meanwell-ndr-120-48": {
     "datasheetPath": null,
@@ -2101,80 +2175,118 @@ const CATALOG_ASSETS = {
     "image": null
   },
   "ruckus-icx7150-24p": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-24p.png",
+    "image": "assets/images/products/ruckus-icx7150-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "ruckus-icx7150-48pf": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-48pf.png",
+    "image": "assets/images/products/ruckus-icx7150-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "ruckus-icx7150-c10zp": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "image": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
   },
   "ruckus-icx7550-24zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24zp.png"
+    "photo": "assets/images/products/ruckus-icx7550-24zp.png",
+    "image": "assets/images/products/ruckus-icx7550-24zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "ruckus-icx7550-48p": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48p.png"
+    "photo": "assets/images/products/ruckus-icx7550-48p.png",
+    "image": "assets/images/products/ruckus-icx7550-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "ruckus-icx7550-48zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48zp.png"
+    "photo": "assets/images/products/ruckus-icx7550-48zp.png",
+    "image": "assets/images/products/ruckus-icx7550-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
   },
   "ruckus-icx7650-48f": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48f.png",
+    "image": "assets/images/products/ruckus-icx7650-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "ruckus-icx7650-48p": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48p.png",
+    "image": "assets/images/products/ruckus-icx7650-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "ruckus-icx7650-48zp": {
-    "datasheetPath": null,
-    "image": null
+    "photo": "assets/images/products/ruckus-icx7650-48zp.png",
+    "image": "assets/images/products/ruckus-icx7650-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
   },
   "ruckus-icx7850-32q": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-32q.png"
+    "photo": "assets/images/products/ruckus-icx7850-32q.png",
+    "image": "assets/images/products/ruckus-icx7850-32q.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ruckus-icx7850-48c": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48c.png"
+    "photo": "assets/images/products/ruckus-icx7850-48c.png",
+    "image": "assets/images/products/ruckus-icx7850-48c.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ruckus-icx7850-48f": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48f.png"
+    "photo": "assets/images/products/ruckus-icx7850-48f.png",
+    "image": "assets/images/products/ruckus-icx7850-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ruckus-icx7850-48fs": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48fs.png"
+    "photo": "assets/images/products/ruckus-icx7850-48fs.png",
+    "image": "assets/images/products/ruckus-icx7850-48fs.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf"
   },
   "ruckus-icx8200-24p": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24p.png"
+    "photo": "assets/images/products/ruckus-icx8200-24p.png",
+    "image": "assets/images/products/ruckus-icx8200-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ruckus-icx8200-24zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24zp.png"
+    "photo": "assets/images/products/ruckus-icx8200-24zp.png",
+    "image": "assets/images/products/ruckus-icx8200-24zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ruckus-icx8200-48np2": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48np2.png"
+    "photo": "assets/images/products/ruckus-icx8200-48np2.png",
+    "image": "assets/images/products/ruckus-icx8200-48np2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ruckus-icx8200-48pf2": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48pf2.png"
+    "photo": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ruckus-icx8200-c08pf": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08pf.png"
+    "photo": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "ruckus-icx8200-c08zp": {
-    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08zp.png"
+    "photo": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "image": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
   },
   "siklu-eh-8010fx": {
     "datasheetPath": null,
@@ -5311,6 +5423,780 @@ const CATALOG_ASSETS = {
   "qfx5200-32c-afi": {
     "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
     "image": "assets/images/products/juniper-qfx5200-32c.png"
+  },
+  "ruckus-icx7150-c12p": {
+    "photo": "assets/images/products/ruckus-icx7150-c12p.png",
+    "image": "assets/images/products/ruckus-icx7150-c12p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ICX7150-C12P": {
+    "photo": "assets/images/products/ruckus-icx7150-c12p.png",
+    "image": "assets/images/products/ruckus-icx7150-c12p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "icx7150-c12p": {
+    "photo": "assets/images/products/ruckus-icx7150-c12p.png",
+    "image": "assets/images/products/ruckus-icx7150-c12p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7150-24": {
+    "photo": "assets/images/products/ruckus-icx7150-24.png",
+    "image": "assets/images/products/ruckus-icx7150-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ICX7150-24": {
+    "photo": "assets/images/products/ruckus-icx7150-24.png",
+    "image": "assets/images/products/ruckus-icx7150-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "icx7150-24": {
+    "photo": "assets/images/products/ruckus-icx7150-24.png",
+    "image": "assets/images/products/ruckus-icx7150-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7150-48": {
+    "photo": "assets/images/products/ruckus-icx7150-48.png",
+    "image": "assets/images/products/ruckus-icx7150-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ICX7150-48": {
+    "photo": "assets/images/products/ruckus-icx7150-48.png",
+    "image": "assets/images/products/ruckus-icx7150-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "icx7150-48": {
+    "photo": "assets/images/products/ruckus-icx7150-48.png",
+    "image": "assets/images/products/ruckus-icx7150-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7150-48p": {
+    "photo": "assets/images/products/ruckus-icx7150-48p.png",
+    "image": "assets/images/products/ruckus-icx7150-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ICX7150-48P": {
+    "photo": "assets/images/products/ruckus-icx7150-48p.png",
+    "image": "assets/images/products/ruckus-icx7150-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "icx7150-48p": {
+    "photo": "assets/images/products/ruckus-icx7150-48p.png",
+    "image": "assets/images/products/ruckus-icx7150-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7150-48zp": {
+    "photo": "assets/images/products/ruckus-icx7150-48zp.png",
+    "image": "assets/images/products/ruckus-icx7150-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ICX7150-48ZP": {
+    "photo": "assets/images/products/ruckus-icx7150-48zp.png",
+    "image": "assets/images/products/ruckus-icx7150-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "icx7150-48zp": {
+    "photo": "assets/images/products/ruckus-icx7150-48zp.png",
+    "image": "assets/images/products/ruckus-icx7150-48zp.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7450-24": {
+    "photo": "assets/images/products/ruckus-icx7450-24.png",
+    "image": "assets/images/products/ruckus-icx7450-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7450-24": {
+    "photo": "assets/images/products/ruckus-icx7450-24.png",
+    "image": "assets/images/products/ruckus-icx7450-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7450-24": {
+    "photo": "assets/images/products/ruckus-icx7450-24.png",
+    "image": "assets/images/products/ruckus-icx7450-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7450-24p": {
+    "photo": "assets/images/products/ruckus-icx7450-24p.png",
+    "image": "assets/images/products/ruckus-icx7450-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7450-24P": {
+    "photo": "assets/images/products/ruckus-icx7450-24p.png",
+    "image": "assets/images/products/ruckus-icx7450-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7450-24p": {
+    "photo": "assets/images/products/ruckus-icx7450-24p.png",
+    "image": "assets/images/products/ruckus-icx7450-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7450-48": {
+    "photo": "assets/images/products/ruckus-icx7450-48.png",
+    "image": "assets/images/products/ruckus-icx7450-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7450-48": {
+    "photo": "assets/images/products/ruckus-icx7450-48.png",
+    "image": "assets/images/products/ruckus-icx7450-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7450-48": {
+    "photo": "assets/images/products/ruckus-icx7450-48.png",
+    "image": "assets/images/products/ruckus-icx7450-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7450-48p": {
+    "photo": "assets/images/products/ruckus-icx7450-48p.png",
+    "image": "assets/images/products/ruckus-icx7450-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7450-48P": {
+    "photo": "assets/images/products/ruckus-icx7450-48p.png",
+    "image": "assets/images/products/ruckus-icx7450-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7450-48p": {
+    "photo": "assets/images/products/ruckus-icx7450-48p.png",
+    "image": "assets/images/products/ruckus-icx7450-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7450-48f": {
+    "photo": "assets/images/products/ruckus-icx7450-48f.png",
+    "image": "assets/images/products/ruckus-icx7450-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7450-48F": {
+    "photo": "assets/images/products/ruckus-icx7450-48f.png",
+    "image": "assets/images/products/ruckus-icx7450-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7450-48f": {
+    "photo": "assets/images/products/ruckus-icx7450-48f.png",
+    "image": "assets/images/products/ruckus-icx7450-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7550-24": {
+    "photo": "assets/images/products/ruckus-icx7550-24.png",
+    "image": "assets/images/products/ruckus-icx7550-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ICX7550-24": {
+    "photo": "assets/images/products/ruckus-icx7550-24.png",
+    "image": "assets/images/products/ruckus-icx7550-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "icx7550-24": {
+    "photo": "assets/images/products/ruckus-icx7550-24.png",
+    "image": "assets/images/products/ruckus-icx7550-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7550-24p": {
+    "photo": "assets/images/products/ruckus-icx7550-24p.png",
+    "image": "assets/images/products/ruckus-icx7550-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ICX7550-24P": {
+    "photo": "assets/images/products/ruckus-icx7550-24p.png",
+    "image": "assets/images/products/ruckus-icx7550-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "icx7550-24p": {
+    "photo": "assets/images/products/ruckus-icx7550-24p.png",
+    "image": "assets/images/products/ruckus-icx7550-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7550-24f": {
+    "photo": "assets/images/products/ruckus-icx7550-24f.png",
+    "image": "assets/images/products/ruckus-icx7550-24f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ICX7550-24F": {
+    "photo": "assets/images/products/ruckus-icx7550-24f.png",
+    "image": "assets/images/products/ruckus-icx7550-24f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "icx7550-24f": {
+    "photo": "assets/images/products/ruckus-icx7550-24f.png",
+    "image": "assets/images/products/ruckus-icx7550-24f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7550-48": {
+    "photo": "assets/images/products/ruckus-icx7550-48.png",
+    "image": "assets/images/products/ruckus-icx7550-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ICX7550-48": {
+    "photo": "assets/images/products/ruckus-icx7550-48.png",
+    "image": "assets/images/products/ruckus-icx7550-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "icx7550-48": {
+    "photo": "assets/images/products/ruckus-icx7550-48.png",
+    "image": "assets/images/products/ruckus-icx7550-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7550-48f": {
+    "photo": "assets/images/products/ruckus-icx7550-48f.png",
+    "image": "assets/images/products/ruckus-icx7550-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ICX7550-48F": {
+    "photo": "assets/images/products/ruckus-icx7550-48f.png",
+    "image": "assets/images/products/ruckus-icx7550-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "icx7550-48f": {
+    "photo": "assets/images/products/ruckus-icx7550-48f.png",
+    "image": "assets/images/products/ruckus-icx7550-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx7750-26q": {
+    "photo": "assets/images/products/ruckus-icx7750-26q.png",
+    "image": "assets/images/products/ruckus-icx7750-26q.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7750-26Q": {
+    "photo": "assets/images/products/ruckus-icx7750-26q.png",
+    "image": "assets/images/products/ruckus-icx7750-26q.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7750-26q": {
+    "photo": "assets/images/products/ruckus-icx7750-26q.png",
+    "image": "assets/images/products/ruckus-icx7750-26q.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7750-48f": {
+    "photo": "assets/images/products/ruckus-icx7750-48f.png",
+    "image": "assets/images/products/ruckus-icx7750-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7750-48F": {
+    "photo": "assets/images/products/ruckus-icx7750-48f.png",
+    "image": "assets/images/products/ruckus-icx7750-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7750-48f": {
+    "photo": "assets/images/products/ruckus-icx7750-48f.png",
+    "image": "assets/images/products/ruckus-icx7750-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx7750-48c": {
+    "photo": "assets/images/products/ruckus-icx7750-48c.png",
+    "image": "assets/images/products/ruckus-icx7750-48c.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ICX7750-48C": {
+    "photo": "assets/images/products/ruckus-icx7750-48c.png",
+    "image": "assets/images/products/ruckus-icx7750-48c.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "icx7750-48c": {
+    "photo": "assets/images/products/ruckus-icx7750-48c.png",
+    "image": "assets/images/products/ruckus-icx7750-48c.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf"
+  },
+  "ruckus-icx8200-24": {
+    "photo": "assets/images/products/ruckus-icx8200-24.png",
+    "image": "assets/images/products/ruckus-icx8200-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-24": {
+    "photo": "assets/images/products/ruckus-icx8200-24.png",
+    "image": "assets/images/products/ruckus-icx8200-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-24": {
+    "photo": "assets/images/products/ruckus-icx8200-24.png",
+    "image": "assets/images/products/ruckus-icx8200-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-48": {
+    "photo": "assets/images/products/ruckus-icx8200-48.png",
+    "image": "assets/images/products/ruckus-icx8200-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-48": {
+    "photo": "assets/images/products/ruckus-icx8200-48.png",
+    "image": "assets/images/products/ruckus-icx8200-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-48": {
+    "photo": "assets/images/products/ruckus-icx8200-48.png",
+    "image": "assets/images/products/ruckus-icx8200-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-48p": {
+    "photo": "assets/images/products/ruckus-icx8200-48p.png",
+    "image": "assets/images/products/ruckus-icx8200-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-48P": {
+    "photo": "assets/images/products/ruckus-icx8200-48p.png",
+    "image": "assets/images/products/ruckus-icx8200-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-48p": {
+    "photo": "assets/images/products/ruckus-icx8200-48p.png",
+    "image": "assets/images/products/ruckus-icx8200-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-48pf": {
+    "photo": "assets/images/products/ruckus-icx8200-48pf.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-48PF": {
+    "photo": "assets/images/products/ruckus-icx8200-48pf.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-48pf": {
+    "photo": "assets/images/products/ruckus-icx8200-48pf.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-48zp2": {
+    "photo": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "image": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-48ZP2": {
+    "photo": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "image": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-48zp2": {
+    "photo": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "image": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-24xp2": {
+    "photo": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "image": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-24XP2": {
+    "photo": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "image": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-24xp2": {
+    "photo": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "image": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-24f": {
+    "photo": "assets/images/products/ruckus-icx8200-24f.png",
+    "image": "assets/images/products/ruckus-icx8200-24f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-24F": {
+    "photo": "assets/images/products/ruckus-icx8200-24f.png",
+    "image": "assets/images/products/ruckus-icx8200-24f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-24f": {
+    "photo": "assets/images/products/ruckus-icx8200-24f.png",
+    "image": "assets/images/products/ruckus-icx8200-24f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-48f": {
+    "photo": "assets/images/products/ruckus-icx8200-48f.png",
+    "image": "assets/images/products/ruckus-icx8200-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-48F": {
+    "photo": "assets/images/products/ruckus-icx8200-48f.png",
+    "image": "assets/images/products/ruckus-icx8200-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-48f": {
+    "photo": "assets/images/products/ruckus-icx8200-48f.png",
+    "image": "assets/images/products/ruckus-icx8200-48f.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8200-24fx": {
+    "photo": "assets/images/products/ruckus-icx8200-24fx.png",
+    "image": "assets/images/products/ruckus-icx8200-24fx.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ICX8200-24FX": {
+    "photo": "assets/images/products/ruckus-icx8200-24fx.png",
+    "image": "assets/images/products/ruckus-icx8200-24fx.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "icx8200-24fx": {
+    "photo": "assets/images/products/ruckus-icx8200-24fx.png",
+    "image": "assets/images/products/ruckus-icx8200-24fx.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf"
+  },
+  "ruckus-icx8100-c08pf": {
+    "photo": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-C08PF": {
+    "photo": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-c08pf": {
+    "photo": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx8100-c16p": {
+    "photo": "assets/images/products/ruckus-icx8100-c16p.png",
+    "image": "assets/images/products/ruckus-icx8100-c16p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-C16P": {
+    "photo": "assets/images/products/ruckus-icx8100-c16p.png",
+    "image": "assets/images/products/ruckus-icx8100-c16p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-c16p": {
+    "photo": "assets/images/products/ruckus-icx8100-c16p.png",
+    "image": "assets/images/products/ruckus-icx8100-c16p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx8100-24": {
+    "photo": "assets/images/products/ruckus-icx8100-24.png",
+    "image": "assets/images/products/ruckus-icx8100-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-24": {
+    "photo": "assets/images/products/ruckus-icx8100-24.png",
+    "image": "assets/images/products/ruckus-icx8100-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-24": {
+    "photo": "assets/images/products/ruckus-icx8100-24.png",
+    "image": "assets/images/products/ruckus-icx8100-24.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx8100-24p": {
+    "photo": "assets/images/products/ruckus-icx8100-24p.png",
+    "image": "assets/images/products/ruckus-icx8100-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-24P": {
+    "photo": "assets/images/products/ruckus-icx8100-24p.png",
+    "image": "assets/images/products/ruckus-icx8100-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-24p": {
+    "photo": "assets/images/products/ruckus-icx8100-24p.png",
+    "image": "assets/images/products/ruckus-icx8100-24p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx8100-48": {
+    "photo": "assets/images/products/ruckus-icx8100-48.png",
+    "image": "assets/images/products/ruckus-icx8100-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-48": {
+    "photo": "assets/images/products/ruckus-icx8100-48.png",
+    "image": "assets/images/products/ruckus-icx8100-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-48": {
+    "photo": "assets/images/products/ruckus-icx8100-48.png",
+    "image": "assets/images/products/ruckus-icx8100-48.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx8100-48p": {
+    "photo": "assets/images/products/ruckus-icx8100-48p.png",
+    "image": "assets/images/products/ruckus-icx8100-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-48P": {
+    "photo": "assets/images/products/ruckus-icx8100-48p.png",
+    "image": "assets/images/products/ruckus-icx8100-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-48p": {
+    "photo": "assets/images/products/ruckus-icx8100-48p.png",
+    "image": "assets/images/products/ruckus-icx8100-48p.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ruckus-icx8100-48pf": {
+    "photo": "assets/images/products/ruckus-icx8100-48pf.png",
+    "image": "assets/images/products/ruckus-icx8100-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "ICX8100-48PF": {
+    "photo": "assets/images/products/ruckus-icx8100-48pf.png",
+    "image": "assets/images/products/ruckus-icx8100-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "icx8100-48pf": {
+    "photo": "assets/images/products/ruckus-icx8100-48pf.png",
+    "image": "assets/images/products/ruckus-icx8100-48pf.png",
+    "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
+    "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf"
+  },
+  "juniper-srx300": {
+    "photo": "assets/images/products/juniper-srx300.png",
+    "image": "assets/images/products/juniper-srx300.png",
+    "datasheet": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf"
+  },
+  "SRX300": {
+    "photo": "assets/images/products/juniper-srx300.png",
+    "image": "assets/images/products/juniper-srx300.png",
+    "datasheet": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf"
+  },
+  "srx300": {
+    "photo": "assets/images/products/juniper-srx300.png",
+    "image": "assets/images/products/juniper-srx300.png",
+    "datasheet": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf"
+  },
+  "juniper-srx320": {
+    "photo": "assets/images/products/juniper-srx320.png",
+    "image": "assets/images/products/juniper-srx320.png",
+    "datasheet": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf"
+  },
+  "SRX320": {
+    "photo": "assets/images/products/juniper-srx320.png",
+    "image": "assets/images/products/juniper-srx320.png",
+    "datasheet": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf"
+  },
+  "srx320": {
+    "photo": "assets/images/products/juniper-srx320.png",
+    "image": "assets/images/products/juniper-srx320.png",
+    "datasheet": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf"
+  },
+  "juniper-srx340": {
+    "photo": "assets/images/products/juniper-srx340.png",
+    "image": "assets/images/products/juniper-srx340.png",
+    "datasheet": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf"
+  },
+  "SRX340": {
+    "photo": "assets/images/products/juniper-srx340.png",
+    "image": "assets/images/products/juniper-srx340.png",
+    "datasheet": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf"
+  },
+  "srx340": {
+    "photo": "assets/images/products/juniper-srx340.png",
+    "image": "assets/images/products/juniper-srx340.png",
+    "datasheet": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf"
+  },
+  "juniper-srx345": {
+    "photo": "assets/images/products/juniper-srx345.png",
+    "image": "assets/images/products/juniper-srx345.png",
+    "datasheet": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf"
+  },
+  "SRX345": {
+    "photo": "assets/images/products/juniper-srx345.png",
+    "image": "assets/images/products/juniper-srx345.png",
+    "datasheet": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf"
+  },
+  "srx345": {
+    "photo": "assets/images/products/juniper-srx345.png",
+    "image": "assets/images/products/juniper-srx345.png",
+    "datasheet": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf"
+  },
+  "juniper-srx380": {
+    "photo": "assets/images/products/juniper-srx380.png",
+    "image": "assets/images/products/juniper-srx380.png",
+    "datasheet": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf"
+  },
+  "SRX380": {
+    "photo": "assets/images/products/juniper-srx380.png",
+    "image": "assets/images/products/juniper-srx380.png",
+    "datasheet": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf"
+  },
+  "srx380": {
+    "photo": "assets/images/products/juniper-srx380.png",
+    "image": "assets/images/products/juniper-srx380.png",
+    "datasheet": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf"
+  },
+  "juniper-srx1500": {
+    "photo": "assets/images/products/juniper-srx1500.png",
+    "image": "assets/images/products/juniper-srx1500.png",
+    "datasheet": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf"
+  },
+  "SRX1500": {
+    "photo": "assets/images/products/juniper-srx1500.png",
+    "image": "assets/images/products/juniper-srx1500.png",
+    "datasheet": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf"
+  },
+  "srx1500": {
+    "photo": "assets/images/products/juniper-srx1500.png",
+    "image": "assets/images/products/juniper-srx1500.png",
+    "datasheet": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf"
+  },
+  "juniper-srx4100": {
+    "photo": "assets/images/products/juniper-srx4100.png",
+    "image": "assets/images/products/juniper-srx4100.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf"
+  },
+  "SRX4100": {
+    "photo": "assets/images/products/juniper-srx4100.png",
+    "image": "assets/images/products/juniper-srx4100.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf"
+  },
+  "srx4100": {
+    "photo": "assets/images/products/juniper-srx4100.png",
+    "image": "assets/images/products/juniper-srx4100.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf"
+  },
+  "juniper-srx4200": {
+    "photo": "assets/images/products/juniper-srx4200.png",
+    "image": "assets/images/products/juniper-srx4200.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf"
+  },
+  "SRX4200": {
+    "photo": "assets/images/products/juniper-srx4200.png",
+    "image": "assets/images/products/juniper-srx4200.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf"
+  },
+  "srx4200": {
+    "photo": "assets/images/products/juniper-srx4200.png",
+    "image": "assets/images/products/juniper-srx4200.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf"
+  },
+  "juniper-srx4600": {
+    "photo": "assets/images/products/juniper-srx4600.png",
+    "image": "assets/images/products/juniper-srx4600.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf"
+  },
+  "SRX4600": {
+    "photo": "assets/images/products/juniper-srx4600.png",
+    "image": "assets/images/products/juniper-srx4600.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf"
+  },
+  "srx4600": {
+    "photo": "assets/images/products/juniper-srx4600.png",
+    "image": "assets/images/products/juniper-srx4600.png",
+    "datasheet": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf",
+    "datasheetPath": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf"
   }
 };
 
