@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.36-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **AMG Systems Industrial Media Converter Catalog Recalibration (`data/networking/data_amg.js` & `data/infrastructure/data_accessories.js`)**:
+  - Resolved switch catalog mix-up by extracting AMG 250 and AMG 255 series media converters from `data_amg.js` (`AMG_SWITCHES`) where they were mistakenly classed as access switches, preserving 41 authentic Layer 2/3 DIN and rack switches.
+  - Re-engineered and integrated **9 authentic AMG 250 & AMG 255 industrial media converter models** into `data_accessories.js` under `category: "media_converter"`, `type: "media_converter"` with complete physical dimensions, power budgets, and mounting specifications.
+  - Fully mapped both sides of field-to-headend deployment topologies:
+    - *Remote / Field End (PoE DIN Converters)*: `AMG250-1GAT-1S-P30` (30W 802.3at), `AMG250-1GBT-1S-P90` (90W 802.3bt Type 4), `AMG250-1XBT-1XS-P90` (10G Multi-rate 90W bt PoE), `AMG250-2G-1S` (dual copper 2+1), `AMG250-2G-2S` (dual channel 2+2), and `AMG255-2GBT-1S-P120` (integrated 90-264VAC mains power supply with 120W PoE budget).
+    - *Head-End / Rack End (Non-PoE DIN & Rack Cards)*: `AMG250-1G-1S` (compact standalone DIN receiver) and `AMG250R-1G-1S` (1+1) / `AMG250R-4G-4S` (4+4) hot-swappable 19" rack-mount blade cards.
+    - *Head-End Chassis Infrastructure*: `AMG2015` (19" 3U 14-Slot Rackmount Card Chassis with dual redundant hot-swappable power supplies).
+- **Official AMG Technical Documentation & Master Asset Registry (`data/data_assets.js`)**:
+  - Registered all models under lowercase ID and uppercase SKU keys with 100% verified asset coverage.
+  - Linked official manufacturer PDF datasheets: `AMG250 Series Datasheet D33035-09.pdf`, `AMG250R Series Datasheet D33036-07.pdf`, and `AMG255 Series Datasheet D33037-05.pdf`.
+  - Normalized isolated transparent 800x600 product imagery across all form factors (`assets/images/products/amg-250-*.png`, `amg-250r-*.png`, `amg-255-*.png`, `amg-2015.png`).
+- **Edge CDP Headless Browser Verification**:
+  - Verified 0 console errors, confirmed access switches filter excludes media converters (count = 41), and accessories filter displays all 18 AMG media converters. Tested modal image popouts for both field-side DIN units and rack-mounted head-end blade cards.
+
+---
+
 ## [0.10.35-alpha] - 2026-10-06
 
 ### Added & Enhanced

@@ -102,9 +102,29 @@ const CATALOG_ASSETS = {
     "datasheetPath": "Datasheets/Network/AMG/AMG250 10G Series Datasheet D33797-01.pdf",
     "image": "assets/images/products/amg-250-1xbt-1xs.png"
   },
+  "amg-250-2g-1s": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250 Series Datasheet D33031-08.pdf",
+    "image": "assets/images/products/amg-250-2g-1s.png"
+  },
+  "amg-250-2g-2s": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250 Series Datasheet D33031-08.pdf",
+    "image": "assets/images/products/amg-250-2g-2s.png"
+  },
+  "amg-250r-1g-1s": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-250r-1g-1s.png"
+  },
+  "amg-250r-4g-4s": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-250r-4g-4s.png"
+  },
   "amg-255-2gbt-1s": {
     "datasheetPath": "Datasheets/Network/AMG/AMG255 120W Series Datasheet D33467-03.pdf",
     "image": "assets/images/products/amg-255-2gbt-1s.png"
+  },
+  "amg-2015": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-2015.png"
   },
   "amg-260m-1g-1s": {
     "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
@@ -490,6 +510,30 @@ const CATALOG_ASSETS = {
     "datasheetPath": "Datasheets/Network/AMG/AMG250 10G Series Datasheet D33797-01.pdf",
     "image": "assets/images/products/amg-250-1xbt-1xs.png"
   },
+  "AMG250-2G-1S": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250 Series Datasheet D33031-08.pdf",
+    "image": "assets/images/products/amg-250-2g-1s.png"
+  },
+  "AMG250-2G-2S": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250 Series Datasheet D33031-08.pdf",
+    "image": "assets/images/products/amg-250-2g-2s.png"
+  },
+  "AMG250R-1G-1S": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-250r-1g-1s.png"
+  },
+  "amg250r-1g-1s": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-250r-1g-1s.png"
+  },
+  "AMG250R-4G-4S": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-250r-4g-4s.png"
+  },
+  "amg250r-4g-4s": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-250r-4g-4s.png"
+  },
   "AMG255-2GBT-1S-P120": {
     "datasheetPath": "Datasheets/Network/AMG/AMG255 120W Series Datasheet D33467-03.pdf",
     "image": "assets/images/products/amg-255-2gbt-1s.png"
@@ -497,6 +541,10 @@ const CATALOG_ASSETS = {
   "amg255-2gbt-1s-p120": {
     "datasheetPath": "Datasheets/Network/AMG/AMG255 120W Series Datasheet D33467-03.pdf",
     "image": "assets/images/products/amg-255-2gbt-1s.png"
+  },
+  "AMG2015": {
+    "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+    "image": "assets/images/products/amg-2015.png"
   },
   "AMG260M-1G-1S": {
     "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",

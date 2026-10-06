@@ -188,6 +188,188 @@ const ACCESSORY_DATABASE = [
       "Integrated surge and transient protection"
     ]
   },
+  {
+    id: "amg-250-1g-1s",
+    sku: "AMG250-1G-1S",
+    model: "AMG 250-1G-1S Industrial Gigabit Media Converter (1+1)",
+    name: "AMG 250-1G-1S Industrial Gigabit Media Converter (1+1)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 280,
+    description: "Ultra-compact industrial 10/100/1000Base-T(x) RJ45 to 100/1000Base-Fx SFP media converter. Designed for head-end demarcation or non-PoE edge devices.",
+    baseWatts: 2,
+    powerWatts: 2,
+    keyFeatures: [
+      "1x 10/100/1000Base-T(x) RJ45 + 1x 100/1000Base-Fx SFP optical cage",
+      "Dual redundant 10-36VDC power inputs with fault alarm relay",
+      "-40°C to +75°C fanless hardened industrial operation",
+      "Link Fault Pass-Through (LFPT) and 9.2KB jumbo frames"
+    ]
+  },
+  {
+    id: "amg-250-1gat-1s",
+    sku: "AMG250-1GAT-1S-P30",
+    model: "AMG 250-1GAT-1S Industrial 30W PoE+ Media Converter (1+1)",
+    name: "AMG 250-1GAT-1S Industrial 30W PoE+ Media Converter (1+1)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 360,
+    description: "Industrial hardened media converter delivering up to 30W IEEE 802.3at PoE+ power to remote security cameras over copper while linking over fiber SFP.",
+    baseWatts: 2,
+    powerWatts: 32,
+    keyFeatures: [
+      "1x 1G RJ45 with 30W 802.3at PoE+ + 1x 100/1000Base-Fx SFP slot",
+      "Powers remote IP cameras directly over Cat6 up to 100m",
+      "48-56VDC dual terminal power inputs with reverse polarity protection",
+      "-40°C to +75°C fanless passive cooling"
+    ]
+  },
+  {
+    id: "amg-250-1gbt-1s",
+    sku: "AMG250-1GBT-1S-P90",
+    model: "AMG 250-1GBT-1S Industrial 90W 802.3bt PoE Media Converter (1+1)",
+    name: "AMG 250-1GBT-1S Industrial 90W 802.3bt PoE Media Converter (1+1)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 460,
+    description: "Industrial hardened media converter delivering up to 90W IEEE 802.3bt Type 4 PoE power for high-power PTZ cameras, illuminators, and heater enclosures.",
+    baseWatts: 2,
+    powerWatts: 92,
+    keyFeatures: [
+      "1x 1G RJ45 with 90W 802.3bt PoE (Mode A & B) + 1x 1G SFP slot",
+      "Powers ultra-demanding outdoor PTZ cameras with wipers/blowers",
+      "52-56VDC dual redundant power inputs with alarm contact",
+      "-40°C to +75°C extreme temperature hardened IP40 aluminum casing"
+    ]
+  },
+  {
+    id: "amg-250-1xbt-1xs",
+    sku: "AMG250-1XBT-1XS-P90",
+    model: "AMG 250-1XBT-1XS Industrial 10G 90W PoE Media Converter (1+1)",
+    name: "AMG 250-1XBT-1XS Industrial 10G 90W PoE Media Converter (1+1)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 790,
+    description: "Industrial 10G Multi-Gigabit media converter delivering up to 90W 802.3bt PoE over 10GBase-T copper while uplinking over 10GBase-R SFP+ optical fiber.",
+    baseWatts: 9,
+    powerWatts: 99,
+    keyFeatures: [
+      "1x 1000/10GBase-T RJ45 (90W 802.3bt) + 1x 1000/10GBase-R SFP+ cage",
+      "Transparent to VLAN, multicast, and jumbo frame traffic",
+      "52-56VDC dual power inputs with reverse polarity protection",
+      "-40°C to +75°C fanless industrial rated"
+    ]
+  },
+  {
+    id: "amg-250-2g-1s",
+    sku: "AMG250-2G-1S",
+    model: "AMG 250-2G-1S Dual-Port Industrial Media Converter (2+1)",
+    name: "AMG 250-2G-1S Dual-Port Industrial Media Converter (2+1)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 340,
+    description: "Compact industrial media converter with two copper RJ45 ports concentrated into a single optical SFP fiber uplink.",
+    baseWatts: 4,
+    powerWatts: 4,
+    keyFeatures: [
+      "2x 10/100/1000Base-T(x) RJ45 + 1x 100/1000Base-Fx SFP slot",
+      "Aggregates two co-located cameras over a single fiber strand/pair",
+      "-40°C to +75°C fanless passive cooling",
+      "Dual redundant 10-36VDC power inputs"
+    ]
+  },
+  {
+    id: "amg-250-2g-2s",
+    sku: "AMG250-2G-2S",
+    model: "AMG 250-2G-2S Dual-Channel Industrial Media Converter (2+2)",
+    name: "AMG 250-2G-2S Dual-Channel Industrial Media Converter (2+2)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 420,
+    description: "Dual-channel media converter housing two completely independent, physically isolated copper-to-fiber channels in a single compact DIN-rail chassis.",
+    baseWatts: 4,
+    powerWatts: 4,
+    keyFeatures: [
+      "2x 10/100/1000Base-T(x) RJ45 + 2x 100/1000Base-Fx SFP optical cages",
+      "Two independent channels providing total physical data separation",
+      "Dual redundant 10-36VDC power inputs with fault alarm relay",
+      "-40°C to +75°C industrial temperature rated"
+    ]
+  },
+  {
+    id: "amg-250r-1g-1s",
+    sku: "AMG250R-1G-1S",
+    model: "AMG 250R-1G-1S Rack-Mount Gigabit Media Converter Blade (1+1)",
+    name: "AMG 250R-1G-1S Rack-Mount Gigabit Media Converter Blade (1+1)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "19\" Rack Blade (AMG2015 / AMG2031)",
+    rackUnits: 1,
+    msrp: 260,
+    description: "Single-channel hot-swappable rack-mount media converter blade for installation into AMG2031 1U or AMG2015 3U card cages at the head-end / MDF.",
+    baseWatts: 2,
+    powerWatts: 2,
+    keyFeatures: [
+      "1x 10/100/1000Base-T(x) RJ45 + 1x 100/1000Base-Fx SFP",
+      "Hot-swappable card powered directly from chassis redundant backplane",
+      "-40°C to +75°C operating range in high-density rack card cages",
+      "Compatible with AMG2031 1U (3-slot) and AMG2015 3U (14-slot) chassis"
+    ]
+  },
+  {
+    id: "amg-250r-4g-4s",
+    sku: "AMG250R-4G-4S",
+    model: "AMG 250R-4G-4S Quad-Channel Rack-Mount Media Converter Blade (4+4)",
+    name: "AMG 250R-4G-4S Quad-Channel Rack-Mount Media Converter Blade (4+4)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "19\" Rack Blade (AMG2015 / AMG2031)",
+    rackUnits: 1,
+    msrp: 690,
+    description: "Quad-channel high-density media converter blade providing 4 independent isolated fiber-to-copper conversion channels in a single slot.",
+    baseWatts: 8,
+    powerWatts: 8,
+    keyFeatures: [
+      "4x 10/100/1000Base-T(x) RJ45 + 4x 100/1000Base-Fx SFP optical ports",
+      "High-density head-end convergence (up to 56 channels in a 3U AMG2015 chassis)",
+      "Hot-swappable blade powered by redundant chassis PSUs",
+      "Full physical channel isolation across all 4 channels"
+    ]
+  },
+  {
+    id: "amg-255-2gbt-1s",
+    sku: "AMG255-2GBT-1S-P120",
+    model: "AMG 255-2GBT-1S Mains-Powered Dual 90W PoE Media Converter (120W)",
+    name: "AMG 255-2GBT-1S Mains-Powered Dual 90W PoE Media Converter (120W)",
+    vendor: "AMG",
+    category: "media_converter",
+    type: "media_converter",
+    mounting: "DIN-Rail / Wall Mount",
+    msrp: 540,
+    description: "Industrial media converter featuring integrated 90-264VAC mains power supply and dual 90W 802.3bt PoE ports with 120W total budget, eliminating external power supplies.",
+    baseWatts: 8,
+    powerWatts: 128,
+    keyFeatures: [
+      "Integrated 90-264VAC mains power supply — no external power brick required",
+      "2x 1G RJ45 (90W 802.3bt PoE, 120W total budget) + 1x 100/1000M SFP",
+      "-40°C to +75°C fanless passive cooling",
+      "Designed for rapid deployment in electrical panels and NEMA enclosures"
+    ]
+  },
 
   {
     id: "unifi-uacc-lre",
@@ -1215,6 +1397,26 @@ const ACCESSORY_DATABASE = [
   // ==========================================
   // AMG INDUSTRIAL RACK CHASSIS & MOUNTING
   // ==========================================
+  {
+    id: "amg-2015",
+    sku: "AMG2015",
+    model: "AMG 19\" 3U 14-Slot Rackmount Card Chassis",
+    name: "AMG 19\" 3U 14-Slot Rackmount Card Chassis",
+    vendor: "AMG",
+    category: "mounting",
+    type: "equipment_rack",
+    mounting: "Rack (3U)",
+    rackUnits: 3,
+    depthInches: 10.0,
+    msrp: 380,
+    description: "Standard 19-inch 3U rackmount card cage accommodating up to 14 AMG250R series media converter blade cards with dual redundant power options.",
+    keyFeatures: [
+      "Accommodates up to 14x AMG250R media converter blade cards in 3U",
+      "Dual redundant power supply options for maximum reliability",
+      "Hot-swappable card slots allow maintenance without network disruption",
+      "Integrated power failure alarm relay contacts"
+    ]
+  },
   {
     id: "amg-2015-dr",
     sku: "AMG2015-DR",
