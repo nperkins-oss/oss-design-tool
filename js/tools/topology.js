@@ -19,13 +19,509 @@ let selectedTopologyNodeId = null;
 let selectedTopologyRackLoc = null;
 let selectedTopologyLinkId = null;
 let isTopologyInspectorVisible = true;
-let showTopologyFieldDevices = typeof localStorage !== "undefined" ? (localStorage.getItem("netselect_topology_show_field") === "true") : false;
+let showTopologyFieldDevices = typeof localStorage !== "undefined" ? (localStorage.getItem("netselect_topology_show_field") === "true") : true;
+let topologyGroupingMode = typeof localStorage !== "undefined" ? (localStorage.getItem("netselect_topology_grouping_mode") || "floor") : "floor";
+
+// Project Fiber Specification & Link Interconnect Overrides
+let projectDefaultFiberType = "mmf"; // "mmf" | "smf"
+let linkInterconnectOverrides = {}; // linkId -> { medium, dacLength, fiberType }
+
+function getProjectFiberType() {
+  if (projectDefaultFiberType) return projectDefaultFiberType;
+  const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+    ? FacilityStore.getProjectId() 
+    : "default";
+  try {
+    const saved = localStorage.getItem(`netselect_fiber_type_${projKey}`);
+    if (saved === "smf" || saved === "mmf") {
+      projectDefaultFiberType = saved;
+      return saved;
+    }
+  } catch (e) {}
+  return "mmf";
+}
+
+function setProjectFiberType(type) {
+  projectDefaultFiberType = (type === "smf") ? "smf" : "mmf";
+  const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+    ? FacilityStore.getProjectId() 
+    : "default";
+  try {
+    localStorage.setItem(`netselect_fiber_type_${projKey}`, projectDefaultFiberType);
+  } catch (e) {}
+
+  const sel1 = document.getElementById("topoProjectFiberSelect");
+  if (sel1) sel1.value = projectDefaultFiberType;
+  const sel2 = document.getElementById("projectFiberSelect");
+  if (sel2) sel2.value = projectDefaultFiberType;
+
+  // Real-time synchronization to Physical Layout fiber backbones that use project default
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    let changedAny = false;
+    facilityFloors.forEach(fl => {
+      if (Array.isArray(fl.fiberBackbones)) {
+        fl.fiberBackbones.forEach(fb => {
+          if (!fb.customOverride) {
+            fb.fiberType = projectDefaultFiberType;
+            changedAny = true;
+          }
+        });
+      }
+    });
+    if (changedAny) {
+      const physModal = document.getElementById("cableLayoutModal");
+      const isPhysOpen = physModal && !physModal.classList.contains("hidden");
+      if (isPhysOpen) {
+        if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
+        if (typeof renderCableCanvas === "function") renderCableCanvas();
+        if (typeof renderInspector === "function") renderInspector();
+        if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
+      }
+      if (typeof commitCablingToBOM === "function") commitCablingToBOM({ silent: true });
+      if (typeof saveFacilityState === "function") saveFacilityState(true);
+    }
+  }
+
+  if (typeof autoSynthesizeInterconnects === "function") {
+    autoSynthesizeInterconnects();
+  }
+  if (typeof renderTopologyInspector === "function") {
+    renderTopologyInspector();
+  }
+  if (typeof renderTopologyLinks === "function") {
+    renderTopologyLinks();
+  }
+  if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+    StorageService.queueAutoSave();
+  }
+  if (typeof showToast === "function") {
+    showToast(`Project fiber specification set to ${projectDefaultFiberType.toUpperCase()} (${projectDefaultFiberType === "mmf" ? "OM4 Multi-Mode" : "OS2 Single-Mode"}).`);
+  }
+}
+
+function isClosetNameMatch(nameA, nameB) {
+  if (!nameA || !nameB) return false;
+  const cleanA = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(nameA) : String(nameA))
+    .split(" • ").pop().trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const cleanB = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(nameB) : String(nameB))
+    .split(" • ").pop().trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (cleanA === cleanB) return true;
+  if (cleanA && cleanB && (cleanA.includes(cleanB) || cleanB.includes(cleanA))) return true;
+  return false;
+}
+
+function syncTopologyLinkToPhysicalLayout(linkId, key, value) {
+  if (typeof facilityFloors === "undefined" || !Array.isArray(facilityFloors)) return;
+  const links = (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) ? topologyLinks : [];
+  const link = links.find(l => l.id === linkId);
+  if (!link) return;
+
+  const nodeA = (typeof projectBOM !== "undefined") ? projectBOM.find(i => i.instanceId === link.fromId) : null;
+  const nodeB = (typeof projectBOM !== "undefined") ? projectBOM.find(i => i.instanceId === link.toId) : null;
+  if (!nodeA || !nodeB) return;
+
+  const locA = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeA.closetName || nodeA.rackId || "MDF") : (nodeA.closetName || "MDF");
+  const locB = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeB.closetName || nodeB.rackId || "MDF") : (nodeB.closetName || "MDF");
+  if (locA === locB) return;
+
+  let targetFiber = null;
+  if (key === "fiberType") {
+    targetFiber = (value === "auto" || !value) ? getProjectFiberType() : value;
+  } else if (key === "medium") {
+    if (value === "smf" || value === "mmf") {
+      targetFiber = value;
+    } else if (value === "auto") {
+      targetFiber = getProjectFiberType();
+    }
+  }
+  if (!targetFiber) return;
+
+  let updatedAny = false;
+  facilityFloors.forEach(fl => {
+    if (!fl.fiberBackbones) return;
+    fl.fiberBackbones.forEach(fb => {
+      const c1 = (fl.nodes || []).find(n => n.id === fb.fromId);
+      const c2 = (fl.nodes || []).find(n => n.id === fb.toId);
+      const name1 = c1 ? c1.name : (fb.fromClosetName || "");
+      const name2 = c2 ? c2.name : (fb.toClosetName || "");
+
+      const match1 = isClosetNameMatch(name1, locA) && isClosetNameMatch(name2, locB);
+      const match2 = isClosetNameMatch(name2, locA) && isClosetNameMatch(name1, locB);
+      if (match1 || match2) {
+        fb.fiberType = targetFiber;
+        fb.customOverride = (key === "fiberType" && value !== "auto");
+        updatedAny = true;
+      }
+    });
+  });
+
+  if (updatedAny) {
+    const physModal = document.getElementById("cableLayoutModal");
+    const isPhysOpen = physModal && !physModal.classList.contains("hidden");
+    if (isPhysOpen) {
+      if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
+      if (typeof renderCableCanvas === "function") renderCableCanvas();
+      if (typeof renderInspector === "function") renderInspector();
+      if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
+    }
+    if (typeof saveFacilityState === "function") saveFacilityState(true);
+    if (typeof commitCablingToBOM === "function") commitCablingToBOM({ silent: true });
+  }
+}
+
+function getLinkInterconnectOverrides() {
+  if (linkInterconnectOverrides && Object.keys(linkInterconnectOverrides).length > 0) {
+    return linkInterconnectOverrides;
+  }
+  const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+    ? FacilityStore.getProjectId() 
+    : "default";
+  try {
+    const raw = localStorage.getItem(`netselect_link_overrides_${projKey}`);
+    if (raw) linkInterconnectOverrides = JSON.parse(raw);
+  } catch (e) {}
+  return linkInterconnectOverrides || {};
+}
+
+function setLinkInterconnectOverrides(overrides) {
+  linkInterconnectOverrides = (overrides && typeof overrides === "object") ? overrides : {};
+  const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+    ? FacilityStore.getProjectId() 
+    : "default";
+  try {
+    localStorage.setItem(`netselect_link_overrides_${projKey}`, JSON.stringify(linkInterconnectOverrides));
+  } catch (e) {}
+}
+
+function getLinkInterconnectOverride(linkId) {
+  const all = getLinkInterconnectOverrides();
+  return all[linkId] || {};
+}
+
+function updateLinkOverride(linkId, key, value) {
+  if (!linkInterconnectOverrides) linkInterconnectOverrides = {};
+  if (!linkInterconnectOverrides[linkId]) linkInterconnectOverrides[linkId] = {};
+  linkInterconnectOverrides[linkId][key] = value;
+
+  const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+    ? FacilityStore.getProjectId() 
+    : "default";
+  try {
+    localStorage.setItem(`netselect_link_overrides_${projKey}`, JSON.stringify(linkInterconnectOverrides));
+  } catch (e) {}
+
+  if (key === "fiberType" || key === "medium") {
+    syncTopologyLinkToPhysicalLayout(linkId, key, value);
+  }
+
+  autoSynthesizeInterconnects();
+  renderTopologyInspector();
+  renderTopologyLinks();
+  if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+    StorageService.queueAutoSave();
+  }
+}
+
+function parseRackU(slot) {
+  if (slot === null || slot === undefined) return null;
+  if (typeof slot === "number") return slot >= 1 ? slot : null;
+  const str = String(slot).trim();
+  if (/^(Bay|Rail|Zone|Pole)/i.test(str)) return null;
+  const m = str.match(/\bU?(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function calculateUDistance(nodeA, nodeB) {
+  const uA = parseRackU(nodeA?.rackSlot);
+  const uB = parseRackU(nodeB?.rackSlot);
+  if (uA === null || uB === null) return 1; // Default to adjacent (1U) if either is unmounted
+  const hA = Math.max(1, parseInt(nodeA?.rackUnits || nodeA?.ru, 10) || 1);
+  const hB = Math.max(1, parseInt(nodeB?.rackUnits || nodeB?.ru, 10) || 1);
+  
+  // Center-to-center vertical RU separation
+  const centerA = uA + (hA - 1) / 2;
+  const centerB = uB + (hB - 1) / 2;
+  return Math.max(1, Math.round(Math.abs(centerA - centerB)));
+}
+
+function getDacLengthForUDiff(uDiff) {
+  if (uDiff === null || uDiff === undefined) return "1m";
+  if (uDiff <= 2) return "0.5m";
+  if (uDiff <= 6) return "1m";
+  if (uDiff <= 15) return "2m";
+  if (uDiff <= 28) return "3m";
+  return "5m";
+}
+
+function getPatchCordLengthForUDiff(uDiff) {
+  if (uDiff === null || uDiff === undefined) return { lengthFt: 1, lengthMeters: 0.3, label: "1 ft (0.3m)" };
+  if (uDiff <= 1) return { lengthFt: 0.5, lengthMeters: 0.15, label: "6 in (0.5 ft)" };
+  if (uDiff <= 4) return { lengthFt: 1, lengthMeters: 0.3, label: "1 ft (0.3m)" };
+  if (uDiff <= 7) return { lengthFt: 3, lengthMeters: 1.0, label: "3 ft (1m)" };
+  if (uDiff <= 14) return { lengthFt: 5, lengthMeters: 1.5, label: "5 ft (1.5m)" };
+  if (uDiff <= 22) return { lengthFt: 7, lengthMeters: 2.1, label: "7 ft (2.1m)" };
+  if (uDiff <= 32) return { lengthFt: 10, lengthMeters: 3.0, label: "10 ft (3m)" };
+  return { lengthFt: 15, lengthMeters: 4.6, label: "15 ft (4.6m)" };
+}
+
+function findDacItem(speed, preferredVendor, dacLength) {
+  const targetMeters = parseFloat(dacLength);
+  if (typeof OPTICS_LIST !== "undefined" && Array.isArray(OPTICS_LIST)) {
+    // 1. Exact match on speed, vendor, and reach/lengthMeters
+    let item = OPTICS_LIST.find(o => o.medium === "dac" && o.speed === speed && o.vendor === preferredVendor && (o.reach === dacLength || o.lengthMeters === targetMeters));
+    if (item) return item;
+    // 2. Match on speed and reach/lengthMeters (any vendor)
+    item = OPTICS_LIST.find(o => o.medium === "dac" && o.speed === speed && (o.reach === dacLength || o.lengthMeters === targetMeters));
+    if (item) return item;
+    // 3. Fallback to vendor + speed
+    item = OPTICS_LIST.find(o => o.medium === "dac" && o.speed === speed && o.vendor === preferredVendor);
+    if (item) return item;
+    // 4. Fallback to speed
+    item = OPTICS_LIST.find(o => o.medium === "dac" && o.speed === speed);
+    if (item) return item;
+  }
+  return null;
+}
+
+function findPatchCordItem(targetFt, preferredVendor, isEtherlighting) {
+  if (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords) {
+    const cords = CABLING_CATALOG.patchCords;
+    if (isEtherlighting) {
+      const el = cords.find(c => c.etherlighting && Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      if (el) return el;
+    }
+    if (preferredVendor) {
+      const match = cords.find(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) && Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      if (match) return match;
+    }
+    const match = cords.find(c => Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+    if (match) return match;
+  }
+  return {
+    sku: targetFt === 0.5 ? "C6A-SLIM-6IN-BL" : (targetFt === 1 ? "C6A-SLIM-1FT-BL" : (targetFt === 3 ? "C6A-SLIM-3FT-BL" : (targetFt === 5 ? "C6A-SLIM-5FT-BL" : (targetFt === 7 ? "C6A-SLIM-7FT-BL" : (targetFt === 10 ? "C6A-SLIM-10FT-BL" : "C6A-SLIM-15FT-BL"))))),
+    name: `Cat6A Slim 28AWG Patch Cord (${targetFt === 0.5 ? '6-Inch' : targetFt + '-Foot'}, Blue)`,
+    vendor: "Panduit",
+    msrp: targetFt === 0.5 ? 6.20 : (targetFt === 1 ? 7.50 : (targetFt === 3 ? 8.50 : (targetFt === 5 ? 9.80 : (targetFt === 7 ? 11.00 : (targetFt === 10 ? 13.50 : 16.50))))),
+    lengthFt: targetFt
+  };
+}
+
+function formatDacItem(baseSku, baseName, baseMsrp, lengthStr, speed, vendor) {
+  const upperLen = lengthStr.toUpperCase();
+  let sku = baseSku;
+  if (/1M/i.test(sku)) {
+    sku = sku.replace(/1M/i, upperLen);
+  } else if (/0101/.test(sku)) {
+    const ruckusMap = { "0.5M": "0051", "1M": "0101", "2M": "0201", "3M": "0301", "5M": "0501" };
+    sku = sku.replace("0101", ruckusMap[upperLen] || upperLen);
+  } else {
+    sku = `${sku}-${upperLen}`;
+  }
+
+  let name = baseName;
+  if (/\(1m\)/i.test(name)) {
+    name = name.replace(/\(1m\)/i, `(${lengthStr})`);
+  } else if (!name.includes(lengthStr)) {
+    name = `${name} (${lengthStr})`;
+  }
+
+  let msrp = baseMsrp;
+  if (lengthStr === "0.5m") msrp = Math.max(15, Math.round(baseMsrp * 0.9));
+  else if (lengthStr === "2m") msrp = baseMsrp + 10;
+  else if (lengthStr === "3m") msrp = baseMsrp + 20;
+  else if (lengthStr === "5m") msrp = baseMsrp + 35;
+
+  return { sku, name, msrp };
+}
+
+function syncRackInterconnectsAndCabling(targetRackId) {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  // 1. Re-evaluate auto-synthesized topology DACs and Patch Cords
+  if (typeof autoSynthesizeInterconnects === "function") {
+    autoSynthesizeInterconnects(true); // silent = true
+  }
+
+  // 2. Re-evaluate switch-to-panel structured cabling patch cords for the rack(s)
+  const closets = targetRackId ? [targetRackId] : [...new Set(projectBOM.map(i => i.closetName || i.rackId).filter(Boolean))];
+
+  closets.forEach(closet => {
+    const normLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(closet) : closet;
+    if (normLoc.endsWith("• Field") || (typeof FacilityStore !== "undefined" && normLoc === FacilityStore.UNASSIGNED)) return;
+
+    const closetSwitches = projectBOM.filter(i => (typeof isNetworkSwitchItem === "function" ? isNetworkSwitchItem(i) : (i.role === "Access" || (i.model || '').includes("Switch"))) && ((typeof FacilityStore !== "undefined" ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId)) === normLoc) && (parseRackU(i.rackSlot) !== null));
+    const closetPanels = projectBOM.filter(i => (i.role === "Structured Cabling" || i.category === "cabling") && (i.model || '').includes("Patch Panel") && ((typeof FacilityStore !== "undefined" ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId)) === normLoc) && (parseRackU(i.rackSlot) !== null));
+
+    if (closetSwitches.length > 0 && closetPanels.length > 0) {
+      const uDiffs = [];
+      closetSwitches.forEach(sw => {
+        const swU = parseRackU(sw.rackSlot);
+        if (swU !== null) {
+          let minD = 999;
+          closetPanels.forEach(pp => {
+            const ppU = parseRackU(pp.rackSlot);
+            if (ppU !== null) {
+              const dist = Math.abs(swU - ppU);
+              if (dist < minD) minD = dist;
+            }
+          });
+          if (minD < 999) uDiffs.push(minD);
+        }
+      });
+
+      if (uDiffs.length > 0) {
+        const avgUDiff = Math.round(uDiffs.reduce((a, b) => a + b, 0) / uDiffs.length);
+        const cordSpec = getPatchCordLengthForUDiff(avgUDiff);
+        const matchedCord = findPatchCordItem(cordSpec.lengthFt, "Panduit");
+
+        if (matchedCord) {
+          projectBOM.forEach(item => {
+            if (item.role === "Structured Cabling" && item.source === "cabling_sync" && (item.instanceId.startsWith("patch1ft-") || item.instanceId.startsWith("patch-")) && !item.instanceId.startsWith("patch7ft-")) {
+              const itemLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(item.closetName || item.rackId) : (item.closetName || item.rackId);
+              if (itemLoc === normLoc && item.lengthFt !== cordSpec.lengthFt) {
+                item.lengthFt = cordSpec.lengthFt;
+                item.lengthMeters = cordSpec.lengthMeters;
+                item.sku = matchedCord.sku;
+                item.model = `${matchedCord.name} (${avgUDiff}U Separation in ${closet})`;
+                item.msrp = matchedCord.msrp;
+              }
+            }
+          });
+        }
+      }
+    }
+  });
+}
+
+// Dynamic Topology Layer Filters
+let topologyLayerFilters = {
+  network: true,
+  servers: true,
+  cameras: true,
+  access: true,
+  wireless: true,
+  links: true
+};
+
+function getTopologyDeviceLayer(item) {
+  if (!item) return "network";
+
+  // 1. Prioritize canonical DeviceTaxonomy classification
+  if (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.getDeviceType === "function") {
+    const tax = DeviceTaxonomy.getDeviceType(item);
+    if (tax) {
+      if (tax.prefix === "SW" || tax.prefix === "FW") return "network";
+      if (tax.prefix === "SVR" || tax.prefix === "CWS" || tax.prefix === "UPS") return "servers";
+      if (tax.prefix === "CAM" || tax.prefix === "LPR") return "cameras";
+      if (tax.prefix === "DR" || tax.prefix === "ACS" || tax.prefix === "BIO" || tax.prefix === "SIP") return "access";
+      if (tax.prefix === "P2P") return "wireless";
+    }
+  }
+
+  // 2. Strict attribute and keyword fallback checks
+  const role = (item.role || "").trim();
+  const cat = (item.category || "").toLowerCase().trim();
+  const model = (item.model || "").toLowerCase();
+  const desc = (item.description || "").toLowerCase();
+  const prefix = item.deviceTypePrefix || "";
+  const allText = `${role} ${cat} ${model} ${desc}`.toLowerCase();
+
+  // Network Switches & Firewalls (Check first: Access Switches must NEVER be treated as Access Control!)
+  if (prefix === "SW" || prefix === "FW" ||
+      role === "Access" || role === "Core" || role === "Aggregation" || role === "Core & Agg" ||
+      role === "Switch" || role === "Access Switch" || role === "Core Switch" ||
+      role === "Firewall" || role === "Gateways & WAN" || role === "Security WAN" ||
+      cat === "switch" || cat === "switches" || cat === "firewall" || cat === "security_appliance" ||
+      /\b(switch|catalyst|meraki ms|unifi.*switch|edge.*switch|fortigate|palo alto|udm-pro|udm-se|gateway|router)\b/i.test(allText)) {
+    return "network";
+  }
+
+  // Servers & Storage
+  if (prefix === "SVR" || prefix === "CWS" || prefix === "UPS" ||
+      role === "Server" || role === "VMS Server" || role === "Compute & Storage" || role === "Storage" ||
+      role === "Client Machine" || role === "Workstation" || role === "UPS" ||
+      cat.includes("server") || cat.includes("storage") || cat.includes("workstation") || cat.includes("ups") ||
+      /\b(server|nvr|san|nas|vms|poweredge|proliant|workstation|smart-ups|battery backup)\b/i.test(allText)) {
+    return "servers";
+  }
+
+  // Cameras & Surveillance
+  if (prefix === "CAM" || prefix === "LPR" ||
+      role === "Camera" || role === "Surveillance" || role === "Video" || role === "LPR" ||
+      cat.includes("camera") || cat.includes("surveillance") ||
+      /\b(camera|cams?|dome|bullet|ptz|turret|fisheye|multisensor|lpr|anpr)\b/i.test(allText)) {
+    return "cameras";
+  }
+
+  // Access Control & Doors (Must NOT match network Access switches!)
+  if (prefix === "DR" || prefix === "ACS" || prefix === "BIO" || prefix === "SIP" ||
+      role === "Access Control" || role === "Door" || role === "Biometric" || role === "Intercom" || role === "Audio/Intercom" ||
+      cat.includes("access_control") || cat === "door" || cat === "doors" || cat.includes("intercom") ||
+      /\b(door|reader|portal|turnstile|mercury|cloudlink|istar|intercom|doorbell|sip)\b/i.test(allText)) {
+    return "access";
+  }
+
+  // Wireless Radios & P2P
+  if (prefix === "P2P" || role === "Wireless Bridge" || role === "Wireless" || role === "P2P" ||
+      cat.includes("wireless") || /\b(nanobeam|gigabeam|airmax|wave|bridge|p2p|ptmp|ubb)\b/i.test(allText)) {
+    return "wireless";
+  }
+
+  return "network";
+}
+
+function toggleTopologyLayerMenu() {
+  const menu = document.getElementById("topologyLayerMenu");
+  if (!menu) return;
+  menu.classList.toggle("hidden");
+}
+
+function setTopologyLayerFilter(layer, enabled) {
+  if (topologyLayerFilters.hasOwnProperty(layer)) {
+    topologyLayerFilters[layer] = !!enabled;
+  }
+  updateTopologyLayerCountBadge();
+  renderTopology();
+}
+
+function toggleAllTopologyLayers(enableAll) {
+  Object.keys(topologyLayerFilters).forEach(k => {
+    topologyLayerFilters[k] = !!enableAll;
+    const chk = document.getElementById(`topoLayer-${k}`);
+    if (chk) chk.checked = !!enableAll;
+  });
+  updateTopologyLayerCountBadge();
+  renderTopology();
+}
+
+function updateTopologyLayerCountBadge() {
+  const badge = document.getElementById("badgeTopologyLayerCount");
+  if (!badge) return;
+  const total = Object.keys(topologyLayerFilters).length;
+  const active = Object.values(topologyLayerFilters).filter(Boolean).length;
+  badge.textContent = active === total ? "All" : `${active}/${total}`;
+  if (active < total) {
+    badge.className = "text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 font-bold";
+  } else {
+    badge.className = "text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold";
+  }
+}
 
 function toggleTopologyFieldDevices() {
   showTopologyFieldDevices = !showTopologyFieldDevices;
   if (typeof localStorage !== "undefined") {
     localStorage.setItem("netselect_topology_show_field", showTopologyFieldDevices ? "true" : "false");
   }
+  topologyLayerFilters.cameras = showTopologyFieldDevices;
+  topologyLayerFilters.access = showTopologyFieldDevices;
+  topologyLayerFilters.wireless = showTopologyFieldDevices;
+  const chkCam = document.getElementById("topoLayer-cameras");
+  const chkAcc = document.getElementById("topoLayer-access");
+  const chkWire = document.getElementById("topoLayer-wireless");
+  if (chkCam) chkCam.checked = showTopologyFieldDevices;
+  if (chkAcc) chkAcc.checked = showTopologyFieldDevices;
+  if (chkWire) chkWire.checked = showTopologyFieldDevices;
+  updateTopologyLayerCountBadge();
   updateTopologyFieldDevicesButton();
   renderTopology();
   if (typeof showToast === "function") {
@@ -45,6 +541,20 @@ function updateTopologyFieldDevicesButton() {
     btn.classList.remove("bg-cyan-600/30", "border-cyan-500/60", "text-cyan-200");
     btn.classList.add("bg-slate-900", "border-slate-800", "text-slate-300");
     if (lbl) lbl.textContent = "Show Field Drops";
+  }
+}
+
+function setTopologyGroupingMode(mode) {
+  if (mode !== "floor" && mode !== "switch") mode = "floor";
+  topologyGroupingMode = mode;
+  try {
+    localStorage.setItem("netselect_topology_grouping_mode", mode);
+  } catch (e) {}
+  const sel = document.getElementById("topologyGroupingSelector");
+  if (sel) sel.value = mode;
+  renderTopologyStudio();
+  if (typeof showToast === "function") {
+    showToast(mode === "floor" ? "Topology: Grouped by Physical Floor (Showing Cable Runs)" : "Topology: Grouped by Serving Switch Enclosure");
   }
 }
 
@@ -284,6 +794,22 @@ function autoResolveDeviceUplinks() {
     const isRadio = item.role === "Wireless Bridge" || item.category === "wireless" || item.category === "ptp_60g";
 
     if (!isEdge && !isRadio) return;
+    if (item.unassignedByUser) return;
+
+    // Detect if this is a Remote Station radio in a PtP paired link
+    const isRemoteRadio = isRadio && item.linkPairId && (
+      (item.model && (item.model.includes("Remote") || item.model.includes("Station") || item.model.includes("Substation"))) ||
+      (item.friendlyName && (item.friendlyName.includes("P2P02") || item.friendlyName.includes("Remote")))
+    );
+
+    // If both partner radios are accidentally plugged into the exact same switch, clear remote uplink
+    if (isRemoteRadio) {
+      const partner = projectBOM.find(p => p.linkPairId === item.linkPairId && p.instanceId !== item.instanceId);
+      if (partner && partner.uplinkTargetId && item.uplinkTargetId === partner.uplinkTargetId) {
+        item.uplinkTargetId = null;
+        item.assignedSwitchPort = null;
+      }
+    }
 
     // Check if device currently has a valid uplink target
     const currentTarget = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
@@ -295,15 +821,37 @@ function autoResolveDeviceUplinks() {
         FacilityStore.normalize(s.closetName || s.rackId) === itemLoc && s.role === "Access"
       );
 
-      // 2. Second priority: Core/Agg in the same closet
+      // 1b. Check if there is an Access switch in the same Space (e.g. East Gate Pole)
+      if (!candidateSwitch && typeof FacilityStore !== "undefined") {
+        const itemSpace = FacilityStore.parse(itemLoc).space.toLowerCase();
+        if (itemSpace && itemSpace !== "unassigned" && itemSpace !== "field") {
+          candidateSwitch = switches.find(s => {
+            const swLoc = FacilityStore.normalize(s.closetName || s.rackId);
+            const swSpace = FacilityStore.parse(swLoc).space.toLowerCase();
+            return swSpace === itemSpace && s.role === "Access";
+          });
+        }
+      }
+
+      // 2. Second priority: Core/Agg in the same closet or space
       if (!candidateSwitch) {
         candidateSwitch = switches.find(s => 
           FacilityStore.normalize(s.closetName || s.rackId) === itemLoc
         );
       }
+      if (!candidateSwitch && typeof FacilityStore !== "undefined") {
+        const itemSpace = FacilityStore.parse(itemLoc).space.toLowerCase();
+        if (itemSpace && itemSpace !== "unassigned" && itemSpace !== "field") {
+          candidateSwitch = switches.find(s => {
+            const swLoc = FacilityStore.normalize(s.closetName || s.rackId);
+            const swSpace = FacilityStore.parse(swLoc).space.toLowerCase();
+            return swSpace === itemSpace;
+          });
+        }
+      }
 
-      // 3. Fallback: If no switch in same location (e.g. outdoor pole), use primary Access switch
-      if (!candidateSwitch) {
+      // 3. Fallback: If no switch in same location (e.g. outdoor pole), use primary Access switch (unless remote radio)
+      if (!candidateSwitch && !isRemoteRadio) {
         candidateSwitch = switches.find(s => s.role === "Access") || switches[0];
       }
 
@@ -373,13 +921,15 @@ function renderTopology() {
       if (!isAccessServer && !isCore && !hasDoors) return false;
     }
 
-    const loc = FacilityStore.normalize(item.closetName || item.rackId);
-    if (loc === FacilityStore.UNASSIGNED) return false; // Staging items are mapped only once assigned
+    // Filter by Dynamic Layer Filters (Network, Servers, Cameras, Access, Wireless)
+    const layer = getTopologyDeviceLayer(item);
+    if (!topologyLayerFilters[layer]) return false;
 
     // Field Devices filter (Cameras, Access Readers, Door Controllers, Intercoms, and field drops)
+    const itemLoc = item.closetName || item.rackId || "";
     const isFieldDevice = item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" ||
                           (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom"))) ||
-                          (typeof isFieldLocation === "function" ? isFieldLocation(loc) : (loc.endsWith("• Field") || loc.toLowerCase().includes("field")));
+                          (typeof isFieldLocation === "function" ? isFieldLocation(itemLoc) : (itemLoc.endsWith("• Field") || itemLoc.toLowerCase().includes("field")));
     if (!showTopologyFieldDevices && isFieldDevice) {
       return false;
     }
@@ -387,10 +937,63 @@ function renderTopology() {
     return true;
   });
 
+  // Sync grouping selector in header if present
+  const groupingSel = document.getElementById("topologyGroupingSelector");
+  if (groupingSel && groupingSel.value !== topologyGroupingMode) {
+    groupingSel.value = topologyGroupingMode;
+  }
+
   // Group active hardware by normalized facility location
   const groups = {};
   activeNodes.forEach(item => {
-    const loc = FacilityStore.normalize(item.closetName || item.rackId);
+    const isField = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isFieldDevice === "function") 
+      ? FacilityStore.isFieldDevice(item) 
+      : (item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom");
+    let loc;
+
+    if (topologyGroupingMode === "floor" && isField) {
+      // In "floor" mode: Field devices (cameras, access readers, etc.) are grouped
+      // into dedicated Physical Floor / Building containers, reflecting physical installation layout!
+      const floorName = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getDevicePhysicalFloor === "function")
+        ? FacilityStore.getDevicePhysicalFloor(item)
+        : "Main Floor";
+      loc = `${floorName} • Field Drops`;
+    } else {
+      // In "switch" mode (or for telecom infrastructure): Group by serving equipment rack / switch pod
+      loc = FacilityStore.normalize(item.closetName || item.rackId);
+      const curLocLower = (loc || "").toLowerCase();
+      if (curLocLower === "field" || curLocLower.endsWith("• field") || curLocLower === "unassigned") {
+        // 1. Check if drop on physical canvas is assigned to a closet
+        if (typeof facilityFloors !== "undefined") {
+          for (const fl of facilityFloors) {
+            const drop = (fl.nodes || []).find(n => n.instanceId === item.instanceId || n.id === `dev-${item.instanceId}` || n.id === item.instanceId);
+            if (drop && drop.assignedClosetId) {
+              const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+              const closet = allClosets.find(c => c.id === drop.assignedClosetId);
+              if (closet) {
+                loc = FacilityStore.normalize(closet.name);
+                break;
+              }
+            }
+          }
+        }
+        // 2. Check if uplink switch has a specific location
+        if ((loc.toLowerCase() === "field" || loc.toLowerCase().endsWith("• field") || loc.toLowerCase() === "unassigned") && item.uplinkTargetId) {
+          const sw = projectBOM.find(s => s.instanceId === item.uplinkTargetId);
+          if (sw && sw.closetName && !sw.closetName.toLowerCase().endsWith("• field") && sw.closetName.toLowerCase() !== "field") {
+            loc = FacilityStore.normalize(sw.closetName);
+          }
+        }
+        // 3. Fallback for field devices if switch mode still has no closet
+        if ((loc.toLowerCase() === "field" || loc.toLowerCase().endsWith("• field") || loc.toLowerCase() === "unassigned") && isField) {
+          const floorName = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getDevicePhysicalFloor === "function")
+            ? FacilityStore.getDevicePhysicalFloor(item)
+            : "Main Floor";
+          loc = `${floorName} • Field Drops`;
+        }
+      }
+    }
+
     if (!groups[loc]) groups[loc] = [];
     groups[loc].push(item);
   });
@@ -482,49 +1085,88 @@ function renderTopology() {
 
   // Render Location Clusters
   Object.keys(groups).forEach(loc => {
-    const items = groups[loc];
+    const items = groups[loc] || [];
+    const isClusterSelected = selectedTopologyRackLoc === loc;
+    const isFieldCluster = loc.endsWith("• Field Drops") || loc.toLowerCase().includes("field drop");
+
+    // Align rack preview inside cluster with Enclosure Visualizer top-to-bottom elevation order
+    if (!isFieldCluster) {
+      items.sort((a, b) => {
+        const uA = parseInt(a.rackSlot, 10);
+        const uB = parseInt(b.rackSlot, 10);
+        if (!isNaN(uA) && !isNaN(uB)) return uB - uA;
+        if (!isNaN(uA)) return -1;
+        if (!isNaN(uB)) return 1;
+        if (a.rackSlot && b.rackSlot) return String(a.rackSlot).localeCompare(String(b.rackSlot));
+        const pA = (typeof getDeviceMountPriority === "function") ? getDeviceMountPriority(a).priority : 5;
+        const pB = (typeof getDeviceMountPriority === "function") ? getDeviceMountPriority(b).priority : 5;
+        return pA - pB;
+      });
+    }
+
+    const isExteriorCluster = loc.toLowerCase().includes("exterior");
+    const clusterWidthClass = isFieldCluster ? (items.length > 2 ? "w-96" : "w-88") : "w-84";
+    const clusterBorderClass = isClusterSelected
+      ? (isFieldCluster ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-cyan-500/20' : 'border-indigo-500 ring-2 ring-indigo-500/50 shadow-indigo-500/20')
+      : (isFieldCluster ? 'border-cyan-800/60 bg-slate-900/95 hover:border-cyan-600' : 'border-slate-800 bg-slate-900/90 hover:border-slate-700/80');
+
     const defaultPos = {
-      x: 80 + (groupIndex * 390),
-      y: 90 + ((groupIndex % 2) * 60)
+      x: 80 + (groupIndex * 410),
+      y: isFieldCluster ? 480 : (90 + ((groupIndex % 2) * 60))
     };
     const pos = savedPositions[loc] || defaultPos;
     const parsed = FacilityStore.parse(loc);
 
-    const isClusterSelected = selectedTopologyRackLoc === loc;
     const clusterEl = document.createElement("div");
-    clusterEl.className = `topo-location-cluster absolute select-none bg-slate-900/90 border ${isClusterSelected ? 'border-indigo-500 ring-2 ring-indigo-500/50 shadow-indigo-500/20' : 'border-slate-800 hover:border-slate-700/80'} rounded-2xl p-3.5 shadow-2xl backdrop-blur-md w-84 transition-all`;
+    clusterEl.className = `topo-location-cluster absolute select-none ${clusterBorderClass} rounded-2xl p-3.5 shadow-2xl backdrop-blur-md ${clusterWidthClass} transition-all`;
     clusterEl.style.left = `${pos.x}px`;
     clusterEl.style.top = `${pos.y}px`;
     clusterEl.setAttribute("data-location", loc);
 
+    const headerIcon = isFieldCluster
+      ? (isExteriorCluster ? 'trees' : 'building')
+      : 'server';
+    const iconColor = isFieldCluster
+      ? (isExteriorCluster ? 'text-emerald-400' : 'text-cyan-400')
+      : 'text-indigo-400';
+    const iconBg = isClusterSelected
+      ? (isFieldCluster ? 'bg-cyan-500 text-white shadow-md' : 'bg-indigo-500 text-white shadow-md')
+      : (isFieldCluster ? (isExteriorCluster ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-cyan-500/10 border border-cyan-500/30') : 'bg-indigo-500/10 border border-indigo-500/30');
+
+    const titleColor = isClusterSelected
+      ? (isFieldCluster ? 'text-cyan-300' : 'text-indigo-300')
+      : 'text-white';
+    const subTitleText = isFieldCluster ? 'Physical Floor Drops & Endpoints' : escapeHTML(parsed.enclosure);
+    const countBadge = isFieldCluster ? `${items.length} ${items.length === 1 ? 'Drop' : 'Drops'}` : `${items.length} Chassis`;
+
     clusterEl.innerHTML = `
       <!-- Cluster Header -->
       <div 
-        class="flex items-center justify-between pb-2.5 mb-3 border-b border-slate-800 cursor-pointer topo-cluster-header group hover:border-indigo-500/40 transition-colors"
+        class="flex items-center justify-between pb-2.5 mb-3 border-b ${isFieldCluster ? 'border-cyan-900/50' : 'border-slate-800'} cursor-pointer topo-cluster-header group hover:border-cyan-500/40 transition-colors"
         onclick="selectTopologyRack('${escapeHTML(loc)}', event)"
-        title="Click to inspect this rack enclosure (or drag to reposition)"
+        title="Click to inspect this container (or drag to reposition)"
       >
         <div class="flex items-center gap-2.5">
-          <div class="p-1.5 rounded-lg ${isClusterSelected ? 'bg-indigo-500 text-white shadow-md' : 'bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 group-hover:bg-indigo-500/20'} transition-all">
-            <i data-lucide="server" class="w-4 h-4"></i>
+          <div class="p-1.5 rounded-lg ${iconBg} ${iconColor} transition-all">
+            <i data-lucide="${headerIcon}" class="w-4 h-4"></i>
           </div>
           <div>
-            <span class="text-xs font-bold ${isClusterSelected ? 'text-indigo-300' : 'text-white'} tracking-wide block leading-none">${escapeHTML(parsed.space)}</span>
-            <span class="text-[10px] font-mono text-indigo-400/90 block mt-1 leading-none">${escapeHTML(parsed.enclosure)}</span>
+            <span class="text-xs font-bold ${titleColor} tracking-wide block leading-none">${escapeHTML(parsed.space)}</span>
+            <span class="text-[10px] font-mono ${isFieldCluster ? 'text-cyan-400/90' : 'text-indigo-400/90'} block mt-1 leading-none">${subTitleText}</span>
           </div>
         </div>
         <div class="flex items-center gap-1.5">
-          <span class="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800">
-            ${items.length} ${items.length === 1 ? 'Chassis' : 'Chassis'}
+          <span class="text-[10px] font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded-lg border ${isFieldCluster ? 'border-cyan-800/40 text-cyan-300' : 'border-slate-800'}">
+            ${countBadge}
           </span>
           ${isClusterSelected ? `
-            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" title="Inspecting Enclosure"></span>
+            <span class="w-2 h-2 rounded-full ${isFieldCluster ? 'bg-cyan-400' : 'bg-indigo-400'} animate-pulse" title="Inspecting Container"></span>
           ` : ''}
         </div>
       </div>
 
       <!-- Equipment Nodes inside Cluster -->
-      <div class="space-y-3">
+      <div class="${isFieldCluster ? 'space-y-2 max-h-[580px] overflow-y-auto pr-1' : 'space-y-3'}" ${isFieldCluster ? 'onscroll="renderTopologyLinks()"' : ''}>
         ${items.map(item => {
           const isSelected = selectedTopologyNodeId === item.instanceId;
           const isServer = item.role === "Server" || item.role === "VMS Server" || item.role === "Compute & Storage";
@@ -548,7 +1190,14 @@ function renderTopology() {
               >
                 <div class="flex items-start justify-between gap-1.5">
                   <div class="min-w-0">
-                    <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-purple-900/60 border border-purple-500/40 text-[9px] font-mono font-bold text-purple-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+                      <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+                      <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                        <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+                      </button>
+                    </div>
+                    ${item.friendlyName && item.friendlyName !== item.model ? `<span class="text-[10px] text-slate-300 font-medium block truncate">${escapeHTML(item.model)}</span>` : ''}
                     <span class="text-[10px] text-slate-400 font-mono block">${escapeHTML(item.vendor || 'Generic')} &bull; ${item.rackUnits || 2}U Appliance</span>
                   </div>
                   <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-purple-500/40 bg-purple-500/10 text-purple-300 shrink-0">
@@ -592,24 +1241,35 @@ function renderTopology() {
           }
 
           // Render Field Device Card (Cameras, Access Readers, Intercoms)
-          const isFieldDev = item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" || (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom")));
+          const isFieldDev = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isFieldDevice === "function") 
+            ? FacilityStore.isFieldDevice(item) 
+            : (item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom");
           if (isFieldDev) {
             const isCam = item.role === "Camera" || (item.category && item.category.includes("camera"));
             const hostSw = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
+            const hostCloset = hostSw ? (hostSw.closetName || hostSw.rackId || "IDF/MDF") : null;
+            const hostClosetShort = hostCloset ? hostCloset.split('•')[0].trim() : 'MDF/IDF';
             const pWatts = item.consumedPoEWatts || item.powerConsumptionWatts || item.baseWatts || 0;
             return `
               <div 
-                class="topo-node-card text-xs space-y-1.5 p-2.5 rounded-xl border ${isSelected ? 'border-cyan-400 ring-2 ring-cyan-400/30 bg-slate-850' : 'border-slate-800 bg-slate-950/80 hover:border-slate-700'} transition-all cursor-pointer shadow-md select-none"
+                class="topo-node-card text-xs space-y-1.5 p-2.5 rounded-xl border ${isSelected ? 'border-cyan-400 ring-2 ring-cyan-400/50 bg-slate-850 shadow-cyan-900/30' : 'border-slate-800 bg-slate-950/80 hover:border-cyan-700/60'} transition-all cursor-pointer shadow-md select-none"
                 id="topo-card-${item.instanceId}"
                 onclick="selectTopologyNode('${item.instanceId}', event)"
               >
                 <div class="flex items-start justify-between gap-1.5">
                   <div class="flex items-center gap-2 min-w-0">
                     <div class="p-1.5 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400 shrink-0">
-                      <i data-lucide="${isCam ? 'camera' : 'shield'}" class="w-3.5 h-3.5"></i>
+                      <i data-lucide="${isCam ? 'camera' : (item.role === 'Intercom' ? 'radio' : 'shield')}" class="w-3.5 h-3.5"></i>
                     </div>
                     <div class="min-w-0">
-                      <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+                      <div class="flex items-center gap-1.5 flex-wrap">
+                        ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-cyan-900/60 border border-cyan-500/40 text-[9px] font-mono font-bold text-cyan-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+                        <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+                        <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                          <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+                        </button>
+                      </div>
+                      ${item.friendlyName && item.friendlyName !== item.model ? `<span class="text-[10px] text-slate-300 font-medium block truncate">${escapeHTML(item.model)}</span>` : ''}
                       <span class="text-[10px] text-slate-400 font-mono block">${escapeHTML(item.role || 'Field Drop')} &bull; ${pWatts}W PoE</span>
                     </div>
                   </div>
@@ -618,11 +1278,18 @@ function renderTopology() {
                   </span>
                 </div>
                 ${hostSw ? `
-                  <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono text-slate-400">
-                    <span>Host Switch:</span>
-                    <span class="text-sky-300 font-semibold truncate max-w-[150px]">${escapeHTML(hostSw.model)}</span>
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono">
+                    <span class="text-slate-400">Home-Run:</span>
+                    <span class="text-cyan-300 font-semibold truncate max-w-[180px]" title="Terminates at ${escapeHTML(hostCloset || '')} &bull; ${escapeHTML(hostSw.friendlyName || hostSw.model)}">
+                      <span class="text-sky-400">${escapeHTML(hostClosetShort)}</span>: ${escapeHTML(hostSw.friendlyName || hostSw.model)}
+                    </span>
                   </div>
-                ` : ''}
+                ` : `
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono text-slate-500 italic">
+                    <span>Home-Run:</span>
+                    <span>Direct Local Feed</span>
+                  </div>
+                `}
               </div>
             `;
           }
@@ -644,7 +1311,14 @@ function renderTopology() {
             >
               <div class="flex items-start justify-between gap-1.5">
                 <div class="min-w-0">
-                  <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+                  <div class="flex items-center gap-1.5 flex-wrap">
+                    ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+                    <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+                    <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                      <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+                    </button>
+                  </div>
+                  ${item.friendlyName && item.friendlyName !== item.model ? `<span class="text-[10px] text-slate-300 font-medium block truncate">${escapeHTML(item.model)}</span>` : ''}
                   <span class="text-[10px] text-slate-400 font-mono block">
                     ${escapeHTML(item.vendor || 'Generic')} &bull; ${isStacked ? `<span class="text-indigo-300 font-semibold">${stackUnits}x Member Virtual Chassis &bull; ${item.rackUnits * stackUnits}U</span>` : `SKU: ${escapeHTML(item.sku || 'N/A')}`}
                   </span>
@@ -770,28 +1444,44 @@ function renderTopology() {
 function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
   topologyLinks = [];
 
-  const gateways = nodes.filter(n => n.role === "Gateways & WAN" || n.role === "Security WAN");
+  const gateways = nodes.filter(n => n.role === "Gateways & WAN" || n.role === "Security WAN" || n.role === "Firewall" || n.category === "firewall" || n.category === "Firewall");
   const cores = nodes.filter(n => n.role === "Core" || n.role === "Core & Agg" || n.role === "Aggregation");
   const access = nodes.filter(n => n.role === "Access");
   const wireless = nodes.filter(n => n.role === "Wireless Bridge");
   const servers = nodes.filter(n => n.role === "Server" || n.role === "Compute & Storage" || n.role === "VMS Server");
 
-  // 1. Gateway -> Core/Aggregation Interconnects
+  // 1. Gateway -> Core/Aggregation Interconnects (or Gateway -> Access if no Core)
   gateways.forEach(gw => {
-    cores.forEach(c => {
-      const speed = resolveNegotiatedSpeed(gw, c);
+    if (cores.length > 0) {
+      cores.forEach(c => {
+        const speed = resolveNegotiatedSpeed(gw, c);
+        topologyLinks.push({
+          id: `link-${gw.instanceId}-${c.instanceId}`,
+          fromId: gw.instanceId,
+          toId: c.instanceId,
+          multiplier: 2,
+          isLAG: true,
+          speedLabel: `2x ${speed} LAG`,
+          rawSpeed: speed,
+          category: "backbone",
+          isPoEDelivery: false
+        });
+      });
+    } else if (access.length > 0) {
+      const primaryAccess = access[0];
+      const speed = resolveNegotiatedSpeed(gw, primaryAccess);
       topologyLinks.push({
-        id: `link-${gw.instanceId}-${c.instanceId}`,
+        id: `link-${gw.instanceId}-${primaryAccess.instanceId}`,
         fromId: gw.instanceId,
-        toId: c.instanceId,
-        multiplier: 2,
-        isLAG: true,
-        speedLabel: `2x ${speed} LAG`,
+        toId: primaryAccess.instanceId,
+        multiplier: 1,
+        isLAG: false,
+        speedLabel: `${speed} Gateway Uplink`,
         rawSpeed: speed,
         category: "backbone",
         isPoEDelivery: false
       });
-    });
+    }
   });
 
   // 2. Core/Aggregation -> Access Uplinks & Peer Cascades
@@ -809,6 +1499,16 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     if (!target) {
       // 2. Check if there is a local Wireless Bridge in the same closet/pole providing backhaul
       target = wireless.find(w => FacilityStore.normalize(w.closetName) === accLoc);
+    }
+    if (!target && typeof FacilityStore !== "undefined") {
+      // 2b. Check if there is a Wireless Bridge in the same Space / Pole (e.g. East Gate Pole)
+      const accSpace = FacilityStore.parse(acc.closetName).space.toLowerCase();
+      if (accSpace && accSpace !== "unassigned" && accSpace !== "field") {
+        target = wireless.find(w => {
+          const wSpace = FacilityStore.parse(w.closetName).space.toLowerCase();
+          return wSpace === accSpace;
+        });
+      }
     }
     if (!target) {
       // 3. Fallback to primary core / gateway
@@ -856,22 +1556,33 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
         });
       } else {
         // Standard Core/Gateway uplink
-        const speedLabel = isStacked 
-          ? `${multiplier}x ${speed} Cross-Stack LACP LAG (${stackUnits} Units)` 
-          : (isLAG ? `${multiplier}x ${speed} LAG` : `${speed} Uplink`);
+        const isGateway = target.role === "Gateways & WAN" || target.role === "Security WAN" || target.role === "Firewall" || target.category === "firewall";
+        const speedLabel = isGateway
+          ? (isLAG ? `${multiplier}x ${speed} Gateway LAG` : `${speed} Gateway Uplink`)
+          : (isStacked 
+              ? `${multiplier}x ${speed} Cross-Stack LACP LAG (${stackUnits} Units)` 
+              : (isLAG ? `${multiplier}x ${speed} LAG` : `${speed} Uplink`));
 
-        topologyLinks.push({
-          id: `link-${target.instanceId}-${acc.instanceId}`,
-          fromId: target.instanceId,
-          toId: acc.instanceId,
-          multiplier,
-          isLAG,
-          isCrossStack: isStacked,
-          speedLabel,
-          rawSpeed: speed,
-          category: "access",
-          isPoEDelivery: false
-        });
+        const linkId = `link-${target.instanceId}-${acc.instanceId}`;
+        const alreadyLinked = topologyLinks.some(l => 
+          (l.fromId === target.instanceId && l.toId === acc.instanceId) ||
+          (l.fromId === acc.instanceId && l.toId === target.instanceId)
+        );
+
+        if (!alreadyLinked) {
+          topologyLinks.push({
+            id: linkId,
+            fromId: target.instanceId,
+            toId: acc.instanceId,
+            multiplier,
+            isLAG,
+            isCrossStack: isStacked && !isGateway,
+            speedLabel,
+            rawSpeed: speed,
+            category: isGateway ? "backbone" : "access",
+            isPoEDelivery: false
+          });
+        }
       }
     }
   });
@@ -925,6 +1636,12 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
 
     // B. Check connection to host switch (data & PoE)
     let hostSwitch = null;
+    const isRemoteStation = wb.linkPairId && (
+      (wb.model && (wb.model.includes("Remote") || wb.model.includes("Station") || wb.model.includes("Substation"))) ||
+      (wb.friendlyName && (wb.friendlyName.includes("P2P02") || wb.friendlyName.includes("Remote")))
+    );
+    const partnerRadio = wb.linkPairId ? wireless.find(w => w.linkPairId === wb.linkPairId && w.instanceId !== wb.instanceId) : null;
+
     if (wb.connectedHostSwitchId) {
       hostSwitch = nodes.find(n => n.instanceId === wb.connectedHostSwitchId);
     } else if (wb.uplinkTargetId) {
@@ -932,6 +1649,21 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
     } else {
       const wbLoc = FacilityStore.normalize(wb.closetName);
       hostSwitch = access.find(a => FacilityStore.normalize(a.closetName) === wbLoc) || cores.find(c => FacilityStore.normalize(c.closetName) === wbLoc);
+      if (!hostSwitch && typeof FacilityStore !== "undefined") {
+        const wbSpace = FacilityStore.parse(wb.closetName).space.toLowerCase();
+        if (wbSpace && wbSpace !== "unassigned" && wbSpace !== "field") {
+          hostSwitch = access.find(a => FacilityStore.parse(a.closetName).space.toLowerCase() === wbSpace);
+        }
+      }
+    }
+
+    // A Remote Station radio must NOT connect to the same host switch that the Local Master is plugged into!
+    // (This eliminates the double-line loop to MDF200)
+    if (isRemoteStation && partnerRadio && hostSwitch) {
+      const partnerHostId = partnerRadio.connectedHostSwitchId || partnerRadio.uplinkTargetId;
+      if (partnerHostId === hostSwitch.instanceId) {
+        hostSwitch = null;
+      }
     }
 
     if (hostSwitch && hostSwitch.instanceId !== wb.instanceId) {
@@ -1029,10 +1761,11 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
   // 7. Field Device Cable Drops (When Field Devices are toggled ON)
   if (showTopologyFieldDevices) {
     const fieldDevices = nodes.filter(n => 
-      n.role === "Camera" || (n.category && n.category.includes("camera")) ||
-      n.role === "Access Control" || (n.category && n.category.includes("access")) ||
-      n.role === "Intercom" || (n.category && n.category.includes("intercom")) ||
-      (n.closetName && isFieldLocation(n.closetName))
+      (n.role === "Camera" || (n.category && n.category.includes("camera")) ||
+       n.role === "Access Control" || (n.category && n.category.includes("access")) ||
+       n.role === "Intercom" || (n.category && n.category.includes("intercom")) ||
+       (n.closetName && isFieldLocation(n.closetName))) &&
+      n.role !== "Wireless Bridge" && n.category !== "wireless"
     );
 
     fieldDevices.forEach(dev => {
@@ -1042,9 +1775,22 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
       }
       if (!host && access.length > 0) {
         const devLoc = FacilityStore.normalize(dev.closetName || dev.rackId);
-        host = access.find(a => FacilityStore.normalize(a.closetName || a.rackId) === devLoc) || access[0];
+        host = access.find(a => FacilityStore.normalize(a.closetName || a.rackId) === devLoc);
+        if (!host && typeof FacilityStore !== "undefined") {
+          const devSpace = FacilityStore.parse(dev.closetName || dev.rackId).space.toLowerCase();
+          if (devSpace && devSpace !== "unassigned" && devSpace !== "field") {
+            host = access.find(a => FacilityStore.parse(a.closetName || a.rackId).space.toLowerCase() === devSpace);
+          }
+        }
+        if (!host) host = access[0];
       }
       if (host && host.instanceId !== dev.instanceId) {
+        const alreadyLinked = topologyLinks.some(l => 
+          (l.fromId === host.instanceId && l.toId === dev.instanceId) ||
+          (l.fromId === dev.instanceId && l.toId === host.instanceId)
+        );
+        if (alreadyLinked) return;
+
         const isPoE = (dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.maxPowerWatts || 0) > 0;
         const watts = dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.maxPowerWatts || 0;
         topologyLinks.push({
@@ -1084,13 +1830,13 @@ function resolveNegotiatedSpeed(nodeA, nodeB) {
   if (!nodeA || !nodeB) return "10G";
 
   const getSpeeds = (n) => {
-    const s = `${n.maxBackboneSpeed || ''} ${n.portSpeed || ''} ${n.uplinksSummary || ''}`.toUpperCase();
+    const s = `${n.maxBackboneSpeed || ''} ${n.portSpeed || ''} ${n.uplinksSummary || ''} ${n.interfaces || ''} ${n.portFormFactorSummary || ''}`.toUpperCase();
     const supported = [];
     if (s.includes("100G") || s.includes("QSFP28")) supported.push(100);
     if (s.includes("40G") || s.includes("QSFP+")) supported.push(40);
     if (s.includes("25G") || s.includes("SFP28")) supported.push(25);
     if (s.includes("10G") || s.includes("SFP+")) supported.push(10);
-    if (s.includes("2.5G") || s.includes("MGIG")) supported.push(2.5);
+    if (s.includes("2.5G") || s.includes("MGIG") || s.includes("2.5GBE")) supported.push(2.5);
     supported.push(1); // Standard 1G baseline
     return supported;
   };
@@ -1109,6 +1855,323 @@ function resolveNegotiatedSpeed(nodeA, nodeB) {
   return "1G";
 }
 
+let isSynthesizingInterconnects = false;
+
+// -----------------------------------------------------------
+// Auto-Synthesize Interconnects (Optics & DAC Cables) into Quote BOM
+// -----------------------------------------------------------
+function autoSynthesizeInterconnects(silent = false) {
+  if (isSynthesizingInterconnects) return;
+  isSynthesizingInterconnects = true;
+
+  try {
+    if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) {
+      if (!silent && typeof showToast === "function") showToast("Project BOM is empty.");
+      return;
+    }
+
+    // Ensure topology links are up to date
+    const nodes = projectBOM.filter(i => !i.parentInstanceId && (
+      i.role === "Gateways & WAN" || i.role === "Security WAN" || i.role === "Firewall" || i.category === "firewall" ||
+      i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation" || 
+      i.role === "Access" || i.role === "Wireless Bridge" || 
+      i.role === "Server" || i.role === "Compute & Storage" || i.role === "VMS Server"
+    ));
+
+    if (typeof generateTopologyLinks === "function") {
+      generateTopologyLinks(nodes);
+    }
+
+    if (!topologyLinks || topologyLinks.length === 0) {
+      if (!silent && typeof showToast === "function") showToast("No inter-switch or core topology links found to synthesize.");
+      return;
+    }
+
+    let synthesizedDACCables = 0;
+    let synthesizedPatchCords = 0;
+    let synthesizedTransceivers = 0;
+    let synthesizedFiberPatchCords = 0;
+    const newInterconnectItems = [];
+
+    // Helper to normalize vendor
+    const detectVendor = (item) => {
+      const v = (item.vendor || "").toLowerCase();
+      const m = (item.model || "").toLowerCase();
+      if (v.includes("unifi") || m.includes("usw-") || m.includes("udm-") || m.includes("efg") || m.includes("uxg-")) return "UniFi";
+      if (v.includes("meraki") || m.includes("ms") || m.includes("mx") || m.includes("mg")) return "Meraki";
+      if (v.includes("fortinet") || m.includes("fortigate") || m.includes("fg-")) return "Fortinet";
+      if (v.includes("palo") || m.includes("pa-")) return "Palo Alto";
+      if (v.includes("ruckus") || m.includes("icx")) return "Ruckus";
+      if (v.includes("juniper") || m.includes("ex")) return "Juniper";
+      if (v.includes("allied") || m.includes("at-")) return "Allied Telesis";
+      if (v.includes("amg")) return "AMG";
+      return "Cisco";
+    };
+
+    topologyLinks.forEach((link, idx) => {
+      if (link.isWireless) return; // Skip wireless PtP links
+      if (link.category === "wireless_handoff" && link.isPoEDelivery) return; // Skip copper PoE drops to radios
+
+      const nodeA = nodes.find(n => n.instanceId === link.fromId);
+      const nodeB = nodes.find(n => n.instanceId === link.toId);
+      if (!nodeA || !nodeB) return;
+
+      const locA = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeA.closetName || nodeA.rackId || "MDF") : (nodeA.closetName || "MDF");
+      const locB = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeB.closetName || nodeB.rackId || "MDF") : (nodeB.closetName || "MDF");
+      const speed = link.rawSpeed || "10G";
+      const multiplier = Math.max(1, parseInt(link.multiplier, 10) || 1);
+
+      // Exact same-rack determination: same rack enclosure and not loose field hardware
+      const isSameRack = (locA === locB) && !locA.endsWith("• Field") && (typeof FacilityStore === "undefined" || locA !== FacilityStore.UNASSIGNED);
+      const uDiff = calculateUDistance(nodeA, nodeB);
+
+      const override = getLinkInterconnectOverride(link.id);
+      const vendorA = detectVendor(nodeA);
+      const vendorB = detectVendor(nodeB);
+      const preferredVendor = (vendorA === vendorB) ? vendorA : vendorA;
+
+      // Determine target medium:
+      // 1. Explicit override on link (dac | patch | mmf | smf)
+      // 2. Otherwise: if same rack -> dac, if between racks -> project fiber type default
+      let chosenMedium = "dac";
+      if (override.medium && override.medium !== "auto") {
+        chosenMedium = override.medium; // "dac", "patch", "mmf", or "smf"
+      } else {
+        chosenMedium = isSameRack ? "dac" : getProjectFiberType(); // "dac", "mmf", or "smf"
+      }
+
+      if (chosenMedium === "dac") {
+        // ----------------------------------------------------
+        // CASE 1: Intra-Rack Link or Override -> Direct Attach Copper (DAC)
+        // Length dynamically calculated from U separation (or explicit override)
+        // ----------------------------------------------------
+        const dacLength = (override.dacLength && override.dacLength !== "auto")
+          ? override.dacLength
+          : getDacLengthForUDiff(uDiff);
+
+        let dacItem = findDacItem(speed, preferredVendor, dacLength);
+        if (!dacItem && typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[preferredVendor]?.[speed]?.dac) {
+          dacItem = OPTICS_CATALOG[preferredVendor][speed].dac;
+        }
+
+        const baseSku = dacItem?.sku || `${speed}-SFP-DAC-1M`;
+        const baseName = dacItem?.name || `${preferredVendor} ${speed} SFP+ Direct Attach Copper Cable (1m)`;
+        const baseMsrp = dacItem?.msrp || (speed === "25G" ? 55 : (speed === "100G" ? 120 : 35));
+
+        const formattedDac = formatDacItem(baseSku, baseName, baseMsrp, dacLength, speed, preferredVendor);
+
+        newInterconnectItems.push({
+          instanceId: `dac-${link.id}-${idx}-${Date.now()}`,
+          id: formattedDac.sku,
+          model: `${formattedDac.name} (${nodeA.model} <-> ${nodeB.model}${isSameRack ? ` • ${uDiff}U Separation` : ''})`,
+          sku: formattedDac.sku,
+          role: "Optics & DAC",
+          vendor: preferredVendor,
+          msrp: formattedDac.msrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          qty: multiplier,
+          closetName: locA,
+          rackId: locA,
+          rackSlot: null,
+          source: "topology_auto_sync",
+          linkId: link.id,
+          medium: "dac",
+          dacLength,
+          uDiff: isSameRack ? uDiff : null
+        });
+        synthesizedDACCables += multiplier;
+
+      } else if (chosenMedium === "patch" || chosenMedium === "cat6a") {
+        // ----------------------------------------------------
+        // CASE 2: Intra-Rack RJ45 Copper Patch Cord (Cat6A)
+        // Length dynamically calculated from U separation (or explicit override)
+        // ----------------------------------------------------
+        const cordSpec = (override.patchLength && override.patchLength !== "auto")
+          ? { lengthFt: parseFloat(override.patchLength), lengthMeters: parseFloat(override.patchLength) * 0.3048, label: `${override.patchLength} ft` }
+          : getPatchCordLengthForUDiff(uDiff);
+
+        const matchedCord = findPatchCordItem(cordSpec.lengthFt, preferredVendor);
+        const cordSku = matchedCord.sku;
+        const cordName = matchedCord.name;
+        const cordMsrp = matchedCord.msrp;
+
+        newInterconnectItems.push({
+          instanceId: `patch-${link.id}-${idx}-${Date.now()}`,
+          id: cordSku,
+          model: `${cordName} (${nodeA.model} <-> ${nodeB.model}${isSameRack ? ` • ${uDiff}U Separation` : ''})`,
+          sku: cordSku,
+          role: "Structured Cabling",
+          category: "cabling",
+          vendor: matchedCord.vendor || "Panduit",
+          msrp: cordMsrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          qty: multiplier,
+          closetName: locA,
+          rackId: locA,
+          rackSlot: null,
+          source: "topology_auto_sync",
+          linkId: link.id,
+          medium: "patch",
+          lengthFt: cordSpec.lengthFt,
+          lengthMeters: cordSpec.lengthMeters,
+          uDiff: isSameRack ? uDiff : null
+        });
+        synthesizedPatchCords += multiplier;
+
+      } else {
+        // ----------------------------------------------------
+        // CASE 3: Inter-Rack / Backbone Link -> Transceivers + Duplex Fiber Patch
+        // Fiber specification: override or project default (mmf vs smf)
+        // ----------------------------------------------------
+        const fiberType = (override.fiberType && override.fiberType !== "auto")
+          ? override.fiberType
+          : chosenMedium; // "mmf" or "smf"
+        const isSMF = (fiberType === "smf");
+
+        // Transceiver for End A
+        let transA = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[vendorA]?.[speed]?.[isSMF ? 'smf' : 'mmf']) || null;
+        if (!transA && typeof OPTICS_LIST !== "undefined") {
+          transA = OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed && o.vendor === vendorA) ||
+                   OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed);
+        }
+        const transASku = transA?.sku || `${vendorA}-${speed}-${isSMF ? 'SMF-LR' : 'MMF-SR'}`;
+        const transAName = transA?.name || `${vendorA} ${speed} ${isSMF ? 'Single-Mode SFP+ Transceiver (LR, 10km)' : 'Multi-Mode SFP+ Transceiver (SR, 300m)'}`;
+        const transAMsrp = transA?.msrp || (speed === "25G" ? (isSMF ? 450 : 220) : (speed === "100G" ? (isSMF ? 850 : 450) : (isSMF ? 180 : 95)));
+
+        newInterconnectItems.push({
+          instanceId: `transA-${link.id}-${idx}-${Date.now()}`,
+          id: transASku,
+          model: `${transAName} (for ${nodeA.model} at ${locA})`,
+          sku: transASku,
+          role: "Optics & DAC",
+          vendor: vendorA,
+          msrp: transAMsrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          qty: multiplier,
+          closetName: locA,
+          rackId: locA,
+          rackSlot: null,
+          source: "topology_auto_sync",
+          linkId: link.id,
+          medium: isSMF ? "smf" : "mmf",
+          fiberType
+        });
+        synthesizedTransceivers += multiplier;
+
+        // Transceiver for End B
+        let transB = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[vendorB]?.[speed]?.[isSMF ? 'smf' : 'mmf']) || null;
+        if (!transB && typeof OPTICS_LIST !== "undefined") {
+          transB = OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed && o.vendor === vendorB) ||
+                   OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed);
+        }
+        const transBSku = transB?.sku || `${vendorB}-${speed}-${isSMF ? 'SMF-LR' : 'MMF-SR'}`;
+        const transBName = transB?.name || `${vendorB} ${speed} ${isSMF ? 'Single-Mode SFP+ Transceiver (LR, 10km)' : 'Multi-Mode SFP+ Transceiver (SR, 300m)'}`;
+        const transBMsrp = transB?.msrp || (speed === "25G" ? (isSMF ? 450 : 220) : (speed === "100G" ? (isSMF ? 850 : 450) : (isSMF ? 180 : 95)));
+
+        newInterconnectItems.push({
+          instanceId: `transB-${link.id}-${idx}-${Date.now()}`,
+          id: transBSku,
+          model: `${transBName} (for ${nodeB.model} at ${locB})`,
+          sku: transBSku,
+          role: "Optics & DAC",
+          vendor: vendorB,
+          msrp: transBMsrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          qty: multiplier,
+          closetName: locB,
+          rackId: locB,
+          rackSlot: null,
+          source: "topology_auto_sync",
+          linkId: link.id,
+          medium: isSMF ? "smf" : "mmf",
+          fiberType
+        });
+        synthesizedTransceivers += multiplier;
+
+        // Duplex Fiber Patch Cords (1 for Side A, 1 for Side B)
+        const patchSku = isSMF ? "FIBER-LC-OS2-2M" : "FIBER-LC-OM4-2M";
+        const patchName = isSMF ? "Corning OS2 Single-Mode Duplex LC-LC Fiber Patch Cord (2m)" : "Corning OM4 Duplex LC-LC Fiber Patch Cord (2m)";
+        const patchMsrp = isSMF ? 28 : 22;
+
+        newInterconnectItems.push({
+          instanceId: `fiberpatchA-${link.id}-${idx}-${Date.now()}`,
+          id: patchSku,
+          model: `${patchName} (${locA} Patch Panel)`,
+          sku: patchSku,
+          role: "Optics & DAC",
+          vendor: "Corning",
+          msrp: patchMsrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          qty: multiplier,
+          closetName: locA,
+          rackId: locA,
+          rackSlot: null,
+          source: "topology_auto_sync",
+          linkId: link.id,
+          medium: isSMF ? "smf" : "mmf",
+          fiberType
+        });
+
+        newInterconnectItems.push({
+          instanceId: `fiberpatchB-${link.id}-${idx}-${Date.now()}`,
+          id: patchSku,
+          model: `${patchName} (${locB} Patch Panel)`,
+          sku: patchSku,
+          role: "Optics & DAC",
+          vendor: "Corning",
+          msrp: patchMsrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          qty: multiplier,
+          closetName: locB,
+          rackId: locB,
+          rackSlot: null,
+          source: "topology_auto_sync",
+          linkId: link.id,
+          medium: isSMF ? "smf" : "mmf",
+          fiberType
+        });
+        synthesizedFiberPatchCords += (multiplier * 2);
+      }
+    });
+
+    // In-place update to projectBOM: remove previously auto-synthesized interconnects
+    for (let i = projectBOM.length - 1; i >= 0; i--) {
+      if (projectBOM[i].source === "topology_auto_sync") {
+        projectBOM.splice(i, 1);
+      }
+    }
+
+    projectBOM.push(...newInterconnectItems);
+
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof updateBOMBadge === "function") updateBOMBadge();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
+
+    const totalAdded = synthesizedDACCables + synthesizedPatchCords + synthesizedTransceivers + synthesizedFiberPatchCords;
+    if (!silent && typeof showToast === "function") {
+      const parts = [];
+      if (synthesizedDACCables > 0) parts.push(`${synthesizedDACCables} DACs`);
+      if (synthesizedPatchCords > 0) parts.push(`${synthesizedPatchCords} Patch Cords`);
+      if (synthesizedTransceivers > 0) parts.push(`${synthesizedTransceivers} Transceivers`);
+      if (synthesizedFiberPatchCords > 0) parts.push(`${synthesizedFiberPatchCords} Fiber Patches`);
+      showToast(`Synthesized ${totalAdded} interconnect items (${parts.join(", ")}) into Quote BOM!`);
+    }
+  } finally {
+    isSynthesizingInterconnects = false;
+  }
+}
+
 // -----------------------------------------------------------
 // Smooth Bézier Curve Vector Link Renderer
 // -----------------------------------------------------------
@@ -1117,6 +2180,7 @@ function renderTopologyLinks() {
   if (!svg) return;
 
   svg.innerHTML = "";
+  if (!topologyLayerFilters.links) return;
 
   topologyLinks.forEach(link => {
     const fromCard = document.getElementById(`topo-card-${link.fromId}`);
@@ -1271,28 +2335,74 @@ function renderTopologyLinks() {
       strokeWidth = "2.0";
     }
 
-    const isSelected = selectedTopologyLinkId === link.id;
+    let displayLabel = link.speedLabel;
+    if (!link.isFieldDrop && !link.isWireless && link.category !== "vms_stream" && link.category !== "access_link" && !link.isCrossStack && !link.isRing) {
+      const nodeA = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.find(n => n.instanceId === link.fromId) : null;
+      const nodeB = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.find(n => n.instanceId === link.toId) : null;
+      if (nodeA && nodeB) {
+        const locA = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeA.closetName || nodeA.rackId || "MDF") : (nodeA.closetName || "MDF");
+        const locB = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeB.closetName || nodeB.rackId || "MDF") : (nodeB.closetName || "MDF");
+        const isSameRack = (locA === locB) && !locA.endsWith("• Field") && (typeof FacilityStore === "undefined" || locA !== FacilityStore.UNASSIGNED);
+        const override = getLinkInterconnectOverride(link.id);
+        const med = (override.medium && override.medium !== "auto") ? override.medium : (isSameRack ? "dac" : getProjectFiberType());
+        if (med === "dac") {
+          strokeColor = "#f59e0b"; // Golden Amber: DAC Copper
+          const uDiff = calculateUDistance(nodeA, nodeB);
+          const dacLen = (override.dacLength && override.dacLength !== "auto") ? override.dacLength : getDacLengthForUDiff(uDiff);
+          displayLabel = `${link.speedLabel} • DAC ${dacLen}`;
+        } else if (med === "patch" || med === "cat6a") {
+          strokeColor = "#38bdf8"; // Sky Blue: RJ45 Copper Patch Cord
+          const uDiff = calculateUDistance(nodeA, nodeB);
+          const cordSpec = (override.patchLength && override.patchLength !== "auto")
+            ? { label: `${override.patchLength} ft` }
+            : getPatchCordLengthForUDiff(uDiff);
+          displayLabel = `${link.speedLabel} • ${cordSpec.label}`;
+        } else if (med === "smf") {
+          strokeColor = "#eab308"; // Gold/Yellow: OS2 Single-Mode Fiber
+        } else {
+          strokeColor = "#06b6d4"; // Aqua/Cyan: OM4 Multi-Mode Fiber
+        }
+      }
+    }
 
-    // Render Curved SVG Path
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    const isConnectedToSelectedNode = selectedTopologyNodeId && (link.fromId === selectedTopologyNodeId || link.toId === selectedTopologyNodeId);
+    const isSelected = selectedTopologyLinkId === link.id || isConnectedToSelectedNode;
+
     const d = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
+
+    // Invisible wide hit-area for effortless clicking of curved link vector
+    const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    hitArea.setAttribute("d", d);
+    hitArea.setAttribute("fill", "none");
+    hitArea.setAttribute("stroke", "transparent");
+    hitArea.setAttribute("stroke-width", "26");
+    hitArea.setAttribute("stroke-linecap", "round");
+    hitArea.setAttribute("class", "cursor-pointer pointer-events-auto");
+    hitArea.style.pointerEvents = "stroke";
+    hitArea.onclick = (e) => selectTopologyLink(link.id, e);
+    svg.appendChild(hitArea);
+
+    // Render Visible Curved SVG Path
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("d", d);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", isSelected ? "#f59e0b" : strokeColor);
-    path.setAttribute("stroke-width", isSelected ? "4.5" : strokeWidth);
+    path.setAttribute("stroke-width", isSelected ? (isConnectedToSelectedNode ? "3.5" : "4.5") : strokeWidth);
     path.setAttribute("stroke-linecap", "round");
     path.setAttribute("opacity", isSelected ? "1.0" : "0.85");
     if (isDashed) path.setAttribute("stroke-dasharray", "6,4");
-    path.setAttribute("class", "cursor-pointer hover:opacity-100 transition-opacity");
+    path.setAttribute("class", "cursor-pointer hover:opacity-100 transition-opacity pointer-events-auto");
+    path.style.pointerEvents = "stroke";
     path.onclick = (e) => selectTopologyLink(link.id, e);
     svg.appendChild(path);
 
     // Midpoint Speed / Wire Pill Badge
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.setAttribute("class", "cursor-pointer select-none");
+    g.setAttribute("class", "cursor-pointer select-none pointer-events-auto");
+    g.style.pointerEvents = "auto";
     g.onclick = (e) => selectTopologyLink(link.id, e);
 
-    const badgeWidth = Math.max(75, link.speedLabel.length * 7.5);
+    const badgeWidth = Math.max(75, displayLabel.length * 7.5);
     const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
     rect.setAttribute("x", midX - (badgeWidth / 2));
     rect.setAttribute("y", midY - 9);
@@ -1300,9 +2410,10 @@ function renderTopologyLinks() {
     rect.setAttribute("height", "18");
     rect.setAttribute("rx", "6");
     rect.setAttribute("fill", "#020617");
-    rect.setAttribute("stroke", strokeColor);
+    rect.setAttribute("stroke", isSelected ? "#f59e0b" : strokeColor);
     rect.setAttribute("stroke-width", isSelected ? "1.5" : "1");
     rect.setAttribute("opacity", "0.95");
+    rect.style.pointerEvents = "auto";
     g.appendChild(rect);
 
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
@@ -1313,7 +2424,8 @@ function renderTopologyLinks() {
     text.setAttribute("font-size", "9.5");
     text.setAttribute("font-family", "monospace");
     text.setAttribute("font-weight", "bold");
-    text.textContent = link.speedLabel;
+    text.textContent = displayLabel;
+    text.style.pointerEvents = "auto";
     g.appendChild(text);
 
     svg.appendChild(g);
@@ -1344,12 +2456,15 @@ function selectTopologyNode(instanceId, e) {
 }
 
 function selectTopologyLink(linkId, e) {
-  if (e) e.stopPropagation();
+  if (e) {
+    if (typeof e.stopPropagation === "function") e.stopPropagation();
+    if (typeof e.preventDefault === "function") e.preventDefault();
+  }
   selectedTopologyLinkId = linkId;
   selectedTopologyNodeId = null;
   selectedTopologyRackLoc = null;
   toggleTopologyInspector(true);
-  renderTopology();
+  renderTopologyLinks();
   renderTopologyInspector();
 }
 
@@ -1398,12 +2513,183 @@ function renderTopologyInspector() {
 
   if (selectedTopologyRackLoc) {
     const loc = selectedTopologyRackLoc;
+    const isFieldCluster = loc.endsWith("• Field Drops") || loc.toLowerCase().includes("field drop");
     const parsed = FacilityStore.parse(loc);
-    const itemsInRack = projectBOM.filter(item => {
-      if (item.parentInstanceId) return false;
-      const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
-      return itemLoc === loc;
-    });
+
+    let itemsInRack;
+    if (isFieldCluster) {
+      const floorNameLower = parsed.space.toLowerCase();
+      itemsInRack = projectBOM.filter(item => {
+        if (item.parentInstanceId) return false;
+        if (typeof FacilityStore !== "undefined" && typeof FacilityStore.isFieldDevice === "function" && !FacilityStore.isFieldDevice(item)) return false;
+        const fl = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getDevicePhysicalFloor === "function") 
+          ? FacilityStore.getDevicePhysicalFloor(item).toLowerCase() 
+          : "main floor";
+        return fl === floorNameLower;
+      });
+    } else {
+      itemsInRack = projectBOM.filter(item => {
+        if (item.parentInstanceId) return false;
+        const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+        return itemLoc === loc;
+      });
+
+      // Align Mounted Chassis order with Enclosure Visualizer (top U down to bottom U1)
+      itemsInRack.sort((a, b) => {
+        const uA = parseInt(a.rackSlot, 10);
+        const uB = parseInt(b.rackSlot, 10);
+        if (!isNaN(uA) && !isNaN(uB)) return uB - uA;
+        if (!isNaN(uA)) return -1;
+        if (!isNaN(uB)) return 1;
+        if (a.rackSlot && b.rackSlot) return String(a.rackSlot).localeCompare(String(b.rackSlot));
+        const pA = (typeof getDeviceMountPriority === "function") ? getDeviceMountPriority(a).priority : 5;
+        const pB = (typeof getDeviceMountPriority === "function") ? getDeviceMountPriority(b).priority : 5;
+        return pA - pB;
+      });
+    }
+
+    if (isFieldCluster) {
+      const floorName = parsed.space;
+      let totalPoEWatts = 0;
+      let cams = 0;
+      let doors = 0;
+      let intercoms = 0;
+      const servingMap = {};
+
+      itemsInRack.forEach(item => {
+        const qty = parseInt(item.qty, 10) || 1;
+        const w = (parseFloat(item.consumedPoEWatts || item.powerConsumptionWatts || item.baseWatts || 0)) * qty;
+        totalPoEWatts += w;
+        if (item.role === "Camera" || (item.category && item.category.includes("camera"))) cams += qty;
+        else if (item.role === "Access Control" || (item.category && item.category.includes("access"))) doors += qty;
+        else if (item.role === "Intercom" || (item.category && item.category.includes("intercom"))) intercoms += qty;
+
+        let hostName = "Unassigned";
+        if (item.uplinkTargetId) {
+          const sw = projectBOM.find(s => s.instanceId === item.uplinkTargetId);
+          if (sw) {
+            const closet = sw.closetName ? sw.closetName.split('•')[0].trim() : "IDF/MDF";
+            hostName = `${closet} (${sw.friendlyName || sw.model})`;
+          }
+        }
+        servingMap[hostName] = (servingMap[hostName] || 0) + qty;
+      });
+
+      if (selectedNodeEl) selectedNodeEl.innerText = `${floorName} • Field Drops`;
+      if (linkSpeedEl) linkSpeedEl.innerText = `${itemsInRack.length} Field Drops`;
+      if (powerSourceEl) powerSourceEl.innerText = `${Math.round(totalPoEWatts)}W PoE Ingest`;
+
+      container.innerHTML = `
+        <!-- Floor Field Drops Header Card -->
+        <div class="space-y-3 pb-3 border-b border-cyan-900/40">
+          <div class="flex items-start justify-between">
+            <div>
+              <span class="text-xs font-bold text-white block">${escapeHTML(floorName)}</span>
+              <span class="text-[11px] font-mono text-cyan-300">Physical Floor Field Endpoints</span>
+            </div>
+            <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300">
+              ${itemsInRack.length} Drops
+            </span>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button 
+              onclick="if (typeof openCableLayoutModal === 'function') { toggleTopologyModal(); openCableLayoutModal(); }"
+              class="px-2.5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group"
+              title="Open Floor in Physical Layout Tool"
+            >
+              <i data-lucide="map" class="w-3.5 h-3.5 group-hover:scale-110 transition-transform"></i>
+              <span>Physical Layout</span>
+            </button>
+            <button 
+              onclick="panClusterIntoView('${escapeHTML(loc)}')"
+              class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              title="Center this floor container on the topology canvas"
+            >
+              <i data-lucide="focus" class="w-3.5 h-3.5"></i>
+              <span>Center View</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Telemetry Breakdown -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> PoE Load & Device Mix
+          </span>
+          <div class="space-y-1.5 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-850 font-mono">
+            <div class="flex justify-between text-slate-400">
+              <span>Total Field Drops:</span>
+              <span class="text-white font-bold">${itemsInRack.length} Devices</span>
+            </div>
+            <div class="flex justify-between text-slate-400">
+              <span>PoE Power Delivered:</span>
+              <span class="text-cyan-400 font-bold">${Math.round(totalPoEWatts)} W</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1 pt-1.5 border-t border-slate-900 text-center">
+              <div class="bg-slate-900/60 p-1 rounded">
+                <span class="text-[9px] text-slate-500 block">Cameras</span>
+                <span class="font-bold text-teal-400">${cams}</span>
+              </div>
+              <div class="bg-slate-900/60 p-1 rounded">
+                <span class="text-[9px] text-slate-500 block">Doors</span>
+                <span class="font-bold text-cyan-400">${doors}</span>
+              </div>
+              <div class="bg-slate-900/60 p-1 rounded">
+                <span class="text-[9px] text-slate-500 block">Other</span>
+                <span class="font-bold text-slate-300">${intercoms + Math.max(0, itemsInRack.length - cams - doors - intercoms)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Home-Run Serving Switches Breakdown -->
+        <div class="space-y-2 pb-3 border-b border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+            <i data-lucide="network" class="w-3.5 h-3.5"></i> Home-Run Terminating Switches
+          </span>
+          <div class="space-y-1 text-xs">
+            ${Object.keys(servingMap).length === 0 ? `
+              <div class="text-[11px] text-slate-500 py-1.5 text-center font-mono">Direct local drops</div>
+            ` : Object.entries(servingMap).map(([targetName, count]) => `
+              <div class="bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-850 flex items-center justify-between text-[11px] font-mono">
+                <span class="text-slate-300 truncate max-w-[200px]" title="${escapeHTML(targetName)}">${escapeHTML(targetName)}</span>
+                <span class="text-cyan-300 font-bold shrink-0">${count} ${count === 1 ? 'drop' : 'drops'}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <!-- Field Endpoints in this Zone -->
+        <div class="space-y-2 pb-3">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center justify-between">
+            <span>Devices in Floor Zone (${itemsInRack.length})</span>
+            <span class="text-[9px] font-mono text-slate-500">Click to Trace Cable</span>
+          </span>
+          <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
+            ${itemsInRack.map(item => `
+              <div 
+                onclick="selectTopologyNode('${item.instanceId}', event)"
+                class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-cyan-500/60 hover:bg-slate-900 cursor-pointer flex items-center justify-between text-xs transition-colors group"
+              >
+                <div class="truncate max-w-[190px]">
+                  <div class="flex items-center gap-1.5">
+                    ${item.deviceNumber ? `<span class="px-1 py-0.2 rounded bg-cyan-900/60 border border-cyan-500/40 text-[9px] font-mono font-bold text-cyan-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+                    <span class="text-white font-medium truncate block">${escapeHTML(item.friendlyName || item.model)}</span>
+                  </div>
+                  <span class="text-[10px] text-slate-400 font-mono block">${escapeHTML(item.role || 'Drop')} &bull; ${item.consumedPoEWatts || 15}W</span>
+                </div>
+                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 group-hover:text-cyan-400 transition-colors"></i>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      if (typeof safeCreateIcons === "function") safeCreateIcons(container);
+      else if (window.lucide) lucide.createIcons();
+      return;
+    }
 
     let occupiedRU = 0;
     let totalWatts = 0;
@@ -1543,16 +2829,29 @@ function renderTopologyInspector() {
               class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-indigo-500/60 hover:bg-slate-900 cursor-pointer flex items-center justify-between text-xs transition-colors group"
             >
               <div class="truncate max-w-[180px]">
-                <span class="text-white block font-medium truncate group-hover:text-indigo-200">${escapeHTML(item.model)}</span>
+                <div class="flex items-center gap-1.5">
+                  ${item.rackSlot ? `<span class="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-700/60 text-[9px] font-mono font-bold text-indigo-300">U${item.rackSlot}</span>` : ''}
+                  <span class="text-white block font-medium truncate group-hover:text-indigo-200">${escapeHTML(item.model)}</span>
+                </div>
                 <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.vendor || 'Generic')} &bull; ${item.rackUnits || 1}U &bull; ${escapeHTML(item.role)}</span>
               </div>
-              <div class="text-right shrink-0">
-                <span class="font-mono text-[10px] text-indigo-300 font-bold block">
-                  ${item.ports ? `${item.ports}P` : (item.role === 'Server' ? 'SRV' : 'DEV')}
-                </span>
-                <span class="font-mono text-[9px] text-slate-500">
-                  ${item.baseWatts || item.powerConsumptionWatts || 0}W
-                </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                <div class="text-right">
+                  <span class="font-mono text-[10px] text-indigo-300 font-bold block">
+                    ${item.ports ? `${item.ports}P` : (item.role === 'Server' ? 'SRV' : 'DEV')}
+                  </span>
+                  <span class="font-mono text-[9px] text-slate-500">
+                    ${item.baseWatts || item.powerConsumptionWatts || 0}W
+                  </span>
+                </div>
+                <button 
+                  type="button" 
+                  onclick="event.stopPropagation(); deleteDeviceFromBOM('${item.instanceId}')"
+                  class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity"
+                  title="Delete from Quote BOM"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
               </div>
             </div>
           `).join('')}
@@ -1600,10 +2899,12 @@ function renderTopologyInspector() {
     const upstreamLink = topologyLinks.find(l => l.toId === item.instanceId);
     if (linkSpeedEl) linkSpeedEl.innerText = upstreamLink ? upstreamLink.speedLabel : (item.role === "Server" ? "Server Ingest" : "Host Core");
 
-    // Candidate uplink targets (Core, Agg, Peer Access switches, and Wireless Radios)
+    // Candidate uplink targets (Core, Agg, Peer Access switches, Wireless Radios, Gateways and Firewalls)
     const candidateTargets = projectBOM.filter(n => {
       if (n.instanceId === item.instanceId || n.parentInstanceId) return false;
-      return n.role === "Core" || n.role === "Core & Agg" || n.role === "Aggregation" || n.role === "Gateways & WAN" || n.role === "Access" || n.role === "Wireless Bridge" || n.category === "wireless";
+      return n.role === "Core" || n.role === "Core & Agg" || n.role === "Aggregation" || 
+             n.role === "Gateways & WAN" || n.role === "Security WAN" || n.role === "Firewall" || n.category === "firewall" ||
+             n.role === "Access" || n.role === "Wireless Bridge" || n.category === "wireless";
     });
 
     // Candidate servers in quote
@@ -1663,11 +2964,18 @@ function renderTopologyInspector() {
         <!-- Server Overview Card -->
         <div class="space-y-2 pb-3 border-b border-slate-800">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-white">${escapeHTML(item.model)}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-purple-900/60 border border-purple-500/40 text-[9px] font-mono font-bold text-purple-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+              <span class="text-xs font-bold text-white">${escapeHTML(item.friendlyName || item.model)}</span>
+              <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                <i data-lucide="pencil" class="w-3 h-3"></i>
+              </button>
+            </div>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-purple-500/40 bg-purple-500/10 text-purple-300">
               Server / Appliance
             </span>
           </div>
+          ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium">${escapeHTML(item.model)}</div>` : ''}
           <div class="text-[11px] text-slate-400 space-y-1 font-mono">
             <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
             <div class="pt-1 pb-1">
@@ -1709,6 +3017,14 @@ function renderTopologyInspector() {
                 title="View in Physical Layout Canvas"
               >
                 <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+              </button>
+              <button 
+                type="button" 
+                onclick="deleteDeviceFromBOM('${item.instanceId}')"
+                class="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                title="Permanently remove device from Project Quote BOM"
+              >
+                <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i> Delete
               </button>
             </div>
             <div>Interfaces: <strong class="text-white">${item.ports || 2}x ${item.portSpeed || '10G'} High-Speed NICs</strong></div>
@@ -1853,11 +3169,18 @@ function renderTopologyInspector() {
         <!-- Wireless Overview Card -->
         <div class="space-y-2 pb-3 border-b border-slate-800">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-white truncate max-w-[200px]">${escapeHTML(item.model)}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-purple-900/60 border border-purple-500/40 text-[9px] font-mono font-bold text-purple-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+              <span class="text-xs font-bold text-white truncate max-w-[180px]">${escapeHTML(item.friendlyName || item.model)}</span>
+              <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                <i data-lucide="pencil" class="w-3 h-3"></i>
+              </button>
+            </div>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border border-purple-500/40 bg-purple-500/10 text-purple-300 shrink-0">
               Wireless RF
             </span>
           </div>
+          ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium">${escapeHTML(item.model)}</div>` : ''}
           <div class="text-[11px] text-slate-400 space-y-1 font-mono">
             <div>Throughput: <strong class="text-purple-300">${item.throughput || item.maxThroughput || '5.4 Gbps'}</strong></div>
             <div>Band: <strong class="text-white">${item.band || item.frequency || '60 GHz / 5 GHz Backup'}</strong></div>
@@ -1900,6 +3223,14 @@ function renderTopologyInspector() {
                 title="View in Physical Layout Canvas"
               >
                 <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+              </button>
+              <button 
+                type="button" 
+                onclick="deleteDeviceFromBOM('${item.instanceId}')"
+                class="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                title="Permanently remove device from Project Quote BOM"
+              >
+                <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i> Delete
               </button>
             </div>
           </div>
@@ -1992,11 +3323,18 @@ function renderTopologyInspector() {
         <!-- Device Overview Card -->
         <div class="space-y-2 pb-3 border-b border-slate-800">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-bold text-white truncate max-w-[200px]">${escapeHTML(item.model)}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+              <span class="text-xs font-bold text-white truncate max-w-[180px]">${escapeHTML(item.friendlyName || item.model)}</span>
+              <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                <i data-lucide="pencil" class="w-3 h-3"></i>
+              </button>
+            </div>
             <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${getRoleBadgeStyle(item.role)} shrink-0">
               ${item.role}
             </span>
           </div>
+          ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium">${escapeHTML(item.model)}</div>` : ''}
           <div class="text-[11px] text-slate-400 space-y-1 font-mono">
             <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
             <div class="pt-1 pb-1">
@@ -2038,6 +3376,14 @@ function renderTopologyInspector() {
                 title="View in Physical Layout Canvas"
               >
                 <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+              </button>
+              <button 
+                type="button" 
+                onclick="deleteDeviceFromBOM('${item.instanceId}')"
+                class="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                title="Permanently remove device from Project Quote BOM"
+              >
+                <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i> Delete
               </button>
             </div>
             <div>Hardware Interface: <strong class="text-white">1x 1G RJ-45 (100m Loop)</strong></div>
@@ -2084,7 +3430,7 @@ function renderTopologyInspector() {
               <label class="text-[10px] text-slate-400 block mb-1">Connected Host Switch:</label>
               <select onchange="setDeviceHostSwitch('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
                 <option value="">Unassigned</option>
-                ${candidateTargets.filter(t => t.role === "Access" || t.role === "Core" || t.role === "Core & Agg").map(sw => `
+                ${candidateTargets.filter(t => t.role === "Access" || t.role === "Core" || t.role === "Core & Agg" || t.role === "Gateways & WAN" || t.role === "Security WAN" || t.role === "Firewall").map(sw => `
                   <option value="${sw.instanceId}" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
                     ${sw.model} (${FacilityStore.normalize(sw.closetName)})
                   </option>
@@ -2177,7 +3523,13 @@ function renderTopologyInspector() {
       <!-- Node Overview Card -->
       <div class="space-y-2 pb-3 border-b border-slate-800">
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-white truncate max-w-[200px]">${escapeHTML(item.model)}</span>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+            <span class="text-xs font-bold text-white truncate max-w-[180px]">${escapeHTML(item.friendlyName || item.model)}</span>
+            <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+              <i data-lucide="pencil" class="w-3 h-3"></i>
+            </button>
+          </div>
           <div class="flex items-center gap-1 shrink-0">
             ${isStacked ? `
               <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-indigo-500/50 bg-indigo-500/20 text-indigo-300">
@@ -2189,6 +3541,7 @@ function renderTopologyInspector() {
             </span>
           </div>
         </div>
+        ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium">${escapeHTML(item.model)}</div>` : ''}
         <div class="text-[11px] text-slate-400 space-y-1 font-mono">
           <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
           <div>Architecture: <strong class="${isStacked ? 'text-indigo-300 font-semibold' : 'text-slate-300'}">${isStacked ? `Single Logical Stack (${stackUnits}x Member Units &bull; ${item.rackUnits * stackUnits}U)` : 'Standalone Chassis'}</strong></div>
@@ -2231,6 +3584,14 @@ function renderTopologyInspector() {
               title="View in Physical Layout Canvas"
             >
               <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
+            </button>
+            <button 
+              type="button" 
+              onclick="deleteDeviceFromBOM('${item.instanceId}')"
+              class="px-2 py-1 bg-rose-950/40 hover:bg-rose-900/70 text-rose-300 border border-rose-800/60 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Permanently remove device from Project Quote BOM"
+            >
+              <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i> Delete
             </button>
           </div>
           <div>Interface: <strong class="text-white">${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P Stack)` : ''} (${escapeHTML(item.portSpeed || '1G/10G')})</strong></div>
@@ -2485,7 +3846,7 @@ function renderTopologyInspector() {
       ` : ''}
 
       <!-- Uplink & Interconnect Settings -->
-      ${item.role !== "Core" && item.role !== "Core & Agg" && item.role !== "Aggregation" && item.role !== "Gateways & WAN" ? `
+      ${item.role !== "Core" && item.role !== "Core & Agg" && item.role !== "Aggregation" && item.role !== "Gateways & WAN" && item.role !== "Security WAN" && item.role !== "Firewall" ? `
         <div class="space-y-2 pb-3 border-b border-slate-800">
           <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
             <i data-lucide="git-commit" class="w-3.5 h-3.5"></i> Uplink Configuration
@@ -2664,34 +4025,140 @@ function renderTopologyInspector() {
         </div>
       `;
     } else {
+      const fromLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(fromNode?.closetName || fromNode?.rackId || "MDF") : (fromNode?.closetName || "MDF");
+      const toLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(toNode?.closetName || toNode?.rackId || "MDF") : (toNode?.closetName || "MDF");
+      const isSameRack = (fromLoc === toLoc) && !fromLoc.endsWith("• Field") && (typeof FacilityStore === "undefined" || fromLoc !== FacilityStore.UNASSIGNED);
+      const uDiff = calculateUDistance(fromNode, toNode);
+      const calcDacLen = getDacLengthForUDiff(uDiff);
+      const calcPatchCord = getPatchCordLengthForUDiff(uDiff);
+      const projectFiber = getProjectFiberType();
+      const override = getLinkInterconnectOverride(link.id);
+
+      const activeMedium = (override.medium && override.medium !== "auto") ? override.medium : (isSameRack ? "dac" : projectFiber);
+
       container.innerHTML = `
         <div class="space-y-3">
-          <div class="pb-2 border-b border-slate-800">
-            <span class="text-xs font-bold text-white block">${link.speedLabel}</span>
-            <span class="text-[10px] font-mono text-slate-400">Logical Transport Interconnect</span>
+          <div class="pb-2 border-b border-slate-800 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-white block">${link.speedLabel}</span>
+              <span class="text-[10px] font-mono text-slate-400">Logical Transport Interconnect</span>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[9px] font-mono font-bold border ${activeMedium === 'dac' ? 'bg-amber-950/80 text-amber-300 border-amber-600/60' : ((activeMedium === 'patch' || activeMedium === 'cat6a') ? 'bg-sky-950/80 text-sky-300 border-sky-600/60' : (activeMedium === 'smf' ? 'bg-yellow-950/80 text-yellow-300 border-yellow-600/60' : 'bg-cyan-950/80 text-cyan-300 border-cyan-600/60'))}">
+              ${activeMedium === 'dac' ? `DAC (${override.dacLength && override.dacLength !== 'auto' ? override.dacLength : calcDacLen})` : ((activeMedium === 'patch' || activeMedium === 'cat6a') ? `Patch (${override.patchLength && override.patchLength !== 'auto' ? override.patchLength + ' ft' : calcPatchCord.label})` : (activeMedium === 'smf' ? 'OS2 SMF' : 'OM4 MMF'))}
+            </span>
           </div>
 
+          <!-- Physical Placement & Endpoints -->
           <div class="space-y-2 text-xs bg-slate-950 p-3 rounded-xl border border-slate-850 font-mono">
-            <div class="flex justify-between">
-              <span class="text-slate-400">Upstream Host:</span>
-              <span class="text-white font-bold truncate max-w-[150px]">${escapeHTML(fromNode ? fromNode.model : 'Core')}</span>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">Host A:</span>
+              <span class="text-white font-bold truncate max-w-[170px]" title="${escapeHTML(fromNode ? fromNode.model : 'Core')}">${escapeHTML(fromNode ? fromNode.model : 'Core')}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-slate-400">Downstream Node:</span>
-              <span class="text-indigo-300 font-bold truncate max-w-[150px]">${escapeHTML(toNode ? toNode.model : 'Access')}</span>
+            <div class="flex justify-between items-center text-[11px] text-slate-400">
+              <span>Location A:</span>
+              <span class="text-sky-300 truncate max-w-[170px]">${escapeHTML(fromLoc)} ${fromNode?.rackSlot ? `@ U${fromNode.rackSlot}` : ''}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-slate-400">Port Speed:</span>
-              <span class="text-cyan-400 font-bold">${link.rawSpeed}</span>
+            <div class="flex justify-between items-center mt-1 pt-1 border-t border-slate-900">
+              <span class="text-slate-400">Host B:</span>
+              <span class="text-indigo-300 font-bold truncate max-w-[170px]" title="${escapeHTML(toNode ? toNode.model : 'Access')}">${escapeHTML(toNode ? toNode.model : 'Access')}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-slate-400">Link Bundle:</span>
-              <span class="text-sky-300 font-bold">${link.multiplier}x ${link.isLAG ? '(LACP LAG)' : '(Single)'}</span>
+            <div class="flex justify-between items-center text-[11px] text-slate-400">
+              <span>Location B:</span>
+              <span class="text-sky-300 truncate max-w-[170px]">${escapeHTML(toLoc)} ${toNode?.rackSlot ? `@ U${toNode.rackSlot}` : ''}</span>
             </div>
-            <div class="flex justify-between">
-              <span class="text-slate-400">Energy Delivery:</span>
-              <span class="${link.isPoEDelivery ? 'text-amber-400 font-bold' : 'text-slate-500'}">${link.isPoEDelivery ? 'PoE Powered' : 'Local Power'}</span>
+            <div class="flex justify-between items-center mt-1 pt-1 border-t border-slate-900">
+              <span class="text-slate-400">Placement:</span>
+              <span class="${isSameRack ? 'text-emerald-400 font-bold' : 'text-cyan-300'}">
+                ${isSameRack ? `Same Rack (${uDiff}U Separation)` : 'Inter-Rack / Backbone'}
+              </span>
             </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400">Port Speed & LAG:</span>
+              <span class="text-cyan-400 font-bold">${link.rawSpeed} &bull; ${link.multiplier}x ${link.isLAG ? '(LACP)' : ''}</span>
+            </div>
+          </div>
+
+          <!-- Interconnect Auto-Calculation & Overrides -->
+          <div class="space-y-2.5 pt-2 border-t border-slate-800">
+            <div class="flex items-center justify-between">
+              <label class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Interconnect Medium</label>
+              <span class="text-[9px] font-mono text-slate-500">${override.medium && override.medium !== 'auto' ? 'Overridden' : 'Auto-Calculated'}</span>
+            </div>
+
+            <div>
+              <label class="text-[11px] text-slate-400 block mb-1">Medium Specification:</label>
+              <select 
+                onchange="updateLinkOverride('${link.id}', 'medium', this.value)"
+                class="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
+              >
+                <option value="auto" ${(!override.medium || override.medium === 'auto') ? 'selected' : ''}>Auto-Calculate (${isSameRack ? 'Same Rack: DAC' : `Inter-Rack: ${projectFiber.toUpperCase()} SFP`})</option>
+                <option value="dac" ${override.medium === 'dac' ? 'selected' : ''}>Direct Attach Copper (DAC)</option>
+                <option value="patch" ${(override.medium === 'patch' || override.medium === 'cat6a') ? 'selected' : ''}>RJ45 Copper Patch Cord (Cat6A)</option>
+                <option value="mmf" ${override.medium === 'mmf' ? 'selected' : ''}>Multi-Mode Fiber (MMF / OM4 SR Optics)</option>
+                <option value="smf" ${override.medium === 'smf' ? 'selected' : ''}>Single-Mode Fiber (SMF / OS2 LR Optics)</option>
+              </select>
+            </div>
+
+            ${activeMedium === 'dac' ? `
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-[11px] text-slate-400">DAC Cable Length:</label>
+                  <span class="text-[10px] font-mono text-amber-400">Span: ${uDiff}U</span>
+                </div>
+                <select 
+                  onchange="updateLinkOverride('${link.id}', 'dacLength', this.value)"
+                  class="w-full bg-slate-950 border border-slate-700 text-amber-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
+                >
+                  <option value="auto" ${(!override.dacLength || override.dacLength === 'auto') ? 'selected' : ''}>Auto (${calcDacLen} based on ${uDiff}U separation)</option>
+                  <option value="0.5m" ${override.dacLength === '0.5m' ? 'selected' : ''}>0.5m (~1.6 ft &bull; Adjacent / 1-2U)</option>
+                  <option value="1m" ${override.dacLength === '1m' ? 'selected' : ''}>1.0m (~3.3 ft &bull; 3-6U)</option>
+                  <option value="2m" ${override.dacLength === '2m' ? 'selected' : ''}>2.0m (~6.6 ft &bull; 7-15U)</option>
+                  <option value="3m" ${override.dacLength === '3m' ? 'selected' : ''}>3.0m (~10 ft &bull; 16-28U)</option>
+                  <option value="5m" ${override.dacLength === '5m' ? 'selected' : ''}>5.0m (~16.4 ft &bull; 28U+ Top-to-Bottom)</option>
+                </select>
+              </div>
+            ` : ((activeMedium === 'patch' || activeMedium === 'cat6a') ? `
+              <div>
+                <div class="flex justify-between items-center mb-1">
+                  <label class="text-[11px] text-slate-400">RJ45 Patch Cord Length:</label>
+                  <span class="text-[10px] font-mono text-sky-400">Span: ${uDiff}U</span>
+                </div>
+                <select 
+                  onchange="updateLinkOverride('${link.id}', 'patchLength', this.value)"
+                  class="w-full bg-slate-950 border border-slate-700 text-sky-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
+                >
+                  <option value="auto" ${(!override.patchLength || override.patchLength === 'auto') ? 'selected' : ''}>Auto (${calcPatchCord.label} based on ${uDiff}U separation)</option>
+                  <option value="0.5" ${override.patchLength === '0.5' ? 'selected' : ''}>0.5 ft (6-Inch &bull; Adjacent / 0-1U)</option>
+                  <option value="1" ${override.patchLength === '1' ? 'selected' : ''}>1.0 ft (~0.3m &bull; 2-4U)</option>
+                  <option value="3" ${override.patchLength === '3' ? 'selected' : ''}>3.0 ft (~1.0m &bull; 5-7U)</option>
+                  <option value="5" ${override.patchLength === '5' ? 'selected' : ''}>5.0 ft (~1.5m &bull; 8-14U)</option>
+                  <option value="7" ${override.patchLength === '7' ? 'selected' : ''}>7.0 ft (~2.1m &bull; 15-22U)</option>
+                  <option value="10" ${override.patchLength === '10' ? 'selected' : ''}>10.0 ft (~3.0m &bull; 23-32U)</option>
+                  <option value="15" ${override.patchLength === '15' ? 'selected' : ''}>15.0 ft (~4.6m &bull; 33U+ Top-to-Bottom)</option>
+                </select>
+              </div>
+            ` : `
+              <div>
+                <label class="text-[11px] text-slate-400 block mb-1">Optical Transceiver & Fiber Type:</label>
+                <select 
+                  onchange="updateLinkOverride('${link.id}', 'fiberType', this.value)"
+                  class="w-full bg-slate-950 border border-slate-700 text-cyan-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
+                >
+                  <option value="auto" ${(!override.fiberType || override.fiberType === 'auto') ? 'selected' : ''}>Project Default (${projectFiber.toUpperCase()} / ${projectFiber === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'})</option>
+                  <option value="mmf" ${override.fiberType === 'mmf' ? 'selected' : ''}>Multi-Mode (OM4 Duplex LC &bull; SR Optics 850nm)</option>
+                  <option value="smf" ${override.fiberType === 'smf' ? 'selected' : ''}>Single-Mode (OS2 Duplex LC &bull; LR Optics 1310nm)</option>
+                </select>
+              </div>
+            `)}
+
+            <button 
+              type="button" 
+              onclick="autoSynthesizeInterconnects()"
+              class="w-full mt-2 py-2 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow"
+            >
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Re-Synthesize Interconnects to BOM</span>
+            </button>
           </div>
         </div>
       `;
@@ -2905,7 +4372,27 @@ function autoArrangeTopologyHierarchy(layoutMode = null) {
   // Collect unique locations and categorize by primary role
   const locMap = {};
   activeNodes.forEach(item => {
-    const loc = FacilityStore.normalize(item.closetName || item.rackId);
+    let loc;
+    const isField = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isFieldDevice === "function") 
+      ? FacilityStore.isFieldDevice(item) 
+      : (item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom");
+
+    if (topologyGroupingMode === "floor" && isField) {
+      const floorName = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getDevicePhysicalFloor === "function")
+        ? FacilityStore.getDevicePhysicalFloor(item)
+        : "Main Floor";
+      loc = `${floorName} • Field Drops`;
+    } else {
+      loc = FacilityStore.normalize(item.closetName || item.rackId);
+      const curLocLower = (loc || "").toLowerCase();
+      if ((curLocLower === "field" || curLocLower.endsWith("• field") || curLocLower === "unassigned") && isField) {
+        const floorName = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getDevicePhysicalFloor === "function")
+          ? FacilityStore.getDevicePhysicalFloor(item)
+          : "Main Floor";
+        loc = `${floorName} • Field Drops`;
+      }
+    }
+
     if (!locMap[loc]) locMap[loc] = [];
     locMap[loc].push(item);
   });
@@ -2987,9 +4474,9 @@ function autoArrangeTopologyHierarchy(layoutMode = null) {
     });
 
     // Layout Tier 4: Field & Wireless (Bottom)
-    const othersY = accessY + (access.length > 0 ? 340 : 0);
+    const othersY = accessY + (access.length > 0 ? 360 : 0);
     others.forEach((loc, idx) => {
-      positions[loc] = { x: 80 + (idx * 400), y: othersY };
+      positions[loc] = { x: 80 + (idx * 420), y: othersY };
     });
   }
 
@@ -3106,11 +4593,33 @@ function setDeviceHostSwitch(deviceInstanceId, newSwitchId) {
       if (oldSw) PortEngine.disconnectPort(oldSw, item.assignedSwitchPort);
     }
     if (newSwitchId) {
+      delete item.unassignedByUser;
       const newSw = projectBOM.find(i => i.instanceId === newSwitchId);
-      if (newSw) PortEngine.allocatePort(newSw, item);
+      if (newSw) {
+        PortEngine.allocatePort(newSw, item);
+        const swLoc = newSw.closetName || newSw.rackId;
+        if (swLoc) {
+          item.closetName = swLoc;
+          item.rackId = swLoc;
+          if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+            const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+            const matchCl = allClosets.find(c => c.name === swLoc || swLoc.startsWith(c.name));
+            facilityFloors.forEach(fl => {
+              const drop = (fl.nodes || []).find(n => n.instanceId === item.instanceId || n.id === `dev-${item.instanceId}` || n.id === item.instanceId);
+              if (drop && matchCl) {
+                drop.assignedClosetId = matchCl.id;
+              }
+            });
+          }
+        }
+      }
+    } else {
+      item.assignedSwitchPort = null;
     }
   }
   FacilityStore.notifyWorkspaceChange();
+  if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
+  if (typeof renderCableCanvas === "function") renderCableCanvas();
   renderTopology();
   renderTopologyInspector();
   if (typeof showToast === "function") showToast(`Reassigned ${item.model} to new host switch`);
@@ -3406,6 +4915,7 @@ function clearTopologySearch() {
   if (resultsContainer) {
     resultsContainer.classList.add("hidden");
   }
+  deselectTopologyNode();
 }
 
 function handleTopologySearchKey(e) {
@@ -3610,3 +5120,48 @@ window.inspectSwitchPort = inspectSwitchPort;
 window.updateSwitchStackFromTopology = updateSwitchStackFromTopology;
 window.toggleTopologyFieldDevices = toggleTopologyFieldDevices;
 window.updateTopologyFieldDevicesButton = updateTopologyFieldDevicesButton;
+window.autoSynthesizeInterconnects = autoSynthesizeInterconnects;
+window.toggleTopologyLayerMenu = toggleTopologyLayerMenu;
+window.setTopologyLayerFilter = setTopologyLayerFilter;
+window.toggleAllTopologyLayers = toggleAllTopologyLayers;
+window.updateTopologyLayerCountBadge = updateTopologyLayerCountBadge;
+window.getTopologyDeviceLayer = getTopologyDeviceLayer;
+window.setTopologyGroupingMode = setTopologyGroupingMode;
+window.getProjectFiberType = getProjectFiberType;
+window.setProjectFiberType = setProjectFiberType;
+window.getLinkInterconnectOverrides = getLinkInterconnectOverrides;
+window.setLinkInterconnectOverrides = setLinkInterconnectOverrides;
+window.getLinkInterconnectOverride = getLinkInterconnectOverride;
+window.updateLinkOverride = updateLinkOverride;
+window.getDacLengthForUDiff = getDacLengthForUDiff;
+window.getPatchCordLengthForUDiff = getPatchCordLengthForUDiff;
+window.parseRackU = parseRackU;
+window.calculateUDistance = calculateUDistance;
+window.findDacItem = findDacItem;
+window.findPatchCordItem = findPatchCordItem;
+window.formatDacItem = formatDacItem;
+window.syncRackInterconnectsAndCabling = syncRackInterconnectsAndCabling;
+window.syncTopologyLinkToPhysicalLayout = syncTopologyLinkToPhysicalLayout;
+window.isClosetNameMatch = isClosetNameMatch;
+window.topologyLinks = topologyLinks;
+window.linkInterconnectOverrides = linkInterconnectOverrides;
+
+// Close menus when clicking outside
+if (typeof document !== "undefined") {
+  document.addEventListener("click", (e) => {
+    const topoContainer = document.getElementById("topologyLayerFilterContainer");
+    const topoMenu = document.getElementById("topologyLayerMenu");
+    if (topoMenu && !topoMenu.classList.contains("hidden")) {
+      if (topoContainer && !topoContainer.contains(e.target)) {
+        topoMenu.classList.add("hidden");
+      }
+    }
+    const physContainer = document.getElementById("physicalLayerFilterContainer");
+    const physMenu = document.getElementById("physicalLayerMenu");
+    if (physMenu && !physMenu.classList.contains("hidden")) {
+      if (physContainer && !physContainer.contains(e.target)) {
+        physMenu.classList.add("hidden");
+      }
+    }
+  });
+}

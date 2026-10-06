@@ -40,6 +40,8 @@ function auditProjectHealth() {
   const demandWatts = Math.max(activeConnectedPoE, targetCalcWatts);
   if (demandWatts > totalPoEAvailable) {
     const deficitWatts = demandWatts - totalPoEAvailable;
+    const poeRec = getContextAwarePoERecommendation();
+    const closetShort = poeRec.targetCloset.split(' • ')[0];
     issues.push({
       id: "poe_deficit",
       category: "poe",
@@ -47,7 +49,7 @@ function auditProjectHealth() {
       title: "PoE Power Budget Deficit",
       summary: `PoE Demand (${demandWatts}W) exceeds Switch Capacity (${totalPoEAvailable}W) by ${deficitWatts}W`,
       details: `Project requires ${demandWatts}W across connected edge devices and headroom targets, but total quoted switch PoE capacity is only ${totalPoEAvailable}W (${deficitWatts}W shortfall). Connected field hardware will suffer brownouts.`,
-      actionLabel: "+ Auto-Add High-PoE Switch to MDF",
+      actionLabel: `+ Auto-Add ${poeRec.switchItem.vendor} ${poeRec.switchItem.sku} (${poeRec.switchItem.poeBudget}W) to ${closetShort}`,
       actionFn: "autoAddPoeSupplyOrSwitch"
     });
   }
@@ -443,25 +445,179 @@ function autoAddMissingDACCables() {
   }
 }
 
+function getContextAwarePoERecommendation() {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) {
+    return {
+      switchItem: {
+        sku: "CBS350-24FP-4X",
+        model: "Cisco Business 350 24-Port Full PoE+ Gigabit Managed Switch (370W)",
+        vendor: "Cisco",
+        poeBudget: 370,
+        baseWatts: 45,
+        ports: 24,
+        msrp: 1150
+      },
+      targetCloset: "MDF • Rack-1"
+    };
+  }
+
+  // 1. Detect dominant switch vendor
+  const vendorCounts = {};
+  const closetBudgets = {}; // closetName -> { supply: 0, demand: 0 }
+
+  projectBOM.forEach(item => {
+    if (item.parentInstanceId) return;
+    const rawLoc = item.closetName || item.rackId || "MDF • Rack-1";
+    const loc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(rawLoc) : rawLoc;
+    if (!closetBudgets[loc]) closetBudgets[loc] = { supply: 0, demand: 0 };
+
+    const isSw = item.role === "Access" || item.role === "Core" || item.role === "Aggregation" || (item.category || "").toLowerCase() === "switch";
+    if (isSw) {
+      const v = (item.vendor || "").trim();
+      const m = (item.model || "").toLowerCase();
+      let key = "Cisco";
+      if (v.toLowerCase().includes("unifi") || m.includes("usw-") || m.includes("udm-")) key = "UniFi";
+      else if (v.toLowerCase().includes("meraki") || m.includes("ms") || m.includes("mx")) key = "Meraki";
+      else if (v.toLowerCase().includes("ruckus") || m.includes("icx")) key = "Ruckus";
+      else if (v.toLowerCase().includes("juniper") || m.includes("ex")) key = "Juniper";
+      else if (v.toLowerCase().includes("allied") || m.includes("at-")) key = "Allied Telesis";
+      else if (v.toLowerCase().includes("amg")) key = "AMG";
+      else if (v) key = v;
+
+      vendorCounts[key] = (vendorCounts[key] || 0) + (item.qty || 1);
+      const units = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : (item.qty || 1);
+      closetBudgets[loc].supply += (item.poeBudget || 0) * units;
+    } else if (item.role !== "Structured Cabling" && item.role !== "Optics & DAC" && !item.role?.includes("License")) {
+      const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "poe_switch");
+      if (pwr === "poe_switch") {
+        const draw = item.poeWattsDrawn || item.powerConsumptionWatts || item.baseWatts || 15;
+        closetBudgets[loc].demand += draw * (item.qty || 1);
+      }
+    }
+  });
+
+  // Dominant vendor
+  let topVendor = "Cisco";
+  let topCount = 0;
+  for (const [vnd, count] of Object.entries(vendorCounts)) {
+    if (count > topCount) {
+      topCount = count;
+      topVendor = vnd;
+    }
+  }
+
+  // Closet with largest deficit
+  let maxDeficit = -1;
+  let targetCloset = "MDF • Rack-1";
+  for (const [loc, b] of Object.entries(closetBudgets)) {
+    const deficit = b.demand - b.supply;
+    if (deficit > maxDeficit) {
+      maxDeficit = deficit;
+      targetCloset = loc;
+    }
+  }
+  if (typeof FacilityStore !== "undefined" && targetCloset === FacilityStore.UNASSIGNED) {
+    targetCloset = "MDF • Rack-1";
+  }
+
+  // Vendor-tailored switch catalog recommendations
+  const catalog = {
+    "UniFi": {
+      sku: "USW-Enterprise-24-PoE",
+      model: "UniFi Enterprise 24-PoE 2.5G Managed Switch (400W PoE+)",
+      vendor: "UniFi",
+      poeBudget: 400,
+      baseWatts: 50,
+      ports: 24,
+      msrp: 799
+    },
+    "Meraki": {
+      sku: "MS130-24P-HW",
+      model: "Cisco Meraki MS130-24P Cloud-Managed 24-Port Switch (370W PoE+)",
+      vendor: "Meraki",
+      poeBudget: 370,
+      baseWatts: 45,
+      ports: 24,
+      msrp: 1495
+    },
+    "Ruckus": {
+      sku: "ICX7150-24P-4X1G",
+      model: "Ruckus ICX 7150 24-Port PoE+ Gigabit Switch (370W)",
+      vendor: "Ruckus",
+      poeBudget: 370,
+      baseWatts: 45,
+      ports: 24,
+      msrp: 1395
+    },
+    "Juniper": {
+      sku: "EX2300-24P",
+      model: "Juniper EX2300 24-Port PoE+ Managed Switch (370W)",
+      vendor: "Juniper",
+      poeBudget: 370,
+      baseWatts: 50,
+      ports: 24,
+      msrp: 1450
+    },
+    "Allied Telesis": {
+      sku: "AT-x530-28GPXm",
+      model: "Allied Telesis x530 24-Port Multi-Gigabit PoE+ Switch (370W)",
+      vendor: "Allied Telesis",
+      poeBudget: 370,
+      baseWatts: 50,
+      ports: 24,
+      msrp: 1650
+    },
+    "AMG": {
+      sku: "AMG200-24GAT-4SFP",
+      model: "AMG 24-Port Industrial Managed PoE+ Switch (370W)",
+      vendor: "AMG",
+      poeBudget: 370,
+      baseWatts: 45,
+      ports: 24,
+      msrp: 1250
+    },
+    "Cisco": {
+      sku: "CBS350-24FP-4X",
+      model: "Cisco Business 350 24-Port Full PoE+ Gigabit Managed Switch (370W)",
+      vendor: "Cisco",
+      poeBudget: 370,
+      baseWatts: 45,
+      ports: 24,
+      msrp: 1150
+    }
+  };
+
+  const rec = catalog[topVendor] || catalog["Cisco"];
+  return {
+    switchItem: rec,
+    targetCloset: targetCloset,
+    dominantVendor: topVendor
+  };
+}
+
 function autoAddPoeSupplyOrSwitch() {
   if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const rec = getContextAwarePoERecommendation();
+  const sw = rec.switchItem;
+  const targetLoc = rec.targetCloset;
+
   projectBOM.push({
     instanceId: `sw-poe-high-${Date.now()}`,
-    id: "CBS350-24FP-4X",
-    model: "Cisco Business 350 24-Port Full PoE+ Gigabit Managed Switch (370W)",
-    sku: "CBS350-24FP-4X",
+    id: sw.sku,
+    model: sw.model,
+    sku: sw.sku,
     role: "Access",
-    vendor: "Cisco",
-    msrp: 1150,
-    ports: 24,
-    poeBudget: 370,
-    baseWatts: 45,
+    vendor: sw.vendor,
+    msrp: sw.msrp,
+    ports: sw.ports || 24,
+    poeBudget: sw.poeBudget || 370,
+    baseWatts: sw.baseWatts || 45,
     rackUnits: 1,
     depthInches: 13.8,
     uplinkMode: "single",
     qty: 1,
-    closetName: "MDF • Rack-1",
-    rackId: "MDF • Rack-1",
+    closetName: targetLoc,
+    rackId: targetLoc,
     rackSlot: null
   });
 
@@ -471,7 +627,7 @@ function autoAddPoeSupplyOrSwitch() {
   updateBOMView();
   updateProjectHealthUI();
   if (typeof showToast === "function") {
-    showToast("Added 370W Full PoE+ Switch to MDF to resolve power deficit.");
+    showToast(`Added ${sw.vendor} ${sw.sku} (${sw.poeBudget}W PoE) to ${targetLoc} to resolve power deficit.`);
   }
 }
 
@@ -506,4 +662,5 @@ window.autoFixUnassignedGear = autoFixUnassignedGear;
 window.autoAddMissingLicenses = autoAddMissingLicenses;
 window.autoAddMissingDACCables = autoAddMissingDACCables;
 window.autoAddPoeSupplyOrSwitch = autoAddPoeSupplyOrSwitch;
+window.getContextAwarePoERecommendation = getContextAwarePoERecommendation;
 window.autoFixAllProjectMisses = autoFixAllProjectMisses;

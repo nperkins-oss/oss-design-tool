@@ -131,6 +131,104 @@ function checkSwitchDemandFit(sw) {
   return true;
 }
 
+function checkSwitchFormFactor(sw, selectedForms) {
+  if (!selectedForms || selectedForms.length === 0) return true;
+  return selectedForms.some(form => {
+    if (form === "rackmount") {
+      return (sw.rackUnits && sw.rackUnits > 0) || (sw.mounting && sw.mounting.toLowerCase().includes("rack"));
+    }
+    if (form === "desktop") {
+      return sw.rackUnits === 0 || (sw.mounting && (sw.mounting.toLowerCase().includes("desktop") || sw.mounting.toLowerCase().includes("wall")));
+    }
+    if (form === "outdoor") {
+      return sw.outdoor === true || 
+             (sw.ipRating && /ip55|ip6|nema/i.test(sw.ipRating)) ||
+             (sw.mounting && /outdoor|pole|nema/i.test(sw.mounting)) ||
+             sw.sku === "USW-Flex" || sw.sku === "USW-Ultra" || (sw.model && (sw.model.toLowerCase().includes("outdoor") || sw.model.toLowerCase().includes("hardened")));
+    }
+    if (form === "din") {
+      return sw.isDinMounted === true || (sw.mounting && /din/i.test(sw.mounting));
+    }
+    return true;
+  });
+}
+window.checkSwitchFormFactor = checkSwitchFormFactor;
+
+function checkSwitchFanless(sw) {
+  if (sw.fanless === true || sw.acousticNoiseDba === 0 || sw.fans === 0) return true;
+  const kf = (sw.keyFeatures || []).join(" ").toLowerCase();
+  const desc = (sw.description || "").toLowerCase();
+  const model = (sw.model || "").toLowerCase();
+  return /fanless|silent|passive cooling|passively cooled|0 db/i.test(kf) ||
+         /fanless|silent|0 db/i.test(desc) ||
+         /fanless/i.test(model) ||
+         sw.sku === "USW-Flex" || sw.sku === "USW-Ultra" || sw.sku === "USW-Flex-Mini" ||
+         sw.sku === "USW-Lite-8-PoE" || sw.sku === "USW-Lite-16-PoE" || sw.sku === "USW-24" ||
+         sw.sku === "USW-Industrial" || sw.sku === "ICX7150-C12P" || sw.sku === "ICX7150-C08PT" ||
+         sw.sku === "EX2300-C-12P" || sw.sku === "EX2300-C-12T" || sw.sku === "EX2300-24T" ||
+         sw.sku === "MS120-8" || sw.sku === "MS120-8FP";
+}
+window.checkSwitchFanless = checkSwitchFanless;
+
+function checkSwitchPoEPowered(sw) {
+  if (sw.poePowered === true || sw.poePassthrough === true) return true;
+  const kf = (sw.keyFeatures || []).join(" ").toLowerCase();
+  const desc = (sw.description || "").toLowerCase();
+  return /powered by poe|poe passthrough|poe in|poe input/i.test(kf) ||
+         /poe-powered|poe passthrough/i.test(desc) ||
+         sw.sku === "USW-Flex" || sw.sku === "USW-Ultra" || sw.sku === "USW-Flex-Mini" ||
+         sw.sku === "ICX7150-C08PT" || sw.sku === "UACC-LRE";
+}
+window.checkSwitchPoEPowered = checkSwitchPoEPowered;
+
+function checkSwitchDcPower(sw) {
+  if (sw.dcPowered === true || sw.powerInput === "DC" || sw.isDinMounted === true) return true;
+  const kf = (sw.keyFeatures || []).join(" ").toLowerCase();
+  const desc = (sw.description || "").toLowerCase();
+  return /12-48vdc|48-56vdc|12-56vdc|dc terminal|terminal block|redundant terminal/i.test(kf) ||
+         /dc power|terminal block/i.test(desc) ||
+         sw.vendor === "AMG";
+}
+window.checkSwitchDcPower = checkSwitchDcPower;
+
+function checkSwitchLayer3(sw) {
+  if (sw.layer3 === true || sw.routing === true || sw.l3 === true) return true;
+  if (sw.role === "Core" || sw.role === "Aggregation") return true;
+  const kf = (sw.keyFeatures || []).join(" ").toLowerCase();
+  const desc = (sw.description || "").toLowerCase();
+  const model = (sw.model || "").toLowerCase();
+  return /layer 3|inter-vlan routing|static routing|ospf|dhcp server|dynamic routing/i.test(kf) ||
+         /layer 3/i.test(desc) ||
+         /pro-max|enterprise|icx 7650|icx 8200|ex4100|ex4400|x530/i.test(model) ||
+         (sw.sku && (sw.sku.includes("Pro-") || sw.sku.includes("Enterprise-") || sw.sku.includes("Pro-Max-") || sw.sku.includes("XG-")));
+}
+window.checkSwitchLayer3 = checkSwitchLayer3;
+
+function checkOpticReach(opt, reach) {
+  if (!reach || reach === "all") return true;
+  const name = (opt.name || "").toLowerCase();
+  const desc = (opt.description || "").toLowerCase();
+  const sku = (opt.sku || "").toLowerCase();
+  const medium = (opt.medium || "").toLowerCase();
+  const optReach = (opt.reach || "").toLowerCase();
+  const combined = `${sku} ${name} ${desc} ${optReach}`;
+
+  if (reach === "patch") {
+    return medium === "dac" || medium === "stacking" || /\b(0\.5|1|2|3|5)m\b/i.test(name) || (optReach.includes("m") && !optReach.includes("km"));
+  }
+  if (reach === "short") {
+    return (medium === "mmf" || /sr\b|sx\b|100m|300m|500m|550m|multimode/i.test(combined)) && !/\b(10km|20km|40km|80km|lr|lx|er|zr)\b/i.test(combined);
+  }
+  if (reach === "long") {
+    return (/\b(10km|20km|3km|lr|lx)\b/i.test(combined) || optReach === "10km" || (medium === "smf" && !/40km|80km|er|zr/i.test(combined))) && !/\b(40km|80km|er|zr)\b/i.test(combined);
+  }
+  if (reach === "extended") {
+    return /\b(40km|80km|er|zr)\b/i.test(combined) || optReach === "40km" || optReach === "80km";
+  }
+  return true;
+}
+window.checkOpticReach = checkOpticReach;
+
 // ==========================================
 // PLUGGABLE FILTER ENGINE (Strategy Pattern)
 // ==========================================
@@ -237,6 +335,31 @@ function filterSwitchesStrategy(items, ctx) {
     results = results.filter(s => (s.poeBt90Ports || 0) > 0 || (s.poeStandardsSupported && (s.poeStandardsSupported.includes("802.3bt-Type4") || s.poeStandardsSupported.includes("PoH"))));
   }
 
+  const formFactors = ctx.selectedFormFactors || (typeof selectedFormFactors !== "undefined" ? selectedFormFactors : []);
+  if (formFactors.length > 0 && typeof checkSwitchFormFactor === "function") {
+    results = results.filter(s => checkSwitchFormFactor(s, formFactors));
+  }
+
+  const isFanlessReq = typeof ctx.requireFanless !== "undefined" ? ctx.requireFanless : (typeof requireFanless !== "undefined" && requireFanless);
+  if (isFanlessReq && typeof checkSwitchFanless === "function") {
+    results = results.filter(s => checkSwitchFanless(s));
+  }
+
+  const isPoEPoweredReq = typeof ctx.requirePoEPowered !== "undefined" ? ctx.requirePoEPowered : (typeof requirePoEPowered !== "undefined" && requirePoEPowered);
+  if (isPoEPoweredReq && typeof checkSwitchPoEPowered === "function") {
+    results = results.filter(s => checkSwitchPoEPowered(s));
+  }
+
+  const isDcPowerReq = typeof ctx.requireDcPower !== "undefined" ? ctx.requireDcPower : (typeof requireDcPower !== "undefined" && requireDcPower);
+  if (isDcPowerReq && typeof checkSwitchDcPower === "function") {
+    results = results.filter(s => checkSwitchDcPower(s));
+  }
+
+  const isLayer3Req = typeof ctx.requireLayer3 !== "undefined" ? ctx.requireLayer3 : (typeof requireLayer3 !== "undefined" && requireLayer3);
+  if (isLayer3Req && typeof checkSwitchLayer3 === "function") {
+    results = results.filter(s => checkSwitchLayer3(s));
+  }
+
   return results;
 }
 FilterEngine.register("access", filterSwitchesStrategy);
@@ -271,16 +394,40 @@ function filterFirewallsStrategy(items, ctx) {
     });
   }
 
-  if (typeof requireFwRackmount !== "undefined" && requireFwRackmount) results = results.filter(f => (parseInt(f.rackUnits) || 0) >= 1);
-  if (typeof requireFwCellular !== "undefined" && requireFwCellular) {
+  const isRackReq = typeof ctx.requireFwRackmount !== "undefined" ? ctx.requireFwRackmount : (typeof requireFwRackmount !== "undefined" && requireFwRackmount);
+  if (isRackReq) results = results.filter(f => (parseInt(f.rackUnits) || 0) >= 1);
+
+  const isCellReq = typeof ctx.requireFwCellular !== "undefined" ? ctx.requireFwCellular : (typeof requireFwCellular !== "undefined" && requireFwCellular);
+  if (isCellReq) {
     results = results.filter(f => f.category === "cellular" || (f.keyFeatures || []).some(k => k.toLowerCase().includes("lte") || k.toLowerCase().includes("5g")));
   }
-  if (typeof requireFwDualPsu !== "undefined" && requireFwDualPsu) results = results.filter(f => f.dualPsu === true);
-  if (typeof requireFw10GWan !== "undefined" && requireFw10GWan) {
+
+  const isDualPsuReq = typeof ctx.requireFwDualPsu !== "undefined" ? ctx.requireFwDualPsu : (typeof requireFwDualPsu !== "undefined" && requireFwDualPsu);
+  if (isDualPsuReq) results = results.filter(f => f.dualPsu === true);
+
+  const is10GWanReq = typeof ctx.requireFw10GWan !== "undefined" ? ctx.requireFw10GWan : (typeof requireFw10GWan !== "undefined" && requireFw10GWan);
+  if (is10GWanReq) {
     results = results.filter(f => (f.interfaces || '').includes('10G') || (f.interfaces || '').includes('25G') || (f.wanPorts || '').includes('10G') || (f.wanPorts || '').includes('25G'));
   }
-  if (typeof requireFwPoePorts !== "undefined" && requireFwPoePorts) {
+
+  const isPoeReq = typeof ctx.requireFwPoePorts !== "undefined" ? ctx.requireFwPoePorts : (typeof requireFwPoePorts !== "undefined" && requireFwPoePorts);
+  if (isPoeReq) {
     results = results.filter(f => (f.poeBudget || 0) > 0 || (f.interfaces || '').includes('PoE'));
+  }
+
+  const isHaReq = typeof ctx.requireFwHA !== "undefined" ? ctx.requireFwHA : (typeof requireFwHA !== "undefined" && requireFwHA);
+  if (isHaReq) {
+    results = results.filter(f => (f.keyFeatures || []).some(k => /shadow\s*mode|high\s*availability|\bha\b|vrrp/i.test(k)) || /shadow\s*mode|high\s*availability|\bha\b|vrrp/i.test(f.description || ''));
+  }
+
+  const is25GWanReq = typeof ctx.requireFw25GWan !== "undefined" ? ctx.requireFw25GWan : (typeof requireFw25GWan !== "undefined" && requireFw25GWan);
+  if (is25GWanReq) {
+    results = results.filter(f => (f.interfaces || '').includes('25G') || (f.wanPorts || '').includes('25G') || (f.uplinksSummary || '').includes('25G') || f.maxBackboneSpeed === '25G' || f.portSpeed === '25G');
+  }
+
+  const isStorageReq = typeof ctx.requireFwStorage !== "undefined" ? ctx.requireFwStorage : (typeof requireFwStorage !== "undefined" && requireFwStorage);
+  if (isStorageReq) {
+    results = results.filter(f => (f.keyFeatures || []).some(k => /3\.5"|hdd|ssd|nvr|storage/i.test(k)) || /nvr|storage/i.test(f.description || ''));
   }
 
   return results;
@@ -294,12 +441,37 @@ function filterOpticsStrategy(items, ctx) {
   const speeds = ctx.selectedOpticSpeeds || (typeof selectedOpticSpeeds !== "undefined" ? selectedOpticSpeeds : []);
   const vendors = ctx.selectedOpticVendors || (typeof selectedOpticVendors !== "undefined" ? selectedOpticVendors : []);
   const formFactor = ctx.selectedOpticFormFactor || (typeof selectedOpticFormFactor !== "undefined" ? selectedOpticFormFactor : "all");
+  const reach = ctx.selectedOpticReach || (typeof selectedOpticReach !== "undefined" ? selectedOpticReach : "all");
 
   if (mediums.length > 0) results = results.filter(o => mediums.includes((o.medium || '').toLowerCase().trim()));
   if (speeds.length > 0) results = results.filter(o => speeds.includes((o.speed || '').trim()));
   if (vendors.length > 0) results = results.filter(o => vendors.includes((o.vendor || '').trim()));
   if (formFactor !== "all") results = results.filter(o => (o.formFactor || '').toLowerCase() === formFactor.toLowerCase());
-  if (typeof requireOpticIndustrial !== "undefined" && requireOpticIndustrial) results = results.filter(o => o.industrial === true);
+  if (reach !== "all" && typeof checkOpticReach === "function") results = results.filter(o => checkOpticReach(o, reach));
+
+  const isIndReq = typeof ctx.requireOpticIndustrial !== "undefined" ? ctx.requireOpticIndustrial : (typeof requireOpticIndustrial !== "undefined" && requireOpticIndustrial);
+  if (isIndReq) results = results.filter(o => o.industrial === true);
+
+  const isBiDiReq = typeof ctx.requireOpticBiDi !== "undefined" ? ctx.requireOpticBiDi : (typeof requireOpticBiDi !== "undefined" && requireOpticBiDi);
+  if (isBiDiReq) {
+    results = results.filter(o => o.bidi === true || /bidi|simplex|single[\s-]strand|wdm/i.test((o.name || '') + ' ' + (o.description || '') + ' ' + (o.sku || '')));
+  }
+
+  const dacLength = ctx.selectedDacLength || (typeof selectedDacLength !== "undefined" ? selectedDacLength : "all");
+  if (dacLength !== "all") {
+    results = results.filter(o => {
+      const isDac = (o.medium || '').toLowerCase() === 'dac';
+      const isStacking = (o.medium || '').toLowerCase() === 'stacking';
+      if (!isDac && !isStacking) return false;
+      const targetLen = parseFloat(dacLength);
+      if (o.lengthMeters !== undefined && Math.abs(o.lengthMeters - targetLen) < 0.05) return true;
+      const combined = `${o.sku} ${o.name} ${o.reach || ''}`.toLowerCase();
+      if (dacLength === "0.5m" || dacLength === "0.5") {
+        return /0\.5m|50cm/i.test(combined);
+      }
+      return combined.includes(dacLength.toLowerCase()) || (combined.includes(`${targetLen}m`) && !combined.includes(`${targetLen}0m`));
+    });
+  }
 
   return results;
 }
@@ -315,6 +487,7 @@ function filterWirelessStrategy(items, ctx) {
   const stations = typeof ctx.minWlStations !== "undefined" ? ctx.minWlStations : (typeof minWlStations !== "undefined" ? minWlStations : 0);
   const vendors = ctx.selectedWlVendors || (typeof selectedWlVendors !== "undefined" ? selectedWlVendors : []);
   const freqs = ctx.selectedWlFrequencies || (typeof selectedWlFrequencies !== "undefined" ? selectedWlFrequencies : []);
+  const rangeTier = ctx.selectedWlRangeTier || (typeof selectedWlRangeTier !== "undefined" ? selectedWlRangeTier : "all");
 
   if (distMiles > 0) {
     results = results.filter(w => {
@@ -370,7 +543,23 @@ function filterWirelessStrategy(items, ctx) {
     });
   }
 
-  if (typeof requireWlBackup5G !== "undefined" && requireWlBackup5G) {
+  if (rangeTier !== "all") {
+    results = results.filter(w => {
+      const km = parseFloat(w.distanceKm || w.rangeKm || w.maxRangeKm || ((w.distanceMiles || w.rangeMiles || 0) * 1.60934) || 0);
+      if (rangeTier === "short") return km > 0 && km <= 1.0;
+      if (rangeTier === "medium") return km > 1.0 && km <= 5.0;
+      if (rangeTier === "long") return km > 5.0;
+      return true;
+    });
+  }
+
+  const is60GReq = typeof ctx.requireWl60GHz !== "undefined" ? ctx.requireWl60GHz : (typeof requireWl60GHz !== "undefined" && requireWl60GHz);
+  if (is60GReq) {
+    results = results.filter(w => (w.frequency || '').includes('60') || (w.band || '').includes('60') || (w.keyFeatures || []).some(k => k.includes('60 GHz')));
+  }
+
+  const isBackupReq = typeof ctx.requireWlBackup5G !== "undefined" ? ctx.requireWlBackup5G : (typeof requireWlBackup5G !== "undefined" && requireWlBackup5G);
+  if (isBackupReq) {
     results = results.filter(w => {
       const freq = (w.frequency || '').toLowerCase();
       const arch = (w.architecture || '').toLowerCase();
@@ -399,9 +588,78 @@ function filterAccessoriesStrategy(items, ctx) {
     results = results.filter(a => (a.powerWatts || 0) >= minWatts);
   }
 
+  const isSineReq = typeof ctx.requireUpsSineWave !== "undefined" ? ctx.requireUpsSineWave : (typeof requireUpsSineWave !== "undefined" && requireUpsSineWave);
+  if (isSineReq) {
+    results = results.filter(a => (a.keyFeatures || []).some(k => /pure\s*sine/i.test(k)) || /pure\s*sine/i.test((a.model || '') + ' ' + (a.name || '') + ' ' + (a.description || '')));
+  }
+
+  const isOnlineReq = typeof ctx.requireUpsOnline !== "undefined" ? ctx.requireUpsOnline : (typeof requireUpsOnline !== "undefined" && requireUpsOnline);
+  if (isOnlineReq) {
+    results = results.filter(a => (a.keyFeatures || []).some(k => /online\s*double|double-conversion|0\s*ms/i.test(k)) || /online/i.test((a.model || '') + ' ' + (a.name || '')));
+  }
+
+  const isEbmReq = typeof ctx.requireUpsEbm !== "undefined" ? ctx.requireUpsEbm : (typeof requireUpsEbm !== "undefined" && requireUpsEbm);
+  if (isEbmReq) {
+    results = results.filter(a => (a.keyFeatures || []).some(k => /external\s*battery|scalable\s*runtime|battery\s*pack|ebm/i.test(k)));
+  }
+
   return results;
 }
+
 FilterEngine.register("accessories", filterAccessoriesStrategy);
+FilterEngine.register("racks", filterAccessoriesStrategy);
+FilterEngine.register("ups", filterAccessoriesStrategy);
+FilterEngine.register("pathways", filterAccessoriesStrategy);
+
+// 6. Structured Cabling Strategy
+function filterCablingStrategy(items, ctx) {
+  let results = items;
+  const vendors = ctx.selectedAccVendors || (typeof selectedAccVendors !== "undefined" ? selectedAccVendors : []);
+  const types = ctx.selectedAccTypes || (typeof selectedAccTypes !== "undefined" ? selectedAccTypes : []);
+  const ratings = ctx.selectedCableRatings || (typeof selectedCableRatings !== "undefined" ? selectedCableRatings : []);
+
+  if (vendors.length > 0) results = results.filter(c => vendors.some(v => (c.vendor || '').toLowerCase().includes(v.toLowerCase())));
+  if (types.length > 0) results = results.filter(c => types.includes(c.type) || types.includes(c.rating) || types.includes(c.standard));
+  if (ratings.length > 0) {
+    results = results.filter(c => {
+      const r = (c.rating || '').toUpperCase();
+      const s = (c.standard || '').toUpperCase();
+      const n = (c.name || '').toUpperCase();
+      return ratings.some(cr => r.includes(cr.toUpperCase()) || s.includes(cr.toUpperCase()) || n.includes(cr.toUpperCase()));
+    });
+  }
+
+  const isShieldedReq = typeof ctx.requireCableShielded !== "undefined" ? ctx.requireCableShielded : (typeof requireCableShielded !== "undefined" && requireCableShielded);
+  if (isShieldedReq) {
+    results = results.filter(c => /shielded|f\/utp|stp|oas/i.test((c.name || '') + ' ' + (c.standard || '') + ' ' + (c.jacketType || '')));
+  }
+
+  const patchLength = ctx.selectedPatchCordLength || (typeof selectedPatchCordLength !== "undefined" ? selectedPatchCordLength : "all");
+  if (patchLength !== "all") {
+    results = results.filter(c => {
+      const isPatch = c.type === 'patch_cord' || (c.category === 'cabling' && c.lengthFt !== undefined);
+      if (!isPatch) return false;
+      const ft = c.lengthFt || 0;
+      if (patchLength === "0.5") return Math.abs(ft - 0.5) < 0.25;
+      if (patchLength === "1") return Math.abs(ft - 1.0) < 0.35;
+      if (patchLength === "2") return Math.abs(ft - 2.0) < 0.4;
+      if (patchLength === "3") return Math.abs(ft - 3.0) < 0.5;
+      if (patchLength === "5") return Math.abs(ft - 5.0) < 0.6;
+      if (patchLength === "7") return Math.abs(ft - 7.0) < 0.6;
+      if (patchLength === "10") return Math.abs(ft - 10.0) < 0.6;
+      if (patchLength === "15") return ft >= 14.5;
+      return Math.abs(ft - parseFloat(patchLength)) < 0.5;
+    });
+  }
+
+  const isEtherlightingReq = typeof ctx.requireEtherlighting !== "undefined" ? ctx.requireEtherlighting : (typeof requireEtherlighting !== "undefined" && requireEtherlighting);
+  if (isEtherlightingReq) {
+    results = results.filter(c => c.etherlighting === true || /etherlighting/i.test((c.name || '') + ' ' + (c.sku || '')));
+  }
+
+  return results;
+}
+FilterEngine.register("cabling", filterCablingStrategy);
 
 // ==========================================
 // ACTIVE FILTER PILLS DISPLAY
@@ -451,6 +709,16 @@ function renderActiveFilterPills() {
     if (typeof requirePerpetualPoE !== "undefined" && requirePerpetualPoE) pills.push({ label: "Perpetual PoE", onRemove: () => { requirePerpetualPoE = false; } });
     if (typeof requireTAA !== "undefined" && requireTAA) pills.push({ label: "TAA Compliant", onRemove: () => { requireTAA = false; } });
     if (typeof requireSubstation !== "undefined" && requireSubstation) pills.push({ label: "Substation", onRemove: () => { requireSubstation = false; } });
+    if (typeof selectedFormFactors !== "undefined") {
+      selectedFormFactors.forEach(f => {
+        const name = f === "rackmount" ? "19\" Rack" : f === "desktop" ? "0U Desktop" : f === "outdoor" ? "Outdoor" : "DIN-Rail";
+        pills.push({ label: `Form: ${name}`, onRemove: () => toggleFilterItem('formFactor', f) });
+      });
+    }
+    if (typeof requireFanless !== "undefined" && requireFanless) pills.push({ label: "Fanless (0 dB)", onRemove: () => { requireFanless = false; } });
+    if (typeof requirePoEPowered !== "undefined" && requirePoEPowered) pills.push({ label: "PoE-Powered In", onRemove: () => { requirePoEPowered = false; } });
+    if (typeof requireDcPower !== "undefined" && requireDcPower) pills.push({ label: "DC Terminal (12-48V)", onRemove: () => { requireDcPower = false; } });
+    if (typeof requireLayer3 !== "undefined" && requireLayer3) pills.push({ label: "Layer 3 Routing", onRemove: () => { requireLayer3 = false; } });
   }
 
   // Firewall Pills
@@ -472,6 +740,9 @@ function renderActiveFilterPills() {
     if (typeof requireFwDualPsu !== "undefined" && requireFwDualPsu) pills.push({ label: "Dual PSU", onRemove: () => { requireFwDualPsu = false; } });
     if (typeof requireFw10GWan !== "undefined" && requireFw10GWan) pills.push({ label: "10G/25G WAN", onRemove: () => { requireFw10GWan = false; } });
     if (typeof requireFwPoePorts !== "undefined" && requireFwPoePorts) pills.push({ label: "PoE Switch Ports", onRemove: () => { requireFwPoePorts = false; } });
+    if (typeof requireFwHA !== "undefined" && requireFwHA) pills.push({ label: "Shadow Mode HA", onRemove: () => { requireFwHA = false; } });
+    if (typeof requireFw25GWan !== "undefined" && requireFw25GWan) pills.push({ label: "25G SFP28 WAN", onRemove: () => { requireFw25GWan = false; } });
+    if (typeof requireFwStorage !== "undefined" && requireFwStorage) pills.push({ label: "NVR Storage Bay", onRemove: () => { requireFwStorage = false; } });
   }
 
   // Optics Pills
@@ -488,7 +759,15 @@ function renderActiveFilterPills() {
     if (typeof selectedOpticFormFactor !== "undefined" && selectedOpticFormFactor !== "all") {
       pills.push({ label: `Form: ${selectedOpticFormFactor}`, onRemove: () => { selectedOpticFormFactor = "all"; } });
     }
+    if (typeof selectedOpticReach !== "undefined" && selectedOpticReach !== "all") {
+      const reachName = selectedOpticReach === "patch" ? "Patch (≤5m)" : selectedOpticReach === "short" ? "Short (≤300m)" : selectedOpticReach === "long" ? "Long (10km)" : "Extended (≥40km)";
+      pills.push({ label: `Reach: ${reachName}`, onRemove: () => { selectedOpticReach = "all"; } });
+    }
+    if (typeof selectedDacLength !== "undefined" && selectedDacLength !== "all") {
+      pills.push({ label: `DAC Length: ${selectedDacLength}`, onRemove: () => { selectedDacLength = "all"; } });
+    }
     if (typeof requireOpticIndustrial !== "undefined" && requireOpticIndustrial) pills.push({ label: "Industrial (-40°C)", onRemove: () => { requireOpticIndustrial = false; } });
+    if (typeof requireOpticBiDi !== "undefined" && requireOpticBiDi) pills.push({ label: "BiDi (Simplex LC)", onRemove: () => { requireOpticBiDi = false; } });
   }
 
   // Wireless Pills
@@ -498,6 +777,10 @@ function renderActiveFilterPills() {
     }
     if (typeof selectedWlFrequencies !== "undefined") {
       selectedWlFrequencies.forEach(f => pills.push({ label: `Freq: ${f} GHz`, onRemove: () => toggleFilterItem('wlFreq', f) }));
+    }
+    if (typeof selectedWlRangeTier !== "undefined" && selectedWlRangeTier !== "all") {
+      const rName = selectedWlRangeTier === "short" ? "Short (≤1km)" : selectedWlRangeTier === "medium" ? "Medium (1-5km)" : "Long (>5km)";
+      pills.push({ label: `Range: ${rName}`, onRemove: () => { selectedWlRangeTier = "all"; } });
     }
     if (typeof wlTargetDistanceMiles !== "undefined" && wlTargetDistanceMiles > 0) {
       pills.push({ label: `Min Range: ${wlTargetDistanceMiles} mi`, onRemove: () => { wlTargetDistanceMiles = 0; if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); } });
@@ -514,11 +797,12 @@ function renderActiveFilterPills() {
     if (typeof minWlStations !== "undefined" && minWlStations > 0) {
       pills.push({ label: `Min Stations: ${minWlStations}+`, onRemove: () => { minWlStations = 0; } });
     }
+    if (typeof requireWl60GHz !== "undefined" && requireWl60GHz) pills.push({ label: "60 GHz Multi-Gig", onRemove: () => { requireWl60GHz = false; } });
     if (typeof requireWlBackup5G !== "undefined" && requireWlBackup5G) pills.push({ label: "5GHz Backup", onRemove: () => { requireWlBackup5G = false; } });
   }
 
-  // Accessories Pills
-  if (typeof currentMode !== "undefined" && currentMode === "accessories") {
+  // Accessories & Infrastructure Pills
+  if (typeof currentMode !== "undefined" && (currentMode === "accessories" || currentMode === "ups" || currentMode === "racks" || currentMode === "pathways" || currentMode === "cabling")) {
     if (typeof selectedAccVendors !== "undefined") {
       selectedAccVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('accVendor', v) }));
     }
@@ -531,6 +815,18 @@ function renderActiveFilterPills() {
     if (typeof accMinPowerWatts !== "undefined" && accMinPowerWatts > 0) {
       pills.push({ label: `Min Power: ${accMinPowerWatts}W`, onRemove: () => { accMinPowerWatts = 0; if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); } });
     }
+    if (typeof requireUpsSineWave !== "undefined" && requireUpsSineWave) pills.push({ label: "Pure Sine Wave", onRemove: () => { requireUpsSineWave = false; } });
+    if (typeof requireUpsOnline !== "undefined" && requireUpsOnline) pills.push({ label: "Online Double-Conversion", onRemove: () => { requireUpsOnline = false; } });
+    if (typeof requireUpsEbm !== "undefined" && requireUpsEbm) pills.push({ label: "EBM Battery Support", onRemove: () => { requireUpsEbm = false; } });
+    if (typeof selectedCableRatings !== "undefined") {
+      selectedCableRatings.forEach(r => pills.push({ label: `Rating: ${r}`, onRemove: () => toggleFilterItem('cableRating', r) }));
+    }
+    if (typeof selectedPatchCordLength !== "undefined" && selectedPatchCordLength !== "all") {
+      const pLabel = selectedPatchCordLength === "0.5" ? "6 in (0.5 ft)" : (selectedPatchCordLength === "15" ? "15+ ft" : `${selectedPatchCordLength} ft`);
+      pills.push({ label: `Patch Length: ${pLabel}`, onRemove: () => { selectedPatchCordLength = "all"; } });
+    }
+    if (typeof requireCableShielded !== "undefined" && requireCableShielded) pills.push({ label: "Shielded Cable", onRemove: () => { requireCableShielded = false; } });
+    if (typeof requireEtherlighting !== "undefined" && requireEtherlighting) pills.push({ label: "Etherlighting™", onRemove: () => { requireEtherlighting = false; } });
   }
 
   if (pills.length === 0) {

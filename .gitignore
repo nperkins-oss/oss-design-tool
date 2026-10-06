@@ -1,0 +1,17 @@
+# Temporary scratch scripts, browser test profiles, and debug dumps
+scratch/
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs & Temporary Files
+*.log
+*.tmp
+*.temp
+
+# IDE / Editor configuration
+.vscode/
+.idea/

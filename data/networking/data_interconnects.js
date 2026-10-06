@@ -156,13 +156,191 @@ const POWER_SUPPLY_CATALOG = {
   "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", msrp: 650, category: "external_brick", wattage: 340, poeBudgetContribution: 240 },
   "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", msrp: 750, category: "internal_hardened", wattage: 340, poeBudgetContribution: 240 },
   "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", msrp: 380, category: "external_brick", wattage: 300, poeBudgetContribution: 240 },
+  // AMG Industrial DIN Rail Power Supplies & UPS (Genuine Manufacturer Catalog)
+  "AMGPSU-I12-P24A": { sku: "AMGPSU-I12-P24A", name: "AMG 24W 12VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 75, category: "din_psu", wattage: 24, poeBudgetContribution: 0 },
+  "AMGPSU-I12-P54": { sku: "AMGPSU-I12-P54", name: "AMG 54W 12VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 110, category: "din_psu", wattage: 54, poeBudgetContribution: 0 },
+  "AMGPSU-I24-P60": { sku: "AMGPSU-I24-P60", name: "AMG 60W 24VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 120, category: "din_psu", wattage: 60, poeBudgetContribution: 0 },
+  "AMGPSU-I24-P120": { sku: "AMGPSU-I24-P120", name: "AMG 120W 24VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 180, category: "din_psu", wattage: 120, poeBudgetContribution: 0 },
+  "AMGPSU-I48-P60": { sku: "AMGPSU-I48-P60", name: "AMG 60W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 140, category: "din_psu", wattage: 60, poeBudgetContribution: 60 },
+  "AMGPSU-I48-P120": { sku: "AMGPSU-I48-P120", name: "AMG 120W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 195, category: "din_psu", wattage: 120, poeBudgetContribution: 120 },
+  "AMGPSU-I48-P120A": { sku: "AMGPSU-I48-P120A", name: "AMG 120W Industrial High-Efficiency DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 210, category: "din_psu", wattage: 120, poeBudgetContribution: 120 },
+  "AMGPSU-I48-P120-IEC": { sku: "AMGPSU-I48-P120-IEC", name: "AMG 120W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 230, category: "din_psu", wattage: 120, poeBudgetContribution: 120 },
+  "AMGPSU-I48-P240": { sku: "AMGPSU-I48-P240", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 250, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
+  "AMGPSU-I48-P240A": { sku: "AMGPSU-I48-P240A", name: "AMG 240W Industrial High-Efficiency DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
+  "AMGPSU-I48-P240A-IEC": { sku: "AMGPSU-I48-P240A-IEC", name: "AMG 240W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 280, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
+  "AMGPSU-I48-P290": { sku: "AMGPSU-I48-P290", name: "AMG 290W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 310, category: "din_psu", wattage: 290, poeBudgetContribution: 290 },
+  "AMGPSU-I48-P480": { sku: "AMGPSU-I48-P480", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 390, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
+  "AMGPSU-I48-P480A": { sku: "AMGPSU-I48-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
+  "AMGPSU-I48-P480A-IEC": { sku: "AMGPSU-I48-P480A-IEC", name: "AMG 480W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 450, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
+  "AMGPSU-I48-P530": { sku: "AMGPSU-I48-P530", name: "AMG 530W Industrial Ultra High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 495, category: "din_psu", wattage: 530, poeBudgetContribution: 530 },
+  "AMGUPS-I48-P240": { sku: "AMGUPS-I48-P240", name: "AMG 240W Industrial DIN Rail UPS Controller (48-56VDC)", vendor: "AMG", msrp: 480, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
+  "AMGPSU-W12-P25": { sku: "AMGPSU-W12-P25", name: "AMG 25W 12VDC Commercial Wall-Mount Plug-In Power Adapter", vendor: "AMG", msrp: 45, category: "external_brick", wattage: 25, poeBudgetContribution: 0 },
+  // Backward-compatibility aliases
   "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
   "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
   "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", msrp: 399, category: "dc_rps", wattage: 950, poeBudgetContribution: 0 },
   "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Meraki 1100W AC Secondary PSU (C9300X / MS390)", msrp: 1250, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
   "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
-  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 }
+  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
+  
+  // UniFi Enterprise Modular Power Supplies & Fans
+  "UACC-PSU-54V-1200W": { sku: "UACC-PSU-54V-1200W", name: "UniFi 1,200W 54V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 299, category: "internal_psu", wattage: 1200, poeBudgetContribution: 720 },
+  "UACC-PSU-54V-600W": { sku: "UACC-PSU-54V-600W", name: "UniFi 600W 54V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 199, category: "internal_psu", wattage: 600, poeBudgetContribution: 370 },
+  "UACC-PSU-12V-550W": { sku: "UACC-PSU-12V-550W", name: "UniFi 550W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 149, category: "internal_psu", wattage: 550, poeBudgetContribution: 0 },
+  "UACC-PSU-12V-150W": { sku: "UACC-PSU-12V-150W", name: "UniFi 150W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 99, category: "internal_psu", wattage: 150, poeBudgetContribution: 0 },
+  "UACC-Fan-4020": { sku: "UACC-Fan-4020", name: "UniFi Hot-Swappable Fan Module (40x20mm)", vendor: "UniFi", msrp: 49, category: "fan_module", wattage: 2, poeBudgetContribution: 0 }
 };
+
+// ==========================================
+// 4B. MOUNTING HARDWARE & RAIL KITS CATALOG
+// ==========================================
+const MOUNTING_CATALOG = {
+  // AMG Systems Rack Chassis & Mounting Hardware
+  "AMG2015": {
+    sku: "AMG2015",
+    name: "AMG 19\" 3U 14-Slot Rackmount Chassis",
+    vendor: "AMG",
+    msrp: 380,
+    category: "mounting",
+    type: "chassis",
+    rackUnits: 3,
+    description: "19-inch 3U rackmount chassis accommodating up to 14 AMG mini cards or media converters with dual power options"
+  },
+  "AMG2015-DR": {
+    sku: "AMG2015-DR",
+    name: "AMG 19\" 3U DIN Rail Equipment Rackmount Shelf",
+    vendor: "AMG",
+    msrp: 260,
+    category: "mounting",
+    type: "rack_shelf",
+    rackUnits: 3,
+    description: "Standard 19-inch 3U rackmount shelf with integrated DIN rail for installing DIN rail switches and power supplies into equipment racks"
+  },
+  "AMG2031": {
+    sku: "AMG2031",
+    name: "AMG 19\" 1U DIN Rail Rackmount Shelf",
+    vendor: "AMG",
+    msrp: 190,
+    category: "mounting",
+    type: "rack_shelf",
+    rackUnits: 1,
+    description: "19-inch 1U shallow rackmount shelf with recessed DIN rail for compact DIN switches and PSUs"
+  },
+  "AMG2035": {
+    sku: "AMG2035",
+    name: "AMG Side Mounted Wall Bracket Adapter Kit",
+    vendor: "AMG",
+    msrp: 35,
+    category: "mounting",
+    type: "wall_bracket",
+    description: "Side mounted wall bracket adapter kit for mounting AMG DIN rail switches and PSUs in depth-restricted enclosures"
+  },
+  "AMG2036-RP-AA": {
+    sku: "AMG2036-RP-AA",
+    name: "AMG 1U 18-Slot Blade Chassis (Dual AC)",
+    vendor: "AMG",
+    msrp: 850,
+    category: "mounting",
+    type: "chassis",
+    rackUnits: 1,
+    description: "1U 19-inch 18-slot high density blade rack chassis with dual redundant AC mains power supplies"
+  },
+  "AMGMNT-MAG": {
+    sku: "AMGMNT-MAG-04",
+    name: "AMG Heavy-Duty Magnetic Mounting Kit",
+    vendor: "AMG",
+    msrp: 45,
+    category: "mounting",
+    type: "magnetic_mount",
+    description: "4x rear-mounted heavy duty neodymium magnets with mounting plates for tool-less installation to steel cabinets"
+  },
+
+  "UACC-Rack-Rails-Slide": {
+    sku: "UACC-Rack-Rails-Slide",
+    name: "UniFi Sliding Rack Rails",
+    vendor: "UniFi",
+    msrp: 99,
+    category: "mounting",
+    type: "sliding_rails",
+    description: "Tool-less sliding rail kit for 4-post server racks (25.6\" - 39.4\" depth)"
+  },
+  "UACC-Pro-Max-16-RM": {
+    sku: "UACC-Pro-Max-16-RM",
+    name: "UniFi Pro Max 16 Rack Mount Kit",
+    vendor: "UniFi",
+    msrp: 29,
+    category: "mounting",
+    type: "rack_ears",
+    rackUnits: 1,
+    description: "Custom 1U rackmount adapter shelf specifically contoured for the USW-Pro-Max-16 switch"
+  },
+  "USW-Flex-Utility": {
+    sku: "USW-Flex-Utility",
+    name: "UniFi Switch Flex Outdoor Weatherproof Enclosure",
+    vendor: "UniFi",
+    msrp: 58,
+    category: "mounting",
+    type: "outdoor_enclosure",
+    description: "Outdoor weatherproof IPX5 enclosure for the USW-Flex switch with 60W PoE adapter"
+  },
+  "UACC-UTS": {
+    sku: "UACC-UTS",
+    name: "UniFi Universal Table Stand",
+    vendor: "UniFi",
+    msrp: 19,
+    category: "mounting",
+    type: "desktop_stand",
+    description: "Universal weighted desktop table stand for compact switches"
+  },
+  "UACC-Rack-Shelf-SD": {
+    sku: "UACC-Rack-Shelf-SD",
+    name: "UniFi 1U Cantilever Shallow Rack Shelf",
+    vendor: "UniFi",
+    msrp: 49,
+    category: "mounting",
+    type: "rack_shelf",
+    rackUnits: 1,
+    description: "Compact 1U 2-post cantilever rack shelf for compact non-rackmount switches"
+  },
+  "UACC-Rack-Shelf-FD": {
+    sku: "UACC-Rack-Shelf-FD",
+    name: "UniFi 1U Vented Full Depth Rack Shelf",
+    vendor: "UniFi",
+    msrp: 69,
+    category: "mounting",
+    type: "rack_shelf",
+    rackUnits: 1,
+    description: "Heavy-duty vented 4-post rack shelf supporting non-rackmount equipment"
+  },
+  "3rd_party_enclosure": {
+    sku: "3rd_party_enclosure",
+    name: "Inside 3rd-Party / NEMA Enclosure (Included Mount)",
+    vendor: "Generic / 3rd Party",
+    msrp: 0,
+    category: "mounting",
+    type: "enclosure_mount",
+    description: "Mounted inside an existing or 3rd-party weatherproof outdoor NEMA enclosure using the switch's included mounting plate or magnetic base"
+  },
+  "NF141208": {
+    sku: "NF141208",
+    name: "Altelix 14x12x8 NEMA 4X Weatherproof Equipment Enclosure",
+    vendor: "Altelix",
+    msrp: 149,
+    category: "mounting",
+    type: "outdoor_enclosure",
+    description: "Vented NEMA 4X / IP66 weatherproof enclosure with aluminum equipment mounting plate"
+  },
+  "Trove1WP1": {
+    sku: "Trove1WP1",
+    name: "Altronix Trove1WP Outdoor NEMA 4/11 Security Enclosure",
+    vendor: "Altronix",
+    msrp: 289,
+    category: "mounting",
+    type: "outdoor_enclosure",
+    description: "Outdoor weatherproof NEMA 4/11 security enclosure with backplane for edge switches & power"
+  }
+};
+window.MOUNTING_CATALOG = MOUNTING_CATALOG;
 
 // ==========================================
 // 5. MASTER OPTICS & INTERCONNECT DATABASE
@@ -171,31 +349,80 @@ const OPTICS_LIST = [
   // ----------------------------------------
   // A. Dedicated Proprietary Stacking Cables
   // ----------------------------------------
-  { vendor: "Meraki", sku: "STACK-T1-50CM", name: "Cisco Catalyst StackWise-1T Dedicated Stacking Cable (0.5m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 250, industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-50CM", name: "Cisco Catalyst StackWise-80 Dedicated Stacking Cable (0.5m)", speed: "80G", speedRank: 80, formFactor: "Stacking", medium: "stacking", msrp: 180, industrial: false },
-  { vendor: "Meraki", sku: "STACK-DAC-1M", name: "Meraki MS350/MS355 Hardware Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 180, industrial: false },
-  { vendor: "Ruckus", sku: "ICX-STACK-1M", name: "Ruckus ICX QSFP+ Dedicated Hardware Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 145, industrial: false },
-  { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-1M", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 195, industrial: false },
+  { vendor: "Meraki", sku: "STACK-T1-50CM", name: "Cisco Catalyst StackWise-1T Stacking Cable (0.5m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 250, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T1-1M", name: "Cisco Catalyst StackWise-1T Stacking Cable (1m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 290, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T1-3M", name: "Cisco Catalyst StackWise-1T Stacking Cable (3m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 380, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T4-50CM", name: "Cisco Catalyst StackWise-80 Stacking Cable (0.5m)", speed: "80G", speedRank: 80, formFactor: "Stacking", medium: "stacking", msrp: 180, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T4-1M", name: "Cisco Catalyst StackWise-80 Stacking Cable (1m)", speed: "80G", speedRank: 80, formFactor: "Stacking", medium: "stacking", msrp: 220, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-DAC-1M", name: "Meraki MS350/MS355 Hardware Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 180, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-DAC-3M", name: "Meraki MS350/MS355 Hardware Stacking Cable (3m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 240, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Ruckus", sku: "ICX-STACK-0.5M", name: "Ruckus ICX QSFP+ Dedicated Hardware Stacking Cable (0.5m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 125, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Ruckus", sku: "ICX-STACK-1M", name: "Ruckus ICX QSFP+ Dedicated Hardware Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 145, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Ruckus", sku: "ICX-STACK-3M", name: "Ruckus ICX QSFP+ Dedicated Hardware Stacking Cable (3m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 185, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-50CM", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (0.5m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 165, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-1M", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-3M", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (3m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 3, reach: "3m", industrial: false },
 
   // ----------------------------------------
   // B. Direct Attach Copper (DAC) Cables
   // ----------------------------------------
-  { vendor: "UniFi", sku: "UACC-DAC-SFP10-1M", name: "UniFi 10G SFP+ Direct Attach Copper Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 25, industrial: false },
-  { vendor: "UniFi", sku: "UACC-DAC-SFP28-1M", name: "UniFi 25G SFP28 Direct Attach Copper Cable (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 39, industrial: false },
-  { vendor: "UniFi", sku: "UACC-DAC-QSFP28-1M", name: "UniFi 100G QSFP28 Direct Attach Copper Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 89, industrial: false },
-  { vendor: "Meraki", sku: "MA-CBL-TA-1M", name: "Meraki 10G SFP+ Direct Attach Copper Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 120, industrial: false },
-  { vendor: "Meraki", sku: "SFP-H25G-CU1M", name: "Cisco 25G SFP28 Direct Attach Copper Cable (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 195, industrial: false },
-  { vendor: "Meraki", sku: "MA-CBL-40G-1M", name: "Meraki 40G QSFP+ Direct Attach Copper Cable (1m)", speed: "40G", speedRank: 40, formFactor: "DAC", medium: "dac", msrp: 280, industrial: false },
-  { vendor: "Meraki", sku: "QSFP-100G-CU1M", name: "Cisco 100G QSFP28 Direct Attach Copper Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 340, industrial: false },
-  { vendor: "Ruckus", sku: "10G-SFPP-TWX-0101", name: "Ruckus 10G SFP+ Direct Attach Copper Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 95, industrial: false },
-  { vendor: "Ruckus", sku: "25G-SFP28-TWX-0101", name: "Ruckus 25G SFP28 Direct Attach Copper Cable (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 160, industrial: false },
-  { vendor: "Ruckus", sku: "100G-QSFP28-TWX-0101", name: "Ruckus 100G QSFP28 Direct Attach Copper Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 290, industrial: false },
-  { vendor: "Juniper", sku: "EX-SFP-10GE-DAC-1M", name: "Juniper 10G SFP+ Direct Attach Copper (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 110, industrial: false },
-  { vendor: "Juniper", sku: "JNP-25G-DAC-1M", name: "Juniper 25G SFP28 Direct Attach Copper (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 175, industrial: false },
-  { vendor: "Juniper", sku: "JNP-100G-DAC-1M", name: "Juniper 100G QSFP28 Direct Attach Copper (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 310, industrial: false },
-  { vendor: "AMG", sku: "AMG-DAC-10G-1M", name: "AMG Industrial 10G SFP+ DAC Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 85, industrial: true },
-  { vendor: "Allied Telesis", sku: "AT-SP10TW1", name: "Allied Telesis 10G SFP+ Direct Attach Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 95, industrial: false },
-  { vendor: "Allied Telesis", sku: "AT-QSFP28-1CU", name: "Allied Telesis 100G QSFP28 Direct Attach Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 290, industrial: false },
+  // 0.5-Meter DAC Cables
+  { vendor: "UniFi", sku: "UACC-DAC-SFP10-0.5M", name: "UniFi 10G SFP+ Direct Attach Copper Cable (0.5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 20, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-SFP28-0.5M", name: "UniFi 25G SFP28 Direct Attach Copper Cable (0.5m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 32, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-TA-50CM", name: "Meraki 10G SFP+ Direct Attach Copper Cable (0.5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 110, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H10GB-CU50CM", name: "Cisco 10GBASE-CU SFP+ Direct Attach Copper Cable (0.5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 105, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Juniper", sku: "EX-SFP-10GE-DAC-50CM", name: "Juniper 10G SFP+ Direct Attach Copper (0.5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 95, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "AMG", sku: "AMG-DAC-10G-0.5M", name: "AMG Industrial 10G SFP+ DAC Cable (0.5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 75, lengthMeters: 0.5, reach: "0.5m", industrial: true },
+
+  // 1-Meter DAC Cables
+  { vendor: "UniFi", sku: "UACC-DAC-SFP10-1M", name: "UniFi 10G SFP+ Direct Attach Copper Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 25, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-SFP28-1M", name: "UniFi 25G SFP28 Direct Attach Copper Cable (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 39, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-QSFP28-1M", name: "UniFi 100G QSFP28 Direct Attach Copper Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 89, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-TA-1M", name: "Meraki 10G SFP+ Direct Attach Copper Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 120, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "SFP-H25G-CU1M", name: "Cisco 25G SFP28 Direct Attach Copper Cable (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 195, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-40G-1M", name: "Meraki 40G QSFP+ Direct Attach Copper Cable (1m)", speed: "40G", speedRank: 40, formFactor: "DAC", medium: "dac", msrp: 280, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "QSFP-100G-CU1M", name: "Cisco 100G QSFP28 Direct Attach Copper Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 340, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Ruckus", sku: "10G-SFPP-TWX-0101", name: "Ruckus 10G SFP+ Direct Attach Copper Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 95, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Ruckus", sku: "25G-SFP28-TWX-0101", name: "Ruckus 25G SFP28 Direct Attach Copper Cable (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 160, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Ruckus", sku: "100G-QSFP28-TWX-0101", name: "Ruckus 100G QSFP28 Direct Attach Copper Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 290, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Juniper", sku: "EX-SFP-10GE-DAC-1M", name: "Juniper 10G SFP+ Direct Attach Copper (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 110, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Juniper", sku: "JNP-25G-DAC-1M", name: "Juniper 25G SFP28 Direct Attach Copper (1m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 175, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Juniper", sku: "JNP-100G-DAC-1M", name: "Juniper 100G QSFP28 Direct Attach Copper (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 310, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "AMG", sku: "AMG-DAC-10G-1M", name: "AMG Industrial 10G SFP+ DAC Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 85, lengthMeters: 1, reach: "1m", industrial: true },
+  { vendor: "Allied Telesis", sku: "AT-SP10TW1", name: "Allied Telesis 10G SFP+ Direct Attach Cable (1m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 95, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Allied Telesis", sku: "AT-QSFP28-1CU", name: "Allied Telesis 100G QSFP28 Direct Attach Cable (1m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 290, lengthMeters: 1, reach: "1m", industrial: false },
+
+  // 2-Meter DAC Cables
+  { vendor: "UniFi", sku: "UACC-DAC-SFP10-2M", name: "UniFi 10G SFP+ Direct Attach Copper Cable (2m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 30, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-SFP28-2M", name: "UniFi 25G SFP28 Direct Attach Copper Cable (2m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 45, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-QSFP28-2M", name: "UniFi 100G QSFP28 Direct Attach Copper Cable (2m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 119, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H10GB-CU2M", name: "Cisco 10GBASE-CU SFP+ Direct Attach Copper Cable (2m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 145, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H25G-CU2M", name: "Cisco 25G SFP28 Direct Attach Copper Cable (2m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 220, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "Ruckus", sku: "10G-SFPP-TWX-0201", name: "Ruckus 10G SFP+ Direct Attach Copper Cable (2m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 115, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "Juniper", sku: "EX-SFP-10GE-DAC-2M", name: "Juniper 10G SFP+ Direct Attach Copper (2m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 135, lengthMeters: 2, reach: "2m", industrial: false },
+  { vendor: "AMG", sku: "AMG-DAC-10G-2M", name: "AMG Industrial 10G SFP+ DAC Cable (2m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 95, lengthMeters: 2, reach: "2m", industrial: true },
+
+  // 3-Meter DAC Cables
+  { vendor: "UniFi", sku: "UACC-DAC-SFP10-3M", name: "UniFi 10G SFP+ Direct Attach Copper Cable (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 35, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-SFP28-3M", name: "UniFi 25G SFP28 Direct Attach Copper Cable (3m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 52, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "UniFi", sku: "UACC-DAC-QSFP28-3M", name: "UniFi 100G QSFP28 Direct Attach Copper Cable (3m)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 149, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-TA-3M", name: "Meraki 10G SFP+ Direct Attach Copper Cable (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 160, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H10GB-CU3M", name: "Cisco 10GBASE-CU SFP+ Direct Attach Copper Cable (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 165, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H25G-CU3M", name: "Cisco 25G SFP28 Direct Attach Copper Cable (3m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 250, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Ruckus", sku: "10G-SFPP-TWX-0301", name: "Ruckus 10G SFP+ Direct Attach Copper Cable (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 135, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Ruckus", sku: "25G-SFP28-TWX-0301", name: "Ruckus 25G SFP28 Direct Attach Copper Cable (3m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 210, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Juniper", sku: "EX-SFP-10GE-DAC-3M", name: "Juniper 10G SFP+ Direct Attach Copper (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 155, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Juniper", sku: "JNP-25G-DAC-3M", name: "Juniper 25G SFP28 Direct Attach Copper (3m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 230, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "AMG", sku: "AMG-DAC-10G-3M", name: "AMG Industrial 10G SFP+ DAC Cable (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 110, lengthMeters: 3, reach: "3m", industrial: true },
+  { vendor: "Allied Telesis", sku: "AT-SP10TW3", name: "Allied Telesis 10G SFP+ Direct Attach Cable (3m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 125, lengthMeters: 3, reach: "3m", industrial: false },
+
+  // 5-Meter DAC Cables
+  { vendor: "UniFi", sku: "UACC-DAC-SFP28-5M", name: "UniFi 25G SFP28 Direct Attach Copper Cable (5m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 69, lengthMeters: 5, reach: "5m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H10GB-CU5M", name: "Cisco 10GBASE-CU SFP+ Direct Attach Copper Cable (5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 210, lengthMeters: 5, reach: "5m", industrial: false },
+  { vendor: "Cisco", sku: "SFP-H25G-CU5M", name: "Cisco 25G SFP28 Direct Attach Copper Cable (5m)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 310, lengthMeters: 5, reach: "5m", industrial: false },
+  { vendor: "Ruckus", sku: "10G-SFPP-TWX-0501", name: "Ruckus 10G SFP+ Direct Attach Copper Cable (5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 175, lengthMeters: 5, reach: "5m", industrial: false },
+  { vendor: "Juniper", sku: "EX-SFP-10GE-DAC-5M", name: "Juniper 10G SFP+ Direct Attach Copper (5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 195, lengthMeters: 5, reach: "5m", industrial: false },
+  { vendor: "Allied Telesis", sku: "AT-SP10TW5", name: "Allied Telesis 10G SFP+ Direct Attach Cable (5m)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 165, lengthMeters: 5, reach: "5m", industrial: false },
 
   // ----------------------------------------
   // C. Multimode Fiber (MMF) Transceivers
@@ -219,7 +446,11 @@ const OPTICS_LIST = [
   { vendor: "Juniper", sku: "SFP-25G-SR", name: "Juniper 25G Multi-Mode SFP28 (SR)", speed: "25G", speedRank: 25, formFactor: "SFP28", medium: "mmf", msrp: 920, industrial: false },
   { vendor: "Juniper", sku: "JNP-QSFP-100G-SR4", name: "Juniper 100G Multi-Mode QSFP28 (SR4)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "mmf", msrp: 2400, industrial: false },
   { vendor: "AMG", sku: "SFP-MM-1G-SX05-85", name: "AMG Industrial 1G MMF SFP (-40°C to +85°C)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "mmf", msrp: 95, industrial: true },
+  { vendor: "AMG", sku: "SFP-MM-2.5G-SX", name: "AMG Industrial 2.5G MMF SFP (-40°C to +85°C)", speed: "2.5G", speedRank: 2.5, formFactor: "SFP", medium: "mmf", msrp: 145, industrial: true },
   { vendor: "AMG", sku: "SFP-MM-10G-SR", name: "AMG Industrial 10G MMF SFP+ (-40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "mmf", msrp: 220, industrial: true },
+  { vendor: "AMG", sku: "SFP-CU-1G", name: "AMG Industrial 1000Base-T RJ45 Copper SFP (-40°C to +85°C)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "copper", msrp: 110, industrial: true },
+  { vendor: "AMG", sku: "SFP-CU-10G", name: "AMG Industrial 10GBase-T RJ45 Copper SFP+ (-40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "copper", msrp: 240, industrial: true },
+  { vendor: "AMG", sku: "SFP-ENC-1G", name: "AMG Industrial 1G Hardware Encrypted SFP Transceiver", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 850, industrial: true },
   { vendor: "Allied Telesis", sku: "AT-SPSX", name: "Allied Telesis 1G Multi-Mode SFP (SX, 550m)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "mmf", msrp: 160, industrial: false },
   { vendor: "Allied Telesis", sku: "AT-SP10SR", name: "Allied Telesis 10G Multi-Mode SFP+ (SR, 300m)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "mmf", msrp: 490, industrial: false },
   { vendor: "Allied Telesis", sku: "AT-QSFP100-SR4", name: "Allied Telesis 100G Multi-Mode QSFP28 (SR4)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "mmf", msrp: 2400, industrial: false },
@@ -239,9 +470,31 @@ const OPTICS_LIST = [
   { vendor: "Juniper", sku: "EX-SFP-10GE-LR", name: "Juniper 10G Single-Mode SFP+ (LR)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 1250, industrial: false },
   { vendor: "Juniper", sku: "JNP-QSFP-100G-LR4", name: "Juniper 100G Single-Mode QSFP28 (LR4, 10km)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "smf", msrp: 4200, industrial: false },
   { vendor: "AMG", sku: "SFP-SM-1G-LX20-31", name: "AMG Industrial 1G SMF SFP (-40°C to +85°C)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 140, industrial: true },
+  { vendor: "AMG", sku: "SFP-SM-2.5G-LX", name: "AMG Industrial 2.5G SMF SFP (-40°C to +85°C)", speed: "2.5G", speedRank: 2.5, formFactor: "SFP", medium: "smf", msrp: 195, industrial: true },
   { vendor: "AMG", sku: "SFP-SM-10G-LR", name: "AMG Industrial 10G SMF SFP+ (-40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 360, industrial: true },
+  { vendor: "AMG", sku: "SFP-CW-1G-EX40-31", name: "AMG Industrial 1G CWDM SFP (40km, 1310nm, -40°C to +85°C)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 320, industrial: true },
   { vendor: "Allied Telesis", sku: "AT-SPLX10", name: "Allied Telesis 1G Single-Mode SFP (LX, 10km)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 280, industrial: false },
-  { vendor: "Allied Telesis", sku: "AT-SP10LR", name: "Allied Telesis 10G Single-Mode SFP+ (LR, 10km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 980, industrial: false }
+  { vendor: "Allied Telesis", sku: "AT-SP10LR", name: "Allied Telesis 10G Single-Mode SFP+ (LR, 10km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 980, industrial: false },
+
+  // ----------------------------------------
+  // E. Bi-Directional (BiDi / Simplex LC Single-Strand) Transceivers
+  // ----------------------------------------
+  { vendor: "UniFi", sku: "UACC-OM-SM-10G-D-BD", name: "UniFi 10G BiDi Single-Mode SFP+ Transceiver Pair (10km, Simplex LC)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 129, industrial: false, bidi: true, reach: "10km" },
+  { vendor: "UniFi", sku: "UACC-OM-SM-1G-D-BD", name: "UniFi 1G BiDi Single-Mode SFP Transceiver Pair (3km, Simplex LC)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 65, industrial: false, bidi: true, reach: "3km" },
+  { vendor: "Cisco", sku: "GLC-BX-D", name: "Cisco 1G Single-Mode BiDi SFP Transceiver (10km, Simplex LC, Downstream)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 295, industrial: false, bidi: true, reach: "10km" },
+  { vendor: "Cisco", sku: "GLC-BX-U", name: "Cisco 1G Single-Mode BiDi SFP Transceiver (10km, Simplex LC, Upstream)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 295, industrial: false, bidi: true, reach: "10km" },
+  { vendor: "AMG", sku: "SFP-SM-10G-BX10", name: "AMG Industrial 10G BiDi SFP+ Transceiver (10km, Simplex LC, -40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 390, industrial: true, bidi: true, reach: "10km" },
+  { vendor: "AMG", sku: "SFP-SM-1G-BX10", name: "AMG Industrial 1G BiDi SFP Transceiver (10km, Simplex LC, -40°C to +85°C)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 165, industrial: true, bidi: true, reach: "10km" },
+
+  // ----------------------------------------
+  // F. Extended Reach (40km / 80km ER & ZR) Single-Mode Transceivers
+  // ----------------------------------------
+  { vendor: "Meraki", sku: "MA-SFP-10GB-ER", name: "Meraki 10G Single-Mode SFP+ (ER, 40km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 2600, industrial: false, reach: "40km" },
+  { vendor: "Cisco", sku: "SFP-10G-ER", name: "Cisco 10GBASE-ER Single-Mode SFP+ (40km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 2450, industrial: false, reach: "40km" },
+  { vendor: "Cisco", sku: "SFP-10G-ZR", name: "Cisco 10GBASE-ZR Single-Mode SFP+ (80km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 3800, industrial: false, reach: "80km" },
+  { vendor: "Juniper", sku: "EX-SFP-10GE-ER", name: "Juniper 10G Single-Mode SFP+ (ER, 40km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 2250, industrial: false, reach: "40km" },
+  { vendor: "Ruckus", sku: "10G-SFPP-ER", name: "Ruckus 10G Single-Mode SFP+ (ER, 40km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 1950, industrial: false, reach: "40km" },
+  { vendor: "AMG", sku: "SFP-SM-10G-ER", name: "AMG Industrial 10G SMF SFP+ ER (40km, -40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 680, industrial: true, reach: "40km" }
 ];
 
 // ==========================================
@@ -260,13 +513,13 @@ const OPTICS_CATALOG = {
       "dac": { sku: "UACC-DAC-SFP10-1M", name: "UniFi 10G Direct Attach Cable (1m)", msrp: 25 }
     },
     "25G": {
-      "mmf": { sku: "UACC-OM-MM-25G-D", name: "UniFi 25G Multi-Mode SFP28", msrp: 120 },
-      "smf": null,
+      "mmf": { sku: "UACC-OM-SFP28-SR", name: "UniFi 25G Multi-Mode SFP28", msrp: 49 },
+      "smf": { sku: "UACC-OM-SFP28-LR", name: "UniFi 25G Single-Mode SFP28", msrp: 79 },
       "dac": { sku: "UACC-DAC-SFP28-1M", name: "UniFi 25G Direct Attach Cable (1m)", msrp: 39 }
     },
     "100G": {
-      "mmf": { sku: "UACC-OM-MM-100G-D", name: "UniFi 100G Multi-Mode QSFP28", msrp: 299 },
-      "smf": null,
+      "mmf": { sku: "UACC-OM-QSFP28-SR4", name: "UniFi 100G Multi-Mode QSFP28 (SR4)", msrp: 199 },
+      "smf": { sku: "UACC-OM-QSFP28-LR4", name: "UniFi 100G Single-Mode QSFP28 (LR4)", msrp: 299 },
       "dac": { sku: "UACC-DAC-QSFP28-1M", name: "UniFi 100G Direct Attach Cable (1m)", msrp: 89 }
     }
   },
@@ -352,6 +605,11 @@ const OPTICS_CATALOG = {
       "smf": { sku: "SFP-SM-1G-LX20-31", name: "AMG Industrial 1G SMF SFP", msrp: 140 },
       "dac": null
     },
+    "2.5G": {
+      "mmf": { sku: "SFP-MM-2.5G-SX", name: "AMG Industrial 2.5G MMF SFP", msrp: 145 },
+      "smf": { sku: "SFP-SM-2.5G-LX", name: "AMG Industrial 2.5G SMF SFP", msrp: 195 },
+      "dac": null
+    },
     "10G": {
       "mmf": { sku: "SFP-MM-10G-SR", name: "AMG Industrial 10G MMF SFP+", msrp: 220 },
       "smf": { sku: "SFP-SM-10G-LR", name: "AMG Industrial 10G SMF SFP+", msrp: 360 },
@@ -373,6 +631,50 @@ const OPTICS_CATALOG = {
       "mmf": { sku: "AT-QSFP100-SR4", name: "Allied Telesis 100G Multi-Mode QSFP28", msrp: 2400 },
       "smf": { sku: "AT-QSFP100-LR4", name: "Allied Telesis 100G Single-Mode QSFP28", msrp: 4100 },
       "dac": { sku: "AT-QSFP28-1CU", name: "Allied Telesis 100G Direct Attach Cable (1m)", msrp: 290 }
+    }
+  },
+  "Fortinet": {
+    "1G": {
+      "mmf": { sku: "FN-TRAN-SX", name: "Fortinet 1G Multi-Mode SFP", msrp: 180 },
+      "smf": { sku: "FN-TRAN-LX", name: "Fortinet 1G Single-Mode SFP", msrp: 320 },
+      "dac": null
+    },
+    "10G": {
+      "mmf": { sku: "FN-TRAN-SFP+SR", name: "Fortinet 10G Multi-Mode SFP+", msrp: 550 },
+      "smf": { sku: "FN-TRAN-SFP+LR", name: "Fortinet 10G Single-Mode SFP+", msrp: 950 },
+      "dac": { sku: "FN-CBL-SFP+1", name: "Fortinet 10G Direct Attach Copper (1m)", msrp: 95 }
+    },
+    "25G": {
+      "mmf": { sku: "FN-TRAN-SFP28-SR", name: "Fortinet 25G Multi-Mode SFP28", msrp: 890 },
+      "smf": { sku: "FN-TRAN-SFP28-LR", name: "Fortinet 25G Single-Mode SFP28", msrp: 1650 },
+      "dac": { sku: "FN-CBL-SFP28-1", name: "Fortinet 25G Direct Attach Copper (1m)", msrp: 180 }
+    },
+    "100G": {
+      "mmf": { sku: "FN-TRAN-QSFP28-SR4", name: "Fortinet 100G Multi-Mode QSFP28", msrp: 2200 },
+      "smf": { sku: "FN-TRAN-QSFP28-LR4", name: "Fortinet 100G Single-Mode QSFP28", msrp: 3900 },
+      "dac": { sku: "FN-CBL-QSFP28-1", name: "Fortinet 100G Direct Attach Copper (1m)", msrp: 290 }
+    }
+  },
+  "Palo Alto": {
+    "1G": {
+      "mmf": { sku: "PAN-SFP-SX", name: "Palo Alto 1G Multi-Mode SFP", msrp: 210 },
+      "smf": { sku: "PAN-SFP-LX", name: "Palo Alto 1G Single-Mode SFP", msrp: 390 },
+      "dac": null
+    },
+    "10G": {
+      "mmf": { sku: "PAN-SFP-PLUS-SR", name: "Palo Alto 10G Multi-Mode SFP+", msrp: 650 },
+      "smf": { sku: "PAN-SFP-PLUS-LR", name: "Palo Alto 10G Single-Mode SFP+", msrp: 1250 },
+      "dac": { sku: "PAN-SFP-PLUS-CU-1M", name: "Palo Alto 10G Direct Attach Copper (1m)", msrp: 110 }
+    },
+    "25G": {
+      "mmf": { sku: "PAN-SFP28-25GBASE-SR", name: "Palo Alto 25G Multi-Mode SFP28", msrp: 950 },
+      "smf": { sku: "PAN-SFP28-25GBASE-LR", name: "Palo Alto 25G Single-Mode SFP28", msrp: 1800 },
+      "dac": { sku: "PAN-SFP28-CU-1M", name: "Palo Alto 25G Direct Attach Copper (1m)", msrp: 195 }
+    },
+    "100G": {
+      "mmf": { sku: "PAN-QSFP28-100GBASE-SR4", name: "Palo Alto 100G Multi-Mode QSFP28", msrp: 2500 },
+      "smf": null,
+      "dac": { sku: "PAN-QSFP28-CU-1M", name: "Palo Alto 100G Direct Attach Copper (1m)", msrp: 320 }
     }
   }
 };

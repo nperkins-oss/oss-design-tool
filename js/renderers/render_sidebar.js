@@ -45,6 +45,14 @@ function buildSidebarFilters() {
     buildWirelessSidebar(container, baseSet);
   } else if (currentMode === "accessories") {
     buildAccessoriesSidebar(container, baseSet);
+  } else if (currentMode === "racks") {
+    buildRacksSidebar(container, baseSet);
+  } else if (currentMode === "ups") {
+    buildUpsSidebar(container, baseSet);
+  } else if (currentMode === "cabling") {
+    buildCablingSidebar(container, baseSet);
+  } else if (currentMode === "pathways") {
+    buildPathwaysSidebar(container, baseSet);
   } else {
     buildDomainPlaceholderSidebar(container, currentMode);
   }
@@ -53,7 +61,7 @@ function buildSidebarFilters() {
 }
 
 function buildSwitchSidebar(container, baseSet) {
-  const vendors = ["UniFi", "Ruckus", "Meraki", "Juniper", "AMG", "Allied Telesis"];
+  const vendors = ["UniFi", "Ruckus", "Meraki", "Cisco", "Juniper", "AMG", "Allied Telesis"];
   const portCategories = [
     { label: "48-Port Density", val: 48 },
     { label: "24-Port Density", val: 24 },
@@ -65,6 +73,13 @@ function buildSwitchSidebar(container, baseSet) {
     { id: "at", label: "PoE+ (802.3at - 30W)" },
     { id: "bt60", label: "PoE++ (802.3bt Type 3 - 60W)" },
     { id: "bt90", label: "PoE++ (802.3bt Type 4 - 90W)" }
+  ];
+
+  const formFactors = [
+    { id: "rackmount", label: "19\" Rackmount (1U/2U)" },
+    { id: "desktop", label: "0U Compact / Wall" },
+    { id: "outdoor", label: "Outdoor Weatherproof" },
+    { id: "din", label: "DIN-Rail Industrial" }
   ];
 
   const totalCams = (typeof calculatePoETarget === "function") ? calculatePoETarget().totalCameras : 0;
@@ -118,6 +133,26 @@ function buildSwitchSidebar(container, baseSet) {
         </div>
       </div>
 
+      <!-- Form Factor & Enclosure -->
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Form Factor & Mounting</span>
+        <div class="space-y-1">
+          ${formFactors.map(f => {
+            const isChecked = (typeof selectedFormFactors !== "undefined" && selectedFormFactors.includes(f.id));
+            const count = baseSet.filter(s => (typeof checkSwitchFormFactor === "function") ? checkSwitchFormFactor(s, [f.id]) : true).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('formFactor', '${f.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
+                  <span>${f.label}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
       <!-- Uplink Speeds -->
       <div class="pt-3 border-t border-slate-800">
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Uplink Speed</span>
@@ -156,6 +191,30 @@ function buildSwitchSidebar(container, baseSet) {
             <div class="flex items-center gap-2">
               <input type="checkbox" onchange="requireDemandFit = this.checked; runActiveFilter();" ${(typeof requireDemandFit !== "undefined" && requireDemandFit) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
               <span class="text-amber-300 font-medium">Meet PoE & Port Demand</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireLayer3 = this.checked; runActiveFilter();" ${(typeof requireLayer3 !== "undefined" && requireLayer3) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
+              <span class="text-indigo-300 font-medium">Layer 3 (Inter-VLAN Routing)</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireFanless = this.checked; runActiveFilter();" ${(typeof requireFanless !== "undefined" && requireFanless) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
+              <span class="text-teal-300 font-medium">Fanless / Silent (0 dB)</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requirePoEPowered = this.checked; runActiveFilter();" ${(typeof requirePoEPowered !== "undefined" && requirePoEPowered) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
+              <span>PoE-Powered In (Passthrough)</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireDcPower = this.checked; runActiveFilter();" ${(typeof requireDcPower !== "undefined" && requireDcPower) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
+              <span>DC Terminal Power (12-48V)</span>
             </div>
           </label>
           <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
@@ -265,7 +324,7 @@ function buildFirewallSidebar(container, baseSet) {
       </div>
 
       <div class="pt-3 border-t border-slate-800">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Hardware Constraints</span>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Hardware Constraints & Features</span>
         <div class="space-y-1 text-slate-300">
           <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
             <div class="flex items-center gap-2">
@@ -289,6 +348,24 @@ function buildFirewallSidebar(container, baseSet) {
             <div class="flex items-center gap-2">
               <input type="checkbox" onchange="requireFw10GWan = this.checked; runActiveFilter();" ${(typeof requireFw10GWan !== "undefined" && requireFw10GWan) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-rose-500 focus:ring-0">
               <span>10G/25G SFP+ Uplinks</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireFw25GWan = this.checked; runActiveFilter();" ${(typeof requireFw25GWan !== "undefined" && requireFw25GWan) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0">
+              <span>25G SFP28 Enterprise WAN</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireFwHA = this.checked; runActiveFilter();" ${(typeof requireFwHA !== "undefined" && requireFwHA) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-0">
+              <span>Shadow Mode HA (VRRP)</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="requireFwStorage = this.checked; runActiveFilter();" ${(typeof requireFwStorage !== "undefined" && requireFwStorage) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+              <span>Integrated NVR HDD/SSD Bay</span>
             </div>
           </label>
           <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
@@ -370,7 +447,50 @@ function buildOpticsSidebar(container, baseSet) {
         </div>
       </div>
 
+      <!-- Reach & Distance -->
       <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Link Reach / Distance</span>
+        <div class="grid grid-cols-2 gap-1 text-[11px] font-medium">
+          ${[
+            { id: "all", label: "All Reaches" },
+            { id: "patch", label: "Patch (≤5m DAC)" },
+            { id: "short", label: "Short (≤300m MMF)" },
+            { id: "long", label: "Long (10km SMF)" },
+            { id: "extended", label: "Extended (≥40km)" }
+          ].map(r => `
+            <button onclick="selectedOpticReach = '${r.id}'; runActiveFilter();" class="py-1 px-1.5 rounded-lg border text-center transition-all ${(typeof selectedOpticReach !== "undefined" && selectedOpticReach === r.id) ? 'bg-sky-600 border-sky-500 text-white font-bold shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+              ${r.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- DAC Cable Length -->
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">DAC / Stacking Length</span>
+        <div class="grid grid-cols-3 gap-1 text-[11px] font-medium font-mono">
+          ${[
+            { id: "all", label: "All Lengths" },
+            { id: "0.5m", label: "0.5m (1.6')" },
+            { id: "1m", label: "1m (3.3')" },
+            { id: "2m", label: "2m (6.6')" },
+            { id: "3m", label: "3m (9.8')" },
+            { id: "5m", label: "5m (16.4')" }
+          ].map(d => `
+            <button onclick="selectedDacLength = '${d.id}'; runActiveFilter();" class="py-1 px-1 rounded-lg border text-center transition-all ${(typeof selectedDacLength !== "undefined" && selectedDacLength === d.id) ? 'bg-sky-600 border-sky-500 text-white font-bold shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+              ${d.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireOpticBiDi = this.checked; runActiveFilter();" ${(typeof requireOpticBiDi !== "undefined" && requireOpticBiDi) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0">
+            <span>BiDi (Simplex LC 1-Strand)</span>
+          </div>
+        </label>
         <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
           <div class="flex items-center gap-2">
             <input type="checkbox" onchange="requireOpticIndustrial = this.checked; runActiveFilter();" ${(typeof requireOpticIndustrial !== "undefined" && requireOpticIndustrial) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
@@ -452,6 +572,28 @@ function buildWirelessSidebar(container, baseSet) {
       </div>
 
       <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Link Distance Range</span>
+        <div class="grid grid-cols-2 gap-1 text-[11px] font-medium">
+          ${[
+            { id: "all", label: "All Ranges" },
+            { id: "short", label: "Short (≤1 km)" },
+            { id: "medium", label: "Mid (1-5 km)" },
+            { id: "long", label: "Long (>5 km)" }
+          ].map(r => `
+            <button onclick="selectedWlRangeTier = '${r.id}'; runActiveFilter();" class="py-1 px-1.5 rounded-lg border text-center transition-all ${(typeof selectedWlRangeTier !== "undefined" && selectedWlRangeTier === r.id) ? 'bg-emerald-600 border-emerald-500 text-white font-bold shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+              ${r.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireWl60GHz = this.checked; runActiveFilter();" ${(typeof requireWl60GHz !== "undefined" && requireWl60GHz) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-teal-500 focus:ring-0">
+            <span>60 GHz High-Capacity (Wave / airFiber)</span>
+          </div>
+        </label>
         <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
           <div class="flex items-center gap-2">
             <input type="checkbox" onchange="requireWlBackup5G = this.checked; runActiveFilter();" ${(typeof requireWlBackup5G !== "undefined" && requireWlBackup5G) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
@@ -523,6 +665,219 @@ function buildAccessoriesSidebar(container, baseSet) {
           <option value="Wall" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Wall') ? 'selected' : ''}>Wall / Surface</option>
           <option value="Pole" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Pole') ? 'selected' : ''}>Outdoor Pole Box</option>
         </select>
+      </div>
+    </div>
+  `;
+}
+
+function buildRacksSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))];
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Mounting & Form Factor</span>
+        <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'all') ? 'selected' : ''}>All Enclosure Types</option>
+          <option value="Floor" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Floor') ? 'selected' : ''}>Floor-Standing (4-Post / 2-Post)</option>
+          <option value="Wall" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Wall') ? 'selected' : ''}>Wall-Mount Hinged Cabinet</option>
+          <option value="Desktop" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Desktop') ? 'selected' : ''}>Tabletop / Desk</option>
+          <option value="Pole" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Pole') ? 'selected' : ''}>Pole / Outdoor Utility</option>
+        </select>
+      </div>
+    </div>
+  `;
+}
+
+function buildUpsSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))];
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Minimum Output Wattage</span>
+        <select onchange="accMinPowerWatts = Number(this.value); runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="0" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 0) ? 'selected' : ''}>Any Capacity</option>
+          <option value="500" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 500) ? 'selected' : ''}>&ge; 500W</option>
+          <option value="1000" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 1000) ? 'selected' : ''}>&ge; 1,000W</option>
+          <option value="2000" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 2000) ? 'selected' : ''}>&ge; 2,000W</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireUpsSineWave = this.checked; runActiveFilter();" ${(typeof requireUpsSineWave !== "undefined" && requireUpsSineWave) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+            <span>Pure Sine Wave Output</span>
+          </div>
+        </label>
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireUpsOnline = this.checked; runActiveFilter();" ${(typeof requireUpsOnline !== "undefined" && requireUpsOnline) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+            <span>Online Double-Conversion (0ms)</span>
+          </div>
+        </label>
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireUpsEbm = this.checked; runActiveFilter();" ${(typeof requireUpsEbm !== "undefined" && requireUpsEbm) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-0">
+            <span>Extended Battery (EBM) Support</span>
+          </div>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function buildCablingSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(c => (c.vendor || '').trim()).filter(Boolean))];
+  const ratings = [
+    { id: "CMP", label: "Plenum (CMP)" },
+    { id: "CMR", label: "Riser (CMR)" },
+    { id: "OSP", label: "Outdoor / Direct Burial (OSP)" },
+    { id: "Cat6A", label: "10G Cat6A Standard" },
+    { id: "Cat6", label: "Gigabit Cat6 Standard" }
+  ];
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(c => (c.vendor || '').includes(v)).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Rating & Standard</span>
+        <div class="space-y-1">
+          ${ratings.map(r => {
+            const isChecked = (typeof selectedCableRatings !== "undefined" && selectedCableRatings.includes(r.id)) || (typeof selectedAccTypes !== "undefined" && selectedAccTypes.includes(r.id));
+            const count = baseSet.filter(c => c.rating === r.id || c.standard === r.id || (c.jacketType || '').includes(r.id)).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('cableRating', '${r.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                  <span>${r.label}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Patch Cord Length -->
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Patch Cord Length</span>
+        <div class="grid grid-cols-3 gap-1 text-[11px] font-medium font-mono">
+          ${[
+            { id: "all", label: "All" },
+            { id: "0.5", label: "6 in" },
+            { id: "1", label: "1 ft" },
+            { id: "2", label: "2 ft" },
+            { id: "3", label: "3 ft" },
+            { id: "5", label: "5 ft" },
+            { id: "7", label: "7 ft" },
+            { id: "10", label: "10 ft" },
+            { id: "15", label: "15+ ft" }
+          ].map(p => `
+            <button onclick="selectedPatchCordLength = '${p.id}'; runActiveFilter();" class="py-1 px-1 rounded-lg border text-center transition-all ${(typeof selectedPatchCordLength !== "undefined" && selectedPatchCordLength === p.id) ? 'bg-amber-600 border-amber-500 text-white font-bold shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+              ${p.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireCableShielded = this.checked; runActiveFilter();" ${(typeof requireCableShielded !== "undefined" && requireCableShielded) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-teal-500 focus:ring-0">
+            <span>Shielded (F/UTP / STP / OAS)</span>
+          </div>
+        </label>
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireEtherlighting = this.checked; runActiveFilter();" ${(typeof requireEtherlighting !== "undefined" && requireEtherlighting) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+            <span>Etherlighting™ Translucent Boot</span>
+          </div>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function buildPathwaysSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))];
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
       </div>
     </div>
   `;

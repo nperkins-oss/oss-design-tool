@@ -96,6 +96,80 @@
       transform: translateY(-2px);
       box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
     }
+
+    /* Formal Engineering Submittal & Proposal Print Stylesheet */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+      }
+      #topBar, #sidebar, #bomDrawer, #topologyModal, #rackElevationModal, #licenseModal, #projectHealthModal, #toastNotification, .no-print {
+        display: none !important;
+      }
+      #engineeringSubmittalModal {
+        position: static !important;
+        display: block !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+      }
+      #engineeringSubmittalModal > div {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+        border: none !important;
+        background: #ffffff !important;
+        box-shadow: none !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+      }
+      #engineeringSubmittalModalContent {
+        overflow: visible !important;
+        height: auto !important;
+        max-height: none !important;
+        padding: 0 !important;
+        color: #0f172a !important;
+      }
+      #engineeringSubmittalModal * {
+        color: #0f172a !important;
+        background-color: transparent !important;
+        border-color: #cbd5e1 !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+      }
+      #engineeringSubmittalModal .submittal-header-bg {
+        background-color: #f8fafc !important;
+        border: 1px solid #94a3b8 !important;
+      }
+      #engineeringSubmittalModal .submittal-kpi-card {
+        background-color: #f8fafc !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      #engineeringSubmittalModal th {
+        background-color: #f1f5f9 !important;
+        color: #0f172a !important;
+        font-weight: 700 !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+      #engineeringSubmittalModal td {
+        border: 1px solid #e2e8f0 !important;
+        color: #334155 !important;
+      }
+      .print-page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+      .print-avoid-break {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
   </style>
 
   <!-- ========================================== -->
@@ -123,7 +197,8 @@
   <script src="data/physical_security/data_cameras.js"></script>
   <script src="data/physical_security/data_access.js"></script>
 
-  <!-- Central Domain Catalog Registry -->
+  <!-- Central Domain Catalog Registry & Assets -->
+  <script src="data/data_assets.js"></script>
   <script src="data/registry.js"></script>
   <script>
     CatalogRegistry.init();
@@ -264,7 +339,7 @@
   </div>
 
   <!-- Slide-Over Bill of Materials (BOM) Drawer -->
-  <div id="bomDrawer" class="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
+  <div id="bomDrawer" class="fixed inset-y-0 right-0 z-[80] w-full sm:w-[500px] bg-slate-900 border-l border-slate-800 shadow-2xl transform translate-x-full transition-transform duration-300 ease-in-out flex flex-col">
     
     <!-- Drawer Header -->
     <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
@@ -306,8 +381,8 @@
     <div class="px-4 py-2 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between text-[11px]">
       <span class="text-slate-400 font-medium">BOM Display Format:</span>
       <div class="flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5">
-        <button id="bomViewMode-grouped" onclick="setBomViewMode('grouped')" class="px-2 py-0.5 rounded font-medium text-white bg-brand-600">By Closet/Rack</button>
-        <button id="bomViewMode-flat" onclick="setBomViewMode('flat')" class="px-2 py-0.5 rounded font-medium text-slate-400 hover:text-white">Flat Order</button>
+        <button id="bomViewMode-grouped" onclick="setBomViewMode('grouped')" class="px-2.5 py-0.5 rounded font-medium text-white bg-brand-600 transition-colors cursor-pointer" title="Group hardware by Location, Enclosure, Rack, and Field zones">By Location/Rack</button>
+        <button id="bomViewMode-flat" onclick="setBomViewMode('flat')" class="px-2.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition-colors cursor-pointer" title="Consolidated Flat Order showing RAW counts of individual SKUs regardless of location">Flat Order</button>
       </div>
     </div>
 
@@ -334,15 +409,23 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-3 gap-2 pt-1">
-        <button onclick="clearBom()" class="py-2 bg-slate-950 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-800/60 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-colors">
+      <div class="grid grid-cols-4 gap-1.5 pt-1">
+        <button onclick="clearBom()" class="py-2 bg-slate-950 hover:bg-rose-950/40 text-slate-400 hover:text-rose-400 border border-slate-800 hover:border-rose-800/60 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 transition-colors" title="Reset BOM">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Reset
         </button>
-        <button onclick="copyBomSummary()" class="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 border border-slate-700 transition-colors">
+        <button onclick="copyBomSummary()" class="py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl flex items-center justify-center gap-1 border border-slate-700 transition-colors" title="Copy Text Summary">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy
         </button>
-        <button onclick="exportBomCSV()" class="py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 transition-colors shadow-md">
+        <button onclick="exportBomCSV()" class="py-2 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs font-bold rounded-xl flex items-center justify-center gap-1 transition-colors" title="Export Quick BOM CSV">
           <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV
+        </button>
+        <button onclick="openEngineeringSubmittalModal()" class="py-2 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center gap-1 transition-all shadow-md" title="Generate Proposal & Print Submittal">
+          <i data-lucide="file-check" class="w-3.5 h-3.5"></i> Proposal
+        </button>
+      </div>
+      <div class="pt-1">
+        <button onclick="exportComprehensiveProjectCSV()" class="w-full py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 rounded-xl text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-all" title="Export complete multi-section project CSV workbook with Closets, PoE, and Cabling">
+          <i data-lucide="table" class="w-3.5 h-3.5 text-emerald-400"></i> Export Comprehensive Multi-Section CSV
         </button>
       </div>
     </div>
@@ -416,6 +499,51 @@
             </select>
           </div>
 
+          <!-- Dynamic Layer Filter Selector -->
+          <div class="relative" id="topologyLayerFilterContainer">
+            <button id="btnTopologyLayers" onclick="toggleTopologyLayerMenu()" class="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Filter Topology Device Layers">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Layers</span>
+              <span id="badgeTopologyLayerCount" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">All</span>
+            </button>
+            <div id="topologyLayerMenu" class="hidden absolute right-0 top-full mt-1.5 w-64 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 backdrop-blur-md">
+              <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 text-[11px]">
+                <span class="font-bold text-slate-200">Device Type Layers</span>
+                <div class="flex gap-2 text-[10px] font-mono">
+                  <button type="button" onclick="toggleAllTopologyLayers(true)" class="text-emerald-400 hover:underline">All</button>
+                  <span class="text-slate-600">|</span>
+                  <button type="button" onclick="toggleAllTopologyLayers(false)" class="text-slate-400 hover:underline">None</button>
+                </div>
+              </div>
+              <div class="space-y-1.5 text-xs">
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="topoLayer-network" checked onchange="setTopologyLayerFilter('network', this.checked)" class="rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i> Switches & Firewalls</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="topoLayer-servers" checked onchange="setTopologyLayerFilter('servers', this.checked)" class="rounded bg-slate-900 border-slate-700 text-purple-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="server" class="w-3.5 h-3.5 text-purple-400"></i> Servers & Storage</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="topoLayer-cameras" checked onchange="setTopologyLayerFilter('cameras', this.checked)" class="rounded bg-slate-900 border-slate-700 text-teal-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-teal-400"></i> Cameras & Video</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="topoLayer-access" checked onchange="setTopologyLayerFilter('access', this.checked)" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control & Doors</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="topoLayer-wireless" checked onchange="setTopologyLayerFilter('wireless', this.checked)" class="rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-sky-400"></i> Wireless Bridges & Radios</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="topoLayer-links" checked onchange="setTopologyLayerFilter('links', this.checked)" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="spline" class="w-3.5 h-3.5 text-amber-400"></i> Interconnect Links & DACs</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
           <!-- Canvas Zoom & Fit Controls -->
           <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5">
             <button onclick="zoomTopologyCanvas(-0.15)" class="p-1 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition-colors" title="Zoom Out (-)">
@@ -448,9 +576,35 @@
             <span id="lblTopologyFieldDevices">Field Devices</span>
           </button>
 
+          <!-- Dual-Mode Topology Grouping Mode (Physical Floor vs Serving Switch) -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl" title="Switch between grouping field drops by their Physical Floor vs by their Serving Switch Enclosure">
+            <i data-lucide="split" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">Group:</span>
+            <select id="topologyGroupingSelector" onchange="setTopologyGroupingMode(this.value)" class="bg-transparent font-bold text-xs text-cyan-300 focus:outline-none cursor-pointer">
+              <option value="floor">Physical Floor (Cable Runs)</option>
+              <option value="switch">Serving Switch Enclosure</option>
+            </select>
+          </div>
+
           <!-- Open Dedicated Port Matrix Studio -->
           <button onclick="openPortMatrixStudio()" class="px-2.5 py-1.5 bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-sky-700/60 transition-colors shadow-sm cursor-pointer" title="Open Dedicated Widescreen Port Matrix & Interconnect Studio">
             <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-sky-400"></i> Port Matrix
+          </button>
+
+          <!-- Project Default Fiber Selector -->
+          <div class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800" title="Project Default Fiber Specification for Inter-Rack / Backbone Links">
+            <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
+            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">Fiber:</span>
+            <select id="topoProjectFiberSelect" onchange="setProjectFiberType(this.value)" class="bg-transparent font-bold text-xs text-cyan-300 focus:outline-none cursor-pointer">
+              <option value="mmf">MMF (OM4 SR)</option>
+              <option value="smf">SMF (OS2 LR)</option>
+            </select>
+          </div>
+
+          <!-- Auto-Synthesize Optics & DACs -->
+          <button onclick="autoSynthesizeInterconnects()" class="px-2.5 py-1.5 bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-emerald-700/60 transition-colors shadow-sm cursor-pointer" title="Auto-synthesize DAC cables and optical transceivers for all active topology links into BOM">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Synthesize Optics & DACs</span>
           </button>
 
           <!-- Toggle Inspector Drawer -->
@@ -474,8 +628,8 @@
 
         <!-- Interactive Viewport -->
         <div class="flex-1 min-w-0 relative overflow-auto bg-slate-950 select-none cursor-grab active:cursor-grabbing" id="topologyCanvasViewport">
-          <svg id="topologySvgOverlay" class="absolute inset-0 pointer-events-none z-10" style="min-width: 4500px; min-height: 2800px; width: 4500px; height: 2800px; overflow: visible;"></svg>
-          <div id="topologyNodesContainer" class="relative z-20 p-8 origin-top-left transition-transform duration-75" style="min-width: 4500px; min-height: 2800px;"></div>
+          <div id="topologyNodesContainer" class="relative z-10 p-8 origin-top-left transition-transform duration-75" style="min-width: 4500px; min-height: 2800px;"></div>
+          <svg id="topologySvgOverlay" class="absolute inset-0 pointer-events-none z-20" style="min-width: 4500px; min-height: 2800px; width: 4500px; height: 2800px; overflow: visible;"></svg>
         </div>
 
         <!-- Topology Inspector Side Panel -->
@@ -595,22 +749,31 @@
   </div>
 
   <!-- Physical Layout & Cable Pathways Modal -->
-  <div id="cableLayoutModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-0 sm:p-2 transition-all">
-    <div id="cableModalCard" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-7xl h-[95vh] flex flex-col shadow-2xl overflow-hidden transition-all">
+  <div id="cableLayoutModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-1 sm:p-2 transition-all">
+    <div id="cableModalCard" class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-[99vw] h-[96vh] flex flex-col shadow-2xl overflow-hidden transition-all">
       
       <!-- Toolbar Header -->
-      <div class="px-4 py-2 border-b border-slate-800 flex items-center justify-between bg-slate-950/90 gap-3 shrink-0">
+      <div class="px-4 py-2 border-b border-slate-800 flex flex-wrap items-center justify-between bg-slate-950/90 gap-2 shrink-0">
         
         <!-- Left: Level Navigation & Blueprint Picker -->
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400">
             <i data-lucide="map" class="w-4 h-4"></i>
           </div>
           <div class="flex items-center gap-1.5">
             <select id="floorSelector" onchange="switchActiveFloor(this.value)" class="bg-slate-900 border border-slate-700 text-amber-300 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500">
             </select>
-            <button onclick="openFacilityModal('hierarchy')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors" title="Manage Facility, Floors, Spaces & Enclosures Engine">
-              <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i> Location
+            <button onclick="promptAddNewFloor()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors" title="Add Floor / Building Level">
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i> Floor/Building
+            </button>
+            <button onclick="promptRenameActiveFloor()" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg border border-slate-700 text-xs flex items-center justify-center cursor-pointer transition-colors" title="Rename Current Floor/Building">
+              <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="promptDeleteActiveFloor()" class="p-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 rounded-lg border border-slate-700 hover:border-rose-800 text-xs flex items-center justify-center cursor-pointer transition-colors" title="Delete Current Floor/Building">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="openFacilityModal('hierarchy')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors" title="Manage Facility, Floors/Buildings, Spaces & Enclosures Engine">
+              <i data-lucide="building-2" class="w-3.5 h-3.5 text-cyan-400"></i> Location Studio
             </button>
           </div>
           <label class="cursor-pointer px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm">
@@ -618,24 +781,10 @@
             <span>Upload Plan</span>
             <input type="file" id="floorPlanFileInput" accept="application/pdf,image/png,image/jpeg,image/svg+xml" onchange="handleUniversalPlanUpload(event)" class="hidden" />
           </label>
-
-          <!-- Quick Search & Jump Menu (Matches Topology UX) -->
-          <div class="relative flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 mr-1.5"></i>
-            <input 
-              type="text" 
-              id="physCanvasSearchInput" 
-              placeholder="Find device or rack..." 
-              oninput="filterPhysCanvasSearch(this.value)" 
-              class="bg-transparent font-medium text-xs text-slate-200 placeholder-slate-500 focus:outline-none w-28 sm:w-36 focus:w-44 transition-all"
-              autocomplete="off"
-            />
-            <div id="physQuickSearchResults" class="hidden absolute left-0 top-full mt-1.5 w-64 max-h-72 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-1 backdrop-blur-md"></div>
-          </div>
         </div>
 
         <!-- Center: Tool Selector & Place All -->
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
           <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs">
             <button id="tool-select" onclick="setCableTool('select')" class="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-medium flex items-center gap-1 shadow">
               <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i> Select & Route
@@ -649,6 +798,9 @@
             <button id="tool-fiber" onclick="setCableTool('fiber')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1" title="Connect closets with fiber backbone">
               <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i> Fiber Backbone
             </button>
+            <button id="tool-auto-fiber" onclick="manualAutoLinkTopology()" class="px-2.5 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-800/80 text-cyan-300 hover:text-white font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Auto-link closets with fiber backbones based on Topology inter-switch uplinks">
+              <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i> Auto-Link Topology
+            </button>
             <button onclick="placeAllUnplacedOnActiveFloor()" class="px-2.5 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600 border border-amber-500/40 text-amber-200 hover:text-white font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Place all unplaced devices for this location onto the floor blueprint">
               <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i> Place All
             </button>
@@ -656,15 +808,71 @@
 
           <button id="btnOrthogonalToggle" onclick="toggleOrthogonalMode()" class="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
             <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-400"></i>
-            <span id="orthoLabel">90° Bends: OFF</span>
+            <span id="orthoLabel">90°: OFF</span>
           </button>
         </div>
 
-        <!-- Right: Zoom, Cable Spec, Add to BOM & Close -->
-        <div class="flex items-center gap-2 shrink-0">
-          <div class="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5">
+        <!-- Right: Search, Layers, Zoom, Cable Spec, Add to BOM, Inspector & Close -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Quick Search & Jump Menu -->
+          <div class="relative flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 mr-1.5"></i>
+            <input 
+              type="text" 
+              id="physCanvasSearchInput" 
+              placeholder="Find device or rack..." 
+              oninput="filterPhysCanvasSearch(this.value)" 
+              class="bg-transparent font-medium text-xs text-slate-200 placeholder-slate-500 focus:outline-none w-24 sm:w-32 focus:w-40 transition-all"
+              autocomplete="off"
+            />
+            <div id="physQuickSearchResults" class="hidden absolute left-0 top-full mt-1.5 w-64 max-h-72 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-1 backdrop-blur-md"></div>
+          </div>
+
+          <!-- Physical Layers Filter Menu -->
+          <div class="relative" id="physicalLayerFilterContainer">
+            <button id="btnPhysicalLayers" onclick="togglePhysicalLayerMenu()" class="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Filter Physical Layout Device Layers">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Layers</span>
+              <span id="badgePhysicalLayerCount" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">All</span>
+            </button>
+            <div id="physicalLayerMenu" class="hidden absolute right-0 top-full mt-1.5 w-64 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 backdrop-blur-md">
+              <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 text-[11px]">
+                <span class="font-bold text-slate-200">Physical Layers</span>
+                <div class="flex gap-2 text-[10px] font-mono">
+                  <button type="button" onclick="toggleAllPhysicalLayers(true)" class="text-amber-400 hover:underline">All</button>
+                  <span class="text-slate-600">|</span>
+                  <button type="button" onclick="toggleAllPhysicalLayers(false)" class="text-slate-400 hover:underline">None</button>
+                </div>
+              </div>
+              <div class="space-y-1.5 text-xs">
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="physLayer-cameras" checked onchange="setPhysicalLayerFilter('cameras', this.checked)" class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i> Cameras & Video</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="physLayer-access" checked onchange="setPhysicalLayerFilter('access', this.checked)" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control & Doors</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="physLayer-wireless" checked onchange="setPhysicalLayerFilter('wireless', this.checked)" class="rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-sky-400"></i> Wireless Bridges & Radios</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="physLayer-closets" checked onchange="setPhysicalLayerFilter('closets', this.checked)" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="server" class="w-3.5 h-3.5 text-amber-400"></i> Closets & Hosts</span>
+                </label>
+                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <input type="checkbox" id="physLayer-pathways" checked onchange="setPhysicalLayerFilter('pathways', this.checked)" class="rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0">
+                  <span class="flex items-center gap-1.5"><i data-lucide="git-commit" class="w-3.5 h-3.5 text-indigo-400"></i> Cable Runs & Pathways</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Canvas Zoom & Fit Controls -->
+          <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5">
             <button onclick="adjustCanvasZoom(-0.15)" class="px-2 py-1 text-slate-400 hover:text-white text-xs font-bold" title="Zoom Out">-</button>
-            <span id="canvasZoomLabel" class="text-[10px] font-mono text-slate-400 px-1">100%</span>
+            <span id="canvasZoomLabel" class="text-[10px] font-mono text-slate-300 px-1 font-bold">100%</span>
             <button onclick="adjustCanvasZoom(0.15)" class="px-2 py-1 text-slate-400 hover:text-white text-xs font-bold" title="Zoom In">+</button>
             <button onclick="resetCanvasZoom()" class="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-[10px]" title="Reset Zoom">
               <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
@@ -674,13 +882,10 @@
             </button>
           </div>
 
-          <button onclick="toggleModalFullscreen()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-slate-700" title="Expand Fullscreen">
-            <i data-lucide="maximize-2" id="iconFullscreen" class="w-4 h-4"></i>
-          </button>
-
-          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs">
-            <span class="text-slate-400 text-[10px]">Spec:</span>
-            <select id="cableTypeSelector" onchange="updateSelectedCableSpec(this.value)" class="bg-transparent text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer max-w-[125px] truncate">
+          <!-- Cable Spec Selector -->
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1 text-xs">
+            <span class="text-slate-400 text-[10px] uppercase font-mono">Spec:</span>
+            <select id="cableTypeSelector" onchange="updateSelectedCableSpec(this.value)" class="bg-transparent text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer max-w-[110px] truncate">
               <option value="C6A-CMP-1K-BL">Cat6A Plenum</option>
               <option value="C6A-CMR-1K-BL">Cat6A Riser</option>
               <option value="C6-CMP-1K-BL">Cat6 Plenum</option>
@@ -688,19 +893,34 @@
             </select>
           </div>
 
-          <button onclick="commitCablingToBOM()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow">
+          <!-- Sync to BOM -->
+          <button onclick="commitCablingToBOM()" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer" title="Commit cabling to BOM">
             <i data-lucide="package-plus" class="w-3.5 h-3.5"></i> Add to Quote
+          </button>
+
+          <!-- Toggle Inspector Drawer (like Topology) -->
+          <button id="cableInspectorHeaderBtn" onclick="togglePhysicalInspector()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer" title="Toggle Inspector Panel">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-400"></i> Inspector
+          </button>
+
+          <button onclick="toggleModalFullscreen()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-slate-700" title="Expand Fullscreen">
+            <i data-lucide="maximize-2" id="iconFullscreen" class="w-4 h-4"></i>
           </button>
 
           <button onclick="toggleCableLayoutModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-rose-900/40 text-slate-300 hover:text-rose-300 rounded-lg border border-slate-700 text-xs font-bold flex items-center gap-1 transition-colors" title="Close (Esc)">
             <i data-lucide="x" class="w-4 h-4"></i>
-            <span>Close</span>
           </button>
         </div>
       </div>
 
       <!-- Main Workspace -->
       <div class="flex-1 flex overflow-hidden relative">
+        <!-- Floating button to reopen inspector when collapsed -->
+        <button id="cableOpenInspectorBtn" onclick="togglePhysicalInspector()" class="hidden absolute top-4 right-4 z-20 px-3 py-2 bg-slate-900/95 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 rounded-xl text-xs font-bold shadow-2xl backdrop-blur flex items-center gap-2 transition-all">
+          <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Open Inspector</span>
+        </button>
+
         <div class="flex-1 relative overflow-auto bg-slate-950 select-none" id="cableCanvasViewport">
           <div id="pdfRenderSpinner" class="hidden absolute inset-0 z-30 bg-slate-950/80 backdrop-blur-sm flex flex-col items-center justify-center space-y-3">
             <div class="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
@@ -709,8 +929,8 @@
           <svg id="cableSvgCanvas" class="absolute inset-0" style="min-width: 4500px; min-height: 2800px; width: 4500px; height: 2800px;"></svg>
         </div>
 
-        <aside class="w-80 md:w-96 max-w-[380px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-20 overflow-hidden">
-          <div id="inspectorPanel" class="p-3.5 border-b border-slate-800 bg-slate-950/80 space-y-3 max-h-80 overflow-y-auto shrink-0">
+        <aside id="cableSidebar" class="w-80 md:w-96 max-w-[380px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-20 overflow-hidden transition-all">
+          <div id="inspectorPanel" class="p-3.5 border-b border-slate-800 bg-slate-950/80 space-y-3 max-h-[460px] overflow-y-auto shrink-0">
             <div class="flex items-center justify-between">
               <span class="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                 <i data-lucide="sliders" class="w-3.5 h-3.5 text-brand-400"></i> Inspector & Cabinet Peek
@@ -732,13 +952,25 @@
                 <span id="activeCableLabel" class="font-mono text-amber-300 font-bold">Cat6A CMP</span>
               </div>
               <div class="flex justify-between text-slate-400">
+                <span>Terminated Drops:</span>
+                <span id="cableTotalDrops" class="font-mono text-cyan-300 font-bold">0 Drops</span>
+              </div>
+              <div class="flex justify-between text-slate-400">
                 <span>Gross Linear Footage:</span>
                 <span id="cableTotalFootage" class="font-mono text-white font-bold">0 ft</span>
               </div>
               <div class="flex justify-between text-slate-400">
-                <span>Required 1,000ft Spool Boxes:</span>
+                <span>Required 1,000ft Spools:</span>
                 <span id="cableSpoolCount" class="font-mono text-emerald-400 font-bold">0 Boxes</span>
               </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Modular Patch Panels:</span>
+                <span id="cablePatchPanels" class="font-mono text-purple-300 font-bold">0 Panels</span>
+              </div>
+              <button onclick="commitCablingToBOM({ userInitiated: true })" class="w-full mt-2.5 py-1.5 px-3 bg-emerald-600/90 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 shadow transition-colors cursor-pointer" title="Commit structured cabling, patch panels, jacks and cords directly to Project BOM">
+                <i data-lucide="package-check" class="w-3.5 h-3.5"></i>
+                <span>Sync Cabling & Panels to Quote BOM</span>
+              </button>
             </div>
           </div>
 
@@ -802,46 +1034,504 @@
 
   <!-- Project Manager Modal -->
   <div id="projectModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden">
-      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
-        <h3 class="text-sm font-bold text-white flex items-center gap-2">
-          <i data-lucide="folder" class="w-4 h-4 text-indigo-400"></i> Saved Projects & Quotes
-        </h3>
-        <button onclick="toggleProjectModal()" class="p-1 text-slate-400 hover:text-white">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+            <i data-lucide="folder" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white tracking-tight">Project Manager & Saved Quotes</h3>
+            <p class="text-[10px] text-slate-400 font-medium">Switch workspaces, manage quote versions, and import/export designs</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openProjectWizardModal('create')" class="px-2.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-brand-500/20" title="Start a fresh blank project with customizable technical defaults">
+            <i data-lucide="plus" class="w-3.5 h-3.5 text-white"></i>
+            <span>New Project</span>
+          </button>
+          <button onclick="toggleProjectModal()" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
 
-      <div class="p-5 space-y-4">
-        <div class="space-y-1.5">
-          <label class="text-[11px] font-semibold text-slate-400 block">Create New Snapshot / Quote:</label>
-          <div class="flex items-center gap-2">
-            <input type="text" id="newProjectNameInput" placeholder="e.g. Acme Corp Campus Phase 1" class="flex-1 bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500" />
-            <button onclick="saveCurrentAsNewProject()" class="px-3 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow">Save</button>
+      <div class="p-5 space-y-4 overflow-y-auto max-h-[80vh]">
+        
+        <!-- Active Project Banner Card -->
+        <div class="p-3.5 bg-gradient-to-r from-slate-950 via-slate-950/90 to-indigo-950/30 rounded-xl border border-indigo-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Active Workspace</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span id="modalActiveProjectTitle" class="text-sm font-extrabold text-white truncate">Default Project</span>
+              <button onclick="renameActiveProject()" class="text-slate-400 hover:text-white transition-colors p-1" title="Rename active project">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="openProjectWizardModal('edit')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-indigo-300 hover:text-white border border-indigo-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm" title="Edit project technical defaults, subsystem scope, and proposal metadata">
+              <i data-lucide="sliders" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>Defaults</span>
+            </button>
+            <button onclick="saveCurrentProject()" class="px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold shadow-md shadow-brand-500/20 flex items-center gap-1.5 transition-all">
+              <i data-lucide="save" class="w-3.5 h-3.5"></i>
+              <span>Save Changes</span>
+            </button>
+            <button onclick="exportCurrentProjectJSON()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all" title="Export this active project bundle">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Export</span>
+            </button>
           </div>
         </div>
 
-        <div class="space-y-2">
-          <label class="text-[11px] font-semibold text-slate-400 block uppercase tracking-wider">Saved Quote Snapshots:</label>
-          <div id="savedProjectsList" class="space-y-1.5 max-h-52 overflow-y-auto pr-1"></div>
+        <!-- Project Scope & Technical Standards Summary Card -->
+        <div id="projectDefaultsSummaryWidget" class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-2"></div>
+
+        <!-- Project Inter-Rack Fiber Specification -->
+        <div class="space-y-1.5 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+          <label class="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
+            <span class="flex items-center gap-1.5"><i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i> Project Inter-Rack Fiber Default:</span>
+            <span class="text-[10px] font-mono text-slate-500">Backbone Optics & Patch</span>
+          </label>
+          <select id="projectFiberSelect" onchange="setProjectFiberType(this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500 transition-colors font-mono">
+            <option value="mmf">Multi-Mode Fiber (MMF / OM4, SR Optics, 850nm)</option>
+            <option value="smf">Single-Mode Fiber (SMF / OS2, LR Optics, 1310nm)</option>
+          </select>
+          <p class="text-[10px] text-slate-400 leading-tight">Same-rack connections automatically use DAC cables sized by RU distance. Connections between different racks use this default fiber specification unless overridden per link in Topology.</p>
         </div>
 
+        <!-- Clone / Save As New Snapshot Section -->
+        <div class="space-y-1.5">
+          <label class="text-[11px] font-semibold text-slate-300 block">Save Snapshot / Clone As New Project:</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="newProjectNameInput" placeholder="e.g. Acme Corp Phase 2 / Option B" class="flex-1 bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500 transition-colors" />
+            <button onclick="saveCurrentAsNewProject()" class="px-3 py-2 bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white rounded-xl text-xs font-bold border border-slate-700 hover:border-transparent transition-all shadow shrink-0 flex items-center gap-1.5">
+              <i data-lucide="copy" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>Save As New</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Saved Projects List -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Project Library & Snapshots</label>
+            <span class="text-[10px] text-slate-500 font-mono">Isolated LocalStorage</span>
+          </div>
+          <div id="savedProjectsList" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
+        </div>
+
+        <!-- Import / Export Actions Footer -->
         <div class="pt-3 border-t border-slate-800 flex items-center justify-between text-xs">
-          <label class="cursor-pointer text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1">
-            <i data-lucide="upload" class="w-3.5 h-3.5"></i> Import JSON
+          <label class="cursor-pointer text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-800/60 transition-colors">
+            <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+            <span>Import Project JSON</span>
             <input type="file" accept=".json" onchange="importProjectJSON(event)" class="hidden" />
           </label>
-          <button onclick="exportCurrentProjectJSON()" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1">
-            <i data-lucide="download" class="w-3.5 h-3.5"></i> Export JSON
+          <button onclick="exportCurrentProjectJSON()" class="text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-800/60 transition-colors">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Export Active Project</span>
           </button>
         </div>
       </div>
     </div>
   </div>
 
+  <!-- New Project & Technical Defaults Wizard Modal -->
+  <div id="newProjectModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl flex flex-col shadow-2xl overflow-hidden max-h-[92vh]">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="wizardModalTitle" class="text-sm sm:text-base font-bold text-white tracking-tight">Create New Project</h3>
+            <p id="wizardModalSubtitle" class="text-[11px] text-slate-400 font-medium">Configure technical standards, vendor ecosystems, and proposal metadata.</p>
+          </div>
+        </div>
+        <button onclick="closeProjectWizardModal()" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- 3-Step Wizard Navigation Pills -->
+      <div class="px-6 py-2.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
+        <button type="button" onclick="setProjectWizardStep(1)" id="wizStepPill-1" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-600 text-white shadow-md shadow-brand-500/20 border border-brand-400/40 transition-all">
+          <span id="wizStepNum-1" class="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
+          <i id="wizStepCheck-1" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Details & Profile</span>
+        </button>
+        <div class="w-4 h-[1px] bg-slate-800 shrink-0"></div>
+        <button type="button" onclick="setProjectWizardStep(2)" id="wizStepPill-2" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer">
+          <span id="wizStepNum-2" class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">2</span>
+          <i id="wizStepCheck-2" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Subsystems & Scope</span>
+        </button>
+        <div class="w-4 h-[1px] bg-slate-800 shrink-0"></div>
+        <button type="button" onclick="setProjectWizardStep(3)" id="wizStepPill-3" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer">
+          <span id="wizStepNum-3" class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">3</span>
+          <i id="wizStepCheck-3" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Cabling & Standards</span>
+        </button>
+      </div>
+
+      <!-- Step Panels Body (Scrollable) -->
+      <div class="p-6 space-y-4 overflow-y-auto flex-1">
+        
+        <!-- STEP 1: Project Details & Profile -->
+        <div id="wizStepContent-1" class="space-y-4">
+          <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 flex items-start gap-2.5">
+            <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
+            <div>
+              <strong class="text-slate-200">Clean Slate Project Architecture:</strong> All new projects are created completely blank. Your selected technical standards, cable colors, and preferred vendors will be set as project defaults across all floors and enclosures.
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-200 mb-1">
+                Project Name <span class="text-rose-400">*</span>
+              </label>
+              <input type="text" id="wizProjectName" placeholder="e.g. Acme HQ - Physical Security Expansion" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Job / Opportunity #</label>
+                <input type="text" id="wizJobOpp" placeholder="e.g. ACME-2026-HQ-PH1" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors font-mono" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Client / Facility Name</label>
+                <input type="text" id="wizClientName" placeholder="e.g. Acme Corporation" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Site Address</label>
+                <input type="text" id="wizSiteAddress" placeholder="e.g. 100 Enterprise Way, Dallas, TX" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Lead System Designer / Estimator</label>
+                <input type="text" id="wizLeadDesigner" placeholder="e.g. N. Perkins" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Software Licensing & Warranty Term</label>
+              <select id="wizLicensingTerm" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                <option value="1YR">1-Year Term (1YR Standard)</option>
+                <option value="3YR">3-Year Term (3YR Multi-Year Support)</option>
+                <option value="5YR">5-Year Term (5YR Enterprise Warranty)</option>
+                <option value="Perpetual">Perpetual / Lifetime License</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Subsystems In Scope & Platform Defaults -->
+        <div id="wizStepContent-2" class="hidden space-y-4">
+          
+          <!-- Access Control Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <i data-lucide="door-closed" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Access Control System (ACS)</h4>
+                  <p class="text-[10px] text-slate-400">Door controllers, subplates, readers, and credential management.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="wizAcsScopeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="wizAcsToggle" checked onchange="toggleAcsScope(this.checked)" class="sr-only peer" />
+                  <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <div id="wizAcsConfigContainer" class="pt-2 border-t border-slate-850 grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">ACS Engine / Host Software</label>
+                <select id="wizAcsEngine" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                  <option value="Genetec">Genetec (Synergis)</option>
+                  <option value="LenelS2 OnGuard">LenelS2 OnGuard</option>
+                  <option value="Software House C•CURE 9000">Software House C•CURE 9000</option>
+                  <option value="Lenel Elements">Lenel Elements (Cloud)</option>
+                  <option value="Genetec SaaS">Genetec SaaS (CloudLink)</option>
+                  <option value="Avigilon Alta">Avigilon Alta (Openpath)</option>
+                  <option value="Avigilon Unity">Avigilon Unity Access</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Card Reader Protocol</label>
+                <select id="wizAcsReaderProto" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                  <option value="osdp">OSDP v2 Secure Channel (Encrypted)</option>
+                  <option value="wiegand">Legacy Wiegand (Unencrypted)</option>
+                </select>
+              </div>
+              <div class="sm:col-span-2 text-[10px] text-slate-400">
+                <span class="text-indigo-400 font-semibold">Note:</span> OSDP v2 automatically configures 22/4 shielded twisted pair (RS-485) and tamper-proof encrypted smart readers.
+              </div>
+            </div>
+          </div>
+
+          <!-- Video Surveillance Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                  <i data-lucide="video" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Video Surveillance (VMS / CCTV)</h4>
+                  <p class="text-[10px] text-slate-400">IP cameras, recording servers, storage calculation, and edge analytics.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="wizVmsScopeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" id="wizVmsToggle" checked onchange="toggleVmsScope(this.checked)" class="sr-only peer" />
+                  <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-600"></div>
+                </label>
+              </div>
+            </div>
+
+            <div id="wizVmsConfigContainer" class="pt-2 border-t border-slate-850 space-y-3 transition-opacity">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">VMS Platform</label>
+                  <select id="wizVmsPlatform" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                    <option value="Milestone XProtect">Milestone XProtect</option>
+                    <option value="Genetec">Genetec (Omnicast)</option>
+                    <option value="Avigilon Unity">Avigilon Unity Video</option>
+                    <option value="YourSix">YourSix (Cloud VMS)</option>
+                    <option value="Genetec SaaS">Genetec SaaS</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default Retention Target</label>
+                  <select id="wizVmsRetention" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                    <option value="30">30 Days Continuous / Motion</option>
+                    <option value="60">60 Days Extended Retention</option>
+                    <option value="90">90 Days Compliance Standard</option>
+                    <option value="120">120 Days High-Security Archive</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                  Preferred Camera Manufacturers <span class="text-[10px] text-slate-400 font-normal">(Select all that apply)</span>
+                </label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizCamVendor-AxisCommunications" checked class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Axis</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizCamVendor-HanwhaVision" checked class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Hanwha</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizCamVendor-Avigilon" checked class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Avigilon</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizCamVendor-Bosch" class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Bosch</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="pt-1">
+                <label class="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" id="wizVmsPromptAnalytics" checked class="rounded border-slate-700 text-brand-600 focus:ring-0 mt-0.5" />
+                  <span class="text-xs text-slate-300">
+                    <strong class="text-white">Auto-Prompt Video Analytics:</strong> Automatically detect and configure AI object detection (DLPU / IVA Pro / NGVA) based on camera hardware capabilities when adding cameras.
+                  </span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Cabling, Termination & Infrastructure Standards -->
+        <div id="wizStepContent-3" class="hidden space-y-4">
+          
+          <!-- Horizontal & Low Voltage Cabling Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <i data-lucide="git-commit" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white">Horizontal & Field Drops Cabling</h4>
+                <p class="text-[10px] text-slate-400">Bulk copper categories and door composite cabling specifications.</p>
+              </div>
+            </div>
+
+            <div class="space-y-3 pt-1 border-t border-slate-850">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">
+                  Horizontal Cable Category <span class="text-[10px] text-slate-400 font-normal">(Select all that apply)</span>
+                </label>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizHorizCable-C6A-CMP-1K-BL" checked class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Cat6A F/UTP Plenum (CMP)</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizHorizCable-C6A-CMR-1K-BL" class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Cat6A Riser (CMR)</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizHorizCable-C6-CMP-1K-BL" class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Cat6 CMP Plenum</span>
+                  </label>
+                  <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
+                    <input type="checkbox" id="wizHorizCable-C6A-OUTDOOR-1K" class="rounded border-slate-700 text-brand-600 focus:ring-0" />
+                    <span class="text-xs text-slate-200">Direct Burial / OSP Outdoor</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Composite / Low Voltage Door Cable Standard</label>
+                <select id="wizCompositeCable" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                  <option value="AC-COMP-CMP-500">Access Control Composite (4-Element Banana Cable, CMP Plenum)</option>
+                  <option value="AC-COMP-CMR-500">Access Control Composite (4-Element Banana Cable, CMR Riser)</option>
+                  <option value="LV-22-4-CMP-1K">22/4 Shielded OAS Cable (OSDP / Readers / RS-485)</option>
+                  <option value="LV-18-2-CMP-1K">Individual Shielded Pairs (22/4 OAS + 18/2 Lock Power)</option>
+                  <option value="pure_poe">Pure PoE Edge Architecture (No Composite Cable)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Termination & Patch Cords Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center gap-2">
+              <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <i data-lucide="server" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white">Rack Termination & Patching</h4>
+                <p class="text-[10px] text-slate-400">Patch panel standards, cord lengths, and color coding.</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-850">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Network Rack Termination</label>
+                <select id="wizRackTermination" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                  <option value="patch_panels">Patch Panels + Patch Cords (Standard Pods)</option>
+                  <option value="direct_rj45">Direct RJ45 Field Plugs (No Patch Panels)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default Patch Cord Length</label>
+                <select id="wizPatchLength" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                  <option value="0.5">6-inch Slim Cords (Standard Switch Pods)</option>
+                  <option value="1">1-Foot Patch Cords</option>
+                  <option value="3">3-Foot Patch Cords</option>
+                  <option value="7">7-Foot Patch Cords</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Color Coding Scheme Bar -->
+            <div class="p-3 bg-slate-900 rounded-xl border border-slate-800 flex items-center justify-between text-xs">
+              <span class="text-slate-300 font-semibold">Patch Cord Color Schema:</span>
+              <div class="flex items-center gap-4">
+                <div class="flex items-center gap-1.5">
+                  <span class="w-3 h-3 rounded-full bg-yellow-400 shadow-sm shadow-yellow-400/50"></span>
+                  <span class="text-slate-300 text-[11px]">Yellow = IP Cameras / VMS / ACS</span>
+                </div>
+                <div class="flex items-center gap-1.5">
+                  <span class="w-3 h-3 rounded-full bg-blue-500 shadow-sm shadow-blue-500/50"></span>
+                  <span class="text-slate-300 text-[11px]">Blue = Data / Workstations / APs</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inter-Rack Fiber Backbone Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+                  <i data-lucide="spline" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Inter-Rack Fiber Backbone</h4>
+                  <p class="text-[10px] text-slate-400">Media and optical transceivers for campus/closet interconnects.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-1 border-t border-slate-850">
+              <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default Inter-Rack Fiber Specification</label>
+              <select id="wizFiberType" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                <option value="mmf">Multi-Mode Fiber (MMF / OM4, SR Optics, 850nm)</option>
+                <option value="smf">Single-Mode Fiber (SMF / OS2, LR Optics, 1310nm)</option>
+              </select>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0">
+        <div>
+          <button type="button" onclick="closeProjectWizardModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all border border-slate-700">
+            Cancel
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button type="button" id="wizardQuickCreateBtn" onclick="quickCreateProjectWithDefaults()" class="px-3.5 py-2 bg-slate-800 hover:bg-amber-950/40 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-700/60 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Quick create blank project using standard defaults">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Quick Create</span>
+          </button>
+
+          <button type="button" id="wizardBackBtn" onclick="setProjectWizardStep(currentWizardStep - 1)" class="hidden px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700">
+            <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+            <span>Back</span>
+          </button>
+
+          <button type="button" id="wizardNextBtn" onclick="setProjectWizardStep(currentWizardStep + 1)" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-brand-500/20">
+            <span>Next: Subsystems & Scope</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+
+          <button type="button" id="wizardSubmitBtn" onclick="submitProjectWizard()" class="hidden px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/25">
+            <i data-lucide="rocket" class="w-3.5 h-3.5"></i>
+            <span>Create Blank Project</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Unified Facility & Enclosure Visualizer Modal -->
-  <div id="facilityModal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+  <div id="facilityModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-1 sm:p-2 animate-fade-in">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-[99vw] h-[96vh] flex flex-col shadow-2xl overflow-hidden">
       
       <!-- Unified Header with Dynamic Title, Breadcrumbs, Tabs, and Enclosure Tools -->
       <div id="facilityModalHeader" class="px-6 py-3.5 border-b border-slate-800 flex flex-wrap items-center justify-between bg-slate-950/70 shrink-0 gap-3">
@@ -854,7 +1544,7 @@
             <!-- Hierarchy Title (shown in hierarchy view) -->
             <div id="facilityTitleHierarchy">
               <h2 class="text-sm font-bold text-white tracking-tight flex items-center gap-2">
-                <span>Facility, Floors, Spaces & Enclosures</span>
+                <span>Facility, Floors/Buildings, Spaces & Enclosures</span>
               </h2>
               <p class="text-[11px] text-slate-400">Single Source of Truth across Physical Layout, Enclosure Visualizer, BOM, and Topology</p>
             </div>
@@ -880,15 +1570,19 @@
           </div>
         </div>
 
-        <!-- Center: View Mode Segmented Switcher -->
+        <!-- Center: View Mode Segmented Switcher (Hierarchy & Spaces | Enclosure Visualizer | Port Matrix) -->
         <div class="flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl text-xs font-semibold select-none">
-          <button id="facilityTabBtnHierarchy" onclick="switchFacilityView('hierarchy')" class="px-3 py-1.5 rounded-lg text-white bg-sky-600 transition-all flex items-center gap-1.5 shadow">
+          <button id="facilityTabBtnHierarchy" onclick="switchFacilityView('hierarchy')" class="px-3 py-1.5 rounded-lg text-white bg-sky-600 transition-all flex items-center gap-1.5 shadow cursor-pointer">
             <i data-lucide="building-2" class="w-3.5 h-3.5"></i>
-            <span>Hierarchy & Spaces</span>
+            <span>Hierarchy &amp; Spaces</span>
           </button>
-          <button id="facilityTabBtnVisualizer" onclick="switchFacilityView('visualizer')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5">
+          <button id="facilityTabBtnVisualizer" onclick="switchFacilityView('visualizer')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer">
             <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
             <span>Enclosure Visualizer</span>
+          </button>
+          <button id="facilityTabBtnPortMatrix" onclick="switchFacilityView('port_matrix')" class="px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer" title="Switch Port Matrix &amp; Interconnect Studio">
+            <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+            <span>Port Matrix</span>
           </button>
         </div>
 
@@ -898,9 +1592,6 @@
           <div id="facilityVisualizerControls" class="hidden flex items-center gap-1.5">
             <button onclick="openQuickAddEnclosureModal()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm cursor-pointer" title="Add New Rack or Enclosure">
               <i data-lucide="plus" class="w-3.5 h-3.5 text-indigo-400"></i> Enclosure
-            </button>
-            <button onclick="openPortMatrixStudio(activeRackId)" class="px-2.5 py-1 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-700/60 rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm" title="Inspect Active Port Matrix for Mounted Switches in this Rack">
-              <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Ports
             </button>
             <button onclick="deleteActiveRackElevation()" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer" title="Delete This Enclosure">
               <i data-lucide="trash-2" class="w-4 h-4"></i>
@@ -923,7 +1614,7 @@
       <div id="facilityVisualizerView" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col lg:flex-row gap-6 bg-slate-950">
         <!-- Host Frame Elevation Column -->
         <div class="flex-1 flex flex-col items-center min-w-0">
-          <div class="w-full max-w-3xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
+          <div class="w-full max-w-5xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
             <!-- Cross-Location Hardware Transfer Drop Bar (Requirement 2) -->
             <div id="rackLocationTransferBar" class="mb-3"></div>
 
@@ -945,14 +1636,24 @@
                   </button>
                 </div>
 
-                <!-- PDU Config Selector (For 19" equipment racks) -->
-                <div id="rackPduConfigControl" class="flex items-center bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-lg text-xs font-semibold shadow-inner ml-1">
-                  <span class="text-[10px] text-slate-400 font-mono mr-1">PDU:</span>
-                  <select id="rackPduConfigSelect" onchange="setRackPduConfig(this.value)" class="bg-transparent text-indigo-300 font-mono font-bold text-[11px] focus:outline-none cursor-pointer">
-                    <option value="dual_vertical">Dual 0U Vertical (A+B)</option>
-                    <option value="single_vertical">Single 0U Vertical (Feed A)</option>
-                    <option value="horizontal">Horizontal 1U Rackmount</option>
-                  </select>
+                <!-- 0U Vertical Channels & PDU Config (For 19" equipment racks) -->
+                <div id="rackPduConfigControl" class="flex items-center gap-1.5 ml-1">
+                  <button type="button" onclick="toggleRackVerticalChannelsModal()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/60 rounded-lg text-xs font-semibold text-indigo-300 flex items-center gap-1 shadow-inner transition-all cursor-pointer" title="Configure 4-Corner 0U Verticals: PDUs or Cable Managers in Front-Left, Front-Right, Rear-Left, Rear-Right">
+                    <i data-lucide="columns-3" class="w-3 h-3 text-indigo-400"></i>
+                    <span>0U Verticals</span>
+                  </button>
+                  <div class="flex items-center bg-slate-950 border border-slate-800 px-2 py-0.5 rounded-lg text-xs font-semibold shadow-inner">
+                    <span class="text-[10px] text-slate-400 font-mono mr-1">Preset:</span>
+                    <select id="rackPduConfigSelect" onchange="setRackPduConfig(this.value)" class="bg-transparent text-indigo-300 font-mono font-bold text-[11px] focus:outline-none cursor-pointer" title="Vertical Layout Preset">
+                      <option value="front_cable_rear_pdu">Front Cable Mgr / Rear PDUs</option>
+                      <option value="dual_vertical">Dual 0U Vertical (A+B Rear)</option>
+                      <option value="single_vertical">Single 0U Vertical (Feed A)</option>
+                      <option value="horizontal">Horizontal 1U Rackmount</option>
+                      <option value="all_cable">All 0U Cable Managers</option>
+                      <option value="quad_pdu">Quad 0U PDUs (4 Corners)</option>
+                      <option value="open">Open Rails (No Verticals)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -962,6 +1663,9 @@
                   <!-- Dynamically populated based on hostType -->
                 </div>
                 <div class="flex items-center gap-1">
+                  <button onclick="applyStandardPodsToActiveRack()" class="px-2.5 py-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 border border-purple-600/60 rounded-lg text-xs font-semibold flex items-center gap-1 shadow transition-colors cursor-pointer" title="Apply Standard Architecture: 24P Modular Patch Panels directly above &amp; below each copper switch unit (including stacks), and 1U horizontal cable management in between fiber switches &amp; firewalls (not doubled up)">
+                    <i data-lucide="layers" class="w-3.5 h-3.5 text-purple-300"></i> Standard Pods (24P Above/Below)
+                  </button>
                   <button onclick="autoMountAllToActiveRack()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 shadow transition-colors" title="Automatically slot all compatible unmounted equipment">
                     <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Auto-Mount
                   </button>
@@ -1081,7 +1785,39 @@
           </div>
         </div>
       </div>
+      
+      <!-- View 3: Port Matrix Studio Frame inside Unified Studio -->
+      <div id="facilityPortMatrixView" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950 flex flex-col">
+        <!-- Port Matrix Header Bar inside Unified Studio -->
+        <div class="px-5 py-3 mb-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xl">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400">
+              <i data-lucide="cpu" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="text-sm font-bold text-white tracking-tight">Switch Port Matrix &amp; Interconnect Studio</span>
+                <span id="facilityPortMatrixSwitchBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">Port Studio</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-400 mt-1">
+                <span>Active Switch:</span>
+                <select id="facilityPortMatrixSwitchSelector" onchange="renderPortMatrixStudioContent(this.value)" class="bg-slate-950 border border-slate-700 text-sky-300 font-semibold rounded-lg px-3 py-1 text-xs focus:outline-none focus:border-sky-500 cursor-pointer min-w-[240px] max-w-[420px] truncate shadow-sm transition-all"></select>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="switchFacilityView('visualizer')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> View in Rack
+            </button>
+            <button type="button" onclick="jumpFromMatrixStudioToTopology()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-400"></i> View in Topology
+            </button>
+          </div>
+        </div>
 
+        <!-- Port Matrix Content Body -->
+        <div id="facilityPortMatrixBody" class="flex-1 overflow-y-auto space-y-5"></div>
+      </div>
     </div>
   </div>
 
@@ -1189,6 +1925,96 @@
     </div>
   </div>
 
+  <!-- Engineering Submittal & System Proposal Modal -->
+  <div id="engineeringSubmittalModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header (Hidden during print) -->
+      <div class="px-6 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 no-print shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-400">
+            <i data-lucide="file-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              Engineering Submittal & System Proposal
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand-950 text-brand-400 border border-brand-800">Printable Spec</span>
+            </h2>
+            <p class="text-[11px] text-slate-400">Formal contractor submittal package, equipment schedules, thermal dissipation, and field drop schedules.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="exportComprehensiveProjectCSV()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors" title="Export complete multi-section project CSV workbook">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i> Full CSV
+          </button>
+          <button onclick="printEngineeringSubmittal()" class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 transition-all" title="Print or save as high-resolution PDF document">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print / PDF
+          </button>
+          <button onclick="closeEngineeringSubmittalModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Scrollable Submittal Document Body -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-8" id="engineeringSubmittalModalContent">
+        <!-- Rendered dynamically by openEngineeringSubmittalModal() -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Technical Datasheet Viewer Modal -->
+  <div id="datasheetViewerModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4" onclick="if(event.target === this) closeDatasheetModal()">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-white flex items-center gap-2">
+              <span id="datasheetModalTitle">Product Engineering Datasheet</span>
+              <span id="datasheetModalSkuBadge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700">SKU</span>
+            </h2>
+            <p id="datasheetModalSubtitle" class="text-[11px] text-slate-400">Official manufacturer technical specifications, electrical ratings, port pinouts, and dimensional tolerances.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <a id="datasheetPopoutBtn" href="#" target="_blank" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors" title="Open PDF in new browser tab">
+            <i data-lucide="external-link" class="w-3.5 h-3.5 text-cyan-400"></i> Pop Out
+          </a>
+          <a id="datasheetDownloadBtn" href="#" download class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors" title="Download PDF document">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i> Download
+          </a>
+          <button onclick="closeDatasheetModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <!-- Embedded PDF Iframe -->
+      <div class="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center">
+        <iframe id="datasheetModalIframe" class="w-full h-full border-0" src="about:blank"></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Image Lightbox Modal -->
+  <div id="productImageModal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4" onclick="if(event.target === this) closeProductImageModal()">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden p-6 relative">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
+        <div>
+          <h3 id="productImageModalTitle" class="text-base font-bold text-white">Product Photo</h3>
+          <span id="productImageModalSku" class="text-xs font-mono text-slate-400"></span>
+        </div>
+        <button onclick="closeProductImageModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div class="flex-1 flex items-center justify-center bg-slate-950/80 rounded-xl p-6 border border-slate-800/80 overflow-hidden">
+        <img id="productImageModalImg" src="" alt="Product Photo" class="max-w-full max-h-[65vh] object-contain filter drop-shadow(0 10px 25px rgba(0,0,0,0.8)) transition-transform duration-300 hover:scale-105" />
+      </div>
+    </div>
+  </div>
+
   <!-- Global Toast Notification -->
   <div id="toastNotification" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 border border-slate-700 text-white text-xs px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2 pointer-events-none">
     <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400 shrink-0"></i>
@@ -1200,6 +2026,7 @@
   <script src="js/core/facility.js"></script>
 
   <!-- Sizing & Filtering Engines -->
+  <script src="js/engines/device_taxonomy.js"></script>
   <script src="js/engines/port_engine.js"></script>
   <script src="js/engines/sizer_network.js"></script>
   <script src="js/engines/search_filter.js"></script>
@@ -1216,6 +2043,7 @@
   <script src="js/tools/rack.js"></script>
   <script src="js/tools/bom.js"></script>
   <script src="js/tools/project_health.js"></script>
+  <script src="js/tools/project_wizard.js"></script>
 
   <!-- Master Application Orchestrator -->
   <script src="js/core/app.js"></script>

@@ -178,6 +178,41 @@ const CAMERAS_DATABASE = [
       "Impact-resistant cast aluminum housing rated IK10",
       "Operates seamlessly on IEEE 802.3af Class 3 PoE"
     ]
+  },
+  {
+    id: "bosch-flexidome-5100i-4k",
+    vendor: "Bosch",
+    model: "Bosch FLEXIDOME indoor 5100i 4K IR Dome",
+    sku: "NDV-5704-AL",
+    role: "Camera",
+    category: "cameras",
+    formFactor: "Dome (Indoor)",
+    resolution: "4K (8MP @ 30fps)",
+    sensorMegapixels: 8,
+    compression: "H.265 / H.264 / Intelligent Dynamic Noise Reduction",
+    streamBitrateMbps: 6.0,
+    poeStandard: "802.3af",
+    poeClass: "Class 3",
+    powerConsumptionWatts: 8.5,
+    maxPowerWatts: 11.5,
+    irIllumination: true,
+    irRangeMeters: 45,
+    lensType: "Varifocal 3.2-10.5mm Automatic Zoom/Focus",
+    fieldOfViewDeg: 96,
+    ipRating: "IP54",
+    ikRating: "IK10 Vandal-Resistant",
+    operatingTempMinC: -20,
+    operatingTempMaxC: 50,
+    weightLbs: 2.2,
+    msrp: 1040,
+    taa: true,
+    deepLearningAnalytics: true,
+    keyFeatures: [
+      "IVA Pro Buildings built-in deep learning object classification (persons and vehicles)",
+      "High Dynamic Range (HDR) 8MP UHD sensor for challenging architectural lighting",
+      "Modular design for rapid tool-less field installation",
+      "IEEE 802.3af Class 3 PoE power consumption"
+    ]
   }
 ];
 

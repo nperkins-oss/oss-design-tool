@@ -19,7 +19,7 @@ function saveBOMState() {
 // Meraki License Compliance
 // -----------------------------------------------------------
 function checkMerakiCompliance() {
-  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && i.vendor === "Meraki");
+  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && (i.vendor === "Meraki" || i.vendor === "Cisco"));
   if (!merakiDevices || merakiDevices.length === 0) return { compliant: true, missingCount: 0 };
 
   let unmanagedCount = 0;
@@ -35,7 +35,7 @@ function checkMerakiCompliance() {
 }
 
 function autoFixMerakiLicenses() {
-  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && i.vendor === "Meraki");
+  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && (i.vendor === "Meraki" || i.vendor === "Cisco"));
   merakiDevices.forEach(dev => {
     dev.selectedMgmtProfile = "cloud";
     const term = dev.individualTerm || globalSelectedTerm || "1YR";
@@ -50,27 +50,17 @@ function autoFixMerakiLicenses() {
 // View Mode Switcher
 // -----------------------------------------------------------
 function setBomViewMode(mode) {
-  bomViewMode = mode;
+  bomViewMode = (mode === "flat") ? "flat" : "grouped";
   const grpBtn = document.getElementById("bomViewMode-grouped");
   const fltBtn = document.getElementById("bomViewMode-flat");
 
-  if (mode === "grouped") {
-    if (grpBtn) {
-      grpBtn.classList.replace("text-slate-400", "text-white");
-      grpBtn.classList.replace("bg-slate-950", "bg-brand-600");
-    }
-    if (fltBtn) {
-      fltBtn.classList.replace("text-white", "text-slate-400");
-      fltBtn.classList.replace("bg-brand-600", "bg-slate-950");
-    }
-  } else {
-    if (fltBtn) {
-      fltBtn.classList.replace("text-slate-400", "text-white");
-      fltBtn.classList.replace("bg-slate-950", "bg-brand-600");
-    }
-    if (grpBtn) {
-      grpBtn.classList.replace("text-white", "text-slate-400");
-      grpBtn.classList.replace("bg-brand-600", "bg-slate-950");
+  if (grpBtn && fltBtn) {
+    if (bomViewMode === "grouped") {
+      grpBtn.className = "px-2.5 py-0.5 rounded font-medium text-white bg-brand-600 transition-colors cursor-pointer";
+      fltBtn.className = "px-2.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition-colors cursor-pointer";
+    } else {
+      fltBtn.className = "px-2.5 py-0.5 rounded font-medium text-white bg-brand-600 transition-colors cursor-pointer";
+      grpBtn.className = "px-2.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition-colors cursor-pointer";
     }
   }
 
@@ -84,12 +74,12 @@ function getAllDefinedLocations() {
   if (typeof FacilityStore !== "undefined") {
     return FacilityStore.getLocationNames(true); // Includes "Unassigned"
   }
-  return ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1", "Exterior Pole • NEMA-Box"];
+  return ["Unassigned"];
 }
 
 function renderBomLocationOptions(currentLocationKey, item = null) {
   if (typeof FacilityStore === "undefined") {
-    const locs = ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1"];
+    const locs = ["Unassigned"];
     return locs.map(l => `<option value="${escapeHTML(l)}" ${l === currentLocationKey ? 'selected' : ''}>${escapeHTML(l)}</option>`).join('');
   }
 
@@ -223,13 +213,18 @@ function addToProjectBOM(id, targetLocation = null) {
   const instanceId = `inst-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   
   // Resolve destination through FacilityStore
-  let assignedLoc = (sw.role === "Core" || sw.role === "Aggregation") ? "MDF • Rack-1" : "IDF-1 • Rack-1";
+  let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
   if (targetLocation && targetLocation !== "new_location") {
     assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  } else if (typeof FacilityStore !== "undefined") {
+    const locs = FacilityStore.getLocationNames(false);
+    if (locs.length > 0) {
+      assignedLoc = (sw.role === "Core" || sw.role === "Aggregation") ? (locs.find(l => l.includes("MDF")) || locs[0]) : (locs.find(l => l.includes("IDF")) || locs[0]);
+    }
   }
 
   const isDinOnly = sw.mounting && sw.mounting.includes("DIN") && !sw.mounting.includes("19\"");
-  let initialMgmtProfile = sw.defaultMgmtProfile || (sw.vendor === "Meraki" ? "cloud" : "standalone");
+  let initialMgmtProfile = sw.defaultMgmtProfile || ((sw.vendor === "Meraki" || sw.vendor === "Cisco") ? "cloud" : "standalone");
   const baseWatts = sw.role === "Core" ? 250 : (sw.role === "Aggregation" ? 150 : (sw.ports >= 48 ? 65 : 35));
 
   const newParent = {
@@ -328,6 +323,92 @@ function addToProjectBOM(id, targetLocation = null) {
     });
   }
 
+  // Hot-Swappable Fan Module
+  const fanSpareChecked = document.getElementById(`fanSpare-${sw.id}`)?.checked;
+  const fanSku = sw.fanSku || (sw.compatibleAccessories && sw.compatibleAccessories.includes('UACC-Fan-4020') ? 'UACC-Fan-4020' : null);
+  if (fanSpareChecked && fanSku) {
+    const fan = (typeof POWER_SUPPLY_CATALOG !== "undefined" && POWER_SUPPLY_CATALOG[fanSku]) || { sku: fanSku, name: "UniFi Hot-Swappable Fan Module (40x20mm)", msrp: 49 };
+    projectBOM.push({
+      instanceId: `fan-${instanceId}`,
+      parentInstanceId: instanceId,
+      id: fan.sku,
+      model: `Hot-Swap Fan: ${fan.name}`,
+      sku: fan.sku,
+      role: "Cooling & Fans",
+      category: "Accessory",
+      vendor: sw.vendor,
+      msrp: fan.msrp || 49,
+      poeBudget: 0,
+      baseWatts: 2,
+      qty: 1
+    });
+  }
+
+  // Mounting Hardware (Sliding Rails, Rack Kits, Utility Enclosures, Shelves)
+  const mountSelect = document.getElementById(`mountSelect-${sw.id}`);
+  let selectedMountSku = mountSelect ? mountSelect.value : null;
+
+  // Auto-select mount based on destination environment
+  const assignedLocLower = (assignedLoc || "").toLowerCase();
+  const isDestEnclosure = assignedLocLower.includes("enclosure") || assignedLocLower.includes("nema") || assignedLocLower.includes("trove") || assignedLocLower.includes("box");
+  const isDestRack = !isDestEnclosure && (assignedLocLower.includes("rack") || assignedLocLower.includes("cabinet") || assignedLocLower.includes("mdf") || assignedLocLower.includes("idf"));
+  const isDestOutdoor = assignedLocLower.includes("pole") || assignedLocLower.includes("outdoor") || assignedLocLower.includes("exterior") || assignedLocLower.includes("utility");
+
+  // Check if target location already has an enclosure in projectBOM
+  const hasExistingEnclosureInBOM = projectBOM.some(i => 
+    (i.closetName === assignedLoc || i.rackId === assignedLoc) && 
+    (i.category === "enclosure" || i.category === "outdoor_enclosure" || i.sku === "USW-Flex-Utility" || i.sku === "NF141208" || i.sku === "Trove1WP1")
+  );
+
+  if (sw.sku === "USW-Flex") {
+    if (selectedMountSku === "3rd_party_enclosure" || selectedMountSku === "included") {
+      // User explicitly selected included mount or 3rd-party enclosure - preserve choice!
+    } else if (isDestEnclosure || hasExistingEnclosureInBOM) {
+      selectedMountSku = "3rd_party_enclosure";
+    } else if (isDestOutdoor) {
+      selectedMountSku = "USW-Flex-Utility";
+    } else if (isDestRack) {
+      selectedMountSku = "UACC-Rack-Shelf-SD";
+    } else if (selectedMountSku === "UACC-Rack-Shelf-SD") {
+      selectedMountSku = "included";
+    }
+  } else if (sw.sku && sw.sku.includes("Pro-Max-16")) {
+    if (isDestRack) {
+      selectedMountSku = "UACC-Pro-Max-16-RM";
+    } else if (selectedMountSku === "UACC-Pro-Max-16-RM" && !isDestRack) {
+      selectedMountSku = "included";
+    }
+  } else if (!selectedMountSku) {
+    selectedMountSku = "included";
+  }
+
+  newParent.selectedMountSku = selectedMountSku;
+
+  if (selectedMountSku && selectedMountSku !== "included" && selectedMountSku !== "3rd_party_enclosure" && selectedMountSku !== "none") {
+    const mountItem = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG[selectedMountSku]) ||
+                      (typeof CatalogRegistry !== "undefined" && CatalogRegistry.get(selectedMountSku));
+    if (mountItem) {
+      projectBOM.push({
+        instanceId: `mount-${instanceId}`,
+        parentInstanceId: instanceId,
+        id: mountItem.sku || selectedMountSku,
+        model: `Mount Hardware: ${mountItem.name || mountItem.model}`,
+        sku: mountItem.sku || selectedMountSku,
+        role: "Mounting Hardware",
+        category: "Infrastructure",
+        vendor: sw.vendor || "UniFi",
+        msrp: mountItem.msrp || 0,
+        rackUnits: mountItem.rackUnits || 0,
+        closetName: assignedLoc,
+        rackId: assignedLoc,
+        qty: 1
+      });
+      if (mountItem.rackUnits && mountItem.rackUnits > 0) {
+        newParent.rackUnits = mountItem.rackUnits;
+      }
+    }
+  }
+
   if (sw.needsExternalPsu && sw.psuSku && POWER_SUPPLY_CATALOG[sw.psuSku]) {
     const psu = POWER_SUPPLY_CATALOG[sw.psuSku];
     projectBOM.push({
@@ -345,13 +426,171 @@ function addToProjectBOM(id, targetLocation = null) {
     });
   }
 
-  if (sw.vendor === "Meraki") {
+  if (sw.vendor === "Meraki" || sw.vendor === "Cisco") {
     applyManagementSubscription(instanceId, "cloud", globalSelectedTerm || "1YR");
   }
 
   FacilityStore.notifyWorkspaceChange();
   showToast(`Added ${sw.model} to ${assignedLoc}`);
 }
+
+// -----------------------------------------------------------
+// Dynamic Auto-Selection of Hardware Mounts & Accessories
+// Auto-attaches required kits when items are assigned/mounted to Racks or Enclosures
+// -----------------------------------------------------------
+function autoSelectMountingForHost(item, targetLocation, hostType = null) {
+  if (!item || !targetLocation || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const sku = (item.sku || "").trim();
+  const model = item.model || "";
+  const locStr = (targetLocation || "").toLowerCase();
+  
+  let resolvedHostType = hostType;
+  if (!resolvedHostType && typeof FacilityStore !== "undefined" && typeof FacilityStore.parse === "function") {
+    const parsed = FacilityStore.parse(targetLocation);
+    resolvedHostType = parsed.hostType;
+  }
+  const isEnclosure = resolvedHostType === "industrial_din" || resolvedHostType === "security_cabinet" || locStr.includes("enclosure") || locStr.includes("nema") || locStr.includes("trove") || locStr.includes("box");
+  const isRack = !isEnclosure && (resolvedHostType === "equipment_rack" || locStr.includes("rack") || locStr.includes("cabinet") || locStr.includes("mdf") || locStr.includes("idf"));
+  const isOutdoorOrPole = resolvedHostType === "structural_mount" || locStr.includes("pole") || locStr.includes("outdoor") || locStr.includes("exterior") || locStr.includes("utility");
+
+  // 1. USW-Pro-Max-16 in 19" Equipment Rack
+  if (isRack && sku.includes("Pro-Max-16")) {
+    const hasMount = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "UACC-Pro-Max-16-RM" || ch.role === "Mounting Hardware"));
+    if (!hasMount) {
+      const mountKit = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-Pro-Max-16-RM"]) || {
+        sku: "UACC-Pro-Max-16-RM",
+        name: "UniFi Pro Max 16 Rack Mount Kit",
+        msrp: 29
+      };
+      projectBOM.push({
+        instanceId: `mount-pmax16-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        parentInstanceId: item.instanceId,
+        id: mountKit.sku,
+        sku: mountKit.sku,
+        model: `1U Rackmount Kit: ${mountKit.name || mountKit.model}`,
+        role: "Mounting Hardware",
+        category: "Infrastructure",
+        vendor: item.vendor || "UniFi",
+        msrp: mountKit.msrp || 29,
+        rackUnits: 0,
+        closetName: targetLocation,
+        rackId: targetLocation,
+        qty: 1
+      });
+      item.rackUnits = 1;
+      if (typeof showToast === "function") {
+        showToast(`Auto-selected 1U Rack Mount Kit (UACC-Pro-Max-16-RM) for ${model}`);
+      }
+    }
+  }
+
+  // 2. USW-Flex on Outdoor Pole, Exterior Location, or Enclosure
+  if (isOutdoorOrPole && sku === "USW-Flex") {
+    // Check if location is already an enclosure or has an outdoor enclosure item in BOM
+    const hasEnclosureInBOM = projectBOM.some(ch => 
+      (ch.closetName === targetLocation || ch.rackId === targetLocation) &&
+      (ch.category === "enclosure" || ch.category === "outdoor_enclosure" || ch.sku === "USW-Flex-Utility" || ch.sku === "NF141208" || ch.sku === "Trove1WP1")
+    );
+    const isUserExplicitNonUtility = item.selectedMountSku === "included" || 
+                                     item.selectedMountSku === "3rd_party_enclosure" ||
+                                     item.mountingOption === "included" ||
+                                     item.mountingOption === "3rd_party_enclosure";
+
+    if (isEnclosure || hasEnclosureInBOM || isUserExplicitNonUtility) {
+      // USW-Flex mounted inside existing/3rd-party enclosure using included plate/magnetic base
+      if (typeof showToast === "function" && (isEnclosure || hasEnclosureInBOM)) {
+        showToast(`USW-Flex deployed inside ${targetLocation} using included mounting bracket`);
+      }
+      return;
+    }
+
+    const hasUtility = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "USW-Flex-Utility" || ch.role === "Mounting Hardware" || ch.category === "enclosure"));
+    if (!hasUtility) {
+      const utilItem = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["USW-Flex-Utility"]) || {
+        sku: "USW-Flex-Utility",
+        name: "UniFi Switch Flex Outdoor Weatherproof Enclosure (60W PoE)",
+        msrp: 58
+      };
+      projectBOM.push({
+        instanceId: `util-flex-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        parentInstanceId: item.instanceId,
+        id: utilItem.sku,
+        sku: utilItem.sku,
+        model: `Outdoor Enclosure: ${utilItem.name || utilItem.model}`,
+        role: "Mounting Hardware",
+        category: "Infrastructure",
+        vendor: item.vendor || "UniFi",
+        msrp: utilItem.msrp || 58,
+        rackUnits: 0,
+        closetName: targetLocation,
+        rackId: targetLocation,
+        qty: 1
+      });
+      if (typeof showToast === "function") {
+        showToast(`Auto-selected Outdoor Utility Enclosure (USW-Flex-Utility) for ${model}`);
+      }
+    }
+  }
+
+  // 3. Compact 0U Switches in 19" Equipment Rack (Shelf allocation)
+  if (isRack && (sku === "USW-Flex" || sku === "USW-Flex-Mini" || sku.includes("Ultra") || sku === "USW-Lite-8-PoE")) {
+    item.rackUnits = 1;
+    const hasShelf = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "UACC-Rack-Shelf-SD" || ch.role === "Mounting Hardware"));
+    if (!hasShelf) {
+      const shelfItem = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-Rack-Shelf-SD"]) || {
+        sku: "UACC-Rack-Shelf-SD",
+        name: "UniFi 1U Cantilever Shallow Rack Shelf",
+        msrp: 49
+      };
+      projectBOM.push({
+        instanceId: `shelf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        parentInstanceId: item.instanceId,
+        id: shelfItem.sku,
+        sku: shelfItem.sku,
+        model: `1U Rack Shelf: ${shelfItem.name || shelfItem.model}`,
+        role: "Mounting Hardware",
+        category: "Infrastructure",
+        vendor: item.vendor || "UniFi",
+        msrp: shelfItem.msrp || 49,
+        rackUnits: 0,
+        closetName: targetLocation,
+        rackId: targetLocation,
+        qty: 1
+      });
+      if (typeof showToast === "function") {
+        showToast(`Auto-selected 1U Cantilever Rack Shelf (UACC-Rack-Shelf-SD) for ${model} in rack`);
+      }
+    }
+  }
+}
+window.autoSelectMountingForHost = autoSelectMountingForHost;
+
+function cleanupMountingForHost(item, targetLocation, hostType = null) {
+  if (!item || !targetLocation || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const locStr = (targetLocation || "").toLowerCase();
+  const isUnassignedOrDesktop = locStr.includes("unassigned") || locStr.includes("desktop") || locStr.includes("table");
+  const isEnclosure = hostType === "industrial_din" || hostType === "security_cabinet" || locStr.includes("enclosure") || locStr.includes("nema") || locStr.includes("trove") || locStr.includes("box");
+
+  if (isUnassignedOrDesktop) {
+    projectBOM = projectBOM.filter(ch => {
+      if (ch.parentInstanceId !== item.instanceId) return true;
+      if (ch.sku === "UACC-Pro-Max-16-RM" || ch.sku === "UACC-Rack-Shelf-SD" || ch.sku === "USW-Flex-Utility") {
+        return false;
+      }
+      return true;
+    });
+  } else if (isEnclosure && item.sku === "USW-Flex") {
+    // If moving into an enclosure, remove standalone pole utility box if it was previously auto-added
+    projectBOM = projectBOM.filter(ch => {
+      if (ch.parentInstanceId !== item.instanceId) return true;
+      if (ch.sku === "USW-Flex-Utility") {
+        return false;
+      }
+      return true;
+    });
+  }
+}
+window.cleanupMountingForHost = cleanupMountingForHost;
 
 function applyManagementSubscription(instanceId, profileKey, term) {
   const sw = projectBOM.find(i => i.instanceId === instanceId);
@@ -408,24 +647,148 @@ function updateStackedCount(instanceId, count) {
 }
 
 function applyStackCabling(item) {
-  const cableSku = item.stackCableSku || "STACK-DAC-1M";
+  const baseCableSku = item.stackCableSku || "STACK-DAC-1M";
   projectBOM = projectBOM.filter(i => !(i.role === "Stacking Cable" && i.parentInstanceId === item.instanceId));
+  projectBOM = projectBOM.filter(i => !(i.source === "stack_patch_panel" && i.parentInstanceId === item.instanceId));
+  projectBOM = projectBOM.filter(i => !(i.source === "stack_cable_manager" && i.parentInstanceId === item.instanceId));
 
   if (item.stackedUnits >= 2) {
+    const baseRU = parseInt(item.rackUnits, 10) || 1;
+    const interleaveU = (item.patchPanelBetween ? item.stackedUnits - 1 : 0) + (item.cableManagerBetween ? item.stackedUnits - 1 : 0);
+    const stackSpanU = ((item.stackedUnits - 1) * baseRU) + interleaveU;
+
+    // Stack cable length dynamically adjusted for member U-span
+    let stackCableLen = "0.5m";
+    if (stackSpanU >= 7) stackCableLen = "2m";
+    else if (stackSpanU >= 3) stackCableLen = "1m";
+
+    let resolvedSku = baseCableSku;
+    let resolvedName = `${item.vendor} Dedicated Hardware Stacking Cable (${stackCableLen} • ${stackSpanU}U Stack Span)`;
+    let resolvedMsrp = 180;
+    if (typeof formatDacItem === "function") {
+      const fmt = formatDacItem(baseCableSku, `${item.vendor} Dedicated Hardware Stacking Cable`, 180, stackCableLen, "40G", item.vendor);
+      resolvedSku = fmt.sku;
+      resolvedName = `${fmt.name} (${item.closetName || 'Rack'} • ${stackSpanU}U Stack Span)`;
+      resolvedMsrp = fmt.msrp;
+    }
+
     projectBOM.push({
       instanceId: `cable-${item.instanceId}`,
       parentInstanceId: item.instanceId,
       id: `${item.id}-stack-cable`,
-      model: `${item.vendor} Dedicated Hardware Stacking Cable (${item.closetName})`,
-      sku: cableSku,
+      model: resolvedName,
+      sku: resolvedSku,
       role: "Stacking Cable",
       vendor: item.vendor,
-      msrp: 180,
+      msrp: resolvedMsrp,
       poeBudget: 0,
       baseWatts: 0,
+      stackCableLength: stackCableLen,
+      uDiff: stackSpanU,
       qty: item.stackedUnits
     });
+
+    if (item.patchPanelBetween) {
+      projectBOM.push({
+        instanceId: `stack-pp-${item.instanceId}`,
+        parentInstanceId: item.instanceId,
+        source: "stack_patch_panel",
+        id: `${item.id}-stack-pp`,
+        model: `1U 24-Port High-Density Modular Keystone Patch Panel (In-Stack Interleave)`,
+        sku: "PP-1U-24P-MOD",
+        role: "Structured Cabling",
+        category: "Infrastructure",
+        vendor: "Panduit",
+        msrp: 68,
+        rackUnits: 1,
+        ports: 24,
+        poeBudget: 0,
+        baseWatts: 0,
+        closetName: item.closetName,
+        rackId: item.rackId,
+        qty: item.stackedUnits - 1
+      });
+    }
+
+    if (item.cableManagerBetween) {
+      projectBOM.push({
+        instanceId: `stack-hcm-${item.instanceId}`,
+        parentInstanceId: item.instanceId,
+        source: "stack_cable_manager",
+        id: `${item.id}-stack-hcm`,
+        model: `1U Horizontal Cable Manager with Dual-Hinged Cover (In-Stack Management)`,
+        sku: "HCM-1U",
+        role: "Structured Cabling",
+        category: "Infrastructure",
+        vendor: "Panduit",
+        msrp: 45,
+        rackUnits: 1,
+        ports: 0,
+        poeBudget: 0,
+        baseWatts: 0,
+        closetName: item.closetName,
+        rackId: item.rackId,
+        qty: item.stackedUnits - 1
+      });
+    }
   }
+
+  if (item.standardPod) {
+    applyStandardPodCabling(item);
+  }
+}
+
+function applyStandardPodCabling(item) {
+  projectBOM = projectBOM.filter(i => !(i.source === "switch_standard_pod" && i.parentInstanceId === item.instanceId));
+
+  if (!item.standardPod) return;
+
+  const stackMultiplier = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+  const switchPorts = (parseInt(item.ports, 10) || 24);
+  const patchCordQty = switchPorts * stackMultiplier;
+  const panelQty = 2 * stackMultiplier; // 1 above + 1 below per switch unit
+
+  // 1. Add Upper and Lower 24-Port Modular Keystone Patch Panels
+  projectBOM.push({
+    instanceId: `pod-pp-${item.instanceId}`,
+    parentInstanceId: item.instanceId,
+    source: "switch_standard_pod",
+    id: `${item.id}-pod-pp`,
+    model: `1U 24-Port High-Density Modular Keystone Patch Panel (Standard Pod: Above & Below)`,
+    sku: "PP-1U-24P-MOD",
+    role: "Structured Cabling",
+    category: "Infrastructure",
+    vendor: "Panduit",
+    msrp: 68,
+    rackUnits: 1,
+    ports: 24,
+    poeBudget: 0,
+    baseWatts: 0,
+    closetName: item.closetName,
+    rackId: item.rackId,
+    qty: panelQty
+  });
+
+  // 2. Add 6-Inch Cat6A Slim Patch Cords
+  projectBOM.push({
+    instanceId: `pod-patch-cables-${item.instanceId}`,
+    parentInstanceId: item.instanceId,
+    source: "switch_standard_pod",
+    id: `${item.id}-pod-patch-cables`,
+    model: `Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, Blue)`,
+    sku: "C6A-SLIM-6IN-BL",
+    role: "Structured Cabling",
+    category: "Infrastructure",
+    vendor: "Panduit",
+    msrp: 6.20,
+    rackUnits: 0,
+    lengthFt: 0.5,
+    poeBudget: 0,
+    baseWatts: 0,
+    closetName: item.closetName,
+    rackId: item.rackId,
+    qty: patchCordQty
+  });
 }
 
 function updateDeviceMountMethod(instanceId, method) {
@@ -560,34 +923,67 @@ function addFirewallToBOM(sku, targetLocation = null) {
 
   const qtyToAdd = 1;
   const instanceId = `fw-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  const defaultLoc = typeof FacilityStore !== "undefined"
-    ? (targetLocation ? FacilityStore.normalize(targetLocation) : "MDF • Rack-1")
-    : "MDF • Rack-1";
+  let defaultLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
+  if (targetLocation && targetLocation !== "new_location") {
+    defaultLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  } else if (typeof FacilityStore !== "undefined") {
+    const locs = FacilityStore.getLocationNames(false);
+    if (locs.length > 0) {
+      defaultLoc = locs.find(l => l.includes("MDF")) || locs[0];
+    }
+  }
 
-  projectBOM.push({
+  const ifText = fw.interfaces || "";
+  let speed = fw.maxBackboneSpeed || fw.portSpeed || "10G";
+  if (ifText.includes("25G") || ifText.includes("SFP28")) speed = "25G";
+  else if (ifText.includes("10G") || ifText.includes("SFP+")) speed = "10G";
+  else if (ifText.includes("2.5G") || ifText.includes("2.5GbE")) speed = "2.5G";
+  else if (ifText.includes("1G") || ifText.includes("SFP") || ifText.includes("1GbE")) speed = "1G";
+
+  const bomItem = {
     instanceId: instanceId,
     id: fw.sku,
     model: fw.model,
     sku: fw.sku,
-    role: "Security WAN",
+    role: fw.role || "Security WAN",
+    category: fw.category || "firewall",
     vendor: fw.vendor,
     msrp: fw.msrp,
     ports: fw.ports || 4,
-    poeBudget: 0,
-    baseWatts: 45,
-    rackUnits: fw.rackUnits || 1,
-    depthInches: 17.5,
-    shallowDepth: false,
+    interfaces: fw.interfaces || "",
+    wanPorts: fw.wanPorts || "",
+    portFormFactorSummary: fw.portFormFactorSummary || fw.interfaces || "",
+    uplinksSummary: fw.uplinksSummary || (ifText.includes("SFP") || ifText.includes("QSFP") ? ifText : ""),
+    maxBackboneSpeed: speed,
+    portSpeed: speed,
+    poeBudget: fw.poeBudget || 0,
+    poeAfPorts: fw.poeAfPorts || 0,
+    poeAtPorts: fw.poeAtPorts || 0,
+    baseWatts: fw.baseWatts || 45,
+    maxPowerWatts: fw.maxPowerWatts || fw.baseWatts || 60,
+    rackUnits: (fw.rackUnits !== undefined) ? fw.rackUnits : 1,
+    depthInches: fw.depthInches || 11.2,
+    shallowDepth: !!fw.shallowDepth,
     qty: qtyToAdd,
     closetName: defaultLoc,
     rackId: defaultLoc,
     rackSlot: null,
     rackU: null,
-    isDinMounted: fw.category === "cellular",
+    isDinMounted: !!fw.isDinMounted || fw.category === "cellular",
     selectedMgmtProfile: fw.category === "cellular" ? "standalone" : (fw.vendor === "Meraki" ? "cloud" : "standalone"),
     uplinkTargetId: null,
-    powerSource: "internal_psu"
-  });
+    powerSource: fw.powerSource || "internal_psu",
+    dualPsu: !!fw.dualPsu,
+    statefulThroughput: fw.statefulThroughput || "",
+    threatThroughput: fw.threatThroughput || "",
+    vpnThroughput: fw.vpnThroughput || ""
+  };
+
+  if (typeof PortEngine !== "undefined" && typeof PortEngine.initSwitchPorts === "function") {
+    PortEngine.initSwitchPorts(bomItem);
+  }
+
+  projectBOM.push(bomItem);
 
   FacilityStore.notifyWorkspaceChange();
   showToast(`Added ${fw.model} Gateway to ${defaultLoc}`);
@@ -618,9 +1014,14 @@ function addServerToBOM(serverId, targetLocation = null) {
   if (!srv) return;
 
   const instanceId = `srv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  let assignedLoc = "MDF • Rack-1";
+  let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
   if (targetLocation && targetLocation !== "new_location") {
     assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  } else if (typeof FacilityStore !== "undefined") {
+    const locs = FacilityStore.getLocationNames(false);
+    if (locs.length > 0) {
+      assignedLoc = locs.find(l => l.includes("MDF")) || locs[0];
+    }
   }
 
   projectBOM.push({
@@ -662,14 +1063,19 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
   if (!cam) return;
 
   const instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  let assignedLoc = "IDF-1 • Rack-1";
+  let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
   if (targetLocation && targetLocation !== "new_location") {
     assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  } else if (typeof FacilityStore !== "undefined") {
+    const locs = FacilityStore.getLocationNames(false);
+    if (locs.length > 0) {
+      assignedLoc = locs.find(l => l.includes("IDF")) || locs[0];
+    }
   }
 
   // Auto-resolve uplink switch if not explicitly provided
   let targetSwitchId = uplinkTargetId;
-  if (!targetSwitchId) {
+  if (!targetSwitchId && assignedLoc !== (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned")) {
     const sw = projectBOM.find(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core") && FacilityStore.normalize(i.closetName) === assignedLoc);
     if (sw) targetSwitchId = sw.instanceId;
   }
@@ -700,6 +1106,24 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
     assignedRecordingServerId: null
   };
 
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : null;
+
+  if (defs && defs.vms && defs.vms.promptAnalytics) {
+    const hasAI = cam.deepLearningAnalytics || (cam.keyFeatures && cam.keyFeatures.some(f => /deep learning|dlpu|artpec|analytics|iva|object classification|ngva/i.test(f)));
+    if (hasAI) {
+      newCam.videoAnalyticsEnabled = true;
+      newCam.analyticsProfile = cam.vendor === "Axis Communications"
+        ? "Axis Object Analytics (AOA - DLPU)"
+        : (cam.vendor === "Hanwha Vision"
+            ? "Hanwha AI Object Detection (Person/Vehicle/Face)"
+            : (cam.vendor === "Bosch"
+                ? "Bosch IVA Pro Buildings"
+                : (cam.vendor === "Avigilon" ? "Avigilon Next-Gen Video Analytics (NGVA)" : "AI Video Analytics")));
+    }
+  }
+
   projectBOM.push(newCam);
 
   if (typeof PortEngine !== "undefined") {
@@ -707,11 +1131,17 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
     if (targetSwitchId) {
       const sw = projectBOM.find(i => i.instanceId === targetSwitchId);
       if (sw) PortEngine.allocatePort(sw, newCam);
+    } else {
+      PortEngine.autoAssignDeviceToClosetSwitch(newCam, assignedLoc);
     }
   }
 
   FacilityStore.notifyWorkspaceChange();
-  showToast(`Added ${cam.model} to quote`);
+  if (newCam.videoAnalyticsEnabled) {
+    showToast(`Added ${cam.model} (${newCam.analyticsProfile})`);
+  } else {
+    showToast(`Added ${cam.model} to quote`);
+  }
 }
 
 function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = null) {
@@ -720,13 +1150,18 @@ function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = 
   if (!dev) return;
 
   const instanceId = `acc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  let assignedLoc = "IDF-1 • Rack-1";
+  let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
   if (targetLocation && targetLocation !== "new_location") {
     assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+  } else if (typeof FacilityStore !== "undefined") {
+    const locs = FacilityStore.getLocationNames(false);
+    if (locs.length > 0) {
+      assignedLoc = locs.find(l => l.includes("IDF")) || locs[0];
+    }
   }
 
   let targetSwitchId = uplinkTargetId;
-  if (!targetSwitchId) {
+  if (!targetSwitchId && assignedLoc !== (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned")) {
     const sw = projectBOM.find(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core") && FacilityStore.normalize(i.closetName) === assignedLoc);
     if (sw) targetSwitchId = sw.instanceId;
   }
@@ -763,6 +1198,8 @@ function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = 
     if (targetSwitchId) {
       const sw = projectBOM.find(i => i.instanceId === targetSwitchId);
       if (sw) PortEngine.allocatePort(sw, newAcc);
+    } else {
+      PortEngine.autoAssignDeviceToClosetSwitch(newAcc, assignedLoc);
     }
   }
 
@@ -780,13 +1217,23 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
   const antSelect = document.getElementById(`wl-ant-${radio.id}`);
   const licChecked = document.getElementById(`wl-lic-${radio.id}`)?.checked;
 
+  let defaultClosetA = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
+  let defaultClosetB = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
+  if (typeof FacilityStore !== "undefined") {
+    const locs = FacilityStore.getLocationNames(false);
+    if (locs.length > 0) {
+      defaultClosetA = locs.find(l => l.includes("MDF")) || locs[0];
+      defaultClosetB = locs.find(l => l.toLowerCase().includes("pole") || l.includes("IDF")) || locs[0];
+    }
+  }
+
   const rolesToCreate = isMatchedPair 
     ? [
-        { label: "PtP Local Master", defaultCloset: "MDF • Rack-1", defaultPower: "poe_switch" },
-        { label: "PtP Remote Substation", defaultCloset: "Exterior Pole • NEMA-Box", defaultPower: "local_injector" }
+        { label: "PtP Local Master", defaultCloset: defaultClosetA, defaultPower: "poe_switch" },
+        { label: "PtP Remote Substation", defaultCloset: defaultClosetB, defaultPower: "local_injector" }
       ]
     : [
-        { label: radio.topology === "PtMP-AP" ? "PtMP BaseStation AP" : "Wireless Radio", defaultCloset: "Exterior Pole • NEMA-Box", defaultPower: "poe_switch" }
+        { label: radio.topology === "PtMP-AP" ? "PtMP BaseStation AP" : "Wireless Radio", defaultCloset: defaultClosetB, defaultPower: "poe_switch" }
       ];
 
   const linkPairId = `link-${Date.now()}`;
@@ -895,14 +1342,103 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
   showToast(isMatchedPair ? `Added 2-Radio Link Pair (${radio.model}) with split endpoints.` : `Added ${radio.model} to BOM.`);
 }
 
+/**
+ * Ensures all cameras exist as discrete individual BOM line items (qty: 1 each)
+ * so they can be placed individually on physical, topology, and enclosure layouts.
+ */
+function unbundleMultiQtyCameras(bom = null) {
+  const targetBom = bom || projectBOM;
+  if (!Array.isArray(targetBom)) return false;
+
+  let didUnbundle = false;
+  for (let i = targetBom.length - 1; i >= 0; i--) {
+    const item = targetBom[i];
+    if (!item) continue;
+    const isCamera = item.role === "Camera" || item.role === "Surveillance" || item.role === "Video" ||
+                     (item.category && item.category.toLowerCase().includes("camera")) ||
+                     (item.deviceTypePrefix === "CAM" || item.deviceTypePrefix === "LPR") ||
+                     (typeof DeviceTaxonomy !== "undefined" && DeviceTaxonomy.getDeviceType && ["CAM", "LPR"].includes(DeviceTaxonomy.getDeviceType(item).prefix));
+
+    if (isCamera && item.qty > 1) {
+      didUnbundle = true;
+      const count = item.qty;
+      item.qty = 1;
+
+      // Clear combined range suffix in custom friendly name
+      if (item.customFriendlyName && /-\d+$/.test(item.customFriendlyName)) {
+        item.customFriendlyName = null;
+      }
+      item.deviceNumber = null;
+      item.friendlyName = null;
+
+      for (let k = 1; k < count; k++) {
+        const cloned = JSON.parse(JSON.stringify(item));
+        cloned.instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}-u${k}`;
+        cloned.qty = 1;
+        cloned.customFriendlyName = null;
+        cloned.deviceNumber = null;
+        cloned.friendlyName = null;
+        targetBom.splice(i + k, 0, cloned);
+
+        if (typeof PortEngine !== "undefined") {
+          PortEngine.initDeviceInterfaces(cloned);
+          if (cloned.uplinkTargetId) {
+            const sw = targetBom.find(s => s.instanceId === cloned.uplinkTargetId);
+            if (sw) PortEngine.allocatePort(sw, cloned);
+          }
+        }
+      }
+    }
+  }
+
+  if (didUnbundle && typeof DeviceTaxonomy !== "undefined") {
+    DeviceTaxonomy.recalculateNumbers(targetBom);
+  }
+
+  return didUnbundle;
+}
+
 function changeBomQty(instanceId, delta) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
+
+  const isCamera = item.role === "Camera" || item.role === "Surveillance" || item.role === "Video" ||
+                   (item.category && item.category.toLowerCase().includes("camera")) ||
+                   (item.deviceTypePrefix === "CAM" || item.deviceTypePrefix === "LPR") ||
+                   (typeof DeviceTaxonomy !== "undefined" && DeviceTaxonomy.getDeviceType && ["CAM", "LPR"].includes(DeviceTaxonomy.getDeviceType(item).prefix));
+
+  if (isCamera && delta > 0) {
+    // Individual camera requirement: spawn a discrete individual camera unit!
+    const cloned = JSON.parse(JSON.stringify(item));
+    cloned.instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    cloned.qty = 1;
+    cloned.customFriendlyName = null;
+    cloned.deviceNumber = null;
+    cloned.friendlyName = null;
+
+    const idx = projectBOM.indexOf(item);
+    projectBOM.splice(idx + 1, 0, cloned);
+
+    if (typeof PortEngine !== "undefined") {
+      PortEngine.initDeviceInterfaces(cloned);
+      if (cloned.uplinkTargetId) {
+        const sw = projectBOM.find(i => i.instanceId === cloned.uplinkTargetId);
+        if (sw) PortEngine.allocatePort(sw, cloned);
+      }
+    }
+
+    FacilityStore.notifyWorkspaceChange();
+    showToast(`Added individual camera unit (${item.model})`);
+    return;
+  }
 
   item.qty += delta;
 
   if (item.qty <= 0) {
     projectBOM = projectBOM.filter(i => i.instanceId !== instanceId && i.parentInstanceId !== instanceId);
+    if (typeof removePhysicalLayoutDropByInstanceId === "function") {
+      removePhysicalLayoutDropByInstanceId(instanceId);
+    }
   } else {
     if (item.stackedUnits > item.qty) {
       item.stackedUnits = item.qty >= 2 ? item.qty : 0;
@@ -920,22 +1456,91 @@ function changeBomQty(instanceId, delta) {
 }
 
 function removeBomItem(instanceId) {
+  deleteDeviceFromBOM(instanceId, true);
+}
+
+function deleteDeviceFromBOM(instanceId, skipConfirm = false) {
+  if (!instanceId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  const name = item ? (item.friendlyName || item.model || "Device") : "Device";
+
+  if (!skipConfirm) {
+    if (!confirm(`Are you sure you want to permanently delete "${name}" from the project quote BOM?`)) {
+      return;
+    }
+  }
+
+  // 1. Remove device and all child line items (optics, licenses, mounts)
   projectBOM = projectBOM.filter(i => i.instanceId !== instanceId && i.parentInstanceId !== instanceId);
-  FacilityStore.notifyWorkspaceChange();
-  showToast("Item removed from BOM.");
+
+  // 2. Remove physical layout canvas drop if present
+  if (typeof removePhysicalLayoutDropByInstanceId === "function") {
+    removePhysicalLayoutDropByInstanceId(instanceId);
+  }
+
+  // 3. Clean up topology links referencing this device
+  if (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) {
+    topologyLinks = topologyLinks.filter(l => l.fromId !== instanceId && l.toId !== instanceId);
+  }
+
+  // 4. Clear any uplink or server associations referencing this device
+  projectBOM.forEach(i => {
+    if (i.uplinkTargetId === instanceId) i.uplinkTargetId = null;
+    if (i.customUplinkTargetId === instanceId) i.customUplinkTargetId = null;
+    if (i.assignedRecordingServerId === instanceId) i.assignedRecordingServerId = null;
+    if (i.assignedAccessServerId === instanceId) i.assignedAccessServerId = null;
+    if (i.assignedVmsServerId === instanceId) i.assignedVmsServerId = null;
+  });
+
+  // 5. Deselect in topology if selected
+  if (typeof selectedTopologyNodeId !== "undefined" && selectedTopologyNodeId === instanceId) {
+    if (typeof deselectTopologyNode === "function") deselectTopologyNode();
+  }
+
+  // 6. Notify workspace and re-render all active UI tools
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  if (typeof renderTopology === "function") renderTopology();
+  if (typeof renderTopologyInspector === "function") renderTopologyInspector();
+  if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+  if (typeof renderCableCanvas === "function") renderCableCanvas();
+  if (typeof renderInspector === "function") renderInspector();
+  if (typeof renderBOM === "function") renderBOM();
+  if (typeof updateBOMBadge === "function") updateBOMBadge();
+  if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+    StorageService.queueAutoSave();
+  }
+  if (typeof showToast === "function") {
+    showToast(`Deleted ${name} from project BOM.`);
+  }
 }
 
 function clearBom() {
   if (projectBOM.length === 0) return;
   if (!confirm("Are you sure you want to clear the entire Project BOM?")) return;
   projectBOM = [];
+  if (typeof clearPhysicalLayoutDrops === "function") {
+    clearPhysicalLayoutDrops();
+  }
   FacilityStore.notifyWorkspaceChange();
   showToast("Project BOM reset.");
 }
 
 function toggleBomDrawer() {
   const drawer = document.getElementById("bomDrawer");
-  if (drawer) drawer.classList.toggle("translate-x-full");
+  if (!drawer) return;
+  const isOpening = drawer.classList.contains("translate-x-full");
+  if (isOpening) {
+    const openModals = ["facilityModal", "cableLayoutModal", "topologyModal", "portMatrixStudioModal"];
+    openModals.forEach(id => {
+      const el = document.getElementById(id);
+      if (el && !el.classList.contains("hidden")) {
+        el.classList.add("hidden");
+      }
+    });
+  }
+  drawer.classList.toggle("translate-x-full");
 }
 
 // -----------------------------------------------------------
@@ -1079,7 +1684,80 @@ function updateBOMView() {
   }
 
   if (bomViewMode === "flat") {
-    listContainer.innerHTML = projectBOM.map(item => renderBomSingleItemHtml(item)).join("");
+    // -------------------------------------------------------------
+    // Flat Order: RAW counts of individual SKUs regardless of location
+    // -------------------------------------------------------------
+    const skuMap = new Map();
+
+    projectBOM.forEach(item => {
+      const rawSku = String(item.sku || item.id || item.model || 'GENERIC-SKU').trim();
+      const qty = parseInt(item.qty, 10) || 1;
+      const msrp = parseFloat(item.msrp) || 0;
+      const baseWatts = parseFloat(item.baseWatts) || 0;
+      const poeWatts = parseFloat(item.poeBudget) || 0;
+      const rawLoc = item.closetName || item.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+      const locKey = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+
+      if (!skuMap.has(rawSku)) {
+        skuMap.set(rawSku, {
+          sku: item.sku || item.id || rawSku,
+          model: item.model || rawSku,
+          vendor: item.vendor || "",
+          role: item.role || item.category || "Hardware",
+          category: item.category || "",
+          msrp: msrp,
+          rawQty: 0,
+          totalCost: 0,
+          totalWatts: 0,
+          locations: {},
+          instances: []
+        });
+      }
+
+      const entry = skuMap.get(rawSku);
+      entry.rawQty += qty;
+      entry.totalCost += (msrp * qty);
+      entry.totalWatts += ((baseWatts + poeWatts) * qty);
+      entry.locations[locKey] = (entry.locations[locKey] || 0) + qty;
+      entry.instances.push(item);
+    });
+
+    const skuList = Array.from(skuMap.values());
+    // Sort by total cost descending, then raw quantity descending
+    skuList.sort((a, b) => (b.totalCost - a.totalCost) || (b.rawQty - a.rawQty) || a.sku.localeCompare(b.sku));
+
+    const totalUniqueSkus = skuList.length;
+    const totalRawCount = skuList.reduce((acc, s) => acc + s.rawQty, 0);
+    const totalOrderCost = skuList.reduce((acc, s) => acc + s.totalCost, 0);
+
+    let flatHtml = `
+      <!-- Flat Order Summary Header -->
+      <div class="p-3 bg-slate-900 border border-indigo-900/60 rounded-xl mb-3 flex items-center justify-between gap-3 shadow-sm select-none">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-lg bg-indigo-950 border border-indigo-700/60 text-indigo-400">
+            <i data-lucide="package-check" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-white">Flat Procurement Order</span>
+              <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-mono font-bold">RAW SKU COUNTS</span>
+            </div>
+            <span class="text-[10px] text-slate-400 font-mono">${totalUniqueSkus} Unique SKUs &bull; ${totalRawCount} Total Raw Units &bull; Regardless of Location</span>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[9px] text-slate-400 uppercase font-mono block">Order Total</span>
+          <span class="text-xs font-mono font-bold text-emerald-400">$${Math.round(totalOrderCost).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <!-- Raw SKU Line Items -->
+      <div class="space-y-2">
+        ${skuList.map(skuItem => renderBomFlatSkuItemHtml(skuItem)).join('')}
+      </div>
+    `;
+
+    listContainer.innerHTML = flatHtml;
   } else {
     const groups = {};
     projectBOM.forEach(item => {
@@ -1128,6 +1806,151 @@ function updateBOMView() {
   }
 }
 
+function renderBomFlatSkuItemHtml(skuItem) {
+  const locEntries = Object.entries(skuItem.locations);
+  const locSummary = locEntries.map(([loc, count]) => `${loc}: ${count}`).join(" &bull; ");
+
+  return `
+    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 shadow-sm hover:border-slate-700 transition-colors">
+      <div class="flex items-center justify-between gap-3">
+        <!-- Left: Prominent Raw Count Badge & Details -->
+        <div class="flex items-center gap-3 min-w-0 flex-1">
+          <div class="flex flex-col items-center justify-center min-w-[52px] px-2.5 py-1.5 rounded-xl bg-indigo-950/80 border border-indigo-500/60 text-indigo-300 shadow-sm shrink-0">
+            <span class="text-base font-mono font-bold leading-none">${skuItem.rawQty}x</span>
+            <span class="text-[8px] font-mono text-indigo-400/80 uppercase mt-0.5 font-bold">RAW</span>
+          </div>
+
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-bold text-white truncate" title="${escapeHTML(skuItem.model)}">${escapeHTML(skuItem.model)}</span>
+              ${skuItem.vendor ? `<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">${escapeHTML(skuItem.vendor)}</span>` : ''}
+              <span class="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-800/80 text-[10px] font-mono text-indigo-300 font-semibold">SKU: ${escapeHTML(skuItem.sku)}</span>
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">
+              <span>${escapeHTML(skuItem.role)}</span>
+              ${skuItem.totalWatts > 0 ? ` &bull; <span class="text-slate-300">${Math.round(skuItem.totalWatts)}W Total Draw</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Unit Price & Extended Total + Raw Qty Controls -->
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="text-right">
+            <div class="text-xs font-mono font-bold text-emerald-400">$${Math.round(skuItem.totalCost).toLocaleString()}</div>
+            <div class="text-[10px] text-slate-400 font-mono">($${skuItem.msrp.toLocaleString()} ea)</div>
+          </div>
+          <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg">
+            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Decrease Total Quantity">-</button>
+            <span class="px-2 text-xs font-mono font-bold text-white min-w-[20px] text-center">${skuItem.rawQty}</span>
+            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Increase Total Quantity">+</button>
+          </div>
+          <button onclick="deleteRawSkuFromBOM('${escapeHTML(skuItem.sku)}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition-colors rounded hover:bg-slate-900 cursor-pointer" title="Delete all units of this SKU">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Allocation Across Locations Pill Footer -->
+      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400 gap-2">
+        <div class="flex items-center gap-1.5 min-w-0 truncate" title="Location allocations: ${escapeHTML(locSummary)}">
+          <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400 shrink-0"></i>
+          <span class="text-slate-500 shrink-0">Allocations:</span>
+          <span class="text-slate-300 truncate">${locSummary}</span>
+        </div>
+        <button 
+          type="button" 
+          onclick="setBomViewMode('grouped')" 
+          class="text-[9.5px] text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-0.5 transition-colors shrink-0 cursor-pointer"
+          title="Switch to By Location/Rack view to manage specific device placements"
+        >
+          <span>By Location/Rack</span>
+          <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function changeRawSkuQty(skuKey, delta) {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const matchingItems = projectBOM.filter(item => {
+    const key = String(item.sku || item.id || item.model || '').trim();
+    return key === skuKey;
+  });
+
+  if (matchingItems.length === 0) return;
+
+  if (delta > 0) {
+    const unassignedItem = matchingItems.find(it => {
+      const loc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(it.closetName || it.rackId) : it.closetName;
+      return loc === FacilityStore.UNASSIGNED;
+    }) || matchingItems[0];
+
+    const isCamera = unassignedItem.role === "Camera" || unassignedItem.role === "Surveillance" || unassignedItem.role === "Video" ||
+                     (unassignedItem.category && unassignedItem.category.toLowerCase().includes("camera")) ||
+                     (unassignedItem.deviceTypePrefix === "CAM" || unassignedItem.deviceTypePrefix === "LPR") ||
+                     (typeof DeviceTaxonomy !== "undefined" && DeviceTaxonomy.getDeviceType && ["CAM", "LPR"].includes(DeviceTaxonomy.getDeviceType(unassignedItem).prefix));
+
+    if (isCamera) {
+      changeBomQty(unassignedItem.instanceId, 1);
+    } else {
+      unassignedItem.qty = (unassignedItem.qty || 1) + 1;
+      if (typeof FacilityStore !== "undefined") FacilityStore.notifyWorkspaceChange();
+      updateBOMView();
+      if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+        StorageService.queueAutoSave();
+      }
+    }
+  } else if (delta < 0) {
+    const unassignedItem = matchingItems.slice().reverse().find(it => {
+      const loc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(it.closetName || it.rackId) : it.closetName;
+      return loc === FacilityStore.UNASSIGNED;
+    }) || matchingItems[matchingItems.length - 1];
+
+    if ((unassignedItem.qty || 1) > 1) {
+      unassignedItem.qty = (unassignedItem.qty || 1) - 1;
+      if (typeof FacilityStore !== "undefined") FacilityStore.notifyWorkspaceChange();
+      updateBOMView();
+      if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+        StorageService.queueAutoSave();
+      }
+    } else {
+      if (matchingItems.length > 1) {
+        deleteDeviceFromBOM(unassignedItem.instanceId, true);
+      } else {
+        deleteDeviceFromBOM(unassignedItem.instanceId);
+      }
+    }
+  }
+}
+
+function deleteRawSkuFromBOM(skuKey) {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const matchingItems = projectBOM.filter(item => {
+    const key = String(item.sku || item.id || item.model || '').trim();
+    return key === skuKey;
+  });
+
+  if (matchingItems.length === 0) return;
+
+  const skuName = matchingItems[0].model || skuKey;
+  const totalUnits = matchingItems.reduce((acc, x) => acc + (x.qty || 1), 0);
+  if (!confirm(`Are you sure you want to remove all ${totalUnits} unit(s) of ${skuName} from the project BOM?`)) {
+    return;
+  }
+
+  const idsToDelete = matchingItems.map(x => x.instanceId);
+  idsToDelete.forEach(id => {
+    deleteDeviceFromBOM(id, true);
+  });
+
+  if (typeof showToast === "function") {
+    showToast(`Removed all ${totalUnits} unit(s) of ${skuName} from BOM.`);
+  }
+}
+
 function renderBomSingleItemHtml(item) {
   if (item.parentInstanceId) {
     return `
@@ -1171,7 +1994,14 @@ function renderBomSingleItemHtml(item) {
       <!-- Device Info & Quantity Controls -->
       <div class="flex items-center justify-between gap-3">
         <div class="flex-1 min-w-0">
-          <span class="text-xs font-bold text-white truncate block">${escapeHTML(item.model)}</span>
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[10px] font-mono font-bold text-brand-300" title="Device Sequence ID">${escapeHTML(item.deviceNumber)}</span>` : ''}
+            <span class="text-xs font-bold text-white truncate" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+            <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+              <i data-lucide="pencil" class="w-3 h-3"></i>
+            </button>
+          </div>
+          ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium truncate">${escapeHTML(item.model)}</div>` : ''}
           <div class="text-[10px] font-mono text-slate-400">SKU: ${escapeHTML(item.sku)}</div>
           <div class="text-[11px] text-emerald-400 font-mono mt-0.5 font-semibold">$${((item.msrp || 0) * (item.qty || 1)).toLocaleString()} <span class="text-slate-500 font-normal">($${(item.msrp || 0).toLocaleString()} ea)</span></div>
         </div>
@@ -1244,6 +2074,17 @@ function renderBomSingleItemHtml(item) {
             <span class="text-[10px] font-mono font-semibold ${item.stackedUnits >= 2 ? 'text-indigo-300 bg-indigo-950/60 border-indigo-500/40' : 'text-slate-400 bg-slate-900 border-slate-800'} px-2 py-0.5 rounded border flex items-center gap-1">
               <span>${item.stackedUnits >= 2 ? `${item.stackedUnits}-Switch Stack (+${item.stackedUnits} DACs)` : 'Standalone (1 Chassis)'}</span>
             </span>
+            ${item.stackedUnits >= 2 ? `
+              <button 
+                type="button" 
+                onclick="if (typeof toggleStackPatchPanel === 'function') toggleStackPatchPanel('${item.instanceId}')"
+                class="px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all flex items-center gap-1 border ${item.patchPanelBetween ? 'bg-purple-900/80 text-purple-200 border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'}"
+                title="${item.patchPanelBetween ? 'Remove 24-port patch panel between stacked switches' : 'Place 24-port patch panel in between stacked switches'}"
+              >
+                <i data-lucide="${item.patchPanelBetween ? 'check-square' : 'plus-square'}" class="w-2.5 h-2.5 ${item.patchPanelBetween ? 'text-purple-400' : 'text-slate-400'}"></i>
+                <span>${item.patchPanelBetween ? '24P Patch In-Between' : '+ 24P Patch In-Between'}</span>
+              </button>
+            ` : ''}
             <button 
               type="button" 
               onclick="jumpToTopologyTarget('node:${item.instanceId}')"
@@ -1537,8 +2378,10 @@ function copyBomSummary() {
     totalMSRP += (i.msrp * i.qty);
     const rawLoc = i.closetName || i.rackId || FacilityStore.UNASSIGNED;
     const loc = `[${typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc}] `;
+    const devNum = i.deviceNumber ? `[${i.deviceNumber}] ` : '';
+    const friendly = (i.friendlyName && i.friendlyName !== i.model) ? ` "${i.friendlyName}"` : '';
     const lagStr = i.uplinkMode === 'lag_dual' ? ' (2x LAG Uplink)' : '';
-    txt += `${loc}[${i.qty}x] ${i.vendor} ${i.model}${lagStr} (SKU: ${i.sku}) - $${(i.msrp * i.qty).toLocaleString()}\n`;
+    txt += `${loc}${devNum}[${i.qty}x] ${i.vendor} ${i.model}${friendly}${lagStr} (SKU: ${i.sku}) - $${(i.msrp * i.qty).toLocaleString()}\n`;
   });
   txt += `\nTotal Estimated Hardware MSRP: $${totalMSRP.toLocaleString()}\n`;
   navigator.clipboard.writeText(txt).then(() => showToast("BOM copied to clipboard!"));
@@ -1554,13 +2397,15 @@ function exportBomCSV() {
     return;
   }
 
-  let csv = "Location,Rack,Role,Vendor,Model,SKU,Quantity,Uplink Mode,Unit MSRP,Total MSRP,PoE Budget,Power Watts\n";
+  let csv = "Device ID,Friendly Name,Location,Rack,Role,Vendor,Model,SKU,Quantity,Uplink Mode,Unit MSRP,Total MSRP,PoE Budget,Power Watts\n";
   projectBOM.forEach(i => {
     const rawLoc = i.closetName || i.rackId || FacilityStore.UNASSIGNED;
     const normalizedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
     const parsed = typeof FacilityStore !== "undefined" ? FacilityStore.parse(normalizedLoc) : { space: "General", enclosure: "General" };
     const totalW = ((i.poeBudget || 0) + (i.baseWatts || 0)) * i.qty;
-    csv += `"${parsed.space}","${parsed.enclosure}","${i.role || 'Accessory'}","${i.vendor}","${i.model}","${i.sku}",${i.qty},"${i.uplinkMode || 'single'}",${i.msrp},${i.msrp * i.qty},${i.poeBudget || 0},${totalW}\n`;
+    const devNum = i.deviceNumber || "";
+    const friendly = (typeof DeviceTaxonomy !== "undefined" ? DeviceTaxonomy.getFriendlyName(i) : (i.friendlyName || i.model)) || "";
+    csv += `"${devNum}","${friendly}","${parsed.space}","${parsed.enclosure}","${i.role || 'Accessory'}","${i.vendor}","${i.model}","${i.sku}",${i.qty},"${i.uplinkMode || 'single'}",${i.msrp},${i.msrp * i.qty},${i.poeBudget || 0},${totalW}\n`;
   });
   const link = document.createElement("a");
   link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
@@ -1569,11 +2414,818 @@ function exportBomCSV() {
   showToast("Exported BOM CSV.");
 }
 
+// ==========================================
+// ENGINEERING SUBMITTAL & COMPREHENSIVE WORKBOOK ENGINE
+// ==========================================
+
+function compileProjectEngineeringData() {
+  const projName = typeof StorageService !== "undefined" ? StorageService.getActiveProjectName() : "Security Infrastructure Project";
+  const projId = typeof StorageService !== "undefined" ? StorageService.getActiveProjectId() : "default";
+  const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+  const timeStr = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : {};
+  const meta = defs.metadata || {};
+  const jobOpportunityNumber = meta.jobOpportunityNumber || "";
+  const clientName = meta.clientName || "";
+  const siteAddress = meta.siteAddress || "";
+  const leadDesigner = meta.leadDesigner || "";
+  const licensingTerm = (defs.licensing && defs.licensing.globalSelectedTerm) || (typeof globalSelectedTerm !== "undefined" ? globalSelectedTerm : "1YR");
+
+  let totalHardwareUnits = 0;
+  let totalMSRP = 0;
+  let totalPoEBudgetWatts = 0;
+  let totalPowerConsumptionWatts = 0;
+
+  const categorized = {
+    switches: [],
+    cameras: [],
+    access: [],
+    firewalls: [],
+    servers: [],
+    cabling: [],
+    optics: [],
+    accessories: [],
+    licenses: []
+  };
+
+  projectBOM.forEach((item) => {
+    const qty = item.qty || 1;
+    totalHardwareUnits += qty;
+    totalMSRP += (item.msrp || 0) * qty;
+    const poe = (item.poeBudget || 0) * qty;
+    totalPoEBudgetWatts += poe;
+    const power = ((item.baseWatts || item.powerWatts || item.powerConsumptionWatts || 0) + (item.poeBudget || 0)) * qty;
+    totalPowerConsumptionWatts += power;
+
+    const role = (item.role || "").toLowerCase();
+    const cat = (item.category || "").toLowerCase();
+    const model = (item.model || "").toLowerCase();
+    const desc = (item.description || "").toLowerCase();
+    const all = `${role} ${cat} ${model} ${desc}`;
+
+    if (item.source === "cabling_auto_sync" || role.includes("passive") || cat.includes("cabling") || /patch panel|keystone|cable spool|cat6/i.test(all)) {
+      categorized.cabling.push(item);
+    } else if (item.source === "topology_auto_sync" || role === "optics" || cat === "optics" || /transceiver|dac|sfp|fiber patch/i.test(all)) {
+      categorized.optics.push(item);
+    } else if (role === "license" || cat === "license" || /license|cloud management/i.test(all)) {
+      categorized.licenses.push(item);
+    } else if (role === "camera" || role === "surveillance" || /camera|bullet|dome|ptz|multisensor/i.test(all)) {
+      categorized.cameras.push(item);
+    } else if (role === "access control" || /door|controller|mercury|reader|cloudlink|trove/i.test(all)) {
+      categorized.access.push(item);
+    } else if (role === "firewall" || /gateway|firewall|mx|fortigate/i.test(all)) {
+      categorized.firewalls.push(item);
+    } else if (role === "server" || /server|storage|nvr|vms/i.test(all)) {
+      categorized.servers.push(item);
+    } else if (role === "access" || role === "core" || role === "aggregation" || /switch/i.test(all)) {
+      categorized.switches.push(item);
+    } else {
+      categorized.accessories.push(item);
+    }
+  });
+
+  const totalHeatBTU = Math.round(totalPowerConsumptionWatts * 3.412142);
+  const totalCoolingTons = (totalHeatBTU / 12000).toFixed(2);
+
+  // Telecom Closets & Spaces
+  let spaces = [];
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.getSpaces === "function") {
+    spaces = FacilityStore.getSpaces();
+  }
+  if (!spaces || spaces.length === 0) {
+    const spaceSet = new Set();
+    projectBOM.forEach(i => {
+      const loc = i.closetName || i.rackId || "MDF";
+      const parsed = typeof FacilityStore !== "undefined" ? FacilityStore.parse(loc) : { space: loc };
+      spaceSet.add(parsed.space || loc);
+    });
+    spaces = Array.from(spaceSet).map(s => ({ id: s, name: s, type: "MDF" }));
+  }
+
+  // Rack Utilization Schedule
+  const rackSchedule = [];
+  const enclosures = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getEnclosures === "function")
+    ? FacilityStore.getEnclosures()
+    : [];
+
+  spaces.forEach(sp => {
+    const spEnclosures = enclosures.filter(e => e.spaceId === sp.id || e.spaceName === sp.name);
+    if (spEnclosures.length > 0) {
+      spEnclosures.forEach(enc => {
+        const mounted = projectBOM.filter(i => {
+          const loc = i.closetName || i.rackId || "";
+          return loc.includes(enc.name) || i.rackId === enc.id || (i.spaceId === sp.id && (!i.rackId || i.rackId === enc.name));
+        });
+        let occupiedU = 0;
+        let encWatts = 0;
+        mounted.forEach(m => {
+          occupiedU += (m.rackUnits || 1) * (m.qty || 1);
+          encWatts += ((m.baseWatts || m.powerWatts || 0) + (m.poeBudget || 0)) * (m.qty || 1);
+        });
+        const totalU = enc.rackUnits || 42;
+        const availableU = Math.max(0, totalU - occupiedU);
+        const utilPct = Math.min(100, Math.round((occupiedU / totalU) * 100));
+        const encBTU = Math.round(encWatts * 3.412142);
+
+        rackSchedule.push({
+          space: sp.name,
+          enclosure: enc.name,
+          formFactor: enc.formFactor || "4-Post Open Frame",
+          totalU,
+          occupiedU,
+          availableU,
+          utilPct,
+          itemsCount: mounted.length,
+          watts: encWatts,
+          btu: encBTU,
+          equipment: mounted.map(m => `${m.qty}x ${m.vendor} ${m.model}`).join("; ")
+        });
+      });
+    } else {
+      const mounted = projectBOM.filter(i => {
+        const loc = i.closetName || i.rackId || "";
+        return loc.includes(sp.name) || i.spaceId === sp.id;
+      });
+      let encWatts = 0;
+      mounted.forEach(m => {
+        encWatts += ((m.baseWatts || m.powerWatts || 0) + (m.poeBudget || 0)) * (m.qty || 1);
+      });
+      const encBTU = Math.round(encWatts * 3.412142);
+      const occupiedU = mounted.reduce((acc, m) => acc + (m.rackUnits || 1) * (m.qty || 1), 0);
+      rackSchedule.push({
+        space: sp.name,
+        enclosure: "Standard Floor Enclosure",
+        formFactor: "Cabinet",
+        totalU: 42,
+        occupiedU,
+        availableU: Math.max(0, 42 - occupiedU),
+        utilPct: Math.min(100, Math.round((occupiedU / 42) * 100)),
+        itemsCount: mounted.length,
+        watts: encWatts,
+        btu: encBTU,
+        equipment: mounted.map(m => `${m.qty}x ${m.vendor} ${m.model}`).join("; ")
+      });
+    }
+  });
+
+  // PoE Telemetry Per Space
+  const poeSchedule = [];
+  spaces.forEach(sp => {
+    const closetItems = projectBOM.filter(i => {
+      const loc = i.closetName || i.rackId || "";
+      return loc.includes(sp.name) || i.spaceId === sp.id;
+    });
+
+    let switchBudget = 0;
+    let switchCount = 0;
+    let edgeDemand = 0;
+    let edgeCount = 0;
+
+    closetItems.forEach(i => {
+      const role = (i.role || "").toLowerCase();
+      const isSwitch = role === "access" || role === "core" || role === "aggregation" || /switch/i.test(role);
+      if (isSwitch) {
+        switchBudget += (i.poeBudget || 0) * (i.qty || 1);
+        switchCount += (i.qty || 1);
+      } else if (i.poeStandard || i.poeWattsDrawn || i.powerSource === "poe_switch" || /camera|door|reader|intercom|access control/i.test(role)) {
+        const itemW = (i.powerConsumptionWatts || i.maxPowerWatts || i.powerWatts || i.poeWattsDrawn || 15);
+        edgeDemand += itemW * (i.qty || 1);
+        edgeCount += (i.qty || 1);
+      }
+    });
+
+    const headroom = switchBudget - edgeDemand;
+    const utilPct = switchBudget > 0 ? Math.round((edgeDemand / switchBudget) * 100) : (edgeDemand > 0 ? 999 : 0);
+    let status = "OPTIMAL";
+    if (switchBudget === 0 && edgeDemand > 0) status = "DEFICIT (NO POE)";
+    else if (headroom < 0) status = "DEFICIT OVERLOAD";
+    else if (utilPct > 80) status = "WARNING (>80%)";
+
+    poeSchedule.push({
+      space: sp.name,
+      switchCount,
+      switchBudget,
+      edgeCount,
+      edgeDemand,
+      headroom,
+      utilPct,
+      status
+    });
+  });
+
+  // Structured Cabling Per Space
+  const cablingSchedule = [];
+  const dropMap = {};
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(fl => {
+      (fl.nodes || []).forEach(n => {
+        if (n.type !== "closet") {
+          const target = n.assignedCloset || n.closetId || "MDF";
+          dropMap[target] = (dropMap[target] || 0) + 1;
+        }
+      });
+    });
+  }
+
+  spaces.forEach(sp => {
+    const drops = dropMap[sp.name] || dropMap[sp.id] || 0;
+    const pp48 = Math.floor(drops / 48);
+    const remainder = drops % 48;
+    const pp24 = remainder > 24 ? 0 : (remainder > 0 ? 1 : 0);
+    const effectivePP48 = remainder > 24 ? pp48 + 1 : pp48;
+    const totalPanels = effectivePP48 + pp24;
+    const estFootage = drops * 150;
+
+    let fiberLinks = 0;
+    if (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) {
+      fiberLinks = topologyLinks.filter(l => {
+        return (l.sourceCloset === sp.name || l.targetCloset === sp.name) && l.isInterCloset;
+      }).length;
+    }
+
+    cablingSchedule.push({
+      space: sp.name,
+      drops,
+      pp48: effectivePP48,
+      pp24,
+      totalPanels,
+      keystones: drops,
+      estFootage,
+      spoolsNeeded: Math.ceil(estFootage / 1000),
+      fiberLinks
+    });
+  });
+
+  return {
+    projName,
+    projId,
+    dateStr,
+    timeStr,
+    totalHardwareUnits,
+    totalMSRP,
+    totalPoEBudgetWatts,
+    totalPowerConsumptionWatts,
+    totalHeatBTU,
+    totalCoolingTons,
+    categorized,
+    spaces,
+    rackSchedule,
+    poeSchedule,
+    cablingSchedule,
+    jobOpportunityNumber,
+    clientName,
+    siteAddress,
+    leadDesigner,
+    licensingTerm
+  };
+}
+
+function exportComprehensiveProjectCSV() {
+  if (projectBOM.length === 0) {
+    showToast("Cannot export empty BOM.");
+    return;
+  }
+
+  const compliance = checkMerakiCompliance();
+  if (!compliance.compliant) {
+    showToast("Compliance Alert: Configure Meraki licensing before exporting.");
+    toggleLicenseModal();
+    return;
+  }
+
+  const data = compileProjectEngineeringData();
+  const esc = (val) => {
+    if (val === null || val === undefined) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  let csv = "";
+
+  // HEADER
+  csv += "================================================================================\n";
+  csv += "ORION SECURITY SOLUTIONS - COMPREHENSIVE PROJECT SPECIFICATION & ENGINEERING SUBMITTAL\n";
+  csv += "================================================================================\n";
+  csv += `Project Name:,${esc(data.projName)}\n`;
+  csv += `Job / Opportunity #:,${esc(data.jobOpportunityNumber || "N/A")}\n`;
+  csv += `Client / Facility:,${esc(data.clientName || "N/A")}\n`;
+  csv += `Site Address:,${esc(data.siteAddress || "N/A")}\n`;
+  csv += `Lead System Designer:,${esc(data.leadDesigner || "N/A")}\n`;
+  csv += `Project Key:,${esc(data.projId)}\n`;
+  csv += `Licensing Term:,${esc(data.licensingTerm || "1-Year")}\n`;
+  csv += `Generated Date:,${esc(data.dateStr + " " + data.timeStr)}\n`;
+  csv += `Platform Version:,OSS Design Tool v0.10.0-alpha\n`;
+  csv += `Total Hardware Items:,${data.totalHardwareUnits}\n`;
+  csv += `Estimated Hardware MSRP:,${esc("$" + data.totalMSRP.toLocaleString())}\n`;
+  csv += `Combined PoE Power Budget:,${data.totalPoEBudgetWatts} W\n`;
+  csv += `Total Heat Dissipation:,${data.totalHeatBTU} BTU/hr (${data.totalCoolingTons} AC Tons)\n`;
+  csv += "\n";
+
+  // SECTION 1: DETAILED BILL OF MATERIALS
+  csv += "================================================================================\n";
+  csv += "SECTION 1: DETAILED PROJECT BILL OF MATERIALS (BOM)\n";
+  csv += "================================================================================\n";
+  csv += "Item #,Device ID,Subsystem Category,Friendly Name,Space / Location,Enclosure / Rack,Role,Vendor,Model,SKU,Quantity,Uplink Mode,Unit MSRP,Ext MSRP,PoE Budget (W),Total Power (W),Heat Output (BTU/hr)\n";
+
+  projectBOM.forEach((i, idx) => {
+    const rawLoc = i.closetName || i.rackId || FacilityStore.UNASSIGNED;
+    const normalizedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+    const parsed = typeof FacilityStore !== "undefined" ? FacilityStore.parse(normalizedLoc) : { space: "General", enclosure: "General" };
+    const devNum = i.deviceNumber || `DEV-${idx + 1}`;
+    const friendly = (typeof DeviceTaxonomy !== "undefined" ? DeviceTaxonomy.getFriendlyName(i) : (i.friendlyName || i.model)) || "";
+    const devType = typeof DeviceTaxonomy !== "undefined" ? DeviceTaxonomy.getDeviceType(i).label : (i.role || "Device");
+    const totalW = ((i.poeBudget || 0) + (i.baseWatts || i.powerWatts || 0)) * (i.qty || 1);
+    const btu = Math.round(totalW * 3.412142);
+
+    csv += `${idx + 1},${esc(devNum)},${esc(devType)},${esc(friendly)},${esc(parsed.space)},${esc(parsed.enclosure)},${esc(i.role || "Device")},${esc(i.vendor)},${esc(i.model)},${esc(i.sku)},${i.qty || 1},${esc(i.uplinkMode || "single")},${i.msrp || 0},${(i.msrp || 0) * (i.qty || 1)},${i.poeBudget || 0},${totalW},${btu}\n`;
+  });
+  csv += `,,,,,,,,,,,,TOTAL MSRP,${data.totalMSRP},${data.totalPoEBudgetWatts},${data.totalPowerConsumptionWatts},${data.totalHeatBTU}\n\n`;
+
+  // SECTION 2: TELECOM CLOSETS & RACK UTILIZATION SCHEDULE
+  csv += "================================================================================\n";
+  csv += "SECTION 2: TELECOM CLOSETS & RACK UTILIZATION SCHEDULE\n";
+  csv += "================================================================================\n";
+  csv += "Space / Closet,Enclosure Name,Form Factor,Rack Capacity (U),Occupied (U),Available (U),Utilization %,Installed Devices Count,Enclosure Power (W),Heat Output (BTU/hr),Installed Equipment Inventory\n";
+  data.rackSchedule.forEach(r => {
+    csv += `${esc(r.space)},${esc(r.enclosure)},${esc(r.formFactor)},${r.totalU},${r.occupiedU},${r.availableU},${r.utilPct}%,${r.itemsCount},${r.watts},${r.btu},${esc(r.equipment)}\n`;
+  });
+  csv += "\n";
+
+  // SECTION 3: POE POWER BUDGET & HEADROOM TELEMETRY
+  csv += "================================================================================\n";
+  csv += "SECTION 3: POE POWER BUDGET & HEADROOM TELEMETRY\n";
+  csv += "================================================================================\n";
+  csv += "Space / Closet,Switch Count,Switch PoE Budget (W),Connected Edge Devices,Calculated PoE Demand (W),PoE Headroom (W),Utilization %,Compliance Status\n";
+  data.poeSchedule.forEach(p => {
+    csv += `${esc(p.space)},${p.switchCount},${p.switchBudget},${p.edgeCount},${p.edgeDemand},${p.headroom},${p.utilPct}%,${esc(p.status)}\n`;
+  });
+  csv += "\n";
+
+  // SECTION 4: STRUCTURED CABLING & FIELD DROP SCHEDULE
+  csv += "================================================================================\n";
+  csv += "SECTION 4: STRUCTURED CABLING & FIELD DROP SCHEDULE\n";
+  csv += "================================================================================\n";
+  csv += "Space / Closet,Terminated Drops,48P Panels,24P Panels,Total Patch Panels,Keystone Jacks,Est Horizontal Footage (ft),1000ft Spools Needed,Inter-Closet Fiber Trunks\n";
+  data.cablingSchedule.forEach(c => {
+    csv += `${esc(c.space)},${c.drops},${c.pp48},${c.pp24},${c.totalPanels},${c.keystones},${c.estFootage},${c.spoolsNeeded},${c.fiberLinks}\n`;
+  });
+  csv += "\n";
+
+  // SECTION 5: LICENSING & ENGINEERING COMPLIANCE
+  csv += "================================================================================\n";
+  csv += "SECTION 5: SYSTEM LICENSING & CLOUD TERMS AUDIT\n";
+  csv += "================================================================================\n";
+  csv += "Subsystem / Vendor,Model / SKU,Required Licenses,Quantity,Term,Audit Status\n";
+  data.categorized.licenses.forEach(l => {
+    csv += `${esc(l.vendor)},${esc(l.model + " (" + l.sku + ")")},Required,${l.qty || 1},${esc(l.term || "1-Year")},Verified\n`;
+  });
+  if (data.categorized.licenses.length === 0) {
+    csv += "Enterprise Cloud Licensing,No cloud subscription licenses required in active BOM,0,0,N/A,Compliant\n";
+  }
+  csv += "\n";
+
+  const cleanName = data.projName.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 32);
+  const fileName = `OSS_Engineering_Submittal_${cleanName}_${new Date().toISOString().slice(0, 10)}.csv`;
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = fileName;
+  link.click();
+  showToast("Exported comprehensive multi-section CSV workbook.");
+}
+
+function openEngineeringSubmittalModal() {
+  if (projectBOM.length === 0) {
+    showToast("Cannot generate engineering submittal for an empty BOM.");
+    return;
+  }
+
+  const modal = document.getElementById("engineeringSubmittalModal");
+  const content = document.getElementById("engineeringSubmittalModalContent");
+  if (!modal || !content) return;
+
+  const data = compileProjectEngineeringData();
+
+  // Helper to render subsystem table
+  const renderSubsystemSection = (title, icon, items) => {
+    if (!items || items.length === 0) return "";
+    let subtotalCost = 0;
+    let subtotalWatts = 0;
+    items.forEach(it => {
+      subtotalCost += (it.msrp || 0) * (it.qty || 1);
+      subtotalWatts += ((it.baseWatts || it.powerWatts || 0) + (it.poeBudget || 0)) * (it.qty || 1);
+    });
+
+    const rows = items.map((i, idx) => {
+      const rawLoc = i.closetName || i.rackId || FacilityStore.UNASSIGNED;
+      const normalizedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+      const devNum = i.deviceNumber || `DEV-${idx + 1}`;
+      const friendly = (typeof DeviceTaxonomy !== "undefined" ? DeviceTaxonomy.getFriendlyName(i) : (i.friendlyName || i.model)) || "";
+      const itemW = ((i.baseWatts || i.powerWatts || 0) + (i.poeBudget || 0)) * (i.qty || 1);
+      const extCost = (i.msrp || 0) * (i.qty || 1);
+      const asset = (typeof CATALOG_ASSETS !== "undefined" ? (CATALOG_ASSETS[i.id] || CATALOG_ASSETS[i.sku]) : null) || {};
+      const img = i.image || asset.image;
+      const dsheet = i.datasheetPath || asset.datasheetPath;
+
+      return `
+        <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
+          <td class="py-2 px-3 font-mono text-slate-400">${idx + 1}</td>
+          <td class="py-2 px-3 font-mono text-indigo-400 font-semibold">${escapeHTML(devNum)}</td>
+          <td class="py-2 px-3">
+            <div class="flex items-center gap-2.5">
+              ${img ? `
+                <img src="${img}" alt="${escapeHTML(i.model)}" class="w-10 h-7 object-contain bg-slate-900 border border-slate-800 rounded p-0.5 shrink-0 cursor-pointer hover:border-brand-500/50 print:border-slate-300" onclick="if(typeof openProductImageModal==='function') openProductImageModal('${img}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" title="Click to view full photo" loading="lazy" />
+              ` : ''}
+              <div>
+                <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
+                  <span>${escapeHTML(i.vendor || '')} ${escapeHTML(i.model || '')}</span>
+                  ${dsheet ? `
+                    <button onclick="if(typeof openDatasheetModal==='function') openDatasheetModal('${dsheet}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" class="inline-flex items-center gap-0.5 text-[10px] text-rose-400 hover:text-rose-300 font-normal underline ml-1 cursor-pointer print:hidden" title="View Technical Datasheet">
+                      <i data-lucide="file-text" class="w-2.5 h-2.5"></i> Datasheet
+                    </button>
+                  ` : ''}
+                </div>
+                <div class="text-[11px] text-slate-400">${escapeHTML(friendly)}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-2 px-3 font-mono text-slate-400 text-[11px]">${escapeHTML(i.sku)}</td>
+          <td class="py-2 px-3 text-slate-300 text-[11px]">${escapeHTML(normalizedLoc)}</td>
+          <td class="py-2 px-3 text-center font-bold font-mono text-white">${i.qty || 1}</td>
+          <td class="py-2 px-3 text-right font-mono text-slate-300">$${(i.msrp || 0).toLocaleString()}</td>
+          <td class="py-2 px-3 text-right font-mono font-bold text-emerald-400">$${extCost.toLocaleString()}</td>
+          <td class="py-2 px-3 text-right font-mono text-amber-400">${itemW} W</td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <div class="space-y-2 pt-4 print-avoid-break">
+        <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+          <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="${icon}" class="w-4 h-4 text-brand-400"></i> ${escapeHTML(title)} (${items.length} Lines)
+          </h4>
+          <span class="text-xs font-mono text-slate-400">Subtotal: <strong class="text-emerald-400 font-semibold">$${subtotalCost.toLocaleString()}</strong> &bull; <strong class="text-amber-400 font-semibold">${subtotalWatts} W</strong></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left submittal-table">
+            <thead>
+              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                <th class="py-2 px-3">#</th>
+                <th class="py-2 px-3">Device ID</th>
+                <th class="py-2 px-3">Equipment / Model</th>
+                <th class="py-2 px-3">Part / SKU</th>
+                <th class="py-2 px-3">Location / Space</th>
+                <th class="py-2 px-3 text-center">Qty</th>
+                <th class="py-2 px-3 text-right">Unit MSRP</th>
+                <th class="py-2 px-3 text-right">Ext MSRP</th>
+                <th class="py-2 px-3 text-right">Power</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  };
+
+  const totalDrops = data.cablingSchedule.reduce((a, c) => a + c.drops, 0);
+  const totalPanels = data.cablingSchedule.reduce((a, c) => a + c.totalPanels, 0);
+
+  content.innerHTML = `
+    <div class="max-w-5xl mx-auto space-y-6">
+      
+      <!-- Executive Header & Metadata -->
+      <div class="p-6 rounded-2xl bg-slate-950/90 border border-slate-800 submittal-header-bg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print-avoid-break">
+        <div>
+          <div class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-brand-400 mb-1">
+            <span>ORION SECURITY SOLUTIONS</span> &bull; <span>SYSTEM DESIGN TOOL v0.10.0-ALPHA</span>
+          </div>
+          <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">ENGINEERING SUBMITTAL & SYSTEM PROPOSAL</h1>
+          <p class="text-xs text-slate-400 mt-0.5">Comprehensive Hardware Bill of Materials, Closet Utilization, PoE Headroom, and Cabling Schedules.</p>
+        </div>
+        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-6 shrink-0 font-mono">
+          <div class="text-slate-400">Project:</div>
+          <div class="text-white font-bold">${escapeHTML(data.projName)}</div>
+          ${data.jobOpportunityNumber ? `<div class="text-slate-400">Job / Opp #:</div><div class="text-amber-400 font-semibold">${escapeHTML(data.jobOpportunityNumber)}</div>` : ''}
+          ${data.clientName ? `<div class="text-slate-400">Client / Facility:</div><div class="text-slate-200 font-semibold">${escapeHTML(data.clientName)}</div>` : ''}
+          ${data.siteAddress ? `<div class="text-slate-400">Site Location:</div><div class="text-slate-300">${escapeHTML(data.siteAddress)}</div>` : ''}
+          ${data.leadDesigner ? `<div class="text-slate-400">Lead Designer:</div><div class="text-sky-400 font-semibold">${escapeHTML(data.leadDesigner)}</div>` : ''}
+          <div class="text-slate-400">Doc Reference:</div>
+          <div class="text-indigo-400 font-semibold">${escapeHTML(data.projId)}</div>
+          <div class="text-slate-400">Licensing Term:</div>
+          <div class="text-purple-400 font-semibold">${escapeHTML(data.licensingTerm || "1-Year")}</div>
+          <div class="text-slate-400">Date Issued:</div>
+          <div class="text-slate-200">${escapeHTML(data.dateStr)}</div>
+          <div class="text-slate-400">Revision:</div>
+          <div class="text-emerald-400 font-bold">REV 1.0 (PROPOSAL)</div>
+        </div>
+      </div>
+
+      <!-- Executive KPIs Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 print-avoid-break">
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Total Hardware</div>
+          <div class="text-lg font-black text-white font-mono mt-0.5">${data.totalHardwareUnits} <span class="text-xs font-normal text-slate-500">units</span></div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Estimated MSRP</div>
+          <div class="text-lg font-black text-emerald-400 font-mono mt-0.5">$${data.totalMSRP.toLocaleString()}</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">PoE Capacity</div>
+          <div class="text-lg font-black text-amber-400 font-mono mt-0.5">${data.totalPoEBudgetWatts.toLocaleString()} <span class="text-xs font-normal text-slate-500">W</span></div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Heat Dissipation</div>
+          <div class="text-sm font-black text-rose-400 font-mono mt-1">${data.totalHeatBTU.toLocaleString()} <span class="text-[10px] font-normal text-slate-500">BTU/hr</span></div>
+          <div class="text-[10px] text-slate-400 font-mono mt-0.5">${data.totalCoolingTons} AC Tons</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Field Drops</div>
+          <div class="text-lg font-black text-sky-400 font-mono mt-0.5">${totalDrops} <span class="text-xs font-normal text-slate-500">runs</span></div>
+          <div class="text-[10px] text-slate-400 font-mono">${totalPanels} Patch Panels</div>
+        </div>
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
+          <div class="text-[10px] text-slate-400 font-bold uppercase">Telecom Spaces</div>
+          <div class="text-lg font-black text-purple-400 font-mono mt-0.5">${data.spaces.length} <span class="text-xs font-normal text-slate-500">closets</span></div>
+        </div>
+      </div>
+
+      <!-- Section 1: Detailed Systems Bill of Materials -->
+      <div class="space-y-4">
+        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+            System Bill of Materials & Subsystem Breakdown
+          </h3>
+        </div>
+
+        ${renderSubsystemSection("Network Switching & Routing", "network", data.categorized.switches)}
+        ${renderSubsystemSection("Video Surveillance Cameras", "camera", data.categorized.cameras)}
+        ${renderSubsystemSection("Access Control & Door Hardware", "shield", data.categorized.access)}
+        ${renderSubsystemSection("Cybersecurity Gateways & Firewalls", "shield-alert", data.categorized.firewalls)}
+        ${renderSubsystemSection("Servers, NVRs & Compute", "hard-drive", data.categorized.servers)}
+        ${renderSubsystemSection("Structured Cabling & Passive Infrastructure", "cable", data.categorized.cabling)}
+        ${renderSubsystemSection("Interconnects, Optics & Fiber Trunks", "link-2", data.categorized.optics)}
+        ${renderSubsystemSection("Software Licensing & Cloud Subscriptions", "key", data.categorized.licenses)}
+        ${renderSubsystemSection("Rack Accessories & Mounting Hardware", "package", data.categorized.accessories)}
+
+        <div class="p-3 bg-slate-950/90 rounded-xl border border-slate-800 flex justify-between items-center text-sm font-bold font-mono">
+          <span class="text-slate-300">TOTAL ESTIMATED HARDWARE MSRP (EXTENDED):</span>
+          <span class="text-emerald-400 text-base font-extrabold">$${data.totalMSRP.toLocaleString()}</span>
+        </div>
+      </div>
+
+      <!-- Section 2: Telecom Closets & Rack Utilization Schedule -->
+      <div class="space-y-4 pt-4 print-avoid-break">
+        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+            Telecom Closets & Rack Utilization Schedule
+          </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left submittal-table">
+            <thead>
+              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                <th class="py-2 px-3">Telecom Closet</th>
+                <th class="py-2 px-3">Enclosure / Form Factor</th>
+                <th class="py-2 px-3 text-center">Rack Height</th>
+                <th class="py-2 px-3 text-center">Occupied / Free</th>
+                <th class="py-2 px-3 text-center">Utilization</th>
+                <th class="py-2 px-3 text-right">Power Draw</th>
+                <th class="py-2 px-3 text-right">Thermal (BTU/hr)</th>
+                <th class="py-2 px-3">Mounted Equipment</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.rackSchedule.map(r => `
+                <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
+                  <td class="py-2.5 px-3 font-bold text-white">${escapeHTML(r.space)}</td>
+                  <td class="py-2.5 px-3">
+                    <div class="font-semibold text-indigo-300">${escapeHTML(r.enclosure)}</div>
+                    <div class="text-[10px] text-slate-400">${escapeHTML(r.formFactor)}</div>
+                  </td>
+                  <td class="py-2.5 px-3 text-center font-mono text-slate-300 font-bold">${r.totalU}U</td>
+                  <td class="py-2.5 px-3 text-center font-mono text-xs">
+                    <span class="text-brand-400 font-bold">${r.occupiedU}U used</span> &bull; <span class="text-slate-400">${r.availableU}U free</span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center">
+                    <div class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold ${r.utilPct > 85 ? 'bg-rose-950/80 text-rose-400 border border-rose-800' : 'bg-slate-800 text-slate-300'}">
+                      ${r.utilPct}%
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-mono text-amber-400">${r.watts} W</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-rose-400">${r.btu.toLocaleString()}</td>
+                  <td class="py-2.5 px-3 text-[11px] text-slate-300 max-w-xs truncate" title="${escapeHTML(r.equipment)}">
+                    ${escapeHTML(r.equipment || "No active equipment assigned")}
+                  </td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 3: PoE Power Budget & Headroom Telemetry -->
+      <div class="space-y-4 pt-4 print-avoid-break">
+        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">3</span>
+            PoE Power Budget & Headroom Telemetry
+          </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left submittal-table">
+            <thead>
+              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                <th class="py-2 px-3">Telecom Closet</th>
+                <th class="py-2 px-3 text-center">Switches</th>
+                <th class="py-2 px-3 text-right">Switch PoE Capacity</th>
+                <th class="py-2 px-3 text-center">Edge Devices</th>
+                <th class="py-2 px-3 text-right">Edge PoE Demand</th>
+                <th class="py-2 px-3 text-right">Headroom Margin</th>
+                <th class="py-2 px-3 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.poeSchedule.map(p => {
+                let badgeClass = "bg-emerald-950 text-emerald-400 border-emerald-800";
+                if (p.status.includes("DEFICIT")) badgeClass = "bg-rose-950 text-rose-400 border-rose-800";
+                else if (p.status.includes("WARNING")) badgeClass = "bg-amber-950 text-amber-400 border-amber-800";
+
+                return `
+                  <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
+                    <td class="py-2.5 px-3 font-bold text-white">${escapeHTML(p.space)}</td>
+                    <td class="py-2.5 px-3 text-center font-mono text-slate-300">${p.switchCount}</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-400">${p.switchBudget.toLocaleString()} W</td>
+                    <td class="py-2.5 px-3 text-center font-mono text-slate-300">${p.edgeCount}</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-semibold text-rose-400">${p.edgeDemand.toLocaleString()} W</td>
+                    <td class="py-2.5 px-3 text-right font-mono font-bold ${p.headroom >= 0 ? 'text-emerald-400' : 'text-rose-500'}">
+                      ${p.headroom >= 0 ? '+' : ''}${p.headroom.toLocaleString()} W
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeClass}">
+                        ${escapeHTML(p.status)}
+                      </span>
+                    </td>
+                  </tr>
+                `;
+              }).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 4: Structured Cabling & Field Drop Schedule -->
+      <div class="space-y-4 pt-4 print-avoid-break">
+        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">4</span>
+            Structured Cabling & Field Drop Schedule
+          </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left submittal-table">
+            <thead>
+              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                <th class="py-2 px-3">Telecom Closet</th>
+                <th class="py-2 px-3 text-center">Data Drops</th>
+                <th class="py-2 px-3 text-center">48P Panels</th>
+                <th class="py-2 px-3 text-center">24P Panels</th>
+                <th class="py-2 px-3 text-center">Total Panels</th>
+                <th class="py-2 px-3 text-center">Keystones</th>
+                <th class="py-2 px-3 text-right">Est. Footage</th>
+                <th class="py-2 px-3 text-center">1k' Spools</th>
+                <th class="py-2 px-3 text-center">Fiber Trunks</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.cablingSchedule.map(c => `
+                <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
+                  <td class="py-2.5 px-3 font-bold text-white">${escapeHTML(c.space)}</td>
+                  <td class="py-2.5 px-3 text-center font-mono font-bold text-sky-400">${c.drops}</td>
+                  <td class="py-2.5 px-3 text-center font-mono text-slate-300">${c.pp48}</td>
+                  <td class="py-2.5 px-3 text-center font-mono text-slate-300">${c.pp24}</td>
+                  <td class="py-2.5 px-3 text-center font-mono font-bold text-indigo-400">${c.totalPanels}</td>
+                  <td class="py-2.5 px-3 text-center font-mono text-slate-300">${c.keystones}</td>
+                  <td class="py-2.5 px-3 text-right font-mono text-slate-300">${c.estFootage.toLocaleString()} ft</td>
+                  <td class="py-2.5 px-3 text-center font-mono font-bold text-amber-400">${c.spoolsNeeded}</td>
+                  <td class="py-2.5 px-3 text-center font-mono font-bold text-purple-400">${c.fiberLinks}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Section 5: Engineering Submittal Sign-Off & Approvals Block -->
+      <div class="space-y-4 pt-6 print-avoid-break">
+        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
+          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">5</span>
+            Engineering Verification & Submittal Approval
+          </h3>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 text-xs">
+            <div class="font-bold text-slate-200 uppercase tracking-wider text-[11px] border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
+              <i data-lucide="award" class="w-3.5 h-3.5 text-brand-400"></i> Lead Systems Designer
+            </div>
+            <div class="space-y-2.5 font-mono text-[11px]">
+              <div><span class="text-slate-500">Name:</span> ___________________________</div>
+              <div><span class="text-slate-500">Signature:</span> ______________________</div>
+              <div><span class="text-slate-500">Date:</span> ___________________________</div>
+              <div><span class="text-slate-500">Lic / Cert:</span> ______________________</div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 text-xs">
+            <div class="font-bold text-slate-200 uppercase tracking-wider text-[11px] border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
+              <i data-lucide="briefcase" class="w-3.5 h-3.5 text-indigo-400"></i> Project Manager / GC
+            </div>
+            <div class="space-y-2.5 font-mono text-[11px]">
+              <div><span class="text-slate-500">Name:</span> ___________________________</div>
+              <div><span class="text-slate-500">Signature:</span> ______________________</div>
+              <div><span class="text-slate-500">Date:</span> ___________________________</div>
+              <div><span class="text-slate-500">Company:</span> ________________________</div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 text-xs">
+            <div class="font-bold text-slate-200 uppercase tracking-wider text-[11px] border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
+              <i data-lucide="check-square" class="w-3.5 h-3.5 text-emerald-400"></i> Customer Acceptance / AHJ
+            </div>
+            <div class="space-y-2.5 font-mono text-[11px]">
+              <div><span class="text-slate-500">Name:</span> ___________________________</div>
+              <div><span class="text-slate-500">Signature:</span> ______________________</div>
+              <div><span class="text-slate-500">Date:</span> ___________________________</div>
+              <div><span class="text-slate-500">Title / Auth:</span> ___________________</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400">
+          <strong class="text-slate-300">Engineering Notes & Field Deviations:</strong>
+          <p class="mt-1 font-mono text-slate-500 leading-relaxed">
+            All equipment installations shall comply with NFPA 70 (NEC), TIA-568-D structured cabling standards, and local electrical codes. 
+            Any field alterations to cabling paths exceeding 295ft (90m) permanent link limits must receive written engineering change approval.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  modal.classList.remove("hidden");
+  if (window.lucide && typeof lucide.createIcons === "function") {
+    try { lucide.createIcons(); } catch(e) {}
+  }
+}
+
+function closeEngineeringSubmittalModal() {
+  const modal = document.getElementById("engineeringSubmittalModal");
+  if (modal) modal.classList.add("hidden");
+}
+
+function printEngineeringSubmittal() {
+  window.print();
+}
+
 function jumpToBomTarget(instanceId) {
   if (typeof NavigationHistory !== "undefined") {
     const st = NavigationHistory.captureCurrentState();
     if (st && st.tool !== "bom") NavigationHistory.push(st);
   }
+
+  // Minimize/hide open modal windows so the user immediately sees the BOM drawer in foreground
+  const facilityModal = document.getElementById("facilityModal");
+  if (facilityModal && !facilityModal.classList.contains("hidden")) {
+    facilityModal.classList.add("hidden");
+  }
+  const cableModal = document.getElementById("cableLayoutModal");
+  if (cableModal && !cableModal.classList.contains("hidden")) {
+    cableModal.classList.add("hidden");
+  }
+  const topoModal = document.getElementById("topologyModal");
+  if (topoModal && !topoModal.classList.contains("hidden")) {
+    topoModal.classList.add("hidden");
+  }
+  const pmModal = document.getElementById("portMatrixStudioModal");
+  if (pmModal && !pmModal.classList.contains("hidden")) {
+    pmModal.classList.add("hidden");
+  }
+
   const drawer = document.getElementById("bomDrawer");
   if (drawer && drawer.classList.contains("translate-x-full")) {
     toggleBomDrawer();
@@ -1605,15 +3257,28 @@ window.setItemLocation = setItemLocation;
 window.updateDeviceMountMethod = updateDeviceMountMethod;
 window.updateBOMView = updateBOMView;
 window.removeBomItem = removeBomItem;
+window.deleteDeviceFromBOM = deleteDeviceFromBOM;
 window.clearBom = clearBom;
 window.changeBomQty = changeBomQty;
 window.toggleBomDrawer = toggleBomDrawer;
 window.exportBomCSV = exportBomCSV;
+window.compileProjectEngineeringData = compileProjectEngineeringData;
+window.exportComprehensiveProjectCSV = exportComprehensiveProjectCSV;
+window.openEngineeringSubmittalModal = openEngineeringSubmittalModal;
+window.closeEngineeringSubmittalModal = closeEngineeringSubmittalModal;
+window.printEngineeringSubmittal = printEngineeringSubmittal;
 window.auditSwitchCapacities = auditSwitchCapacities;
 window.autoResolveUplinks = autoResolveUplinks;
 window.updateStackedCount = updateStackedCount;
 window.applyStackCabling = applyStackCabling;
+window.applyStandardPodCabling = applyStandardPodCabling;
 window.jumpToBomTarget = jumpToBomTarget;
 window.openFacilityCreationForLocation = openFacilityCreationForLocation;
 window.getPendingFacilityLocationContext = () => pendingFacilityLocationContext;
 window.clearPendingFacilityLocationContext = () => { pendingFacilityLocationContext = null; };
+window.unbundleMultiQtyCameras = unbundleMultiQtyCameras;
+window.setBomViewMode = setBomViewMode;
+window.renderBomFlatSkuItemHtml = renderBomFlatSkuItemHtml;
+window.changeRawSkuQty = changeRawSkuQty;
+window.deleteRawSkuFromBOM = deleteRawSkuFromBOM;
+

@@ -3,6 +3,13 @@
 // Single Source of Truth for Floors, Spaces/Closets/Poles, Enclosures & Event Dispatching
 // =========================================================================
 
+if (typeof window !== "undefined" && typeof window.escapeHTML !== "function") {
+  window.escapeHTML = (str => String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+}
+var escapeHTML = (typeof window !== "undefined" && typeof window.escapeHTML === "function")
+  ? window.escapeHTML
+  : (str => String(str || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+
 /**
  * 5 Canonical Physical Mounting Hosts (Where equipment is mounted & powered)
  */
@@ -56,6 +63,16 @@ const MOUNTING_HOST_TYPES = {
     unitOfMeasure: "Sq Ft",
     defaultCapacity: 32,
     description: "3/4-inch fire-retardant AC plywood telecom wall backboard for surface-mounted equipment"
+  },
+  field: {
+    id: "field",
+    label: "Field Drop / Unenclosed",
+    badgeLabel: "Field Drop",
+    icon: "map-pin",
+    color: "cyan",
+    unitOfMeasure: "Drops",
+    defaultCapacity: 0,
+    description: "Field devices (cameras, access points, door readers, drops) mounted in unenclosed spaces"
   }
 };
 
@@ -115,21 +132,10 @@ const FacilityStore = {
   HOST_TYPES: MOUNTING_HOST_TYPES,
   ENDPOINT_TYPES: EDGE_ENDPOINT_TYPES,
 
-  // Canonical Default Hierarchy Structure
-  defaultFloors: [
-    { id: "floor-1", name: "Main Floor", levelIndex: 1, heightFt: 14, scaleFt: 25, slackFt: 15, slabFt: 10 },
-    { id: "floor-exterior", name: "Exterior", levelIndex: 0, heightFt: 0, scaleFt: 50, slackFt: 25, slabFt: 0 }
-  ],
-
-  defaultSpaces: [
-    { id: "space-mdf", name: "MDF", floorId: "floor-1", type: "mdf", description: "Main Equipment Room / Server Room" },
-    { id: "space-exterior-pole1", name: "Pole 1", floorId: "floor-exterior", type: "pole", description: "Perimeter Security & Wireless Pole", poleHeightFt: 25, poleDiameterInches: 4 }
-  ],
-
-  defaultEnclosures: [
-    { id: "enc-mdf-rack1", spaceId: "space-mdf", name: "Rack-1", hostType: "equipment_rack", type: "rack_4post", heightU: 42, maxWatts: 4500, pduCount: 2, isDin: false, depthInches: 36 },
-    { id: "enc-pole1-nema", spaceId: "space-exterior-pole1", name: "NEMA-Box", hostType: "industrial_din", type: "nema_box", mountingMethod: "pole", mountHeightFt: 10, heightU: 0, isDin: true, maxWatts: 800, pduCount: 1, dinRails: 2, railLengthMm: 350 }
-  ],
+  // Canonical Default Hierarchy Structure (Blank for new projects)
+  defaultFloors: [],
+  defaultSpaces: [],
+  defaultEnclosures: [],
 
   getProjectId() {
     try {
@@ -153,9 +159,9 @@ const FacilityStore = {
     const projKey = this.getProjectId();
     try {
       const raw = localStorage.getItem(`netselect_fac_floors_${projKey}`);
-      if (raw) {
+      if (raw !== null) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           // Normalize old default name if present
           parsed.forEach(f => {
             if (f.name === "Level 1 - Main Floor") f.name = "Main Floor";
@@ -201,6 +207,7 @@ const FacilityStore = {
     const list = this.getFloors();
     const floor = list.find(f => f.id === floorId);
     if (!floor) return false;
+    const oldName = floor.name;
     if (updates.name) {
       const cleanName = updates.name.trim();
       if (list.some(f => f.id !== floorId && f.name.trim().toLowerCase() === cleanName.toLowerCase())) {
@@ -209,28 +216,92 @@ const FacilityStore = {
       }
       updates.name = cleanName;
     }
+    const nameChanged = updates.name && updates.name !== oldName;
+    const newName = updates.name || oldName;
+
     Object.assign(floor, updates);
     this.saveFloors(list);
+
+    if (nameChanged) {
+      // 1. Cascade to facilityFloors in physical layout
+      if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+        const fl = facilityFloors.find(f => f.id === floorId || f.name.toLowerCase() === oldName.toLowerCase());
+        if (fl) {
+          fl.name = newName;
+        }
+      }
+
+      // 2. Cascade to Floor Field BOM items (e.g. "Main Floor • Field")
+      if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+        const oldFieldLoc = this.normalize(`${oldName} • Field`);
+        const newFieldLoc = `${newName} • Field`;
+        projectBOM.forEach(item => {
+          const loc = this.normalize(item.closetName || item.rackId);
+          if (loc === oldFieldLoc) {
+            if (item.closetName) item.closetName = newFieldLoc;
+            if (item.rackId && item.rackId !== this.UNASSIGNED) item.rackId = newFieldLoc;
+          }
+        });
+      }
+
+      if (typeof renderFloorSelector === "function") renderFloorSelector();
+      if (typeof renderCableCanvas === "function") renderCableCanvas();
+      if (typeof renderBOM === "function") renderBOM();
+      if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+        StorageService.queueAutoSave();
+      }
+    }
+
     this.notifyWorkspaceChange();
     return floor;
   },
 
   deleteFloor(floorId) {
     let list = this.getFloors();
-    if (list.length <= 1) {
-      alert("At least one building floor level must remain in the project.");
-      return false;
-    }
+    const targetFloor = list.find(f => f.id === floorId);
+    if (!targetFloor) return false;
+
     list = list.filter(f => f.id !== floorId);
     this.saveFloors(list);
 
-    // Reassign orphan spaces to first floor
-    const fallbackFloor = list[0].id;
+    // Reassign orphan spaces to first remaining floor or null
+    const fallbackFloor = list.length > 0 ? list[0].id : null;
     const spaces = this.getSpaces();
     spaces.forEach(s => {
       if (s.floorId === floorId) s.floorId = fallbackFloor;
     });
     this.saveSpaces(spaces);
+
+    // Also remove from physical layout facilityFloors if present
+    if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+      const idx = facilityFloors.findIndex(f => f.id === floorId || f.name.toLowerCase() === targetFloor.name.toLowerCase());
+      if (idx !== -1) {
+        facilityFloors.splice(idx, 1);
+        if (typeof activeFloorId !== "undefined" && activeFloorId === floorId) {
+          activeFloorId = facilityFloors.length > 0 ? facilityFloors[0].id : null;
+        }
+      }
+    }
+
+    // Floor Field hardware on this floor unassigned
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      const oldFieldLoc = this.normalize(`${targetFloor.name} • Field`);
+      projectBOM.forEach(item => {
+        const loc = this.normalize(item.closetName || item.rackId);
+        if (loc === oldFieldLoc) {
+          item.closetName = this.UNASSIGNED;
+          item.rackId = this.UNASSIGNED;
+          item.rackSlot = null;
+        }
+      });
+    }
+
+    if (typeof renderFloorSelector === "function") renderFloorSelector();
+    if (typeof renderCableCanvas === "function") renderCableCanvas();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
     this.notifyWorkspaceChange();
     return true;
   },
@@ -240,13 +311,16 @@ const FacilityStore = {
     let list = [];
     try {
       const raw = localStorage.getItem(`netselect_fac_spaces_${projKey}`);
-      list = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultSpaces));
+      list = raw !== null ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultSpaces));
+      if (!Array.isArray(list)) list = [];
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultSpaces));
     }
-    // Ensure all pole spaces have poleHeightFt and poleDiameterInches
+    // Ensure all spaces have a type, and pole spaces have poleHeightFt and poleDiameterInches
     list.forEach(s => {
-      if (s.type === "pole" || (s.name && s.name.toLowerCase().includes("pole"))) {
+      if (!s) return;
+      if (!s.type) s.type = "idf";
+      if (s.type === "pole" || (s.name && String(s.name).toLowerCase().includes("pole"))) {
         s.type = "pole";
         if (!s.poleHeightFt) s.poleHeightFt = 25;
         if (!s.poleDiameterInches) s.poleDiameterInches = 4;
@@ -265,22 +339,24 @@ const FacilityStore = {
     } catch (e) {}
   },
 
-  addSpace(name, type = "idf", floorId = "floor-1", options = {}) {
+  addSpace(name, type = "idf", floorId = null, options = {}) {
     if (!name || !name.trim()) return null;
     const cleanName = name.trim();
+    const floors = this.getFloors();
+    const targetFloorId = floorId || (typeof activeFacilityFloorId !== "undefined" && activeFacilityFloorId) || (floors[0] ? floors[0].id : "floor-1");
     const list = this.getSpaces();
     // Validate uniqueness on this floor (Requirement 4)
-    if (list.some(s => s.floorId === floorId && s.name.trim().toLowerCase() === cleanName.toLowerCase())) {
+    if (list.some(s => s.floorId === targetFloorId && s.name.trim().toLowerCase() === cleanName.toLowerCase())) {
       if (typeof showToast === "function") showToast(`A space named "${cleanName}" already exists on this floor.`);
       return null;
     }
-    const id = `space-${Date.now()}`;
+    const id = `space-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
     const isPole = type === "pole" || cleanName.toLowerCase().includes("pole");
     const newSpace = {
       id,
       name: cleanName,
       type: isPole ? "pole" : (type || "idf"),
-      floorId: floorId || "floor-1",
+      floorId: targetFloorId,
       description: options.description || "",
       poleHeightFt: isPole ? (options.poleHeightFt || 25) : null,
       poleDiameterInches: isPole ? (options.poleDiameterInches || 4) : null
@@ -288,32 +364,37 @@ const FacilityStore = {
     list.push(newSpace);
     this.saveSpaces(list);
 
-    // Create default host for this space (e.g. Rack-1, NEMA-Box, or Security Cabinet)
-    const isOutdoor = newSpace.type === "pole" || newSpace.type === "exterior";
-    const isAccess = newSpace.type === "electrical_room" || newSpace.type === "security_room";
-    let hostName = "Rack-1";
-    let hostType = "equipment_rack";
-    let heightU = 24;
+    // Create default host for this space (e.g. Rack-1, Wallbox, or Security Cabinet)
+    // Only create a default host if:
+    // 1. options.createDefaultHost is explicitly true, OR
+    // 2. options.createDefaultHost !== false AND the space is a dedicated enclosure closet: "idf", "mdf", or "wallbox"
+    // Spaces that are unenclosed (e.g. warehouse, room, field, exterior, zone, office) or poles (which already have Pole Mount)
+    // must NEVER have fake 19" racks or enclosures created automatically!
+    const isDedicatedCloset = newSpace.type === "idf" || newSpace.type === "mdf" || newSpace.type === "wallbox" || newSpace.type === "security_room";
+    const shouldCreateHost = options.createDefaultHost === true || (options.createDefaultHost !== false && isDedicatedCloset);
 
-    if (isOutdoor) {
-      hostName = "NEMA-Box";
-      hostType = "industrial_din";
-      heightU = 0;
-    } else if (isAccess) {
-      hostName = "AC-Cabinet-1";
-      hostType = "security_cabinet";
-      heightU = 0;
-    } else if (newSpace.type === "wallbox") {
-      hostName = "Wallbox";
-      hostType = "equipment_rack";
-      heightU = 12;
+    if (shouldCreateHost) {
+      const isAccess = newSpace.type === "electrical_room" || newSpace.type === "security_room";
+      let hostName = "Rack-1";
+      let hostType = "equipment_rack";
+      let heightU = 24;
+
+      if (isAccess) {
+        hostName = "AC-Cabinet-1";
+        hostType = "security_cabinet";
+        heightU = 0;
+      } else if (newSpace.type === "wallbox") {
+        hostName = "Wallbox";
+        hostType = "equipment_rack";
+        heightU = 12;
+      }
+
+      this.addHost(hostName, hostType, id, { 
+        heightU,
+        mountingMethod: "wall",
+        mountHeightFt: null
+      });
     }
-
-    this.addHost(hostName, hostType, id, { 
-      heightU,
-      mountingMethod: isOutdoor ? "pole" : "wall",
-      mountHeightFt: isOutdoor ? 10 : null
-    });
     this.notifyWorkspaceChange();
     return newSpace;
   },
@@ -322,6 +403,8 @@ const FacilityStore = {
     const list = this.getSpaces();
     const space = list.find(s => s.id === spaceId);
     if (!space) return false;
+    const oldName = space.name;
+
     if (updates.name) {
       const cleanName = updates.name.trim();
       const floorId = updates.floorId || space.floorId;
@@ -331,18 +414,96 @@ const FacilityStore = {
       }
       updates.name = cleanName;
     }
+
+    const nameChanged = updates.name && updates.name !== oldName;
+    const newName = updates.name || oldName;
+
     Object.assign(space, updates);
     this.saveSpaces(list);
+
+    // CASCADE RENAMING
+    if (nameChanged) {
+      // 1. Cascade to Enclosures
+      let encs = this.getEnclosures();
+      const escapedOld = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      encs.forEach(e => {
+        if (e.spaceId === spaceId) {
+          if (e.location && e.location.toLowerCase().includes(oldName.toLowerCase())) {
+            e.location = e.location.replace(new RegExp(`^${escapedOld}`, 'i'), newName);
+          }
+        }
+      });
+      this.saveEnclosures(encs);
+
+      // 2. Cascade to BOM items (closetName and rackId)
+      if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+        projectBOM.forEach(item => {
+          if (item.closetId === spaceId || (item.closetName && item.closetName.toLowerCase() === oldName.toLowerCase())) {
+            item.closetName = newName;
+          } else if (item.closetName && item.closetName.toLowerCase().startsWith(oldName.toLowerCase() + " • ")) {
+            item.closetName = newName + item.closetName.substring(oldName.length);
+          }
+          if (item.rackId && item.rackId.toLowerCase().startsWith(oldName.toLowerCase() + " • ")) {
+            item.rackId = newName + item.rackId.substring(oldName.length);
+          }
+        });
+      }
+
+      // 3. Cascade to Canvas floor nodes (MDF closet nodes and device assignedCloset)
+      if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+        facilityFloors.forEach(fl => {
+          (fl.nodes || []).forEach(n => {
+            if (n.type === "closet" && (n.id === spaceId || (n.name && n.name.toLowerCase() === oldName.toLowerCase()))) {
+              n.name = newName;
+            }
+            if (n.assignedCloset && n.assignedCloset.toLowerCase() === oldName.toLowerCase()) {
+              n.assignedCloset = newName;
+            } else if (n.assignedCloset && n.assignedCloset.toLowerCase().startsWith(oldName.toLowerCase() + " • ")) {
+              n.assignedCloset = newName + n.assignedCloset.substring(oldName.length);
+            }
+          });
+          (fl.fiberBackbones || []).forEach(fb => {
+            if (fb.fromClosetName && fb.fromClosetName.toLowerCase() === oldName.toLowerCase()) fb.fromClosetName = newName;
+            if (fb.toClosetName && fb.toClosetName.toLowerCase() === oldName.toLowerCase()) fb.toClosetName = newName;
+          });
+        });
+      }
+
+      // 4. Cascade to Topology persisted coordinates in localStorage
+      try {
+        const projKey = this.getProjectId();
+        const topoKey = `netselect_topo_pos_${projKey}`;
+        const rawTopo = localStorage.getItem(topoKey);
+        if (rawTopo) {
+          const topoPos = JSON.parse(rawTopo);
+          const oldClusterKey = `cluster:${oldName}`;
+          const newClusterKey = `cluster:${newName}`;
+          if (topoPos[oldClusterKey]) {
+            topoPos[newClusterKey] = topoPos[oldClusterKey];
+            delete topoPos[oldClusterKey];
+            localStorage.setItem(topoKey, JSON.stringify(topoPos));
+          }
+        }
+      } catch (err) {
+        console.warn("Could not cascade topology cluster rename:", err);
+      }
+
+      // 5. Notify downstream renderers
+      if (typeof renderBOM === "function") renderBOM();
+      if (typeof renderCableCanvas === "function") renderCableCanvas();
+      if (typeof renderTopology === "function") renderTopology();
+      if (typeof renderFloorSelector === "function") renderFloorSelector();
+      if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+        StorageService.queueAutoSave();
+      }
+    }
+
     this.notifyWorkspaceChange();
     return space;
   },
 
   deleteSpace(spaceId, fallbackSpaceId = null) {
     let spaces = this.getSpaces();
-    if (spaces.length <= 1) {
-      alert("At least one telecom space or closet must remain in the project.");
-      return false;
-    }
     const targetSpace = spaces.find(s => s.id === spaceId);
     if (!targetSpace) return false;
 
@@ -372,6 +533,14 @@ const FacilityStore = {
       });
     }
 
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof renderCableCanvas === "function") renderCableCanvas();
+    if (typeof renderTopology === "function") renderTopology();
+    if (typeof renderFloorSelector === "function") renderFloorSelector();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
+
     this.notifyWorkspaceChange();
     return true;
   },
@@ -381,7 +550,8 @@ const FacilityStore = {
     let list = [];
     try {
       const raw = localStorage.getItem(`netselect_fac_enclosures_${projKey}`);
-      list = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultEnclosures));
+      list = raw !== null ? JSON.parse(raw) : JSON.parse(JSON.stringify(this.defaultEnclosures));
+      if (!Array.isArray(list)) list = [];
     } catch (e) {
       list = JSON.parse(JSON.stringify(this.defaultEnclosures));
     }
@@ -435,13 +605,13 @@ const FacilityStore = {
     // Resolve hostType from options, type, or name context
     let hostType = options.hostType;
     if (!hostType) {
-      if (type === "nema_box" || type === "din_rail" || cleanName.toLowerCase().includes("nema") || cleanName.toLowerCase().includes("din")) {
+      if (type === "industrial_din" || type === "nema_box" || type === "din_rail" || cleanName.toLowerCase().includes("nema") || cleanName.toLowerCase().includes("din")) {
         hostType = "industrial_din";
-      } else if (type === "wall_cabinet" || cleanName.toLowerCase().includes("panel") || cleanName.toLowerCase().includes("trove") || cleanName.toLowerCase().includes("ac-")) {
+      } else if (type === "security_cabinet" || type === "wall_cabinet" || cleanName.toLowerCase().includes("panel") || cleanName.toLowerCase().includes("trove") || cleanName.toLowerCase().includes("ac-") || cleanName.toLowerCase().includes("enc")) {
         hostType = "security_cabinet";
-      } else if (type === "pole" || cleanName.toLowerCase().includes("pole")) {
+      } else if (type === "structural_mount" || type === "pole" || cleanName.toLowerCase().includes("pole")) {
         hostType = "structural_mount";
-      } else if (type === "backboard" || cleanName.toLowerCase().includes("backboard") || cleanName.toLowerCase().includes("plywood")) {
+      } else if (type === "architectural_backboard" || type === "backboard" || cleanName.toLowerCase().includes("backboard") || cleanName.toLowerCase().includes("plywood")) {
         hostType = "architectural_backboard";
       } else {
         hostType = "equipment_rack";
@@ -486,6 +656,7 @@ const FacilityStore = {
     const list = this.getEnclosures();
     const host = list.find(h => h.id === hostId);
     if (!host) return false;
+    const oldName = host.name;
     if (updates.name) {
       const cleanName = updates.name.trim();
       const spaceId = updates.spaceId || host.spaceId;
@@ -495,18 +666,48 @@ const FacilityStore = {
       }
       updates.name = cleanName;
     }
+    const nameChanged = updates.name && updates.name !== oldName;
+    const newName = updates.name || oldName;
+
     Object.assign(host, updates);
     this.saveEnclosures(list);
+
+    if (nameChanged) {
+      const spaces = this.getSpaces();
+      const space = spaces.find(s => s.id === host.spaceId);
+      if (space) {
+        const oldLoc = `${space.name} • ${oldName}`;
+        const newLoc = `${space.name} • ${newName}`;
+        // Cascade to BOM items
+        if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+          projectBOM.forEach(item => {
+            if (item.rackId === oldLoc || item.rackId === oldName) {
+              item.rackId = newLoc;
+            }
+            if (item.closetName === oldLoc) {
+              item.closetName = newLoc;
+            }
+          });
+        }
+      }
+      if (typeof renderBOM === "function") renderBOM();
+      if (typeof renderCableCanvas === "function") renderCableCanvas();
+      if (typeof renderTopology === "function") renderTopology();
+      if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+        StorageService.queueAutoSave();
+      }
+    }
+
     this.notifyWorkspaceChange();
     return host;
   },
 
+  updateEnclosure(enclosureId, updates = {}) {
+    return this.updateHost(enclosureId, updates);
+  },
+
   deleteEnclosure(enclosureId, fallbackEnclosureId = null) {
     let encs = this.getEnclosures();
-    if (encs.length <= 1) {
-      alert("At least one equipment enclosure / rack must remain in the project.");
-      return false;
-    }
     const targetEnc = encs.find(e => e.id === enclosureId);
     if (!targetEnc) return false;
 
@@ -517,7 +718,7 @@ const FacilityStore = {
     if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
       projectBOM.forEach(item => {
         const itemLoc = this.normalize(item.closetName || item.rackId);
-        if ((fullLoc && itemLoc === fullLoc) || item.rackId === enclosureId) {
+        if ((fullLoc && itemLoc === fullLoc) || item.rackId === enclosureId || item.rackId === targetEnc.name) {
           item.closetName = this.UNASSIGNED;
           item.rackId = this.UNASSIGNED;
           item.rackSlot = null;
@@ -527,6 +728,14 @@ const FacilityStore = {
 
     encs = encs.filter(e => e.id !== enclosureId);
     this.saveEnclosures(encs);
+
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof renderCableCanvas === "function") renderCableCanvas();
+    if (typeof renderTopology === "function") renderTopology();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
+
     this.notifyWorkspaceChange();
     return true;
   },
@@ -608,11 +817,12 @@ const FacilityStore = {
   // Canonical Location String Handlers ("Space • Enclosure" or "Floor • Field")
   // -----------------------------------------------------------
   normalize(str) {
-    if (!str || !str.trim()) return this.UNASSIGNED;
-    const trimmed = str.trim();
-    if (trimmed === this.UNASSIGNED || trimmed.toLowerCase() === "unassigned") {
+    if (!str) return this.UNASSIGNED;
+    const strVal = String(str).trim();
+    if (!strVal || strVal === this.UNASSIGNED || strVal.toLowerCase() === "unassigned") {
       return this.UNASSIGNED;
     }
+    const trimmed = strVal;
 
     if (trimmed.includes(" • ")) {
       const parts = trimmed.split(" • ");
@@ -654,15 +864,16 @@ const FacilityStore = {
       }
       const encs = this.getEnclosures(matchedSpace.id);
       if (encs.length > 0) return `${matchedSpace.name} • ${encs[0].name}`;
-      return `${matchedSpace.name} • Rack-1`;
+      return `${matchedSpace.name} • Field`;
     }
 
     // Intelligent suffixing based on naming context
     const lower = trimmed.toLowerCase();
-    if (lower.includes("exterior") || lower.includes("outdoor")) return `Exterior • Field`;
+    if (lower.includes("exterior") || lower.includes("outdoor") || lower.includes("field")) return `Exterior • Field`;
     if (lower.includes("pole") || lower.includes("mast")) return `${trimmed} • Pole Mount`;
     if (lower.includes("wall") || lower.includes("gate")) return `${trimmed} • Wallbox`;
-    return `${trimmed} • Rack-1`;
+    if (lower.includes("rack") || lower.includes("cabinet") || lower.includes("mdf") || lower.includes("idf")) return `${trimmed} • Rack-1`;
+    return `${trimmed} • Field`;
   },
 
   parse(str) {
@@ -694,20 +905,18 @@ const FacilityStore = {
 
     if (isFieldHardware) {
       let floor = floors.find(f => f.name.toLowerCase() === firstPart.toLowerCase());
-      if (!floor) {
-        const legSpace = spaces.find(s => s.name.toLowerCase() === firstPart.toLowerCase());
-        if (legSpace) {
-          floor = floors.find(f => f.id === legSpace.floorId);
-        }
+      const legSpace = spaces.find(s => s.name.toLowerCase() === firstPart.toLowerCase());
+      if (!floor && legSpace) {
+        floor = floors.find(f => f.id === legSpace.floorId);
       }
       if (!floor && floors.length > 0) floor = floors[0];
 
       return {
         fullName: normalized,
-        space: "Field",
+        space: legSpace ? legSpace.name : (floor ? floor.name : "Field"),
         enclosure: "Field",
         hostName: "Field Hardware",
-        spaceId: null,
+        spaceId: legSpace ? legSpace.id : null,
         enclosureId: null,
         hostId: null,
         floorId: floor ? floor.id : "floor-1",
@@ -806,7 +1015,7 @@ const FacilityStore = {
     spaces.forEach(s => {
       const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
       const floor = floors.find(f => f.id === s.floorId) || floors[0];
-      const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
+      const isPole = s.type === "pole" || (s.name && String(s.name).toLowerCase().includes("pole"));
 
       if (isPole) {
         // Structural Pole Mounting Host at the Space level
@@ -832,21 +1041,23 @@ const FacilityStore = {
 
       if (spaceEncs.length === 0) {
         if (!isPole) {
-          // Fallback default enclosure if none exists
+          // Space with no enclosures is an unenclosed field space/zone
           list.push({
-            id: `loc-${s.id}-default`,
-            name: `${s.name} • Rack-1`,
-            displayName: `${s.name} • Rack-1`,
+            id: `loc-${s.id}-field`,
+            name: `${s.name} • Field`,
+            displayName: `${s.name} (Field / Unenclosed)`,
             space: s.name,
             spaceId: s.id,
-            enclosure: "Rack-1",
-            hostName: "Rack-1",
+            enclosure: "Field",
+            hostName: "Field Hardware",
             enclosureId: null,
             hostId: null,
-            hostType: "equipment_rack",
+            hostType: "field",
+            isField: true,
+            isSpace: true,
             floorId: s.floorId,
             floorName: floor ? floor.name : "Level 1",
-            heightU: 24,
+            heightU: 0,
             isDin: false
           });
         }
@@ -1021,6 +1232,29 @@ const FacilityStore = {
     return true;
   },
 
+  renameLocation(oldName, newName) {
+    if (!oldName || !newName || oldName === newName) return false;
+    const oldNorm = this.normalize(oldName);
+    const newClean = newName.trim();
+    const parsedOld = this.parse(oldNorm);
+
+    // If it's a space or closet name
+    if (parsedOld.spaceId) {
+      if (!parsedOld.enclosureId || parsedOld.isStructuralMount) {
+        return this.updateSpace(parsedOld.spaceId, { name: newClean });
+      } else {
+        return this.updateEnclosure(parsedOld.enclosureId, { name: newClean });
+      }
+    }
+    // If it matches a floor
+    const floors = this.getFloors();
+    const floor = floors.find(f => f.name.toLowerCase() === oldNorm.toLowerCase() || (oldNorm.startsWith(f.name + " •")));
+    if (floor) {
+      return this.updateFloor(floor.id, { name: newClean });
+    }
+    return false;
+  },
+
   // -----------------------------------------------------------
   // Equipment Aggregation & Telemetry per Enclosure / Location
   // -----------------------------------------------------------
@@ -1071,6 +1305,12 @@ const FacilityStore = {
   // =========================================================================
   notifyWorkspaceChange() {
     try {
+      if (typeof unbundleMultiQtyCameras === "function" && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+        unbundleMultiQtyCameras(projectBOM);
+      }
+      if (typeof DeviceTaxonomy !== "undefined" && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+        DeviceTaxonomy.recalculateNumbers(projectBOM);
+      }
       if (typeof saveBOMState === "function") saveBOMState();
       if (typeof updateBOMView === "function") updateBOMView();
       if (typeof runActiveFilter === "function") runActiveFilter();
@@ -1091,17 +1331,251 @@ const FacilityStore = {
         if (typeof renderTopology === "function") renderTopology();
       }
 
-      // 3. Live update Physical Layout Canvas if open
+      // 3. Live update Physical Layout Canvas & State
+      if (typeof syncBOMClosetsToFloors === "function") syncBOMClosetsToFloors();
+      if (typeof syncBOMDevicesToFloors === "function") syncBOMDevicesToFloors();
+
       const cableModal = document.getElementById("cableLayoutModal");
       if (cableModal && !cableModal.classList.contains("hidden")) {
-        if (typeof syncBOMClosetsToFloors === "function") syncBOMClosetsToFloors();
         if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
         if (typeof renderCableCanvas === "function") renderCableCanvas();
         if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
+        if (typeof renderInspector === "function") renderInspector();
+      }
+
+      // 4. Live update Intra-Rack Cabling & Interconnects (DACs and Patch Cords adjust based on U separation)
+      if (typeof syncRackInterconnectsAndCabling === "function") {
+        syncRackInterconnectsAndCabling();
       }
     } catch (e) {
       console.error("Error in FacilityStore.notifyWorkspaceChange:", e);
     }
+  },
+
+  // -----------------------------------------------------------
+  // Edge Device & Served Field Drops Analysis
+  // -----------------------------------------------------------
+  isFieldDevice(item) {
+    if (!item) return false;
+    const role = (item.role || "").trim();
+    if (role === "Access" || role === "Core" || role === "Core & Agg" || role === "Aggregation" || 
+        role === "Gateways & WAN" || role === "Security WAN" || role === "Server" || 
+        role === "VMS Server" || role === "Compute & Storage" || role === "UPS" || role === "PDU") {
+      return false;
+    }
+    if (typeof DeviceTaxonomy !== "undefined") {
+      if (typeof DeviceTaxonomy.isCamera === "function" && DeviceTaxonomy.isCamera(item)) return true;
+      if (typeof DeviceTaxonomy.isAccessControl === "function" && DeviceTaxonomy.isAccessControl(item)) return true;
+      if (typeof DeviceTaxonomy.isIntercom === "function" && DeviceTaxonomy.isIntercom(item)) return true;
+      if (typeof DeviceTaxonomy.isWireless === "function" && DeviceTaxonomy.isWireless(item)) return true;
+      if (typeof DeviceTaxonomy.isFieldDevice === "function" && DeviceTaxonomy.isFieldDevice(item)) return true;
+    }
+    if (role === "Camera" || role === "Access Control" || role === "Intercom" || role === "Field Drop") return true;
+    const cat = (item.category || "").toLowerCase();
+    if (cat.includes("camera") || cat.includes("access") || cat.includes("intercom") || cat.includes("sensor")) return true;
+    const loc = item.closetName || item.rackId || "";
+    if (typeof isFieldLocation === "function" && isFieldLocation(loc)) return true;
+    if (loc.endsWith("• Field") || loc.toLowerCase().includes("field")) return true;
+    return false;
+  },
+
+  getDevicePhysicalFloor(item) {
+    if (!item) return "Main Floor";
+
+    // 1. Check physical floor canvas placement in facilityFloors
+    if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+      for (const fl of facilityFloors) {
+        const drop = (fl.nodes || []).find(n => 
+          n.instanceId === item.instanceId || 
+          n.id === `dev-${item.instanceId}` || 
+          n.id === item.instanceId
+        );
+        if (drop) {
+          return fl.name || "Main Floor";
+        }
+      }
+    }
+
+    // 2. Check explicit floor fields on item
+    if (item.floorName && item.floorName.trim()) return item.floorName.trim();
+    if (item.floor && item.floor.trim()) return item.floor.trim();
+    if (item.floorId) {
+      const fl = this.getFloors().find(f => f.id === item.floorId);
+      if (fl && fl.name) return fl.name;
+    }
+
+    // 3. Check item.closetName or item.rackId for floor prefix (e.g. "First Floor • Field", "Exterior • Camera 1")
+    const rawLoc = (item.closetName || item.rackId || "").trim();
+    if (rawLoc) {
+      const allFloors = this.getFloors();
+      for (const fl of allFloors) {
+        const fnLower = fl.name.toLowerCase();
+        const rLower = rawLoc.toLowerCase();
+        if (rLower === fnLower || rLower.startsWith(fnLower + " •") || rLower.startsWith(fnLower + " -") || rLower.startsWith(fnLower + " ")) {
+          return fl.name;
+        }
+      }
+      if (rawLoc.toLowerCase().includes("exterior") || rawLoc.toLowerCase().includes("outdoor") || rawLoc.toLowerCase().includes("perimeter") || rawLoc.toLowerCase().includes("gate")) {
+        return "Exterior";
+      }
+    }
+
+    // 4. Default fallback
+    const floors = this.getFloors();
+    if (floors.length > 0) {
+      return floors[0].name || "Main Floor";
+    }
+    return "Main Floor";
+  },
+
+  getEnclosureServedDrops(locName) {
+    if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) {
+      return { totalDrops: 0, totalWatts: 0, byFloor: {}, items: [] };
+    }
+
+    const normLoc = this.normalize(locName);
+    const parsed = this.parse(locName);
+    const spaceNameLower = (parsed.space || "").toLowerCase();
+
+    // Find all switches or hosts located in this enclosure
+    const hostedUnits = projectBOM.filter(i => {
+      if (i.parentInstanceId) return false;
+      const iLoc = this.normalize(i.closetName || i.rackId);
+      return iLoc === normLoc;
+    });
+    const hostedIds = new Set(hostedUnits.map(h => h.instanceId));
+
+    const servedItems = [];
+    const visitedIds = new Set();
+
+    projectBOM.forEach(item => {
+      if (item.parentInstanceId) return;
+      if (visitedIds.has(item.instanceId)) return;
+      if (!this.isFieldDevice(item)) return;
+
+      let isServed = false;
+
+      // 1. Direct uplink switch match
+      if (item.uplinkTargetId && hostedIds.has(item.uplinkTargetId)) {
+        isServed = true;
+      }
+
+      // 2. Physical layout canvas drop assigned closet match
+      if (!isServed && typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+        for (const fl of facilityFloors) {
+          const drop = (fl.nodes || []).find(n => 
+            n.instanceId === item.instanceId || 
+            n.id === `dev-${item.instanceId}` || 
+            n.id === item.instanceId
+          );
+          if (drop && drop.assignedClosetId) {
+            const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+            const closet = allClosets.find(c => c.id === drop.assignedClosetId);
+            if (closet && (this.normalize(closet.name) === normLoc || closet.name.toLowerCase().startsWith(spaceNameLower))) {
+              isServed = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // 3. Fallback: item's assigned location matches enclosure
+      if (!isServed) {
+        const itemLoc = this.normalize(item.closetName || item.rackId);
+        if (itemLoc === normLoc) {
+          isServed = true;
+        }
+      }
+
+      if (isServed) {
+        visitedIds.add(item.instanceId);
+        servedItems.push(item);
+      }
+    });
+
+    const byFloor = {};
+    let totalWatts = 0;
+    let totalDrops = 0;
+
+    servedItems.forEach(dev => {
+      const qty = parseInt(dev.qty, 10) || 1;
+      const floor = this.getDevicePhysicalFloor(dev);
+      const watts = (parseFloat(dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.baseWatts || 0)) * qty;
+
+      if (!byFloor[floor]) {
+        byFloor[floor] = { count: 0, watts: 0, cameras: 0, doors: 0, other: 0 };
+      }
+      byFloor[floor].count += qty;
+      byFloor[floor].watts += watts;
+      totalDrops += qty;
+      totalWatts += watts;
+
+      if (dev.role === "Camera" || (dev.category && dev.category.includes("camera"))) {
+        byFloor[floor].cameras += qty;
+      } else if (dev.role === "Access Control" || (dev.category && dev.category.includes("access"))) {
+        byFloor[floor].doors += qty;
+      } else {
+        byFloor[floor].other += qty;
+      }
+    });
+
+    return { totalDrops, totalWatts: Math.round(totalWatts), byFloor, items: servedItems };
+  },
+
+  getFloorDropsSummary(floorName) {
+    if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) {
+      return { dropCount: 0, totalWatts: 0, servingEnclosures: [], servingDetails: {} };
+    }
+
+    const floorNameLower = (floorName || "").toLowerCase().trim();
+    const floorDrops = projectBOM.filter(item => {
+      if (item.parentInstanceId) return false;
+      if (!this.isFieldDevice(item)) return false;
+      return this.getDevicePhysicalFloor(item).toLowerCase().trim() === floorNameLower;
+    });
+
+    const servingCounts = {};
+    let totalWatts = 0;
+    let totalDrops = 0;
+
+    floorDrops.forEach(dev => {
+      const qty = parseInt(dev.qty, 10) || 1;
+      totalDrops += qty;
+      totalWatts += (parseFloat(dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.baseWatts || 0)) * qty;
+
+      let servingSpace = "Unassigned";
+      if (dev.uplinkTargetId) {
+        const sw = projectBOM.find(s => s.instanceId === dev.uplinkTargetId);
+        if (sw && sw.closetName) {
+          servingSpace = this.parse(sw.closetName).space;
+        }
+      }
+      if (servingSpace === "Unassigned" && typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+        for (const fl of facilityFloors) {
+          const drop = (fl.nodes || []).find(n => n.instanceId === dev.instanceId || n.id === `dev-${dev.instanceId}` || n.id === dev.instanceId);
+          if (drop && drop.assignedClosetId) {
+            const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+            const closet = allClosets.find(c => c.id === drop.assignedClosetId);
+            if (closet) {
+              servingSpace = this.parse(closet.name).space;
+              break;
+            }
+          }
+        }
+      }
+      if (servingSpace === "Unassigned" && dev.closetName && !this.normalize(dev.closetName).endsWith("• Field")) {
+        servingSpace = this.parse(dev.closetName).space;
+      }
+      servingCounts[servingSpace] = (servingCounts[servingSpace] || 0) + qty;
+    });
+
+    const servingList = Object.entries(servingCounts).map(([spaceName, count]) => `${count} to ${spaceName}`);
+    return {
+      dropCount: totalDrops,
+      totalWatts: Math.round(totalWatts),
+      servingEnclosures: servingList,
+      servingDetails: servingCounts
+    };
   }
 };
 
@@ -1169,31 +1643,53 @@ function syncVisualizerBreadcrumbs() {
 }
 
 function switchFacilityView(viewName, targetLocName) {
-  facilityActiveView = viewName === "visualizer" ? "visualizer" : "hierarchy";
+  facilityActiveView = (viewName === "port_matrix") ? "port_matrix" : ((viewName === "visualizer") ? "visualizer" : "hierarchy");
+  window.facilityActiveView = facilityActiveView;
   const hierarchyView = document.getElementById("facilityHierarchyView");
   const visualizerView = document.getElementById("facilityVisualizerView");
+  const portMatrixView = document.getElementById("facilityPortMatrixView");
   const titleHierarchy = document.getElementById("facilityTitleHierarchy");
   const titleVisualizer = document.getElementById("facilityTitleVisualizer");
   const tabBtnHierarchy = document.getElementById("facilityTabBtnHierarchy");
   const tabBtnVisualizer = document.getElementById("facilityTabBtnVisualizer");
+  const tabBtnPortMatrix = document.getElementById("facilityTabBtnPortMatrix");
   const visualizerControls = document.getElementById("facilityVisualizerControls");
 
-  if (facilityActiveView === "visualizer") {
+  if (tabBtnHierarchy) tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer";
+  if (tabBtnVisualizer) tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer";
+  if (tabBtnPortMatrix) tabBtnPortMatrix.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer";
+
+  if (facilityActiveView === "port_matrix") {
+    if (hierarchyView) hierarchyView.classList.add("hidden");
+    if (visualizerView) visualizerView.classList.add("hidden");
+    if (portMatrixView) portMatrixView.classList.remove("hidden");
+    if (titleHierarchy) titleHierarchy.classList.add("hidden");
+    if (titleVisualizer) titleVisualizer.classList.remove("hidden");
+    if (visualizerControls) visualizerControls.classList.add("hidden");
+    if (tabBtnPortMatrix) {
+      tabBtnPortMatrix.className = "px-3 py-1.5 rounded-lg text-white bg-indigo-600 transition-all flex items-center gap-1.5 shadow cursor-pointer";
+    }
+    if (typeof syncRackSelectorOptions === "function") {
+      syncRackSelectorOptions();
+    }
+    if (typeof openPortMatrixStudio === "function") {
+      openPortMatrixStudio(targetLocName || activeRackId);
+    }
+    syncVisualizerBreadcrumbs();
+  } else if (facilityActiveView === "visualizer") {
     // Record current position for smooth back button navigation
     if (activeFacilityFloorId) previousFacilityFloorId = activeFacilityFloorId;
     if (activeFacilitySpaceId) previousFacilitySpaceId = activeFacilitySpaceId;
 
     if (hierarchyView) hierarchyView.classList.add("hidden");
     if (visualizerView) visualizerView.classList.remove("hidden");
+    if (portMatrixView) portMatrixView.classList.add("hidden");
     if (titleHierarchy) titleHierarchy.classList.add("hidden");
     if (titleVisualizer) titleVisualizer.classList.remove("hidden");
     if (visualizerControls) visualizerControls.classList.remove("hidden");
 
-    if (tabBtnHierarchy) {
-      tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
-    }
     if (tabBtnVisualizer) {
-      tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-white bg-indigo-600 transition-all flex items-center gap-1.5 shadow";
+      tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-white bg-indigo-600 transition-all flex items-center gap-1.5 shadow cursor-pointer";
     }
 
     if (targetLocName && typeof switchActiveRackElevation === "function") {
@@ -1208,15 +1704,13 @@ function switchFacilityView(viewName, targetLocName) {
     // Return to hierarchy & spaces
     if (hierarchyView) hierarchyView.classList.remove("hidden");
     if (visualizerView) visualizerView.classList.add("hidden");
+    if (portMatrixView) portMatrixView.classList.add("hidden");
     if (titleHierarchy) titleHierarchy.classList.remove("hidden");
     if (titleVisualizer) titleVisualizer.classList.add("hidden");
     if (visualizerControls) visualizerControls.classList.add("hidden");
 
     if (tabBtnHierarchy) {
-      tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-white bg-sky-600 transition-all flex items-center gap-1.5 shadow";
-    }
-    if (tabBtnVisualizer) {
-      tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5";
+      tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-white bg-sky-600 transition-all flex items-center gap-1.5 shadow cursor-pointer";
     }
 
     // Restore previous floor and space if set
@@ -1284,17 +1778,32 @@ function openFacilityModal(view = "hierarchy") {
 }
 
 function openFacilityAddForm(formType) {
-  facilityActiveForm = formType;
+  const floors = FacilityStore.getFloors();
+  if ((formType === "add_space" || formType === "add_host") && floors.length === 0) {
+    if (typeof showToast === "function") showToast("Please create a floor/building first.");
+    facilityActiveForm = "add_floor";
+  } else if (formType === "add_host") {
+    const currentFloor = floors.find(f => f.id === activeFacilityFloorId) || floors[0];
+    const spaces = currentFloor ? FacilityStore.getSpaces(currentFloor.id) : [];
+    if (spaces.length === 0) {
+      if (typeof showToast === "function") showToast("Please create a telecom space first.");
+      facilityActiveForm = "add_space";
+    } else {
+      facilityActiveForm = formType;
+    }
+  } else {
+    facilityActiveForm = formType;
+  }
   renderFacilityManager();
   // Focus the first input of the open form
   setTimeout(() => {
-    if (formType === "add_floor") {
+    if (facilityActiveForm === "add_floor") {
       const el = document.getElementById("inlineFloorName");
       if (el) el.focus();
-    } else if (formType === "add_space") {
+    } else if (facilityActiveForm === "add_space") {
       const el = document.getElementById("inlineSpaceName");
       if (el) el.focus();
-    } else if (formType === "add_host") {
+    } else if (facilityActiveForm === "add_host") {
       const el = document.getElementById("inlineHostName");
       if (el) el.focus();
     }
@@ -1322,10 +1831,10 @@ function saveInlineFloor() {
 
   if (!name) {
     if (errEl) {
-      errEl.textContent = "Please enter a floor name.";
+      errEl.textContent = "Please enter a floor/building name.";
       errEl.classList.remove("hidden");
     } else if (typeof showToast === "function") {
-      showToast("Please enter a floor name");
+      showToast("Please enter a floor/building name");
     }
     return;
   }
@@ -1333,10 +1842,10 @@ function saveInlineFloor() {
   const floors = FacilityStore.getFloors();
   if (floors.some(f => f.name.trim().toLowerCase() === name.toLowerCase())) {
     if (errEl) {
-      errEl.textContent = `A floor named "${name}" already exists.`;
+      errEl.textContent = `A floor/building named "${name}" already exists.`;
       errEl.classList.remove("hidden");
     } else if (typeof showToast === "function") {
-      showToast(`A floor named "${name}" already exists.`);
+      showToast(`A floor/building named "${name}" already exists.`);
     }
     return;
   }
@@ -1346,7 +1855,7 @@ function saveInlineFloor() {
   activeFacilityFloorId = f.id;
   facilityActiveForm = null;
   renderFacilityManager();
-  if (typeof showToast === "function") showToast(`Added floor level "${name}"`);
+  if (typeof showToast === "function") showToast(`Added floor/building "${name}"`);
 }
 
 function saveInlineSpace() {
@@ -1369,7 +1878,12 @@ function saveInlineSpace() {
     return;
   }
 
-  const spaces = FacilityStore.getSpaces(activeFacilityFloorId);
+  const floors = FacilityStore.getFloors();
+  const currentFloor = floors.find(f => f.id === activeFacilityFloorId) || floors[0] || null;
+  const targetFloorId = currentFloor ? currentFloor.id : (activeFacilityFloorId || "floor-1");
+  activeFacilityFloorId = targetFloorId;
+
+  const spaces = FacilityStore.getSpaces(targetFloorId);
   if (spaces.some(s => s.name.trim().toLowerCase() === name.toLowerCase())) {
     if (errEl) {
       errEl.textContent = `A space named "${name}" already exists in this area.`;
@@ -1381,7 +1895,7 @@ function saveInlineSpace() {
   }
 
   const poleHeightFt = pHeightInput ? parseInt(pHeightInput.value, 10) : 25;
-  const s = FacilityStore.addSpace(name, type, activeFacilityFloorId, { poleHeightFt, poleDiameterInches: 4 });
+  const s = FacilityStore.addSpace(name, type, targetFloorId, { poleHeightFt, poleDiameterInches: 4 });
   if (!s) return;
   activeFacilitySpaceId = s.id;
   facilityActiveForm = null;
@@ -1709,6 +2223,10 @@ function assignHardwareToLocation(instanceId, targetLoc) {
   item.rackSlot = null;
   item.rackU = null;
 
+  if (typeof autoSelectMountingForHost === "function") {
+    autoSelectMountingForHost(item, normalized);
+  }
+
   FacilityStore.notifyWorkspaceChange();
   renderFacilityManager();
   if (typeof updateBOMView === "function") updateBOMView();
@@ -1835,40 +2353,56 @@ function renderFacilityManager() {
   const container = document.getElementById("facilityManagerContent");
   if (!container) return;
 
-  const floors = FacilityStore.getFloors();
-  const spaces = FacilityStore.getSpaces();
-  const enclosures = FacilityStore.getEnclosures();
-  const locations = FacilityStore.getLocations();
+  try {
+    const floors = FacilityStore.getFloors() || [];
+    const spaces = FacilityStore.getSpaces() || [];
+    const enclosures = FacilityStore.getEnclosures() || [];
+    const locations = FacilityStore.getLocations() || [];
 
-  // Selected floor & space
-  const currentFloor = floors.find(f => f.id === activeFacilityFloorId) || floors[0];
-  const currentFloorSpaces = spaces.filter(s => s.floorId === currentFloor.id);
-  const currentSpace = currentFloorSpaces.find(s => s.id === activeFacilitySpaceId) || currentFloorSpaces[0] || spaces[0];
-  const currentSpaceEncs = currentSpace ? enclosures.filter(e => e.spaceId === currentSpace.id) : [];
+    // Selected floor & space
+    const currentFloor = (floors && floors.length > 0) ? (floors.find(f => f && f.id === activeFacilityFloorId) || floors[0] || null) : null;
+    if (currentFloor && activeFacilityFloorId !== currentFloor.id) {
+      activeFacilityFloorId = currentFloor.id;
+    }
+    const currentFloorSpaces = currentFloor ? spaces.filter(s => s && s.floorId === currentFloor.id) : [];
+    const currentSpace = currentFloor ? (currentFloorSpaces.find(s => s && s.id === activeFacilitySpaceId) || currentFloorSpaces[0] || null) : null;
+    if (currentSpace && activeFacilitySpaceId !== currentSpace.id) {
+      activeFacilitySpaceId = currentSpace.id;
+    }
+    const currentSpaceEncs = currentSpace ? enclosures.filter(e => e && e.spaceId === currentSpace.id) : [];
 
-  // Facility-wide Rollups
-  let totalProjectWatts = 0;
-  let totalPoEWatts = 0;
-  let totalEquipmentCount = 0;
-  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
-    projectBOM.forEach(item => {
-      const qty = parseInt(item.qty, 10) || 1;
-      const bWatts = parseFloat(item.baseWatts) || 0;
-      const pWatts = parseFloat(item.consumedPoEWatts) || 0;
-      totalProjectWatts += (bWatts + pWatts) * qty;
-      totalPoEWatts += pWatts * qty;
-      totalEquipmentCount += qty;
-    });
-  }
+    // Facility-wide Rollups
+    let totalProjectWatts = 0;
+    let totalPoEWatts = 0;
+    let totalEquipmentCount = 0;
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      projectBOM.forEach(item => {
+        if (!item) return;
+        const qty = parseInt(item.qty, 10) || 1;
+        const bWatts = parseFloat(item.baseWatts) || 0;
+        const pWatts = parseFloat(item.consumedPoEWatts) || 0;
+        totalProjectWatts += (bWatts + pWatts) * qty;
+        totalPoEWatts += pWatts * qty;
+        totalEquipmentCount += qty;
+      });
+    }
 
-  container.innerHTML = `
+    // Calculate next collision-free space name for inline form
+    const allExistingSpaces = spaces || [];
+    let nextSpaceNum = 1;
+    while (allExistingSpaces.some(s => s && s.name && String(s.name).trim().toLowerCase() === `idf-${nextSpaceNum}`)) {
+      nextSpaceNum++;
+    }
+    const suggestedSpaceName = `IDF-${nextSpaceNum}`;
+
+    container.innerHTML = `
     <!-- Top Facility Telemetry Header Strip -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-6 mb-6 border-b border-slate-800">
       <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
         <span class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Facility Structure</span>
         <div class="flex items-baseline gap-2">
           <span class="text-xl font-extrabold text-white font-mono">${floors.length}</span>
-          <span class="text-xs text-slate-400">${floors.length === 1 ? 'Floor' : 'Floors'} &bull; ${spaces.length} Spaces</span>
+          <span class="text-xs text-slate-400">${floors.length === 1 ? 'Floor/Building' : 'Floors/Buildings'} &bull; ${spaces.length} Spaces</span>
         </div>
       </div>
 
@@ -1900,14 +2434,14 @@ function renderFacilityManager() {
     <!-- 3-Column Master Hierarchy View -->
     <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
       
-      <!-- Col 1: Floor Levels (3 cols) -->
+      <!-- Col 1: Floors/Buildings (3 cols) -->
       <div class="md:col-span-3 space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i> Floor Levels (${floors.length})
+            <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i> Floors/Buildings (${floors.length})
           </span>
           <button onclick="openFacilityAddForm('add_floor')" class="px-2 py-1 bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1">
-            <i data-lucide="plus" class="w-3 h-3"></i> Add Floor
+            <i data-lucide="plus" class="w-3 h-3"></i> Add Floor/Building
           </button>
         </div>
 
@@ -1915,12 +2449,12 @@ function renderFacilityManager() {
           <!-- Inline Add Floor Form -->
           <div class="p-3 bg-slate-900 border border-sky-500/60 rounded-xl space-y-2.5 shadow-lg">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-sky-400">New Floor Level</span>
+              <span class="text-xs font-bold text-sky-400">New Floor/Building</span>
               <button onclick="closeFacilityAddForm()" class="text-slate-500 hover:text-slate-300"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Floor Name:</label>
-              <input id="inlineFloorName" type="text" placeholder="e.g. Level 2 - Corporate Offices" value="Level ${floors.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-sky-500 focus:outline-none font-medium">
+              <label class="text-[10px] text-slate-400 block mb-1">Floor/Building Name:</label>
+              <input id="inlineFloorName" type="text" placeholder="e.g. Building A - Level 2" value="Level ${floors.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-sky-500 focus:outline-none font-medium">
               <div id="inlineFloorError" class="hidden text-[10px] text-rose-400 font-medium mt-1"></div>
             </div>
             <div>
@@ -1929,15 +2463,24 @@ function renderFacilityManager() {
             </div>
             <div class="flex items-center justify-end gap-2 pt-1">
               <button onclick="closeFacilityAddForm()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-semibold">Cancel</button>
-              <button onclick="saveInlineFloor()" class="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow">Save Floor</button>
+              <button onclick="saveInlineFloor()" class="px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-bold shadow">Save Floor/Building</button>
             </div>
           </div>
         ` : ''}
 
         <div class="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
-          ${floors.map(f => {
-            const isSelected = f.id === currentFloor.id;
+          ${floors.length === 0 ? `
+            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-800 p-4">
+              <p class="font-medium text-slate-400 mb-1">No Floors/Buildings Defined</p>
+              <p class="text-[11px] text-slate-500 mb-3">Click "+ Add Floor/Building" above to create your first level or building.</p>
+              <button onclick="openFacilityAddForm('add_floor')" class="px-2.5 py-1 bg-sky-600/30 hover:bg-sky-600/50 text-sky-200 border border-sky-500/40 rounded-lg text-xs font-semibold">
+                + Add Floor/Building
+              </button>
+            </div>
+          ` : floors.map(f => {
+            const isSelected = currentFloor && f.id === currentFloor.id;
             const floorSpaces = spaces.filter(s => s.floorId === f.id);
+            const dropSummary = FacilityStore.getFloorDropsSummary(f.name);
             return `
               <div 
                 onclick="selectFacilityFloor('${f.id}')"
@@ -1946,15 +2489,28 @@ function renderFacilityManager() {
                 ondrop="handleFloorCardDrop(event, '${escapeHTML(f.name)}')"
                 class="floor-drop-target p-3 rounded-xl border ${isSelected ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'} cursor-pointer transition-all flex items-center justify-between group"
               >
-                <div class="min-w-0">
+                <div class="min-w-0 pr-1">
                   <span class="text-xs font-bold text-white block truncate">${escapeHTML(f.name)}</span>
                   <span class="text-[10px] text-slate-400 font-mono block mt-0.5">${floorSpaces.length} Spaces &bull; ${f.heightFt || 14}' Rise</span>
+                  <div class="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-sky-500/10 border border-sky-500/30 text-sky-300 font-bold">
+                      ${dropSummary.dropCount} Drops (${dropSummary.totalWatts}W)
+                    </span>
+                    ${dropSummary.servingEnclosures.length > 0 ? `
+                      <span class="text-[9px] font-mono text-slate-400 truncate max-w-[170px]" title="Terminating Closets: ${escapeHTML(dropSummary.servingEnclosures.join(', '))}">
+                        Fed by: ${escapeHTML(dropSummary.servingEnclosures.join(', '))}
+                      </span>
+                    ` : ''}
+                  </div>
                 </div>
-                ${floors.length > 1 ? `
-                  <button onclick="event.stopPropagation(); deleteFacilityFloor('${f.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity" title="Delete Floor">
+                <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button onclick="event.stopPropagation(); renameFacilityFloor('${f.id}')" class="p-1 text-slate-400 hover:text-sky-400 transition-colors" title="Rename Floor/Building">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="event.stopPropagation(); deleteFacilityFloor('${f.id}')" class="p-1 text-slate-400 hover:text-rose-400 transition-colors" title="Delete Floor/Building">
                     <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                   </button>
-                ` : ''}
+                </div>
               </div>
             `;
           }).join('')}
@@ -1967,12 +2523,12 @@ function renderFacilityManager() {
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="door-open" class="w-3.5 h-3.5 text-indigo-400"></i> Telecom Spaces & Poles (${currentFloorSpaces.length})
           </span>
-          <button onclick="openFacilityAddForm('add_space')" class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1">
+          <button onclick="openFacilityAddForm('add_space')" class="px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer">
             <i data-lucide="plus" class="w-3 h-3"></i> Add Space
           </button>
         </div>
 
-        ${facilityActiveForm === 'add_space' ? `
+        ${facilityActiveForm === 'add_space' && currentFloor ? `
           <!-- Inline Add Space Form -->
           <div class="p-3 bg-slate-900 border border-indigo-500/60 rounded-xl space-y-2.5 shadow-lg">
             <div class="flex items-center justify-between">
@@ -1981,7 +2537,7 @@ function renderFacilityManager() {
             </div>
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Space Name:</label>
-              <input id="inlineSpaceName" type="text" placeholder="e.g. IDF-2, Pole 2, East Gate Wallbox" value="IDF-${currentFloorSpaces.length + 1}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none font-medium">
+              <input id="inlineSpaceName" type="text" placeholder="e.g. IDF-2, Pole 2, East Gate Wallbox" value="${suggestedSpaceName}" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none font-medium">
               <div id="inlineSpaceError" class="hidden text-[10px] text-rose-400 font-medium mt-1"></div>
             </div>
             <div>
@@ -2013,15 +2569,25 @@ function renderFacilityManager() {
         ` : ''}
 
         <div class="space-y-1.5 max-h-[500px] overflow-y-auto pr-1">
-          ${currentFloorSpaces.length === 0 ? `
-            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-855">
-              No telecom spaces defined on this floor.
+          ${!currentFloor ? `
+            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-800 p-4">
+              Add a floor/building first to define telecom spaces and closets.
+            </div>
+          ` : (currentFloorSpaces.length === 0 ? `
+            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-800 p-4">
+              <p class="font-medium text-slate-400 mb-1">No Spaces Defined on ${escapeHTML(currentFloor.name)}</p>
+              <p class="text-[11px] text-slate-500 mb-3">Add an IDF, MDF closet, exterior pole, or wallbox.</p>
+              <button onclick="openFacilityAddForm('add_space')" class="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold">
+                + Add Space
+              </button>
             </div>
           ` : currentFloorSpaces.map(s => {
+            if (!s) return '';
             const isSelected = currentSpace && s.id === currentSpace.id;
-            const spaceEncs = enclosures.filter(e => e.spaceId === s.id);
-            const isPole = s.type === "pole" || s.name.toLowerCase().includes("pole");
+            const spaceEncs = enclosures.filter(e => e && e.spaceId === s.id);
+            const isPole = s.type === "pole" || (s.name && String(s.name).toLowerCase().includes("pole"));
             const isMdf = s.type === "mdf";
+            const spaceTypeLabel = isPole ? 'STRUCTURAL POLE' : (s.type || 'idf').toUpperCase();
 
             return `
               <div 
@@ -2034,9 +2600,9 @@ function renderFacilityManager() {
               >
                 <div class="min-w-0 pr-2">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    <span class="text-xs font-bold text-white truncate">${escapeHTML(s.name)}</span>
+                    <span class="text-xs font-bold text-white truncate">${escapeHTML(s.name || 'Space')}</span>
                     <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded border ${isMdf ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : (isPole ? 'border-cyan-500/30 bg-cyan-500/10 text-cyan-300' : 'border-indigo-500/30 bg-indigo-500/10 text-indigo-300')}">
-                      ${isPole ? 'STRUCTURAL POLE' : s.type.toUpperCase()}
+                      ${spaceTypeLabel}
                     </span>
                   </div>
                   <div class="mt-1 flex items-center gap-2 flex-wrap">
@@ -2075,15 +2641,23 @@ function renderFacilityManager() {
                     </select>
                   ` : ''}
 
-                  ${spaces.length > 1 ? `
-                    <button onclick="event.stopPropagation(); deleteFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 transition-opacity" title="Delete Space">
-                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    </button>
-                  ` : ''}
+                  <button onclick="event.stopPropagation(); renameFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-indigo-400 transition-opacity" title="Rename Space">
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="event.stopPropagation(); deleteFacilitySpace('${s.id}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity" title="Delete Space">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
                 </div>
               </div>
             `;
-          }).join('')}
+          }).join(''))}
+          ${currentFloor && currentFloorSpaces.length > 0 ? `
+            <div class="pt-1.5">
+              <button onclick="openFacilityAddForm('add_space')" class="w-full py-2 bg-slate-900/60 hover:bg-indigo-950/40 border border-dashed border-slate-800 hover:border-indigo-500/40 rounded-xl text-slate-400 hover:text-indigo-300 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+                <i data-lucide="plus" class="w-3.5 h-3.5 text-indigo-400"></i> + Add Another Space
+              </button>
+            </div>
+          ` : ''}
         </div>
       </div>
 
@@ -2140,9 +2714,17 @@ function renderFacilityManager() {
         ` : ''}
 
         <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1">
-          ${currentSpaceEncs.length === 0 ? `
-            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-850">
-              No racks or enclosures mounted in this space yet.
+          ${!currentSpace ? `
+            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-850 p-4">
+              Select or create a telecom space above to view and add mounted enclosures.
+            </div>
+          ` : (currentSpaceEncs.length === 0 ? `
+            <div class="text-center py-8 text-slate-500 text-xs bg-slate-950/60 rounded-xl border border-slate-850 p-4">
+              <p class="font-medium text-slate-400 mb-1">No Enclosures in ${escapeHTML(currentSpace.name)}</p>
+              <p class="text-[11px] text-slate-500 mb-3">Add a 19" rack, NEMA box, security cabinet, or backboard.</p>
+              <button onclick="openFacilityAddForm('add_host')" class="px-2.5 py-1 bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-200 border border-emerald-500/40 rounded-lg text-xs font-semibold">
+                + Add Enclosure
+              </button>
             </div>
           ` : currentSpaceEncs.map(e => {
             const locName = `${currentSpace.name} • ${e.name}`;
@@ -2203,6 +2785,9 @@ function renderFacilityManager() {
                     >
                       <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Visualizer
                     </button>
+                    <button onclick="event.stopPropagation(); renameFacilityEnclosure('${e.id}')" class="p-1.5 text-slate-400 hover:text-emerald-400 rounded-lg hover:bg-slate-800 transition-colors" title="Rename Enclosure">
+                      <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                    </button>
                     <button onclick="deleteFacilityEnclosure('${e.id}')" class="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors" title="Delete Enclosure">
                       <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
                     </button>
@@ -2229,20 +2814,49 @@ function renderFacilityManager() {
                   </div>
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span class="text-slate-500 block text-[9px]">Power Draw:</span>
-                    <span class="text-amber-400 font-bold">${telem.totalWatts} W</span>
+                    <span class="text-amber-400 font-bold">${telem.totalWatts || 0} W</span>
                   </div>
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
                     <span class="text-slate-500 block text-[9px]">Thermal Heat:</span>
-                    <span class="text-rose-400 font-bold">${telem.btuPerHour.toLocaleString()} BTU</span>
+                    <span class="text-rose-400 font-bold">${(telem.btuPerHour || 0).toLocaleString()} BTU</span>
                   </div>
                 </div>
+
+                <!-- Served Field Drops Breakdown Panel -->
+                ${(() => {
+                  const servedDrops = FacilityStore.getEnclosureServedDrops(locName);
+                  return `
+                    <div class="bg-cyan-950/20 border border-cyan-800/40 rounded-lg p-2.5 space-y-1.5">
+                      <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-bold text-cyan-300 uppercase tracking-wider flex items-center gap-1">
+                          <i data-lucide="network" class="w-3 h-3 text-cyan-400"></i> Served Field Drops (${servedDrops.totalDrops})
+                        </span>
+                        <span class="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-900/40 px-1.5 py-0.2 rounded border border-cyan-700/50">
+                          ${servedDrops.totalWatts}W PoE Delivered
+                        </span>
+                      </div>
+                      ${servedDrops.totalDrops === 0 ? `
+                        <p class="text-[10px] text-slate-500 font-mono italic">No edge field drops terminated in this enclosure (Core / Compute backbone).</p>
+                      ` : `
+                        <div class="flex flex-wrap gap-1.5 pt-0.5">
+                          ${Object.entries(servedDrops.byFloor).map(([flName, stats]) => `
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-200 flex items-center gap-1">
+                              <span class="font-bold text-cyan-300">${stats.count}</span> drops from <span class="text-white">${escapeHTML(flName)}</span>
+                              ${stats.cameras > 0 ? `<span class="text-slate-400">(${stats.cameras} Cams${stats.doors > 0 ? `, ${stats.doors} Doors` : ''})</span>` : ''}
+                            </span>
+                          `).join('')}
+                        </div>
+                      `}
+                    </div>
+                  `;
+                })()}
               </div>
             `;
-          }).join('')}
+          }).join(''))}
         </div>
 
         <!-- Floor Field Hardware (Floors & Buildings, not spaces) -->
-        ${(() => {
+        ${currentFloor ? (() => {
           const floorFieldLoc = FacilityStore.normalize(`${currentFloor.name} • Field`);
           const floorFieldHardware = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM.filter(item => {
             if (item.parentInstanceId) return false;
@@ -2291,6 +2905,8 @@ function renderFacilityManager() {
                     const isDoor = dev.role === "Access Control" || dev.category?.includes("access");
                     const isRadio = dev.role === "Wireless Bridge" || dev.category?.includes("wireless");
                     const iconName = isCamera ? "camera" : (isDoor ? "door-closed" : (isRadio ? "radio" : "cpu"));
+                    const hostSw = dev.uplinkTargetId && typeof projectBOM !== "undefined" ? projectBOM.find(s => s.instanceId === dev.uplinkTargetId) : null;
+                    const hostCloset = hostSw ? (hostSw.closetName || hostSw.rackId) : null;
 
                     return `
                       <div class="bg-slate-950 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-xs hover:border-slate-700 transition-colors">
@@ -2304,6 +2920,12 @@ function renderFacilityManager() {
                               <span class="text-[9px] font-mono px-1 py-0.2 rounded bg-amber-950/80 border border-amber-800/80 text-amber-300 font-bold">${mountMethod} MOUNT</span>
                               <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(dev.role || 'Field Device')} &bull; ${dev.consumedPoEWatts || 15}W PoE</span>
                             </div>
+                            ${hostSw ? `
+                              <div class="mt-0.5 text-[9px] font-mono text-cyan-400 flex items-center gap-1">
+                                <i data-lucide="network" class="w-2.5 h-2.5"></i>
+                                <span>Home-Run: ${escapeHTML(hostCloset ? String(hostCloset).split('•')[0].trim() : '')} &bull; ${escapeHTML(hostSw.friendlyName || hostSw.model)}</span>
+                              </div>
+                            ` : ''}
                           </div>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
@@ -2324,7 +2946,7 @@ function renderFacilityManager() {
               `}
             </div>
           `;
-        })()}
+        })() : ''}
       </div>
     </div>
 
@@ -2459,7 +3081,23 @@ function renderFacilityManager() {
     })()}
   `;
 
-  if (window.lucide) lucide.createIcons();
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    console.error("Facility Manager Render Error:", err);
+    container.innerHTML = `
+      <div class="p-8 text-center text-rose-400 bg-rose-950/20 border border-rose-800/40 rounded-2xl max-w-xl mx-auto my-8">
+        <i data-lucide="alert-triangle" class="w-8 h-8 mx-auto mb-3 text-rose-400"></i>
+        <p class="font-bold text-base mb-1 text-white">Hierarchy & Spaces encountered a display issue</p>
+        <p class="text-xs text-rose-300 font-mono mb-4">${escapeHTML(err.message || String(err))}</p>
+        <div class="flex items-center justify-center gap-3">
+          <button onclick="renderFacilityManager()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition-all shadow cursor-pointer">
+            Reload Hierarchy View
+          </button>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+  }
 }
 
 function getSuggestedHostName(hostType, existingCount) {
@@ -2607,29 +3245,82 @@ function promptAddEnclosure(spaceId) {
   openFacilityAddForm("add_host");
 }
 
+function renameFacilityFloor(floorId, newName = null) {
+  const floors = FacilityStore.getFloors();
+  const floor = floors.find(f => f.id === floorId);
+  if (!floor) return;
+  const targetName = newName || prompt("Rename Floor/Building:", floor.name);
+  if (!targetName || !targetName.trim() || targetName.trim() === floor.name) return;
+  const result = FacilityStore.updateFloor(floorId, { name: targetName.trim() });
+  if (result) {
+    renderFacilityManager();
+    if (typeof showToast === "function") showToast(`Floor/Building renamed to "${targetName.trim()}"`);
+  }
+}
+
 function deleteFacilityFloor(floorId) {
-  if (confirm("Delete this floor level? All associated spaces and equipment will be moved to Main Floor.")) {
+  const floors = FacilityStore.getFloors();
+  const floor = floors.find(f => f.id === floorId);
+  if (!floor) return;
+  if (confirm(`Delete floor/building "${floor.name}"? Associated spaces will be reassigned or unassigned.`)) {
     FacilityStore.deleteFloor(floorId);
-    activeFacilityFloorId = FacilityStore.getFloors()[0].id;
+    const remaining = FacilityStore.getFloors();
+    activeFacilityFloorId = remaining.length > 0 ? remaining[0].id : null;
     facilityActiveForm = null;
     renderFacilityManager();
+    if (typeof showToast === "function") showToast(`Deleted floor/building "${floor.name}"`);
+  }
+}
+
+function renameFacilitySpace(spaceId, newName = null) {
+  const spaces = FacilityStore.getSpaces();
+  const space = spaces.find(s => s.id === spaceId);
+  if (!space) return;
+  const targetName = newName || prompt("Rename Telecom Space / Closet:", space.name);
+  if (!targetName || !targetName.trim() || targetName.trim() === space.name) return;
+  const result = FacilityStore.updateSpace(spaceId, { name: targetName.trim() });
+  if (result) {
+    renderFacilityManager();
+    if (typeof showToast === "function") showToast(`Space renamed to "${targetName.trim()}"`);
   }
 }
 
 function deleteFacilitySpace(spaceId) {
-  if (confirm("Delete this telecom space? All associated equipment will be unassigned.")) {
+  const spaces = FacilityStore.getSpaces();
+  const space = spaces.find(s => s.id === spaceId);
+  if (!space) return;
+  if (confirm(`Delete telecom space "${space.name}"? All associated equipment will be unassigned.`)) {
     FacilityStore.deleteSpace(spaceId);
-    activeFacilitySpaceId = FacilityStore.getSpaces()[0].id;
+    const remaining = FacilityStore.getSpaces();
+    activeFacilitySpaceId = remaining.length > 0 ? remaining[0].id : null;
     facilityActiveForm = null;
     renderFacilityManager();
+    if (typeof showToast === "function") showToast(`Deleted space "${space.name}"`);
+  }
+}
+
+function renameFacilityEnclosure(enclosureId, newName = null) {
+  const encs = FacilityStore.getEnclosures();
+  const enc = encs.find(e => e.id === enclosureId);
+  if (!enc) return;
+  const targetName = newName || prompt("Rename Enclosure / Rack:", enc.name);
+  if (!targetName || !targetName.trim() || targetName.trim() === enc.name) return;
+  const result = FacilityStore.updateHost(enclosureId, { name: targetName.trim() });
+  if (result) {
+    renderFacilityManager();
+    if (typeof showToast === "function") showToast(`Enclosure renamed to "${targetName.trim()}"`);
   }
 }
 
 function deleteFacilityEnclosure(enclosureId) {
-  if (confirm("Delete this host / enclosure? Assigned hardware will be moved to Unassigned.")) {
+  const encs = FacilityStore.getEnclosures();
+  const enc = encs.find(e => e.id === enclosureId);
+  if (!enc) return;
+  if (confirm(`Delete host / enclosure "${enc.name}"? Assigned hardware will be moved to Unassigned.`)) {
     FacilityStore.deleteEnclosure(enclosureId);
     facilityActiveForm = null;
     renderFacilityManager();
+    if (typeof showToast === "function") showToast(`Deleted enclosure "${enc.name}"`);
   }
 }
 
@@ -2719,8 +3410,11 @@ if (typeof window !== "undefined") {
   window.promptAddSpace = promptAddSpace;
   window.promptAddEnclosure = promptAddEnclosure;
   window.deleteFacilityFloor = deleteFacilityFloor;
+  window.renameFacilityFloor = renameFacilityFloor;
   window.deleteFacilitySpace = deleteFacilitySpace;
+  window.renameFacilitySpace = renameFacilitySpace;
   window.deleteFacilityEnclosure = deleteFacilityEnclosure;
+  window.renameFacilityEnclosure = renameFacilityEnclosure;
   window.openRackViewerFor = openRackViewerFor;
   window.jumpToFacilitySpace = jumpToFacilitySpace;
   window.updateSpacePoleHeight = updateSpacePoleHeight;
@@ -2862,7 +3556,7 @@ function openQuickAddEnclosureModal() {
   if (spaceSelect) {
     spaceSelect.innerHTML = spaces.map(s => {
       const isSel = (s.id === activeFacilitySpaceId) || (typeof activeRackId === "string" && activeRackId.startsWith(s.name));
-      return `<option value="${s.id}" ${isSel ? 'selected' : ''}>${escapeHTML(s.name)} (${s.type.toUpperCase()})</option>`;
+      return `<option value="${s.id}" ${isSel ? 'selected' : ''}>${escapeHTML(s.name)} (${(s.type || 'idf').toUpperCase()})</option>`;
     }).join('');
   }
 

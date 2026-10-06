@@ -117,6 +117,11 @@ let requireDualPsu = false;
 let requireTAA = false;
 let requireDinMount = false;
 let requireMultiGig = false;
+let selectedFormFactors = [];
+let requireFanless = false;
+let requirePoEPowered = false;
+let requireDcPower = false;
+let requireLayer3 = false;
 
 // 2. Firewall / Gateway Filters
 let selectedFwCategories = [];
@@ -128,13 +133,19 @@ let requireFwDualPsu = false;
 let requireFwRackmount = false;
 let requireFw10GWan = false;
 let requireFwPoePorts = false;
+let requireFwHA = false;
+let requireFw25GWan = false;
+let requireFwStorage = false;
 
 // 3. Optics Filters
 let selectedOpticMediums = [];
 let selectedOpticSpeeds = [];
 let selectedOpticVendors = [];
 let selectedOpticFormFactor = "all";
+let selectedOpticReach = "all";
+let selectedDacLength = "all";
 let requireOpticIndustrial = false;
+let requireOpticBiDi = false;
 
 // 4. Wireless Filters
 let wlTargetDistanceMiles = 0;
@@ -144,6 +155,8 @@ let selectedCompatibleMasterSku = "all";
 let minWlStations = 0;
 let selectedWlFrequencies = [];
 let selectedWlVendors = [];
+let selectedWlRangeTier = "all";
+let requireWl60GHz = false;
 let requireWlBackup5G = false;
 
 // 5. Infrastructure Accessories Filters
@@ -152,6 +165,13 @@ let selectedAccCategories = [];
 let selectedAccTypes = [];
 let selectedAccMounting = "all";
 let accMinPowerWatts = 0;
+let requireUpsSineWave = false;
+let requireUpsOnline = false;
+let requireUpsEbm = false;
+let selectedCableRatings = [];
+let selectedPatchCordLength = "all";
+let requireCableShielded = false;
+let requireEtherlighting = false;
 
 // 6. Camera Filters
 let selectedCameraVendors = [];
@@ -225,6 +245,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (typeof updateBOMView === "function") updateBOMView();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+  if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
+  if (typeof renderProjectDefaultsSummary === "function") renderProjectDefaultsSummary();
   safeCreateIcons();
 });
 
@@ -243,6 +265,7 @@ function switchDomain(domainKey) {
   buildCalculatorStrip();
   buildSidebarFilters();
   runActiveFilter();
+  if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
 }
 
 function switchMode(newMode) {
@@ -260,6 +283,7 @@ function switchMode(newMode) {
   buildCalculatorStrip();
   buildSidebarFilters();
   runActiveFilter();
+  if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
 }
 
 function buildDomainNavigation() {
@@ -327,6 +351,11 @@ function resetCurrentFilters() {
   requireTAA = false;
   requireDinMount = false;
   requireMultiGig = false;
+  selectedFormFactors = [];
+  requireFanless = false;
+  requirePoEPowered = false;
+  requireDcPower = false;
+  requireLayer3 = false;
 
   selectedFwVendors = [];
   selectedFwCategories = [];
@@ -337,12 +366,18 @@ function resetCurrentFilters() {
   requireFwRackmount = false;
   requireFw10GWan = false;
   requireFwPoePorts = false;
+  requireFwHA = false;
+  requireFw25GWan = false;
+  requireFwStorage = false;
 
   selectedOpticMediums = [];
   selectedOpticSpeeds = [];
   selectedOpticVendors = [];
   selectedOpticFormFactor = "all";
+  selectedOpticReach = "all";
+  selectedDacLength = "all";
   requireOpticIndustrial = false;
+  requireOpticBiDi = false;
 
   wlTargetDistanceMiles = 0;
   wlTargetThroughputMbps = 0;
@@ -351,6 +386,8 @@ function resetCurrentFilters() {
   minWlStations = 0;
   selectedWlFrequencies = [];
   selectedWlVendors = [];
+  selectedWlRangeTier = "all";
+  requireWl60GHz = false;
   requireWlBackup5G = false;
 
   selectedAccVendors = [];
@@ -358,6 +395,13 @@ function resetCurrentFilters() {
   selectedAccTypes = [];
   selectedAccMounting = "all";
   accMinPowerWatts = 0;
+  requireUpsSineWave = false;
+  requireUpsOnline = false;
+  requireUpsEbm = false;
+  selectedCableRatings = [];
+  selectedPatchCordLength = "all";
+  requireCableShielded = false;
+  requireEtherlighting = false;
 
   selectedCameraVendors = [];
   selectedCameraFormFactors = [];
@@ -435,6 +479,83 @@ function resetDemandInputs() {
   if (typeof FacilityStore !== "undefined") FacilityStore.notifyWorkspaceChange();
   if (typeof StorageService !== "undefined") StorageService.queueAutoSave();
   showToast("PoE demand targets reset to 0.");
+}
+
+function deriveDemandFromBOM() {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) {
+    if (typeof showToast === "function") showToast("Project BOM is empty.");
+    return;
+  }
+
+  let countAf = 0;
+  let countAt = 0;
+  let countBt60 = 0;
+  let countBt90 = 0;
+  let edgeDeviceCount = 0;
+
+  projectBOM.forEach(item => {
+    // Filter out switches, servers, PDUs, UPS, structured cabling, licenses, and optics
+    const role = (item.role || "").toLowerCase();
+    const cat = (item.category || "").toLowerCase();
+    const model = (item.model || "").toLowerCase();
+
+    const isNonEdge = role.includes("switch") || role === "access" || role === "core" || role === "aggregation" ||
+                      role === "server" || role === "storage" || role === "ups" || role === "pdu" ||
+                      role === "structured cabling" || role === "optics & dac" || role.includes("license") ||
+                      item.source === "cabling_sync" || item.source === "topology_auto_sync";
+    if (isNonEdge) return;
+
+    // Check if device is powered via PoE
+    const isCamera = role === "camera" || cat.includes("camera") || item.deviceType === "camera" || model.includes("camera");
+    const isAccess = role === "access control" || cat.includes("access") || model.includes("controller") || model.includes("reader");
+    const isWireless = role === "wireless" || role === "wireless bridge" || cat.includes("wireless") || model.includes("access point");
+    const isIntercom = role.includes("intercom") || model.includes("intercom") || model.includes("speaker");
+    const hasPoeAttr = Boolean(item.poeStandard || item.poeWattsDrawn || (item.powerConsumptionWatts && item.powerSource !== "dual_ac" && item.powerSource !== "internal_ac"));
+
+    if (isCamera || isAccess || isWireless || isIntercom || hasPoeAttr) {
+      const qty = Math.max(1, parseInt(item.qty, 10) || 1);
+      const std = (item.poeStandard || "").toLowerCase();
+      const watts = parseFloat(item.maxPowerWatts || item.powerConsumptionWatts || item.poeWattsDrawn || item.baseWatts || (isCamera ? 12 : 15));
+
+      edgeDeviceCount += qty;
+
+      if (std.includes("bt4") || std.includes("90w") || std.includes("type 4") || watts > 60) {
+        countBt90 += qty;
+      } else if (std.includes("bt") || std.includes("60w") || std.includes("type 3") || watts > 30) {
+        countBt60 += qty;
+      } else if (std.includes("at") || std.includes("poe+") || watts > 15.4) {
+        countAt += qty;
+      } else {
+        countAf += qty;
+      }
+    }
+  });
+
+  if (edgeDeviceCount === 0) {
+    if (typeof showToast === "function") showToast("No PoE edge devices (cameras, access, APs) found in quote.");
+    return;
+  }
+
+  demandCounts.af = countAf;
+  demandCounts.at = countAt;
+  demandCounts.bt60 = countBt60;
+  demandCounts.bt90 = countBt90;
+
+  buildCalculatorStrip();
+  buildSidebarFilters();
+  runActiveFilter();
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+    StorageService.queueAutoSave();
+  }
+
+  const p = calculatePoETarget();
+  if (typeof showToast === "function") {
+    showToast(`Derived demands from BOM: ${edgeDeviceCount} edge devices (${countAf} af, ${countAt} at, ${countBt60} bt60, ${countBt90} bt90) totaling ${p.budgetWithHeadroom}W required.`);
+  }
 }
 
 function updateHeadroom(val) {
@@ -529,6 +650,12 @@ function buildCalculatorStrip() {
             <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">90W (bt):</span>
             <input type="number" min="0" max="96" value="${demandCounts.bt90 || 0}" onchange="updateDemandInput('bt90', this.value)" class="w-8 bg-transparent text-center font-mono font-bold text-amber-400 focus:outline-none" />
           </div>
+
+          <!-- Auto-Derive from BOM Button -->
+          <button onclick="deriveDemandFromBOM()" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl transition-all font-semibold text-[11px] cursor-pointer" title="Auto-detect PoE demands from devices in project BOM">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Derive from BOM</span>
+          </button>
 
           <!-- Telemetry & Headroom Buffer Selection -->
           <div class="flex items-center gap-3 border-l border-slate-800 pl-3">
@@ -768,10 +895,14 @@ function toggleFilterItem(type, val) {
     selectedWlVendors = selectedWlVendors.includes(val) ? selectedWlVendors.filter(v => v !== val) : [...selectedWlVendors, val];
   } else if (type === "wlFreq") {
     selectedWlFrequencies = selectedWlFrequencies.includes(val) ? selectedWlFrequencies.filter(f => f !== val) : [...selectedWlFrequencies, val];
+  } else if (type === "formFactor") {
+    selectedFormFactors = selectedFormFactors.includes(val) ? selectedFormFactors.filter(f => f !== val) : [...selectedFormFactors, val];
   } else if (type === "accVendor") {
     selectedAccVendors = selectedAccVendors.includes(val) ? selectedAccVendors.filter(v => v !== val) : [...selectedAccVendors, val];
   } else if (type === "accType") {
     selectedAccTypes = selectedAccTypes.includes(val) ? selectedAccTypes.filter(t => t !== val) : [...selectedAccTypes, val];
+  } else if (type === "cableRating") {
+    selectedCableRatings = selectedCableRatings.includes(val) ? selectedCableRatings.filter(r => r !== val) : [...selectedCableRatings, val];
   }
   runActiveFilter();
 }
@@ -818,14 +949,30 @@ function runActiveFilter() {
           selectedPoEClasses,
           selectedUplinkSpeed,
           requireDemandFit,
+          selectedFormFactors,
+          requireFanless,
+          requirePoEPowered,
+          requireDcPower,
+          requireLayer3,
           selectedFwVendors,
           selectedFwCategories,
           fwTargetThroughputGbps,
           fwTargetThreatMbps,
+          requireFwCellular,
+          requireFwDualPsu,
+          requireFwRackmount,
+          requireFw10GWan,
+          requireFwPoePorts,
+          requireFwHA,
+          requireFw25GWan,
+          requireFwStorage,
           selectedOpticMediums,
           selectedOpticSpeeds,
           selectedOpticVendors,
           selectedOpticFormFactor,
+          selectedOpticReach,
+          requireOpticIndustrial,
+          requireOpticBiDi,
           wlTargetDistanceMiles,
           wlTargetThroughputMbps,
           selectedWlTopologyRole,
@@ -833,10 +980,21 @@ function runActiveFilter() {
           minWlStations,
           selectedWlVendors,
           selectedWlFrequencies,
+          selectedWlRangeTier,
+          requireWl60GHz,
+          requireWlBackup5G,
           selectedAccVendors,
           selectedAccTypes,
           selectedAccMounting,
-          accMinPowerWatts
+          accMinPowerWatts,
+          requireUpsSineWave,
+          requireUpsOnline,
+          requireUpsEbm,
+          selectedCableRatings,
+          requireCableShielded,
+          selectedDacLength,
+          selectedPatchCordLength,
+          requireEtherlighting
         })
       : (activeSearchQuery && typeof matchesSearchTokens === "function")
         ? rawDataset.filter(item => matchesSearchTokens(item, activeSearchQuery))
@@ -1084,9 +1242,14 @@ document.addEventListener("keydown", (e) => {
       return;
     }
 
-    // 5. Active selection in Physical Layout -> First ESC deselects node
+    // 5. Active selection in Physical Layout -> First ESC deselects node or fiber backbone
     const physModal = document.getElementById("cableLayoutModal");
     if (physModal && !physModal.classList.contains("hidden")) {
+      if (typeof selectedFiberBackboneId !== "undefined" && selectedFiberBackboneId) {
+        e.preventDefault();
+        if (typeof deselectFiberBackbone === "function") deselectFiberBackbone();
+        return;
+      }
       if (typeof selectedNodeId !== "undefined" && selectedNodeId) {
         e.preventDefault();
         if (typeof deselectNode === "function") deselectNode();
@@ -1151,6 +1314,20 @@ document.addEventListener("keydown", (e) => {
       }
     }
   }
+
+  // Delete / Backspace key to delete selected fiber backbone
+  if ((e.key === "Delete" || e.key === "Backspace") && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) {
+    const physModal = document.getElementById("cableLayoutModal");
+    if (physModal && !physModal.classList.contains("hidden")) {
+      if (typeof selectedFiberBackboneId !== "undefined" && selectedFiberBackboneId) {
+        e.preventDefault();
+        if (typeof deleteFiberBackbone === "function") {
+          deleteFiberBackbone(selectedFiberBackboneId);
+        }
+        return;
+      }
+    }
+  }
 });
 
 // Window Compatibility
@@ -1165,8 +1342,11 @@ window.buildCalculatorStrip = buildCalculatorStrip;
 window.calculatePoETarget = calculatePoETarget;
 window.updateDemandInput = updateDemandInput;
 window.resetDemandInputs = resetDemandInputs;
+window.deriveDemandFromBOM = deriveDemandFromBOM;
 window.updateHeadroom = updateHeadroom;
 window.setOpticQuickFilter = setOpticQuickFilter;
 window.setUplinkSpeedFilter = setUplinkSpeedFilter;
+window.selectedDacLength = selectedDacLength;
+window.selectedPatchCordLength = selectedPatchCordLength;
 window.toggleFilterItem = toggleFilterItem;
 window.showToast = showToast;

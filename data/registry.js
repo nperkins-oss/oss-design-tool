@@ -112,6 +112,17 @@ const CatalogRegistry = {
     this.infrastructure.accessories = typeof ACCESSORY_DATABASE !== "undefined" ? ACCESSORY_DATABASE : [];
     this.infrastructure.cabling = typeof CABLING_CATALOG !== "undefined" ? CABLING_CATALOG : (typeof CABLING_DATABASE !== "undefined" ? CABLING_DATABASE : {});
 
+    // Populate specialized Infrastructure sub-mode collections from ACCESSORY_DATABASE
+    this.infrastructure.racks = this.infrastructure.accessories.filter(a =>
+      a.category === "racks" || a.type === "equipment_rack" || a.category === "enclosure" || a.type === "enclosure"
+    );
+    this.infrastructure.ups = this.infrastructure.accessories.filter(a =>
+      a.category === "ups" || a.type === "ups"
+    );
+    this.infrastructure.pathways = this.infrastructure.accessories.filter(a =>
+      a.category === "pathways" || a.type === "pathway" || a.category === "cable_management"
+    );
+
     // Ingest Physical Security & Compute
     this.physical_security.cameras = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
     this.physical_security.accessControl = typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : [];
@@ -134,22 +145,44 @@ const CatalogRegistry = {
 
     // Index structured cabling items
     if (this.infrastructure.cabling && typeof this.infrastructure.cabling === "object") {
-      Object.values(this.infrastructure.cabling).forEach(cat => {
-        if (Array.isArray(cat)) {
-          allItems.push(...cat);
+      Object.entries(this.infrastructure.cabling).forEach(([catKey, catList]) => {
+        if (Array.isArray(catList)) {
+          catList.forEach(cItem => {
+            if (!cItem.id) cItem.id = cItem.sku;
+            if (!cItem.model) cItem.model = cItem.name;
+            if (!cItem.category) cItem.category = "cabling";
+            if (!cItem.type) cItem.type = catKey === "patchPanels" ? "patch_panel" : (catKey === "fiberBackbone" ? "fiber_trunk" : (catKey === "patchCords" ? "patch_cord" : (catKey === "connectors" ? "connector" : "bulk_cable")));
+            allItems.push(cItem);
+          });
         }
       });
     }
 
-    // Index modular expansion sleds, power supplies, and feature licenses
+    // Index modular expansion sleds, power supplies, mounting hardware, and feature licenses
     if (this.networking.modularUplinks) {
       allItems.push(...Object.values(this.networking.modularUplinks));
     }
     if (this.networking.powerSupplies) {
       allItems.push(...Object.values(this.networking.powerSupplies));
     }
+    if (typeof MOUNTING_CATALOG !== "undefined") {
+      allItems.push(...Object.values(MOUNTING_CATALOG));
+    }
     if (this.networking.featureLicenses) {
       allItems.push(...Object.values(this.networking.featureLicenses));
+    }
+
+    // Enrich with Datasheet and Product Image Assets if available
+    if (typeof CATALOG_ASSETS !== "undefined") {
+      for (let i = 0; i < allItems.length; i++) {
+        const item = allItems[i];
+        if (!item) continue;
+        const asset = (item.id && CATALOG_ASSETS[item.id]) || (item.sku && CATALOG_ASSETS[item.sku]);
+        if (asset) {
+          if (!item.datasheetPath && asset.datasheetPath) item.datasheetPath = asset.datasheetPath;
+          if (!item.image && asset.image) item.image = asset.image;
+        }
+      }
     }
 
     for (let i = 0; i < allItems.length; i++) {
@@ -166,6 +199,9 @@ const CatalogRegistry = {
     window.OPTICS_LIST = this.networking.optics;
     window.ACCESSORY_DATABASE = this.infrastructure.accessories;
     window.CABLING_CATALOG = this.infrastructure.cabling;
+    window.RACKS_DATABASE = this.infrastructure.racks;
+    window.UPS_DATABASE = this.infrastructure.ups;
+    window.PATHWAYS_DATABASE = this.infrastructure.pathways;
     window.CAMERAS_DATABASE = this.physical_security.cameras;
     window.ACCESS_CONTROL_DATABASE = this.physical_security.accessControl;
     window.SERVERS_DATABASE = this.compute_storage.servers;
@@ -177,7 +213,7 @@ const CatalogRegistry = {
     window.CatalogRegistry = this;
     window.MASTER_CATALOG = this;
 
-    console.info(`[CatalogRegistry] Initialized: ${this.networking.switches.length} switches, ${this.networking.firewalls.length} firewalls, ${this.compute_storage.servers.length} servers, ${this.physical_security.cameras.length} cameras, ${this.physical_security.accessControl.length} access controllers. Indexed ${this._byId.size} unique IDs / ${this._bySku.size} SKUs.`);
+    console.info(`[CatalogRegistry] Initialized: ${this.networking.switches.length} switches, ${this.networking.firewalls.length} firewalls, ${this.infrastructure.racks.length} racks, ${this.infrastructure.ups.length} UPS, ${this.compute_storage.servers.length} servers, ${this.physical_security.cameras.length} cameras, ${this.physical_security.accessControl.length} access controllers. Indexed ${this._byId.size} unique IDs / ${this._bySku.size} SKUs.`);
   },
 
   /**
@@ -203,6 +239,34 @@ const CatalogRegistry = {
    */
   getDevice(idOrSku) {
     return this.get(idOrSku);
+  },
+
+  getDeviceById(id) {
+    if (!id) return null;
+    return this._byId.get(id) || null;
+  },
+
+  getDeviceBySku(sku) {
+    if (!sku) return null;
+    return this._bySku.get(sku) || null;
+  },
+
+  getSwitches() {
+    return this.networking.switches || [];
+  },
+
+  openDatasheet(idOrSku) {
+    const item = this.get(idOrSku);
+    const path = item?.datasheetPath;
+    if (path) {
+      if (typeof window.openDatasheetModal === "function") {
+        window.openDatasheetModal(path, item.model || item.name, item.sku);
+      } else {
+        window.open(path, "_blank");
+      }
+      return true;
+    }
+    return false;
   }
 };
 

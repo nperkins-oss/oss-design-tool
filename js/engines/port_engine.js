@@ -95,6 +95,21 @@ const PortEngine = {
   POWER_MODES: POWER_SOURCE_MODES,
 
   /**
+   * Checks if switch has dedicated physical stacking hardware (e.g. Cisco StackWise)
+   * vs using standard high-speed optical uplink cages for stacking (e.g. UniFi, Aruba VSF)
+   */
+  hasDedicatedStackPorts(item) {
+    if (!item) return false;
+    const v = (item.vendor || "").toLowerCase();
+    const m = (item.model || "").toLowerCase();
+    const s = (item.sku || "").toLowerCase();
+    // UniFi switches do NOT have dedicated stacking ports - they stack via optical cages
+    if (v === "unifi" || /unifi|ubiquiti/i.test(m)) return false;
+    if (item.hasDedicatedStackPorts !== undefined) return !!item.hasDedicatedStackPorts;
+    return /stackwise|stack-t1|stack-t4|c9300|c3850|ms350|ms355|ms425/i.test(m + " " + s);
+  },
+
+  /**
    * Initializes or normalizes physical ports on a switch item
    * @param {Object} item - BOM line item representing a switch or router
    * @returns {Array} Array of standardized port objects
@@ -209,37 +224,91 @@ const PortEngine = {
       item.physicalPorts = ports;
       item._lastStackUnits = stackUnits;
       this.syncSwitchUplinks(item);
+      this.syncSwitchEdgePorts(item);
       return ports;
     }
 
-    // Mixed Copper + Optical Switch
-    let uplinkPortCount = 0;
-    let uplinkSpeed = "10G";
-    let uplinkMedia = "sfp_plus_10g";
+    // Check if device has dedicated physical stacking hardware (e.g. Cisco StackWise)
+    const hasDedicatedStack = this.hasDedicatedStackPorts(item);
+    item.hasDedicatedStackPorts = hasDedicatedStack;
 
-    if (portDesc.includes("100g") || (item.maxBackboneSpeed === "100G")) {
-      uplinkPortCount = 4;
-      uplinkSpeed = "100G";
-      uplinkMedia = "qsfp28_100g";
-    } else if (portDesc.includes("40g") || (item.maxBackboneSpeed === "40G")) {
-      uplinkPortCount = 2;
-      uplinkSpeed = "40G";
-      uplinkMedia = "qsfp_plus_40g";
-    } else if (portDesc.includes("25g") || (item.maxBackboneSpeed === "25G")) {
-      uplinkPortCount = 4;
-      uplinkSpeed = "25G";
-      uplinkMedia = "sfp28_25g";
-    } else if (portDesc.includes("10g") || (item.maxBackboneSpeed === "10G") || totalPortCount >= 24) {
-      uplinkPortCount = (totalPortCount === 52 || totalPortCount === 48) ? 4 : (totalPortCount === 28 ? 4 : 2);
-      uplinkSpeed = "10G";
-      uplinkMedia = "sfp_plus_10g";
-    } else if (portDesc.includes("sfp")) {
-      uplinkPortCount = 2;
-      uplinkSpeed = "1G";
-      uplinkMedia = "sfp_1g";
+    // Parse multi-tier copper port breakdown from portFormFactorSummary or interfaces
+    // E.g. "16x 10G RJ-45 + 32x 2.5G RJ-45 copper" or "8x 1GbE RJ45"
+    const copperTierMap = [];
+    const copperRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(?:RJ-?45|copper|base-t|gbe)?/gi;
+    let cMatch;
+    const formSummary = `${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
+    const hasCopper = formSummary.toLowerCase().includes("rj-45") || 
+                      formSummary.toLowerCase().includes("rj45") || 
+                      formSummary.toLowerCase().includes("copper") || 
+                      formSummary.toLowerCase().includes("base-t") ||
+                      formSummary.toLowerCase().includes("gbe");
+    if (hasCopper) {
+      while ((cMatch = copperRegex.exec(formSummary)) !== null) {
+        const full = cMatch[0].toLowerCase();
+        if (!full.includes("sfp") && !full.includes("qsfp") && !full.includes("cage")) {
+          const count = parseInt(cMatch[1], 10);
+          let spd = cMatch[2].toUpperCase();
+          if (!spd.endsWith("G") && !spd.endsWith("M")) spd += "G";
+          copperTierMap.push({ count, speed: spd });
+        }
+      }
     }
 
-    // Determine access ports vs uplink cages per unit
+    // Parse optical uplink cages from uplinksSummary, portFormFactorSummary or interfaces
+    const parsedCages = [];
+    const uplinkRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|cages?)/gi;
+    let uMatch;
+    const allOpticalText = `${item.uplinksSummary || ''} ${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
+    while ((uMatch = uplinkRegex.exec(allOpticalText)) !== null) {
+      const count = parseInt(uMatch[1], 10);
+      let spd = uMatch[2].toUpperCase();
+      if (!spd.endsWith("G") && !spd.endsWith("M")) spd += "G";
+      const typeStr = (uMatch[3] || '').toLowerCase();
+      let conn = "SFP+";
+      let media = "sfp_plus_10g";
+      if (spd.includes("100") || typeStr.includes("qsfp28")) {
+        conn = "QSFP28";
+        media = "qsfp28_100g";
+      } else if (spd.includes("40") || typeStr.includes("qsfp")) {
+        conn = "QSFP+";
+        media = "qsfp_plus_40g";
+      } else if (spd.includes("25") || typeStr.includes("sfp28")) {
+        conn = "SFP28";
+        media = "sfp28_25g";
+      } else if (spd.includes("10") || typeStr.includes("sfp+")) {
+        conn = "SFP+";
+        media = "sfp_plus_10g";
+      } else if (spd.includes("1") || typeStr.includes("sfp")) {
+        conn = "SFP";
+        media = "sfp_1g";
+      }
+      for (let c = 0; c < count; c++) {
+        parsedCages.push({ speed: spd, connector: conn, mediaType: media });
+      }
+    }
+
+    let uplinkPortCount = parsedCages.length;
+    if (uplinkPortCount === 0) {
+      if (portDesc.includes("100g") || (item.maxBackboneSpeed === "100G")) {
+        uplinkPortCount = 4;
+        for (let k = 0; k < 4; k++) parsedCages.push({ speed: "100G", connector: "QSFP28", mediaType: "qsfp28_100g" });
+      } else if (portDesc.includes("40g") || (item.maxBackboneSpeed === "40G")) {
+        uplinkPortCount = 2;
+        for (let k = 0; k < 2; k++) parsedCages.push({ speed: "40G", connector: "QSFP+", mediaType: "qsfp_plus_40g" });
+      } else if (portDesc.includes("25g") || (item.maxBackboneSpeed === "25G")) {
+        uplinkPortCount = 4;
+        for (let k = 0; k < 4; k++) parsedCages.push({ speed: "25G", connector: "SFP28", mediaType: "sfp28_25g" });
+      } else if (portDesc.includes("10g") || (item.maxBackboneSpeed === "10G") || totalPortCount >= 24) {
+        uplinkPortCount = (totalPortCount === 52 || totalPortCount === 48) ? 4 : (totalPortCount === 28 ? 4 : 2);
+        for (let k = 0; k < uplinkPortCount; k++) parsedCages.push({ speed: "10G", connector: "SFP+", mediaType: "sfp_plus_10g" });
+      } else if (portDesc.includes("sfp")) {
+        uplinkPortCount = 2;
+        for (let k = 0; k < 2; k++) parsedCages.push({ speed: "1G", connector: "SFP", mediaType: "sfp_1g" });
+      }
+    }
+
+    // Determine access ports per unit
     let accessPortCount = totalPortCount;
     if (totalPortCount === 52) accessPortCount = 48;
     else if (totalPortCount === 28) accessPortCount = 24;
@@ -251,7 +320,10 @@ const PortEngine = {
 
     let globalPortIdx = 1;
     for (let u = 1; u <= stackUnits; u++) {
-      // 1. Generate Access / Downlink Ports (RJ-45) for Unit u
+      const nextU = u === stackUnits ? 1 : u + 1;
+      const prevU = u === 1 ? stackUnits : u - 1;
+
+      // 1. Generate Access / Downlink Ports (RJ-45) for Unit u with accurate Multi-Gig speeds
       for (let i = 1; i <= accessPortCount; i++) {
         const portNum = globalPortIdx++;
         const conn = existingConnections[portNum] || {};
@@ -259,22 +331,63 @@ const PortEngine = {
         let maxPoeWatts = 0;
 
         if (poeBudget > 0) {
+          const totalExplicitPoe = poeBt90Count + poeBt60Count + poeAtCount + poeAfCount;
           if (i <= poeBt90Count) {
             poeStandard = "bt90";
             maxPoeWatts = 90;
           } else if (i <= (poeBt90Count + poeBt60Count)) {
             poeStandard = "bt60";
             maxPoeWatts = 60;
-          } else if (i <= poeAtCount) {
+          } else if (i <= (poeBt90Count + poeBt60Count + poeAtCount)) {
             poeStandard = "at";
             maxPoeWatts = 30;
-          } else if (i <= poeAfCount) {
+          } else if (i <= totalExplicitPoe) {
             poeStandard = "af";
             maxPoeWatts = 15.4;
-          } else {
+          } else if (totalExplicitPoe === 0) {
+            // Default when no port breakdown was specified
             poeStandard = "at";
             maxPoeWatts = 30;
+          } else {
+            // Non-PoE copper port on a hybrid switch (e.g. USW-24-PoE ports 17-24)
+            poeStandard = null;
+            maxPoeWatts = 0;
           }
+        }
+
+        // Determine port speed from copper tier breakdown or item.portSpeed
+        let portSpeed = "1G";
+        let speedLabel = "10/100/1000 Base-T Gigabit";
+        let mediaType = "rj45_1g";
+
+        if (copperTierMap.length > 0) {
+          let accum = 0;
+          for (const tier of copperTierMap) {
+            accum += tier.count;
+            if (i <= accum) {
+              portSpeed = tier.speed;
+              break;
+            }
+          }
+        } else if (item.portSpeed) {
+          const ps = item.portSpeed.toUpperCase();
+          if (ps.includes("10G")) portSpeed = "10G";
+          else if (ps.includes("2.5G")) portSpeed = "2.5G";
+          else if (ps.includes("5G")) portSpeed = "5G";
+        }
+
+        if (portSpeed === "10G") {
+          speedLabel = "10G Base-T Multi-Gig (100M/1G/2.5G/5G/10G)";
+          mediaType = "rj45_10g";
+        } else if (portSpeed === "2.5G") {
+          speedLabel = "2.5G Base-T Multi-Gig (100M/1G/2.5G)";
+          mediaType = "rj45_2.5g";
+        } else if (portSpeed === "5G") {
+          speedLabel = "5G Base-T Multi-Gig (100M/1G/2.5G/5G)";
+          mediaType = "rj45_5g";
+        } else if (portSpeed === "100M") {
+          speedLabel = "10/100 Base-TX Fast Ethernet";
+          mediaType = "rj45_100m";
         }
 
         ports.push({
@@ -283,9 +396,10 @@ const PortEngine = {
           unitPortNumber: i,
           label: stackUnits > 1 ? `Unit ${u} - Port ${i} (${u}/${i})` : `Port ${i}`,
           shortLabel: stackUnits > 1 ? `${u}/${i}` : `P${i}`,
-          mediaType: "rj45_1g",
+          mediaType: mediaType,
           connector: "RJ-45",
-          speed: item.portSpeed && item.portSpeed.includes("2.5G") ? "2.5G" : (item.portSpeed && item.portSpeed.includes("10G") ? "10G" : "1G"),
+          speed: portSpeed,
+          speedLabel: speedLabel,
           poeStandard,
           maxPoeWatts,
           poeOutputWatts: conn.poeOutputWatts || 0,
@@ -300,27 +414,45 @@ const PortEngine = {
       }
 
       // 2. Generate Uplink / Backbone Optical Cages for Unit u
-      for (let j = 1; j <= uplinkPortCount; j++) {
+      // If stacked without dedicated stack ports (e.g. UniFi), the last 2 cages act as the Stacking Interconnect Ring!
+      for (let j = 1; j <= parsedCages.length; j++) {
         const portNum = globalPortIdx++;
         const conn = existingConnections[portNum] || {};
+        const cageDef = parsedCages[j - 1];
+        const isStackInterconnect = (isStacked && !hasDedicatedStack && j > (parsedCages.length - 2));
+
+        let role = isStackInterconnect ? "stack_interconnect" : "uplink";
+        let isUplink = !isStackInterconnect;
+        let speedLabel = isStackInterconnect 
+          ? `${cageDef.speed} Stacking DAC Ring` 
+          : `${cageDef.speed} ${cageDef.connector} Optical Cage`;
+        let label = isStackInterconnect
+          ? (j === parsedCages.length ? `Unit ${u} - Stk DAC 2 (${cageDef.speed}) ← Unit ${prevU}` : `Unit ${u} - Stk DAC 1 (${cageDef.speed}) → Unit ${nextU}`)
+          : (stackUnits > 1 ? `Unit ${u} - Uplink ${j} (${cageDef.speed})` : `Uplink ${j} (${cageDef.speed})`);
+        let shortLabel = isStackInterconnect
+          ? `U${u}:Stk${j - (parsedCages.length - 2)}`
+          : (stackUnits > 1 ? `U${u}:Q${j}` : `Q${j}`);
+
         ports.push({
           portNumber: portNum,
           unitIndex: u,
           unitPortNumber: accessPortCount + j,
-          label: stackUnits > 1 ? `Unit ${u} - Uplink ${j} (${uplinkSpeed})` : `Uplink ${j} (${uplinkSpeed})`,
-          shortLabel: stackUnits > 1 ? `U${u}:Q${j}` : `Q${j}`,
-          mediaType: uplinkMedia,
-          connector: uplinkMedia.includes("qsfp") ? "QSFP" : "SFP+",
-          speed: uplinkSpeed,
+          label: label,
+          shortLabel: shortLabel,
+          mediaType: isStackInterconnect ? "dac_copper" : cageDef.mediaType,
+          connector: cageDef.connector,
+          speed: cageDef.speed,
+          speedLabel: speedLabel,
+          isStackPort: isStackInterconnect,
           poeStandard: null,
           maxPoeWatts: 0,
           poeOutputWatts: 0,
-          connectedDeviceId: conn.connectedDeviceId || null,
-          connectedDeviceModel: conn.connectedDeviceModel || null,
-          connectedPortNumber: conn.connectedPortNumber || null,
-          role: "uplink",
-          isUplink: true,
-          linkStatus: conn.linkStatus || (conn.connectedDeviceId ? "up" : "down"),
+          connectedDeviceId: isStackInterconnect ? `stack-member-${nextU}` : (conn.connectedDeviceId || null),
+          connectedDeviceModel: isStackInterconnect ? `Chassis Unit ${nextU} (Stack Interconnect Ring)` : (conn.connectedDeviceModel || null),
+          connectedPortNumber: isStackInterconnect ? `Stk-${j}` : (conn.connectedPortNumber || null),
+          role: role,
+          isUplink: isUplink,
+          linkStatus: isStackInterconnect ? "up" : (conn.linkStatus || (conn.connectedDeviceId ? "up" : "down")),
           adminStatus: "up"
         });
       }
@@ -329,6 +461,7 @@ const PortEngine = {
     item.physicalPorts = ports;
     item._lastStackUnits = stackUnits;
     this.syncSwitchUplinks(item);
+    this.syncSwitchEdgePorts(item);
     return ports;
   },
 
@@ -343,7 +476,7 @@ const PortEngine = {
     const uplinkPorts = item.physicalPorts.filter(p => p.isUplink || p.role === "uplink");
     if (uplinkPorts.length === 0) return;
 
-    const isCoreOrAgg = item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Spine" || item.role === "Gateways & WAN";
+    const isCoreOrAgg = item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Spine" || item.role === "Gateways & WAN" || item.role === "Security WAN" || item.role === "Firewall" || item.category === "firewall" || item.category === "Firewall";
 
     if (isCoreOrAgg) {
       // Find downstream access switches homing back to this core/aggregation switch
@@ -401,6 +534,259 @@ const PortEngine = {
         }
       });
     }
+  },
+
+  /**
+   * Synchronizes edge client devices (Cameras, Access Control, APs, Intercoms) homed to this switch
+   * Auto-allocates switch ports supporting the device's PoE standards and speed if unassigned
+   * @param {Object} switchItem - Network switch BOM item
+   */
+  syncSwitchEdgePorts(switchItem) {
+    if (!switchItem || !Array.isArray(switchItem.physicalPorts) || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+    const ports = switchItem.physicalPorts;
+    const switchLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(switchItem.closetName || switchItem.rackId) : (switchItem.closetName || switchItem.rackId);
+    const switchSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(switchLoc).space.toLowerCase() : "";
+
+    // 1. Gather all field devices that are homed to this switch or in this switch's closet/rack
+    const edgeDevices = projectBOM.filter(item => {
+      if (!item || item.parentInstanceId || item.instanceId === switchItem.instanceId) return false;
+      const role = (item.role || "").toLowerCase();
+      const cat = (item.category || "").toLowerCase();
+      const isEdge = role === "camera" || role === "access control" || role === "intercom" || 
+                     cat.includes("camera") || cat.includes("access") || cat.includes("intercom") ||
+                     cat.includes("wireless") || role === "wireless bridge" || role === "edge device";
+      if (!isEdge) return false;
+
+      // Matches if explicitly homed to this switch
+      if (item.uplinkTargetId === switchItem.instanceId) return true;
+
+      // Or if not homed to ANY switch yet (and not explicitly unassigned by user), check if it terminates at this switch's closet / space
+      if (!item.uplinkTargetId && !item.unassignedByUser) {
+        // A. Check if placed on physical layout canvas assigned to this closet
+        if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+          for (const fl of facilityFloors) {
+            const drop = (fl.nodes || []).find(n => n.instanceId === item.instanceId || n.id === `dev-${item.instanceId}` || n.id === item.instanceId);
+            if (drop && drop.assignedClosetId) {
+              const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+              const cl = allClosets.find(c => c.id === drop.assignedClosetId);
+              if (cl) {
+                const clNorm = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cl.name) : cl.name;
+                if (clNorm === switchLoc || (switchSpace && FacilityStore.parse(clNorm).space.toLowerCase() === switchSpace)) {
+                  return true;
+                }
+              }
+            }
+          }
+        }
+
+        // B. Check BOM closetName
+        const devLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(item.closetName || item.rackId) : (item.closetName || item.rackId);
+        if (devLoc === switchLoc) return true;
+        if (switchSpace && typeof FacilityStore !== "undefined" && FacilityStore.parse(devLoc).space.toLowerCase() === switchSpace) {
+          return true;
+        }
+      }
+
+      return false;
+    });
+
+    // 2. Track assigned ports and reconcile existing vs new connections
+    const assignedDevIds = new Set();
+
+    // First pass: Honor devices that already have an explicit assignedSwitchPort
+    edgeDevices.forEach(dev => {
+      if (dev.assignedSwitchPort) {
+        const portNum = parseInt(dev.assignedSwitchPort, 10);
+        const p = ports.find(pt => pt.portNumber === portNum && pt.role === "access" && !pt.isUplink);
+        if (p) {
+          dev.uplinkTargetId = switchItem.instanceId;
+          const devPower = this.getDevicePowerSource(dev);
+          const devWatts = parseFloat(dev.powerConsumptionWatts || dev.maxPowerWatts || 15.0) * (parseInt(dev.qty, 10) || 1);
+          p.connectedDeviceId = dev.instanceId;
+          p.connectedDeviceModel = dev.friendlyName || dev.model || "Device";
+          p.connectedDeviceRole = dev.role || "Edge Device";
+          p.connectedLocation = dev.closetName || dev.rackId || switchLoc;
+          p.linkStatus = "up";
+          if (devPower === "poe_switch" && p.poeStandard) {
+            p.poeOutputWatts = Math.min(devWatts, p.maxPoeWatts);
+          } else {
+            p.poeOutputWatts = 0;
+          }
+          assignedDevIds.add(dev.instanceId);
+        } else {
+          dev.assignedSwitchPort = null;
+        }
+      }
+    });
+
+    // Second pass: For unassigned devices, find the best matching free port (PoE capable if needed, speed match)
+    edgeDevices.forEach(dev => {
+      if (assignedDevIds.has(dev.instanceId)) return;
+
+      const devPower = this.getDevicePowerSource(dev);
+      const needsPoe = (devPower === "poe_switch");
+      const devWatts = parseFloat(dev.powerConsumptionWatts || dev.maxPowerWatts || 15.0) * (parseInt(dev.qty, 10) || 1);
+
+      // Candidate free access ports
+      const freePorts = ports.filter(p => p.role === "access" && !p.isUplink && !p.connectedDeviceId && p.adminStatus === "up");
+      
+      let chosenPort = null;
+      if (needsPoe) {
+        chosenPort = freePorts.find(p => p.poeStandard !== null) || freePorts[0];
+      } else {
+        chosenPort = freePorts.find(p => p.poeStandard === null) || freePorts[0];
+      }
+
+      if (chosenPort) {
+        dev.uplinkTargetId = switchItem.instanceId;
+        dev.assignedSwitchPort = chosenPort.portNumber;
+        chosenPort.connectedDeviceId = dev.instanceId;
+        chosenPort.connectedDeviceModel = dev.friendlyName || dev.model || "Device";
+        chosenPort.connectedDeviceRole = dev.role || "Edge Device";
+        chosenPort.connectedLocation = dev.closetName || dev.rackId || switchLoc;
+        chosenPort.linkStatus = "up";
+        if (needsPoe && chosenPort.poeStandard) {
+          chosenPort.poeOutputWatts = Math.min(devWatts, chosenPort.maxPoeWatts);
+        } else {
+          chosenPort.poeOutputWatts = 0;
+        }
+        assignedDevIds.add(dev.instanceId);
+      }
+    });
+
+    // Clear stale non-uplink port connections for devices no longer homed here
+    ports.filter(p => p.role === "access" && !p.isUplink && p.connectedDeviceId).forEach(p => {
+      if (!assignedDevIds.has(p.connectedDeviceId)) {
+        p.connectedDeviceId = null;
+        p.connectedDeviceModel = null;
+        p.connectedDeviceRole = null;
+        p.connectedLocation = null;
+        p.poeOutputWatts = 0;
+        p.linkStatus = "down";
+      }
+    });
+
+    this.recalculateSwitchPoE(switchItem);
+  },
+
+  /**
+   * Auto-assigns a field device (Camera, Access Control, AP, etc.) to the best matching
+   * switch and port in its terminating closet/rack based on PoE and speed capabilities.
+   * @param {Object} deviceItem - Device line item in BOM
+   * @param {String} [targetClosetName] - Optional override closet/rack location
+   * @returns {Object|null} { switchItem, port } or null
+   */
+  autoAssignDeviceToClosetSwitch(deviceItem, targetClosetName = null) {
+    if (!deviceItem || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return null;
+    delete deviceItem.unassignedByUser;
+
+    let targetLoc = targetClosetName || deviceItem.closetName || deviceItem.rackId || "MDF • Rack-1";
+    if (typeof FacilityStore !== "undefined") {
+      targetLoc = FacilityStore.normalize(targetLoc);
+    }
+
+    let searchSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(targetLoc).space.toLowerCase() : "";
+    if (searchSpace === "field" || searchSpace === "unassigned" || !searchSpace) {
+      if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+        for (const fl of facilityFloors) {
+          const drop = (fl.nodes || []).find(n => n.instanceId === deviceItem.instanceId || n.id === `dev-${deviceItem.instanceId}` || n.id === deviceItem.instanceId);
+          if (drop && drop.assignedClosetId) {
+            const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+            const cl = allClosets.find(c => c.id === drop.assignedClosetId);
+            if (cl) {
+              targetLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cl.name) : cl.name;
+              searchSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(targetLoc).space.toLowerCase() : "";
+              break;
+            }
+          }
+        }
+      }
+    }
+
+    const allSwitches = projectBOM.filter(i => {
+      if (!i || i.parentInstanceId || i.instanceId === deviceItem.instanceId) return false;
+      const role = String(i.role || "").toLowerCase();
+      const cat = String(i.category || "").toLowerCase();
+      return role === "access" || role === "core" || role === "aggregation" || role === "core & agg" || 
+             role.includes("switch") || cat === "switch" || cat === "switches" || cat.includes("switch");
+    });
+
+    if (allSwitches.length === 0) return null;
+
+    let candidateSwitches = allSwitches.filter(s => {
+      const sLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(s.closetName || s.rackId) : (s.closetName || s.rackId);
+      if (sLoc === targetLoc) return true;
+      if (searchSpace && searchSpace !== "field" && searchSpace !== "unassigned") {
+        const sSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(sLoc).space.toLowerCase() : "";
+        if (sSpace === searchSpace) return true;
+      }
+      return false;
+    });
+
+    if (candidateSwitches.length === 0) {
+      candidateSwitches = allSwitches.filter(s => (s.role || "").toLowerCase() === "access");
+      if (candidateSwitches.length === 0) candidateSwitches = allSwitches;
+    }
+
+    candidateSwitches.sort((a, b) => {
+      const aIsAccess = (a.role || "").toLowerCase() === "access" ? 0 : 1;
+      const bIsAccess = (b.role || "").toLowerCase() === "access" ? 0 : 1;
+      if (aIsAccess !== bIsAccess) return aIsAccess - bIsAccess;
+      return (a.portsTotal || a.ports || 24) - (b.portsTotal || b.ports || 24);
+    });
+
+    const devPower = this.getDevicePowerSource(deviceItem);
+    const needsPoe = (devPower === "poe_switch");
+
+    for (const sw of candidateSwitches) {
+      const ports = this.initSwitchPorts(sw);
+      // Check if sw already has deviceItem connected to a port (e.g. from syncSwitchEdgePorts or previous call)
+      const existingPort = ports.find(p => p.connectedDeviceId === deviceItem.instanceId);
+      if (existingPort) {
+        deviceItem.uplinkTargetId = sw.instanceId;
+        deviceItem.assignedSwitchPort = existingPort.portNumber;
+        return { switchItem: sw, port: existingPort };
+      }
+
+      const freePorts = ports.filter(p => p.role === "access" && !p.isUplink && !p.connectedDeviceId && p.adminStatus === "up");
+      if (freePorts.length === 0) continue;
+
+      let port = null;
+      if (needsPoe) {
+        port = freePorts.find(p => p.poeStandard !== null);
+      } else {
+        port = freePorts.find(p => p.poeStandard === null) || freePorts[0];
+      }
+
+      if (port) {
+        if (deviceItem.uplinkTargetId && deviceItem.uplinkTargetId !== sw.instanceId) {
+          const oldSw = projectBOM.find(i => i.instanceId === deviceItem.uplinkTargetId);
+          if (oldSw) this.disconnectPort(oldSw, deviceItem.assignedSwitchPort);
+        }
+
+        this.connect(sw, port.portNumber, deviceItem, 1);
+        return { switchItem: sw, port: port };
+      }
+    }
+
+    return null;
+  },
+
+  /**
+   * Synchronizes all switches in the project for both uplinks and edge client devices
+   */
+  syncAllSwitchPorts() {
+    if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+    const switches = projectBOM.filter(i => !i.parentInstanceId && (
+      (i.role || "").toLowerCase().includes("switch") || (i.category || "").toLowerCase().includes("switch") ||
+      i.role === "Access" || i.role === "Core" || i.role === "Aggregation" || i.role === "Core & Agg" || i.role === "Security WAN"
+    ));
+    switches.forEach(sw => {
+      this.initSwitchPorts(sw);
+      this.syncSwitchUplinks(sw);
+      this.syncSwitchEdgePorts(sw);
+    });
   },
 
   /**
@@ -557,6 +943,18 @@ const PortEngine = {
       this.disconnectPort(switchItem, sPort.portNumber);
     }
 
+    // If device was previously connected to any other port on THIS switch, clear it first
+    switchPorts.forEach(p => {
+      if (p.connectedDeviceId === deviceItem.instanceId && p.portNumber !== sPort.portNumber) {
+        p.connectedDeviceId = null;
+        p.connectedDeviceModel = null;
+        p.connectedDeviceRole = null;
+        p.connectedLocation = null;
+        p.poeOutputWatts = 0;
+        p.linkStatus = "down";
+      }
+    });
+
     // Determine power delivery
     const devPowerSource = options.powerSource || this.getDevicePowerSource(deviceItem);
     const devWatts = parseFloat(deviceItem.powerConsumptionWatts || deviceItem.maxPowerWatts || 15.0) * (parseInt(deviceItem.qty, 10) || 1);
@@ -592,6 +990,7 @@ const PortEngine = {
     deviceItem.uplinkTargetId = switchItem.instanceId;
     deviceItem.assignedSwitchPort = sPort.portNumber;
     deviceItem.powerSourceOverride = devPowerSource;
+    delete deviceItem.unassignedByUser;
 
     this.recalculateSwitchPoE(switchItem);
     return true;
@@ -622,6 +1021,7 @@ const PortEngine = {
         dev.assignedSwitchPort = null;
         if (dev.uplinkTargetId === switchItem.instanceId) {
           dev.uplinkTargetId = null;
+          dev.unassignedByUser = true;
         }
       }
     }

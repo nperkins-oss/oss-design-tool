@@ -4,6 +4,7 @@
 
 let activeCableTool = "select"; // "select" | "device" | "mdf" | "fiber"
 let selectedNodeId = null;
+let selectedFiberBackboneId = null;
 let activeSidebarTab = "runs";  // "runs" | "unplaced"
 
 let activeCableSku = "C6A-CMP-1K-BL";
@@ -11,23 +12,129 @@ let useOrthogonalRouting = false;
 let currentCanvasZoom = 1.0;
 let isModalFullscreen = false;
 
-let activeFloorId = "floor-1";
-let facilityFloors = [
-  {
-    id: "floor-1",
-    name: "Level 1 - Main Floor",
-    levelIndex: 1,
-    image: null,
-    opacity: 0.7,
-    scaleFt: 25,
-    slackFt: 15,
-    slabFt: 14,
-    nodes: [],
-    fiberBackbones: []
-  }
-];
+let activeFloorId = null;
+let facilityFloors = [];
 
 let fiberFirstClosetId = null;
+
+// Physical Layer Filtering & Inspector Visibility
+let isPhysicalInspectorVisible = true;
+let physicalLayerFilters = {
+  cameras: true,
+  access: true,
+  wireless: true,
+  closets: true,
+  pathways: true
+};
+
+function getDeviceLayerType(item) {
+  if (!item) return "cameras";
+  if (item.type === "closet" || item.hostType || item.enclosureId) return "closets";
+
+  // 1. Prioritize canonical DeviceTaxonomy classification
+  if (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.getDeviceType === "function") {
+    const tax = DeviceTaxonomy.getDeviceType(item);
+    if (tax) {
+      if (tax.prefix === "CAM" || tax.prefix === "LPR") return "cameras";
+      if (tax.prefix === "DR" || tax.prefix === "ACS" || tax.prefix === "BIO" || tax.prefix === "SIP") return "access";
+      if (tax.prefix === "P2P") return "wireless";
+    }
+  }
+
+  const role = (item.role || "").trim();
+  const cat = (item.category || "").toLowerCase().trim();
+  const model = (item.model || "").toLowerCase();
+  const desc = (item.description || "").toLowerCase();
+  const prefix = item.deviceTypePrefix || "";
+  const allText = `${role} ${cat} ${model} ${desc}`.toLowerCase();
+
+  if (prefix === "CAM" || prefix === "LPR" ||
+      role === "Camera" || role === "Surveillance" || role === "Video" || role === "LPR" ||
+      cat.includes("camera") || cat.includes("surveillance") ||
+      /\b(camera|cams?|dome|bullet|ptz|turret|fisheye|multisensor|lpr|anpr)\b/i.test(allText)) {
+    return "cameras";
+  }
+
+  if (prefix === "DR" || prefix === "ACS" || prefix === "BIO" || prefix === "SIP" ||
+      role === "Access Control" || role === "Door" || role === "Biometric" || role === "Intercom" || role === "Audio/Intercom" ||
+      cat.includes("access_control") || cat === "door" || cat === "doors" || cat.includes("intercom") ||
+      /\b(door|reader|portal|turnstile|mercury|cloudlink|istar|intercom|doorbell|sip)\b/i.test(allText)) {
+    return "access";
+  }
+
+  if (prefix === "P2P" || role === "Wireless Bridge" || role === "Wireless" || role === "P2P" ||
+      cat.includes("wireless") || /\b(nanobeam|gigabeam|airmax|wave|bridge|p2p|ptmp|ubb)\b/i.test(allText)) {
+    return "wireless";
+  }
+
+  if (role.includes("cabling") || role.includes("pathway") || role.includes("patch") || role === "Structured Cabling") {
+    return "pathways";
+  }
+
+  return "cameras";
+}
+
+function togglePhysicalInspector(forceState = null) {
+  const sidebar = document.getElementById("cableSidebar");
+  const openBtn = document.getElementById("cableOpenInspectorBtn");
+  const headerBtn = document.getElementById("cableInspectorHeaderBtn");
+  if (!sidebar) return;
+
+  if (forceState !== null) {
+    isPhysicalInspectorVisible = forceState;
+  } else {
+    isPhysicalInspectorVisible = !isPhysicalInspectorVisible;
+  }
+
+  if (isPhysicalInspectorVisible) {
+    sidebar.classList.remove("hidden");
+    if (openBtn) openBtn.classList.add("hidden");
+    if (headerBtn) headerBtn.classList.add("border-amber-500", "text-amber-300");
+  } else {
+    sidebar.classList.add("hidden");
+    if (openBtn) openBtn.classList.remove("hidden");
+    if (headerBtn) headerBtn.classList.remove("border-amber-500", "text-amber-300");
+  }
+}
+
+function togglePhysicalLayerMenu() {
+  const menu = document.getElementById("physicalLayerMenu");
+  if (!menu) return;
+  menu.classList.toggle("hidden");
+}
+
+function setPhysicalLayerFilter(layer, enabled) {
+  if (physicalLayerFilters.hasOwnProperty(layer)) {
+    physicalLayerFilters[layer] = !!enabled;
+  }
+  updatePhysicalLayerCountBadge();
+  renderCableCanvas();
+  renderSidebarTabContent();
+}
+
+function toggleAllPhysicalLayers(enableAll) {
+  Object.keys(physicalLayerFilters).forEach(k => {
+    physicalLayerFilters[k] = !!enableAll;
+    const chk = document.getElementById(`physLayer-${k}`);
+    if (chk) chk.checked = !!enableAll;
+  });
+  updatePhysicalLayerCountBadge();
+  renderCableCanvas();
+  renderSidebarTabContent();
+}
+
+function updatePhysicalLayerCountBadge() {
+  const badge = document.getElementById("badgePhysicalLayerCount");
+  if (!badge) return;
+  const total = Object.keys(physicalLayerFilters).length;
+  const active = Object.values(physicalLayerFilters).filter(Boolean).length;
+  badge.textContent = active === total ? "All" : `${active}/${total}`;
+  if (active < total) {
+    badge.className = "text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500 text-slate-950 font-bold";
+  } else {
+    badge.className = "text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold";
+  }
+}
 
 // Isolated Dragging State
 let isDraggingPhysNode = false;
@@ -42,22 +149,12 @@ function isPhysCanvasVisible() {
 }
 
 function getActiveFloor() {
+  if (facilityFloors.length === 0) {
+    activeFloorId = null;
+    return null;
+  }
   let floor = facilityFloors.find(f => f.id === activeFloorId);
   if (!floor) {
-    if (facilityFloors.length === 0) {
-      facilityFloors.push({
-        id: "floor-1",
-        name: "Level 1 - Main Floor",
-        levelIndex: 1,
-        image: null,
-        opacity: 0.7,
-        scaleFt: 25,
-        slackFt: 15,
-        slabFt: 14,
-        nodes: [],
-        fiberBackbones: []
-      });
-    }
     floor = facilityFloors[0];
     activeFloorId = floor.id;
   }
@@ -75,6 +172,10 @@ function toggleCableLayoutModal() {
     loadFacilityState();
     initCableCanvas();
     syncBOMClosetsToFloors();
+    const curFl = getActiveFloor();
+    if (curFl) {
+      autoSyncFiberBackbonesFromTopology(curFl, false);
+    }
     renderFloorSelector();
     syncFloorControlInputs();
     recalculateCurrentFloorCables();
@@ -133,31 +234,39 @@ function _doSaveFacilityState() {
 
 function loadFacilityState() {
   try {
-    const projId = FacilityStore.getProjectId();
+    const projId = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
+      ? FacilityStore.getProjectId() : "default";
     const raw = localStorage.getItem(`netselect_facility_${projId}`);
     if (!raw) {
-      facilityFloors = [
-        {
-          id: "floor-1",
-          name: "Level 1 - Main Floor",
-          levelIndex: 1,
+      const storeFloors = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getFloors === "function") 
+        ? FacilityStore.getFloors() : [];
+      if (storeFloors.length > 0) {
+        facilityFloors = storeFloors.map(sf => ({
+          id: sf.id,
+          name: sf.name,
+          levelIndex: sf.levelIndex || 1,
           image: null,
           opacity: 0.7,
-          scaleFt: 25,
-          slackFt: 15,
-          slabFt: 14,
+          scaleFt: sf.scaleFt || 25,
+          slackFt: sf.slackFt || 15,
+          slabFt: sf.slabFt || 14,
           nodes: [],
           fiberBackbones: []
-        }
-      ];
-      activeFloorId = "floor-1";
+        }));
+        activeFloorId = facilityFloors[0].id;
+      } else {
+        facilityFloors = [];
+        activeFloorId = null;
+      }
       return;
     }
     const data = JSON.parse(raw);
-    if (Array.isArray(data.facilityFloors) && data.facilityFloors.length > 0) {
+    if (Array.isArray(data.facilityFloors)) {
       facilityFloors = data.facilityFloors;
+    } else {
+      facilityFloors = [];
     }
-    if (data.activeFloorId) activeFloorId = data.activeFloorId;
+    activeFloorId = data.activeFloorId || (facilityFloors.length > 0 ? facilityFloors[0].id : null);
     if (data.activeCableSku) activeCableSku = data.activeCableSku;
     if (typeof data.useOrthogonalRouting === "boolean") useOrthogonalRouting = data.useOrthogonalRouting;
   } catch (e) {}
@@ -205,6 +314,7 @@ function handlePhysMouseDown(e) {
   if (!isPhysCanvasVisible()) return;
   const pos = getCanvasCoordinates(e);
   const floor = getActiveFloor();
+  if (!floor) return;
 
   // 1. Fiber Backbone Tool
   if (activeCableTool === "fiber") {
@@ -219,18 +329,32 @@ function handlePhysMouseDown(e) {
             showToast(`Selected ${closetNode.name}. Now click target closet.`);
           }
         } else if (fiberFirstClosetId !== closetNode.id) {
-          floor.fiberBackbones.push({
+          const projFiber = (typeof getProjectFiberType === "function") ? getProjectFiberType() : "mmf";
+          const newFb = {
             id: `fiber-${Date.now()}`,
             fromId: fiberFirstClosetId,
             toId: closetNode.id,
+            fiberType: projFiber,
+            strandCount: 12,
+            rating: "plenum",
+            connectorType: "lc",
+            slackFt: 40,
             waypoints: []
-          });
+          };
+          floor.fiberBackbones.push(newFb);
           fiberFirstClosetId = null;
+          selectedFiberBackboneId = newFb.id;
+          selectedNodeId = null;
+          setCableTool("select");
           recalculateCurrentFloorCables();
           renderCableCanvas();
+          renderInspector();
+          renderSidebarTabContent();
           saveFacilityState();
+          if (typeof commitCablingToBOM === "function") commitCablingToBOM();
+          if (typeof renderBOMTable === "function") renderBOMTable();
           if (typeof showToast === "function") {
-            showToast("Fiber Backbone linked.");
+            showToast(`Linked ${closetNode.name} via ${newFb.fiberType.toUpperCase()} fiber backbone.`);
           }
         }
       }
@@ -336,6 +460,28 @@ function handlePhysMouseDown(e) {
     }
   }
 
+  // Fiber Backbone Delete Button Click (floating pill or on-badge circle X)
+  const delBtn = e.target.closest("[data-action='delete-fiber']") || e.target.closest(".fiber-link-delete-btn");
+  if (delBtn) {
+    const fiberId = delBtn.getAttribute("data-fiber-id") || (delBtn.closest(".fiber-backbone-link") ? delBtn.closest(".fiber-backbone-link").getAttribute("data-fiber-id") : null);
+    if (fiberId) {
+      e.preventDefault();
+      e.stopPropagation();
+      deleteFiberBackbone(fiberId, e);
+      return;
+    }
+  }
+
+  // Fiber Backbone Click
+  const fiberEl = e.target.closest(".fiber-backbone-link");
+  if (fiberEl) {
+    const fiberId = fiberEl.getAttribute("data-fiber-id");
+    if (fiberId) {
+      selectFiberBackbone(fiberId, e);
+      return;
+    }
+  }
+
   // 6. Click & Drag Node (Drop or Closet)
   const nodeEl = e.target.closest(".draggable-canvas-node");
   if (nodeEl) {
@@ -343,6 +489,7 @@ function handlePhysMouseDown(e) {
     const node = floor.nodes.find(n => n.id === nodeId);
     if (node) {
       selectedNodeId = nodeId;
+      selectedFiberBackboneId = null;
       isDraggingPhysNode = true;
       draggedPhysNode = node;
       physDragOffset.x = pos.x - node.x;
@@ -355,8 +502,9 @@ function handlePhysMouseDown(e) {
     }
   }
 
-  // Click empty canvas -> deselect node
+  // Click empty canvas -> deselect node & fiber backbone
   selectedNodeId = null;
+  selectedFiberBackboneId = null;
   renderInspector();
   renderSidebarTabContent();
   renderCableCanvas();
@@ -482,9 +630,14 @@ function renderFloorSelector() {
   const sel = document.getElementById("floorSelector");
   if (!sel) return;
 
+  if (facilityFloors.length === 0) {
+    sel.innerHTML = '<option value="">(No Floors/Buildings - Click + to Add)</option>';
+    return;
+  }
+
   sel.innerHTML = facilityFloors.map(f => {
-    const drops = f.nodes.filter(n => n.type === 'device').length;
-    const closets = f.nodes.filter(n => n.type === 'closet').length;
+    const drops = (f.nodes || []).filter(n => n.type === 'device').length;
+    const closets = (f.nodes || []).filter(n => n.type === 'closet').length;
     return `<option value="${f.id}" ${f.id === activeFloorId ? 'selected' : ''}>${f.name} (${closets} Racks, ${drops} Drops)</option>`;
   }).join('');
 }
@@ -492,6 +645,11 @@ function renderFloorSelector() {
 function switchActiveFloor(floorId) {
   activeFloorId = floorId;
   selectedNodeId = null;
+  selectedFiberBackboneId = null;
+  const floor = getActiveFloor();
+  if (floor) {
+    autoSyncFiberBackbonesFromTopology(floor, false);
+  }
   syncFloorControlInputs();
   recalculateCurrentFloorCables();
   renderCableCanvas();
@@ -502,7 +660,7 @@ function switchActiveFloor(floorId) {
 
 function promptAddNewFloor() {
   const nextNum = facilityFloors.length + 1;
-  const name = prompt(`Enter Level / Floor Name:`, `Level ${nextNum}`);
+  const name = prompt(`Enter Floor / Building Name:`, `Level ${nextNum}`);
   if (!name || !name.trim()) return;
 
   const newFloor = {
@@ -520,11 +678,89 @@ function promptAddNewFloor() {
 
   facilityFloors.push(newFloor);
   activeFloorId = newFloor.id;
+
+  // Also add to FacilityStore so it stays synchronized
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.addFloor === "function") {
+    const existing = FacilityStore.getFloors().find(f => f.name.toLowerCase() === newFloor.name.toLowerCase());
+    if (!existing) {
+      FacilityStore.addFloor(newFloor.name, nextNum, {
+        scaleFt: newFloor.scaleFt,
+        slackFt: newFloor.slackFt,
+        slabFt: newFloor.slabFt
+      });
+    }
+  }
+
   renderFloorSelector();
   switchActiveFloor(newFloor.id);
   if (typeof showToast === "function") {
     showToast(`Created ${newFloor.name}`);
   }
+}
+
+function promptRenameActiveFloor() {
+  const floor = getActiveFloor();
+  if (!floor) {
+    if (typeof showToast === "function") showToast("No floor/building level available to rename.");
+    return;
+  }
+  const newName = prompt("Rename Floor/Building:", floor.name);
+  if (!newName || !newName.trim() || newName.trim() === floor.name) return;
+  const cleanName = newName.trim();
+  
+  if (facilityFloors.some(f => f.id !== floor.id && f.name.toLowerCase() === cleanName.toLowerCase())) {
+    if (typeof showToast === "function") showToast(`A floor/building named "${cleanName}" already exists.`);
+    return;
+  }
+  const oldName = floor.name;
+  floor.name = cleanName;
+
+  // Also sync with FacilityStore
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.updateFloor === "function") {
+    const sf = FacilityStore.getFloors().find(f => f.id === floor.id || f.name.toLowerCase() === oldName.toLowerCase());
+    if (sf) {
+      FacilityStore.updateFloor(sf.id, { name: cleanName });
+    }
+  }
+
+  renderFloorSelector();
+  renderCableCanvas();
+  saveFacilityState();
+  if (typeof showToast === "function") showToast(`Renamed floor/building to "${cleanName}"`);
+}
+
+function promptDeleteActiveFloor() {
+  const floor = getActiveFloor();
+  if (!floor) {
+    if (typeof showToast === "function") showToast("No floor/building level available to delete.");
+    return;
+  }
+  if (!confirm(`Delete floor/building "${floor.name}" and all associated cable runs/nodes?`)) {
+    return;
+  }
+  const deletedFloorId = floor.id;
+  const deletedFloorName = floor.name;
+
+  facilityFloors = facilityFloors.filter(f => f.id !== deletedFloorId);
+  activeFloorId = facilityFloors.length > 0 ? facilityFloors[0].id : null;
+  selectedNodeId = null;
+
+  // Also sync to FacilityStore
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.deleteFloor === "function") {
+    const sf = FacilityStore.getFloors().find(f => f.id === deletedFloorId || f.name.toLowerCase() === deletedFloorName.toLowerCase());
+    if (sf) {
+      FacilityStore.deleteFloor(sf.id);
+    }
+  }
+
+  renderFloorSelector();
+  syncFloorControlInputs();
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  saveFacilityState();
+  if (typeof showToast === "function") showToast(`Deleted floor/building "${deletedFloorName}"`);
 }
 
 function syncFloorControlInputs() {
@@ -533,6 +769,13 @@ function syncFloorControlInputs() {
   const slackInput = document.getElementById("cableSlackFt");
   const slabInput = document.getElementById("cableSlabFt");
   const cableSelect = document.getElementById("cableTypeSelector");
+
+  if (!floor) {
+    if (scaleInput) scaleInput.value = 25;
+    if (slackInput) slackInput.value = 15;
+    if (slabInput) slabInput.value = 14;
+    return;
+  }
 
   if (scaleInput) scaleInput.value = floor.scaleFt || 25;
   if (slackInput) slackInput.value = floor.slackFt || 15;
@@ -545,6 +788,10 @@ async function handleUniversalPlanUpload(event) {
   if (!file) return;
 
   const floor = getActiveFloor();
+  if (!floor) {
+    if (typeof showToast === "function") showToast("Please add a floor/building first.", "warning");
+    return;
+  }
 
   if (file.type === "application/pdf") {
     const spinner = document.getElementById("pdfRenderSpinner");
@@ -847,6 +1094,129 @@ function syncBOMClosetsToFloors() {
       });
     }
   });
+
+  // C. Synchronize placed equipment drops with Project BOM
+  syncBOMDevicesToFloors();
+}
+
+/**
+ * Synchronizes placed physical equipment drops with the Project BOM.
+ * Drops whose BOM equipment was deleted or cleared are automatically purged from all floors.
+ */
+function syncBOMDevicesToFloors() {
+  if (typeof facilityFloors === "undefined" || !Array.isArray(facilityFloors)) return;
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const validInstanceIds = new Set(projectBOM.filter(i => !i.parentInstanceId).map(i => i.instanceId));
+  let didRemove = false;
+
+  facilityFloors.forEach(fl => {
+    if (!fl.nodes) fl.nodes = [];
+    const before = fl.nodes.length;
+    fl.nodes = fl.nodes.filter(n => {
+      if (n.type === "device") {
+        // If BOM was cleared (empty), remove all placed BOM drops
+        if (validInstanceIds.size === 0) {
+          return false;
+        }
+        // If drop is linked to a BOM instance, keep only if instance still exists in projectBOM
+        const instId = n.instanceId || (n.id && n.id.startsWith("dev-") ? n.id.replace("dev-", "") : null);
+        if (instId) {
+          if (!validInstanceIds.has(instId)) return false;
+          // Synchronize name and deviceNumber with current BOM item!
+          const item = projectBOM.find(i => i.instanceId === instId);
+          if (item) {
+            n.name = item.friendlyName || item.model;
+            n.deviceNumber = item.deviceNumber;
+
+            // Synchronize BOM location with terminating closet if item was unassigned or in virtual field
+            if (n.assignedClosetId) {
+              const allClosets = getAllClosetsAcrossFacility();
+              const closet = allClosets.find(c => c.id === n.assignedClosetId);
+              if (closet) {
+                const cur = (item.closetName || "").toLowerCase().trim();
+                if (!item.closetName || cur === "unassigned" || cur === "field" || cur.endsWith("• field") || cur.endsWith("-field")) {
+                  item.closetName = closet.name;
+                  item.rackId = closet.name;
+                }
+              }
+            }
+          }
+          return true;
+        }
+      }
+      return true;
+    });
+    if (fl.nodes.length !== before) didRemove = true;
+  });
+
+  if (didRemove) {
+    if (typeof selectedNodeId !== "undefined" && selectedNodeId) {
+      const floor = getActiveFloor();
+      if (floor && Array.isArray(floor.nodes) && !floor.nodes.some(n => n.id === selectedNodeId)) {
+        selectedNodeId = null;
+      }
+    }
+    recalculateCurrentFloorCables();
+    if (typeof isPhysCanvasVisible === "function" && isPhysCanvasVisible()) {
+      renderCableCanvas();
+      renderInspector();
+      renderSidebarTabContent();
+    }
+    saveFacilityState(true);
+  }
+}
+
+/**
+ * Clears all placed equipment drops across all floors when BOM is cleared.
+ */
+function clearPhysicalLayoutDrops() {
+  if (typeof facilityFloors === "undefined" || !Array.isArray(facilityFloors)) return;
+  facilityFloors.forEach(fl => {
+    if (!fl.nodes) fl.nodes = [];
+    fl.nodes = fl.nodes.filter(n => n.type !== "device");
+  });
+  selectedNodeId = null;
+  recalculateCurrentFloorCables();
+  if (typeof isPhysCanvasVisible === "function" && isPhysCanvasVisible()) {
+    renderCableCanvas();
+    renderInspector();
+    renderSidebarTabContent();
+  }
+  saveFacilityState(true);
+}
+
+/**
+ * Removes a specific placed equipment drop when its item is deleted from BOM.
+ */
+function removePhysicalLayoutDropByInstanceId(instanceId) {
+  if (!instanceId || typeof facilityFloors === "undefined" || !Array.isArray(facilityFloors)) return;
+  let didRemove = false;
+  facilityFloors.forEach(fl => {
+    if (!fl.nodes) fl.nodes = [];
+    const before = fl.nodes.length;
+    fl.nodes = fl.nodes.filter(n => {
+      if (n.type === "device") {
+        if (n.instanceId === instanceId) return false;
+        if (n.id === `dev-${instanceId}` || n.id === instanceId) return false;
+      }
+      return true;
+    });
+    if (fl.nodes.length !== before) didRemove = true;
+  });
+
+  if (didRemove) {
+    if (selectedNodeId && (selectedNodeId === `dev-${instanceId}` || selectedNodeId === instanceId)) {
+      selectedNodeId = null;
+    }
+    recalculateCurrentFloorCables();
+    if (typeof isPhysCanvasVisible === "function" && isPhysCanvasVisible()) {
+      renderCableCanvas();
+      renderInspector();
+      renderSidebarTabContent();
+    }
+    saveFacilityState(true);
+  }
 }
 
 function getAllClosetsAcrossFacility() {
@@ -865,9 +1235,11 @@ function recalculateCurrentFloorCables() {
   const slackInput = document.getElementById("cableSlackFt");
   const slabInput = document.getElementById("cableSlabFt");
 
-  if (scaleInput) floor.scaleFt = parseFloat(scaleInput.value) || 25;
-  if (slackInput) floor.slackFt = parseFloat(slackInput.value) || 15;
-  if (slabInput) floor.slabFt = parseFloat(slabInput.value) || 14;
+  if (floor) {
+    if (scaleInput) floor.scaleFt = parseFloat(scaleInput.value) || 25;
+    if (slackInput) floor.slackFt = parseFloat(slackInput.value) || 15;
+    if (slabInput) floor.slabFt = parseFloat(slabInput.value) || 14;
+  }
 
   const allClosets = getAllClosetsAcrossFacility();
 
@@ -930,8 +1302,12 @@ function recalculateCurrentFloorCables() {
       const c1 = fl.nodes.find(n => n.id === fb.fromId);
       const c2 = fl.nodes.find(n => n.id === fb.toId);
       if (c1 && c2) {
+        fb.fromClosetName = c1.name;
+        fb.toClosetName = c2.name;
         const pxDist = Math.hypot(c2.x - c1.x, c2.y - c1.y);
-        fb.totalFt = Math.round(pxDist * fPxToFt) + (fSlack * 2);
+        const slack = (typeof fb.slackFt === "number") ? fb.slackFt : (fSlack * 2);
+        fb.measuredFt = Math.round(pxDist * fPxToFt);
+        fb.totalFt = fb.measuredFt + slack;
       }
     });
   });
@@ -940,10 +1316,17 @@ function recalculateCurrentFloorCables() {
   const footageEl = document.getElementById("cableTotalFootage");
   const spoolEl = document.getElementById("cableSpoolCount");
   const countActiveEl = document.getElementById("countActiveDrops");
+  const totalDropsEl = document.getElementById("cableTotalDrops");
+  const patchPanelsEl = document.getElementById("cablePatchPanels");
 
   if (footageEl) footageEl.innerText = `${globalFootage.toLocaleString()} ft`;
   if (spoolEl) spoolEl.innerText = `${spoolBoxes} Box${spoolBoxes === 1 ? '' : 'es'}`;
   if (countActiveEl) countActiveEl.innerText = floor.nodes.filter(n => n.type === 'device').length;
+  if (totalDropsEl) totalDropsEl.innerText = `${globalDropsCount} Drop${globalDropsCount === 1 ? '' : 's'}`;
+  if (patchPanelsEl) {
+    const panelsNeeded = Math.ceil(globalDropsCount / 24);
+    patchPanelsEl.innerText = `${panelsNeeded} Panel${panelsNeeded === 1 ? '' : 's'} (${panelsNeeded * 24}P)`;
+  }
 
   renderSidebarTabContent();
 }
@@ -1014,31 +1397,116 @@ function renderSidebarTabContent() {
   if (!container) return;
 
   const floor = getActiveFloor();
+  if (!floor) {
+    container.innerHTML = `
+      <div class="py-12 px-4 text-center text-slate-500 text-xs">
+        <i data-lucide="layers" class="w-8 h-8 mx-auto mb-2 text-slate-600 opacity-50"></i>
+        <p class="font-medium text-slate-400">No Floor/Building Active</p>
+        <p class="mt-1 text-[11px] text-slate-500">Create or select a floor/building to view runs, paths, and closets.</p>
+        <button onclick="promptAddNewFloor()" class="mt-3 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium text-[11px] inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i> Add First Floor/Building
+        </button>
+      </div>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
 
   if (activeSidebarTab === "runs") {
-    const drops = floor.nodes.filter(n => n.type === "device");
-    if (drops.length === 0) {
-      container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs"><p>No drops placed on this level.</p></div>`;
-      return;
+    const allDrops = floor.nodes.filter(n => n.type === "device");
+    const drops = allDrops.filter(dev => {
+      const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+      const layerType = getDeviceLayerType(bomItem || dev);
+      return physicalLayerFilters[layerType] !== false;
+    });
+
+    const countDropsEl = document.getElementById("countActiveDrops");
+    if (countDropsEl) {
+      countDropsEl.innerText = drops.length === allDrops.length ? drops.length : `${drops.length}/${allDrops.length}`;
     }
 
-    container.innerHTML = drops.map(dev => {
-      const run = dev.calculatedRun || { totalFt: 0, closetName: 'Unassigned', isExceeded: false };
-      return `
-        <div onclick="selectNode('${dev.id}')" class="bg-slate-950 p-2.5 rounded-xl border ${dev.id === selectedNodeId ? 'border-brand-500 bg-brand-500/10' : run.isExceeded ? 'border-rose-500/60 bg-rose-950/20' : 'border-slate-800'} text-xs space-y-1 cursor-pointer hover:border-slate-700 transition-all">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-white">${dev.name}</span>
-            <span class="font-mono font-bold ${run.isExceeded ? 'text-rose-400' : 'text-amber-300'}">
-              ${run.totalFt} ft (${run.totalMeters}m)
-            </span>
+    const fiberLinks = floor.fiberBackbones || [];
+    let fiberSectionHtml = "";
+    if (fiberLinks.length > 0) {
+      fiberSectionHtml = `
+        <div class="mb-3 space-y-1.5">
+          <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-0.5">
+            <span>Inter-Closet Fiber Links (${fiberLinks.length})</span>
+            <span class="text-cyan-400 font-mono text-[9px]">Optical Trunks</span>
           </div>
-          <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-            <span>To: ${run.closetName}</span>
-            <span>${(dev.waypoints || []).length} Bends</span>
+          <div class="space-y-1.5">
+            ${fiberLinks.map(fb => {
+              const c1 = floor.nodes.find(n => n.id === fb.fromId);
+              const c2 = floor.nodes.find(n => n.id === fb.toId);
+              const fromName = c1 ? c1.name : (fb.fromClosetName || "MDF");
+              const toName = c2 ? c2.name : (fb.toClosetName || "IDF");
+              const isSMF = (fb.fiberType === "smf");
+              const isSel = (fb.id === selectedFiberBackboneId);
+              return `
+                <div onclick="selectFiberBackbone('${fb.id}')" class="bg-slate-950 p-2.5 rounded-xl border ${isSel ? (isSMF ? 'border-amber-500 bg-amber-500/10' : 'border-cyan-500 bg-cyan-500/10') : 'border-slate-800'} text-xs space-y-1 cursor-pointer hover:border-slate-700 transition-all">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-white flex items-center gap-1.5 truncate">
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${isSMF ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'}">${isSMF ? 'OS2 SMF' : 'OM4 MMF'}</span>
+                      <span class="truncate">${escapeHTML(fromName)} &harr; ${escapeHTML(toName)}</span>
+                    </span>
+                    <div class="flex items-center gap-2 shrink-0">
+                      <span class="font-mono font-bold ${isSMF ? 'text-amber-300' : 'text-cyan-300'}">${fb.totalFt || 100} ft</span>
+                      <button type="button" onclick="deleteFiberBackbone('${fb.id}', event)" title="Delete Fiber Backbone" class="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 border border-transparent hover:border-rose-800/60 transition-colors cursor-pointer">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span>${fb.strandCount || 12}-Strand &bull; ${(fb.rating || 'plenum').toUpperCase()}</span>
+                    <span>${(fb.connectorType || 'lc').toUpperCase()} Duplex</span>
+                  </div>
+                </div>
+              `;
+            }).join("")}
           </div>
         </div>
       `;
-    }).join("");
+    }
+
+    if (drops.length === 0 && fiberLinks.length === 0) {
+      container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs"><p>${allDrops.length === 0 ? 'No drops or fiber links on this level.' : 'No drops match the active layer filters.'}</p></div>`;
+      return;
+    }
+
+    const dropsHtml = (drops.length === 0) ? '' : `
+      <div class="space-y-1.5">
+        ${fiberLinks.length > 0 ? `
+          <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-0.5 pt-1">
+            <span>Horizontal Station Drops (${drops.length})</span>
+            <span class="text-amber-400 font-mono text-[9px]">Copper</span>
+          </div>
+        ` : ''}
+        ${drops.map(dev => {
+          const run = dev.calculatedRun || { totalFt: 0, closetName: 'Unassigned', isExceeded: false };
+          return `
+            <div onclick="selectNode('${dev.id}')" class="bg-slate-950 p-2.5 rounded-xl border ${dev.id === selectedNodeId ? 'border-brand-500 bg-brand-500/10' : run.isExceeded ? 'border-rose-500/60 bg-rose-950/20' : 'border-slate-800'} text-xs space-y-1 cursor-pointer hover:border-slate-700 transition-all">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-white flex items-center gap-1.5 truncate">
+                  ${(() => {
+                    const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+                    const devNum = (bomItem && bomItem.deviceNumber) ? `<span class="px-1 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[8.5px] font-mono font-bold text-brand-300">${escapeHTML(bomItem.deviceNumber)}</span>` : '';
+                    return `${devNum}<span>${escapeHTML(dev.name)}</span>`;
+                  })()}
+                </span>
+                <span class="font-mono font-bold shrink-0 ${run.isExceeded ? 'text-rose-400' : 'text-amber-300'}">
+                  ${run.totalFt} ft (${run.totalMeters}m)
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                <span>To: ${run.closetName}</span>
+                <span>${(dev.waypoints || []).length} Bends</span>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+
+    container.innerHTML = fiberSectionHtml + dropsHtml;
   } else {
     // Unplaced devices: edge/field hardware in quote not currently placed on canvas
     // Devices in racks/enclosures (switches, servers, storage, UPS, PDU) already live inside their enclosures
@@ -1054,14 +1522,16 @@ function renderSidebarTabContent() {
     const unplacedBOM = (typeof projectBOM !== "undefined" ? projectBOM : []).filter(item => {
       if (!isFieldDeviceForPhysicalLayout(item)) return false;
       const isPlaced = placedInstanceIds.has(item.instanceId);
-      return !isPlaced;
+      if (isPlaced) return false;
+      const layerType = getDeviceLayerType(item);
+      return physicalLayerFilters[layerType] !== false;
     });
 
     const countUnplacedEl = document.getElementById("countUnplacedDevices");
     if (countUnplacedEl) countUnplacedEl.innerText = unplacedBOM.length;
 
     if (unplacedBOM.length === 0) {
-      container.innerHTML = `<div class="py-8 text-center text-slate-500 text-xs"><p>No unplaced field hardware or unassigned items in quote.</p></div>`;
+      container.innerHTML = `<div class="py-8 text-center text-slate-500 text-xs"><p>No unplaced field hardware matching active filters.</p></div>`;
       return;
     }
 
@@ -1088,7 +1558,14 @@ function renderSidebarTabContent() {
       return `
         <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 flex items-center justify-between text-xs space-y-1 hover:border-slate-700 transition-colors">
           <div class="min-w-0 pr-2">
-            <span class="font-bold text-white block truncate max-w-[160px]" title="${escapeHTML(item.model)}">${escapeHTML(item.model)}</span>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+              <span class="font-bold text-white truncate max-w-[160px]" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+              <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
+              </button>
+            </div>
+            ${item.friendlyName && item.friendlyName !== item.model ? `<span class="text-[10px] text-slate-300 font-medium block truncate max-w-[160px]">${escapeHTML(item.model)}</span>` : ''}
             <div class="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <span class="text-[9px] font-mono px-1 py-0.2 rounded font-bold ${isUnassigned ? 'bg-amber-950/80 border border-amber-800/80 text-amber-300' : 'bg-indigo-950/80 border border-indigo-800/80 text-indigo-300'}">
                 ${isUnassigned ? 'Unassigned' : escapeHTML(item.closetName)}
@@ -1277,7 +1754,8 @@ function placeAllUnplacedOnActiveFloor() {
     const newDrop = {
       id: `dev-${item.instanceId}`,
       instanceId: item.instanceId,
-      name: item.model,
+      name: item.friendlyName || item.model,
+      deviceNumber: item.deviceNumber,
       type: "device",
       floorId: floor.id,
       x: spot.x,
@@ -1290,10 +1768,23 @@ function placeAllUnplacedOnActiveFloor() {
     floor.nodes.push(newDrop);
     placedCount++;
 
-    // If item was unassigned, assign it to the matching closet's location
-    if ((!item.closetName || item.closetName === FacilityStore.UNASSIGNED) && matchingCloset) {
+    // If item was unassigned or in virtual field, assign it to the matching closet's location
+    const curLoc = (item.closetName || "").toLowerCase().trim();
+    const isFieldOrUnassigned = !item.closetName || curLoc === "unassigned" || curLoc === "field" || curLoc.endsWith("• field") || curLoc.endsWith("-field");
+    if (isFieldOrUnassigned && matchingCloset) {
       item.closetName = matchingCloset.name;
       item.rackId = matchingCloset.name;
+      didUpdateWorkspace = true;
+      if (typeof autoSelectMountingForHost === "function") {
+        autoSelectMountingForHost(item, matchingCloset.name);
+      }
+    }
+    if (newDrop.mountMethod === "pole" && typeof autoSelectMountingForHost === "function") {
+      autoSelectMountingForHost(item, "Pole Assembly", "structural_mount");
+    }
+    // Auto-home field device to the access switch in the matching closet
+    if (typeof PortEngine !== "undefined" && matchingCloset) {
+      PortEngine.autoAssignDeviceToClosetSwitch(item, matchingCloset.name);
       didUpdateWorkspace = true;
     }
   });
@@ -1320,6 +1811,10 @@ function placeBomItemOnFloor(instanceId) {
   if (!item) return;
 
   const floor = getActiveFloor();
+  if (!floor) {
+    if (typeof showToast === "function") showToast("Please add or select a floor/building before placing devices.", "warning");
+    return;
+  }
   const allClosets = getAllClosetsAcrossFacility();
 
   // Find matching closet on this floor if item already has a location assigned
@@ -1343,7 +1838,8 @@ function placeBomItemOnFloor(instanceId) {
   const newDrop = {
     id: `dev-${item.instanceId}`,
     instanceId: item.instanceId,
-    name: item.model,
+    name: item.friendlyName || item.model,
+    deviceNumber: item.deviceNumber,
     type: "device",
     floorId: floor.id,
     x: spot.x,
@@ -1356,10 +1852,23 @@ function placeBomItemOnFloor(instanceId) {
   floor.nodes.push(newDrop);
   selectedNodeId = newDrop.id;
 
-  // If item was unassigned, assign it to the matching closet's location
-  if ((!item.closetName || item.closetName === FacilityStore.UNASSIGNED) && matchingCloset) {
+  // If item was unassigned or in virtual field, assign it to the matching closet's location
+  const curLocSingle = (item.closetName || "").toLowerCase().trim();
+  const isFieldOrUnassignedSingle = !item.closetName || curLocSingle === "unassigned" || curLocSingle === "field" || curLocSingle.endsWith("• field") || curLocSingle.endsWith("-field");
+  if (isFieldOrUnassignedSingle && matchingCloset) {
     item.closetName = matchingCloset.name;
     item.rackId = matchingCloset.name;
+    if (typeof autoSelectMountingForHost === "function") {
+      autoSelectMountingForHost(item, matchingCloset.name);
+    }
+    FacilityStore.notifyWorkspaceChange();
+  }
+  if (newDrop.mountMethod === "pole" && typeof autoSelectMountingForHost === "function") {
+    autoSelectMountingForHost(item, "Pole Assembly", "structural_mount");
+  }
+  // Auto-home field device to the access switch in the matching closet
+  if (typeof PortEngine !== "undefined" && matchingCloset) {
+    PortEngine.autoAssignDeviceToClosetSwitch(item, matchingCloset.name);
     FacilityStore.notifyWorkspaceChange();
   }
 
@@ -1379,6 +1888,7 @@ function placeBomItemOnFloor(instanceId) {
 // -----------------------------------------------------------
 function selectNode(id) {
   selectedNodeId = id;
+  selectedFiberBackboneId = null;
   renderInspector();
   renderCableCanvas();
   renderSidebarTabContent();
@@ -1391,17 +1901,528 @@ function deselectNode() {
   renderSidebarTabContent();
 }
 
+function isClosetMatch(nameA, nameB) {
+  if (!nameA || !nameB) return false;
+  const normA = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(nameA) : String(nameA)).trim().toLowerCase();
+  const normB = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(nameB) : String(nameB)).trim().toLowerCase();
+  if (normA === normB) return true;
+
+  // Compare clean full strings
+  const cleanFullA = normA.replace(/[^a-z0-9]/g, "");
+  const cleanFullB = normB.replace(/[^a-z0-9]/g, "");
+  if (cleanFullA && cleanFullB && cleanFullA === cleanFullB) return true;
+
+  // Compare space names (before the " • ")
+  const spaceA = normA.split(" • ")[0].trim();
+  const spaceB = normB.split(" • ")[0].trim();
+  const cleanSpaceA = spaceA.replace(/[^a-z0-9]/g, "");
+  const cleanSpaceB = spaceB.replace(/[^a-z0-9]/g, "");
+  if (cleanSpaceA && cleanSpaceB && cleanSpaceA === cleanSpaceB) return true;
+
+  return false;
+}
+
+function getInterClosetConnections() {
+  const pairMap = new Map();
+
+  // 1. Try topologyLinks if available
+  let tLinks = (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) ? topologyLinks : [];
+  if (tLinks.length === 0 && typeof generateTopologyLinks === "function" && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    generateTopologyLinks(projectBOM.filter(i => !i.parentInstanceId));
+    tLinks = (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) ? topologyLinks : [];
+  }
+
+  const overrides = (typeof getLinkInterconnectOverrides === "function") 
+    ? getLinkInterconnectOverrides() 
+    : ((typeof linkInterconnectOverrides !== "undefined") ? linkInterconnectOverrides : {});
+
+  const projFiber = (typeof getProjectFiberType === "function") ? getProjectFiberType() : "mmf";
+
+  if (tLinks.length > 0 && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    tLinks.forEach(link => {
+      if (link.isWireless) return;
+      if (link.isPoEDelivery) return;
+
+      const nodeA = projectBOM.find(i => i.instanceId === link.fromId);
+      const nodeB = projectBOM.find(i => i.instanceId === link.toId);
+      if (!nodeA || !nodeB) return;
+
+      const locA = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeA.closetName || nodeA.rackId || "MDF") : (nodeA.closetName || "MDF");
+      const locB = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(nodeB.closetName || nodeB.rackId || "MDF") : (nodeB.closetName || "MDF");
+
+      if (locA === locB) return;
+      if (locA.endsWith("• Field") || locB.endsWith("• Field")) return;
+      if (typeof FacilityStore !== "undefined" && (locA === FacilityStore.UNASSIGNED || locB === FacilityStore.UNASSIGNED)) return;
+
+      const normA = locA.trim().toLowerCase();
+      const normB = locB.trim().toLowerCase();
+      const pairKey = [normA.replace(/[^a-z0-9]/g, ""), normB.replace(/[^a-z0-9]/g, "")].sort().join("___");
+
+      const override = overrides[link.id] || {};
+      let fiberType = projFiber;
+      if (override.fiberType && override.fiberType !== "auto") {
+        fiberType = override.fiberType;
+      } else if (override.medium && (override.medium === "smf" || override.medium === "mmf")) {
+        fiberType = override.medium;
+      }
+
+      if (!pairMap.has(pairKey)) {
+        pairMap.set(pairKey, {
+          locA,
+          locB,
+          fiberType,
+          speed: link.rawSpeed || "10G",
+          linkId: link.id
+        });
+      }
+    });
+  }
+
+  // 2. Direct BOM inspection fallback if topologyLinks yielded nothing
+  if (pairMap.size === 0 && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    const switches = projectBOM.filter(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core" || i.role === "Aggregation" || i.role === "Core & Agg" || i.role === "Switch"));
+    const coreSwitch = switches.find(s => s.role === "Core" || s.role === "Core & Agg" || s.role === "Aggregation") || switches[0];
+
+    switches.forEach(sw => {
+      let targetSw = null;
+      if (sw.customUplinkTargetId) {
+        targetSw = switches.find(s => s.instanceId === sw.customUplinkTargetId);
+      } else if (sw.uplinkTargetId) {
+        targetSw = switches.find(s => s.instanceId === sw.uplinkTargetId);
+      } else if (coreSwitch && sw.instanceId !== coreSwitch.instanceId) {
+        targetSw = coreSwitch;
+      }
+
+      if (targetSw && targetSw.instanceId !== sw.instanceId) {
+        const locA = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(sw.closetName || sw.rackId || "MDF") : (sw.closetName || "MDF");
+        const locB = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(targetSw.closetName || targetSw.rackId || "MDF") : (targetSw.closetName || "MDF");
+
+        if (locA !== locB && !locA.endsWith("• Field") && !locB.endsWith("• Field")) {
+          const normA = locA.trim().toLowerCase();
+          const normB = locB.trim().toLowerCase();
+          const pairKey = [normA.replace(/[^a-z0-9]/g, ""), normB.replace(/[^a-z0-9]/g, "")].sort().join("___");
+          if (!pairMap.has(pairKey)) {
+            pairMap.set(pairKey, {
+              locA,
+              locB,
+              fiberType: projFiber,
+              speed: "10G",
+              linkId: `link-${sw.instanceId}-${targetSw.instanceId}`
+            });
+          }
+        }
+      }
+    });
+  }
+
+  return Array.from(pairMap.values());
+}
+
+function autoSyncFiberBackbonesFromTopology(floor, force = false) {
+  if (!floor || !Array.isArray(floor.nodes)) return 0;
+  if (!floor.fiberBackbones) floor.fiberBackbones = [];
+  if (!floor.deletedFiberLinks) floor.deletedFiberLinks = [];
+
+  const connections = getInterClosetConnections();
+  if (!connections || connections.length === 0) return 0;
+
+  const closetsOnFloor = floor.nodes.filter(n => n.type === "closet");
+  if (closetsOnFloor.length < 2) return 0;
+
+  let createdCount = 0;
+
+  connections.forEach(conn => {
+    const c1 = closetsOnFloor.find(c => isClosetMatch(c.name, conn.locA));
+    const c2 = closetsOnFloor.find(c => isClosetMatch(c.name, conn.locB));
+
+    if (c1 && c2 && c1.id !== c2.id) {
+      const normA = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(c1.name || "") : String(c1.name || "")).trim().toLowerCase();
+      const normB = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(c2.name || "") : String(c2.name || "")).trim().toLowerCase();
+      const fullKey = [normA.replace(/[^a-z0-9]/g, ""), normB.replace(/[^a-z0-9]/g, "")].sort().join("___");
+      const spaceA = normA.split(" • ")[0].trim().replace(/[^a-z0-9]/g, "");
+      const spaceB = normB.split(" • ")[0].trim().replace(/[^a-z0-9]/g, "");
+      const spaceKey = [spaceA, spaceB].sort().join("___");
+      const idKey = [c1.id, c2.id].sort().join("___");
+
+      const existing = floor.fiberBackbones.find(fb => 
+        (fb.fromId === c1.id && fb.toId === c2.id) || (fb.fromId === c2.id && fb.toId === c1.id)
+      );
+
+      if (existing) {
+        if (!existing.customOverride && conn.fiberType && existing.fiberType !== conn.fiberType) {
+          existing.fiberType = conn.fiberType;
+        }
+      } else {
+        if (!force && (
+          floor.deletedFiberLinks.includes(fullKey) || 
+          floor.deletedFiberLinks.includes(spaceKey) || 
+          floor.deletedFiberLinks.includes(idKey)
+        )) {
+          return;
+        }
+
+        const newFb = {
+          id: `fiber-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+          fromId: c1.id,
+          toId: c2.id,
+          fromClosetName: c1.name,
+          toClosetName: c2.name,
+          fiberType: conn.fiberType || ((typeof getProjectFiberType === "function") ? getProjectFiberType() : "mmf"),
+          strandCount: 12,
+          rating: "plenum",
+          connectorType: "lc",
+          slackFt: 40,
+          waypoints: [],
+          autoCreatedFromTopology: true
+        };
+        floor.fiberBackbones.push(newFb);
+        createdCount++;
+      }
+    }
+  });
+
+  return createdCount;
+}
+
+function manualAutoLinkTopology() {
+  const floor = getActiveFloor();
+  if (!floor) return;
+  floor.deletedFiberLinks = [];
+  const count = autoSyncFiberBackbonesFromTopology(floor, true);
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  saveFacilityState();
+  if (typeof commitCablingToBOM === "function") commitCablingToBOM();
+  if (typeof renderBOMTable === "function") renderBOMTable();
+
+  if (count > 0) {
+    if (typeof showToast === "function") {
+      showToast(`Auto-linked ${count} fiber backbone${count > 1 ? 's' : ''} based on Topology.`);
+    }
+  } else {
+    if (typeof showToast === "function") {
+      showToast("All closet uplinks from Topology are already linked.");
+    }
+  }
+}
+
+function syncFiberBackboneToTopology(fb, newFiberType) {
+  if (!fb || !newFiberType) return;
+  const floor = getActiveFloor();
+  if (!floor) return;
+  const c1 = (floor.nodes || []).find(n => n.id === fb.fromId);
+  const c2 = (floor.nodes || []).find(n => n.id === fb.toId);
+  const name1 = c1 ? c1.name : (fb.fromClosetName || "");
+  const name2 = c2 ? c2.name : (fb.toClosetName || "");
+  if (!name1 || !name2) return;
+
+  const overrides = (typeof getLinkInterconnectOverrides === "function") 
+    ? getLinkInterconnectOverrides() 
+    : ((typeof linkInterconnectOverrides !== "undefined") ? linkInterconnectOverrides : {});
+
+  if ((typeof topologyLinks === "undefined" || topologyLinks.length === 0) && typeof generateTopologyLinks === "function" && typeof projectBOM !== "undefined") {
+    generateTopologyLinks(projectBOM.filter(i => !i.parentInstanceId));
+  }
+
+  const links = (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) ? topologyLinks : [];
+  let updatedCount = 0;
+
+  links.forEach(lnk => {
+    const s1 = (typeof projectBOM !== "undefined") ? projectBOM.find(i => i.instanceId === lnk.fromId) : null;
+    const s2 = (typeof projectBOM !== "undefined") ? projectBOM.find(i => i.instanceId === lnk.toId) : null;
+    if (s1 && s2) {
+      const loc1 = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(s1.closetName || s1.rackId || "") : (s1.closetName || "");
+      const loc2 = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(s2.closetName || s2.rackId || "") : (s2.closetName || "");
+      const match1 = isClosetMatch(loc1, name1) && isClosetMatch(loc2, name2);
+      const match2 = isClosetMatch(loc1, name2) && isClosetMatch(loc2, name1);
+      if (match1 || match2) {
+        if (!overrides[lnk.id]) overrides[lnk.id] = {};
+        overrides[lnk.id].fiberType = newFiberType;
+        overrides[lnk.id].medium = newFiberType;
+        updatedCount++;
+      }
+    }
+  });
+
+  if (typeof setLinkInterconnectOverrides === "function") {
+    setLinkInterconnectOverrides(overrides);
+  } else if (typeof linkInterconnectOverrides !== "undefined") {
+    linkInterconnectOverrides = overrides;
+  }
+
+  if (updatedCount > 0) {
+    if (typeof autoSynthesizeInterconnects === "function") autoSynthesizeInterconnects();
+    if (typeof renderTopologyInspector === "function") renderTopologyInspector();
+    if (typeof renderTopologyLinks === "function") renderTopologyLinks();
+  }
+}
+
+function selectFiberBackbone(fiberId, e) {
+  if (e && typeof e.stopPropagation === "function") {
+    e.stopPropagation();
+  }
+  if (selectedFiberBackboneId === fiberId) return;
+  selectedFiberBackboneId = fiberId;
+  selectedNodeId = null;
+  const inspectorPanel = document.getElementById("inspectorPanel");
+  if (inspectorPanel && inspectorPanel.classList.contains("hidden")) {
+    inspectorPanel.classList.remove("hidden");
+  }
+  renderInspector();
+  renderSidebarTabContent();
+  renderCableCanvas();
+}
+
+function deselectFiberBackbone() {
+  selectedFiberBackboneId = null;
+  renderInspector();
+  renderSidebarTabContent();
+  renderCableCanvas();
+}
+
+function updateFiberBackbone(fiberId, field, value) {
+  const floor = getActiveFloor();
+  if (!floor || !floor.fiberBackbones) return;
+  const fb = floor.fiberBackbones.find(f => f.id === fiberId);
+  if (!fb) return;
+  fb[field] = value;
+
+  // Real-time synchronization to Topology if changing fiber type
+  if (field === "fiberType") {
+    fb.customOverride = true;
+    syncFiberBackboneToTopology(fb, value);
+  }
+
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  saveFacilityState(true);
+  if (typeof commitCablingToBOM === "function") {
+    commitCablingToBOM({ silent: true });
+  }
+  if (typeof renderBOMTable === "function") {
+    renderBOMTable();
+  }
+}
+
+function deleteFiberBackbone(fiberId, e) {
+  if (e && typeof e.stopPropagation === "function") {
+    e.stopPropagation();
+  }
+  const floor = getActiveFloor();
+  if (!floor || !floor.fiberBackbones) return;
+  const targetFb = floor.fiberBackbones.find(f => f.id === fiberId);
+  if (targetFb) {
+    const c1 = (floor.nodes || []).find(n => n.id === targetFb.fromId);
+    const c2 = (floor.nodes || []).find(n => n.id === targetFb.toId);
+    const name1 = c1 ? c1.name : (targetFb.fromClosetName || "");
+    const name2 = c2 ? c2.name : (targetFb.toClosetName || "");
+    const norm1 = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(name1) : String(name1)).trim().toLowerCase();
+    const norm2 = (typeof FacilityStore !== "undefined" ? FacilityStore.normalize(name2) : String(name2)).trim().toLowerCase();
+    const fullKey = [norm1.replace(/[^a-z0-9]/g, ""), norm2.replace(/[^a-z0-9]/g, "")].sort().join("___");
+    const space1 = norm1.split(" • ")[0].trim().replace(/[^a-z0-9]/g, "");
+    const space2 = norm2.split(" • ")[0].trim().replace(/[^a-z0-9]/g, "");
+    const spaceKey = [space1, space2].sort().join("___");
+
+    if (!floor.deletedFiberLinks) floor.deletedFiberLinks = [];
+    if (!floor.deletedFiberLinks.includes(fullKey)) {
+      floor.deletedFiberLinks.push(fullKey);
+    }
+    if (!floor.deletedFiberLinks.includes(spaceKey)) {
+      floor.deletedFiberLinks.push(spaceKey);
+    }
+    if (targetFb.fromId && targetFb.toId) {
+      const idKey = [targetFb.fromId, targetFb.toId].sort().join("___");
+      if (!floor.deletedFiberLinks.includes(idKey)) {
+        floor.deletedFiberLinks.push(idKey);
+      }
+    }
+    if (!floor.deletedFiberLinks.includes(fiberId)) {
+      floor.deletedFiberLinks.push(fiberId);
+    }
+  }
+
+  floor.fiberBackbones = floor.fiberBackbones.filter(f => f.id !== fiberId);
+  if (selectedFiberBackboneId === fiberId) {
+    selectedFiberBackboneId = null;
+  }
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  saveFacilityState(true);
+  if (typeof commitCablingToBOM === "function") {
+    commitCablingToBOM({ silent: true });
+  }
+  if (typeof renderBOMTable === "function") {
+    renderBOMTable();
+  }
+  if (typeof showToast === "function") {
+    showToast("Fiber backbone link deleted.");
+  }
+}
+
 function renderInspector() {
   const container = document.getElementById("inspectorContent");
   if (!container) return;
 
-  if (!selectedNodeId) {
-    container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">Select a drop or closet to view properties or rack contents.</span>`;
+  if (!selectedNodeId && !selectedFiberBackboneId) {
+    container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">Select a drop, closet, or fiber link to view properties or rack contents.</span>`;
     return;
   }
 
   const floor = getActiveFloor();
-  const node = floor.nodes.find(n => n.id === selectedNodeId);
+  if (!floor) {
+    container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">No active floor/building. Click "+ Floor/Building" to create one.</span>`;
+    return;
+  }
+
+  // Fiber Backbone Inspector
+  if (selectedFiberBackboneId) {
+    const fb = (floor && floor.fiberBackbones) ? floor.fiberBackbones.find(f => f.id === selectedFiberBackboneId) : null;
+    if (fb) {
+      const c1 = floor.nodes.find(n => n.id === fb.fromId);
+      const c2 = floor.nodes.find(n => n.id === fb.toId);
+      const fromName = c1 ? c1.name : (fb.fromClosetName || "MDF");
+      const toName = c2 ? c2.name : (fb.toClosetName || "IDF");
+      const fType = (fb.fiberType || (typeof getProjectFiberType === "function" ? getProjectFiberType() : "mmf")).toLowerCase();
+      const strands = parseInt(fb.strandCount) || 12;
+      const rating = fb.rating || "plenum";
+      const conn = fb.connectorType || "lc";
+      const slack = (typeof fb.slackFt === "number") ? fb.slackFt : 40;
+      const measured = fb.measuredFt || Math.max(10, (fb.totalFt || 100) - slack);
+      const totalFt = measured + slack;
+
+      // Price estimation preview
+      const catalogList = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.fiberBackbone) ? CABLING_CATALOG.fiberBackbone : [];
+      const trunkItem = catalogList.find(i => i.medium === fType && i.strands === strands) ||
+        catalogList.find(i => i.medium === fType) ||
+        catalogList[0] ||
+        { sku: "FIBER-TRUNK", name: "Fiber Trunk", msrpPerFt: 2.50, baseTerminationMsrp: 250 };
+      const estPrice = Math.round((totalFt * (trunkItem.msrpPerFt || 2.5)) + (trunkItem.baseTerminationMsrp || 250));
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-lg ${fType === 'smf' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30' : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'}">
+                <i data-lucide="network" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white tracking-wide">Fiber Backbone Link</h4>
+                <p class="text-[10px] text-slate-400 font-mono">Inter-Enclosure Optical Trunk</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button type="button" onclick="deleteFiberBackbone('${fb.id}', event)" class="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm" title="Delete this fiber backbone">
+                <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+              </button>
+              <button onclick="deselectFiberBackbone()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors cursor-pointer" title="Deselect">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Locations Span -->
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800">
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">Connected Enclosures / Closets</label>
+            <div class="flex items-center justify-between text-xs font-semibold gap-2">
+              <span class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-indigo-300 truncate max-w-[110px]" title="${escapeHTML(fromName)}">${escapeHTML(fromName)}</span>
+              <span class="text-slate-500 font-mono text-[11px]">&harr;</span>
+              <span class="px-2 py-1 rounded bg-slate-900 border border-slate-700 text-indigo-300 truncate max-w-[110px]" title="${escapeHTML(toName)}">${escapeHTML(toName)}</span>
+            </div>
+          </div>
+
+          <!-- Optical Medium / Fiber Type -->
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Optical Fiber Medium</label>
+            <select onchange="updateFiberBackbone('${fb.id}', 'fiberType', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500 font-medium cursor-pointer">
+              <option value="smf" ${fType === 'smf' ? 'selected' : ''}>OS2 Single-Mode (9/125&mu;m &bull; Yellow Jacket &bull; 1310/1550nm LR)</option>
+              <option value="mmf" ${fType === 'mmf' ? 'selected' : ''}>OM4 Multi-Mode (50/125&mu;m &bull; Aqua Jacket &bull; 850nm SR)</option>
+              <option value="om3" ${fType === 'om3' ? 'selected' : ''}>OM3 Multi-Mode (50/125&mu;m &bull; Aqua Jacket &bull; 850nm SR)</option>
+            </select>
+          </div>
+
+          <!-- Strand Count -->
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Strand Count / Core Capacity</label>
+            <select onchange="updateFiberBackbone('${fb.id}', 'strandCount', parseInt(this.value))" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
+              <option value="6" ${strands === 6 ? 'selected' : ''}>6-Strand (3 Duplex Pairs)</option>
+              <option value="12" ${strands === 12 ? 'selected' : ''}>12-Strand (6 Duplex Pairs &bull; Standard)</option>
+              <option value="24" ${strands === 24 ? 'selected' : ''}>24-Strand (12 Duplex Pairs &bull; High-Density)</option>
+              <option value="48" ${strands === 48 ? 'selected' : ''}>48-Strand (24 Duplex Pairs &bull; Core Spine)</option>
+            </select>
+          </div>
+
+          <!-- Jacket Fire Rating -->
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Jacket Fire Rating / Environment</label>
+            <select onchange="updateFiberBackbone('${fb.id}', 'rating', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
+              <option value="plenum" ${rating === 'plenum' ? 'selected' : ''}>OFNP - Plenum Rated (Air Return / Ceiling Plenums)</option>
+              <option value="riser" ${rating === 'riser' ? 'selected' : ''}>OFNR - Riser Rated (Vertical Shafts / Conduits)</option>
+              <option value="armored" ${rating === 'armored' ? 'selected' : ''}>Armored / OSP (Indoor/Outdoor Inter-Locking Armor)</option>
+            </select>
+          </div>
+
+          <!-- Connector Termination -->
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Pre-Terminated Connector End</label>
+            <select onchange="updateFiberBackbone('${fb.id}', 'connectorType', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
+              <option value="lc" ${conn === 'lc' ? 'selected' : ''}>LC Duplex (Staggered Breakout Kits)</option>
+              <option value="sc" ${conn === 'sc' ? 'selected' : ''}>SC Duplex</option>
+              <option value="mpo" ${conn === 'mpo' ? 'selected' : ''}>MTP / MPO High-Density Cassette</option>
+            </select>
+          </div>
+
+          <!-- Length & Slack -->
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-2">
+            <label class="text-[10px] uppercase font-bold text-slate-400 block">Footage &amp; Service Loops</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span class="text-slate-500 block text-[10px]">Measured Span:</span>
+                <span class="font-mono font-bold text-slate-200">${measured} ft</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[10px]">Service Loops:</span>
+                <div class="flex items-center gap-1">
+                  <input type="number" min="0" max="200" step="5" value="${slack}" onchange="updateFiberBackbone('${fb.id}', 'slackFt', parseFloat(this.value) || 0)" class="w-16 bg-slate-900 border border-slate-700 text-white text-xs px-1.5 py-0.5 rounded font-mono focus:border-indigo-500" />
+                  <span class="text-[10px] text-slate-400">ft</span>
+                </div>
+              </div>
+            </div>
+            <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-medium">Total Assembly Run:</span>
+              <span class="font-mono font-bold text-amber-300">${totalFt} ft (${Math.round(totalFt * 0.3048)}m)</span>
+            </div>
+          </div>
+
+          <!-- Live BOM Line Item Preview -->
+          <div class="bg-slate-900/80 p-2.5 rounded-xl border border-slate-800 text-[11px] space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] uppercase font-bold text-indigo-400">Quote BOM Item</span>
+              <span class="font-mono font-bold text-emerald-400">$${estPrice.toLocaleString()} MSRP</span>
+            </div>
+            <p class="font-semibold text-white leading-tight text-xs">${strands}-Strand ${fType === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'} Pre-Term Trunk</p>
+            <p class="text-[10px] font-mono text-slate-400">${trunkItem.sku} &bull; ${fromName} &rarr; ${toName}</p>
+          </div>
+
+          <!-- Actions -->
+          <div class="pt-2 flex items-center gap-2">
+            <button onclick="deleteFiberBackbone('${fb.id}', event)" class="flex-1 py-1.5 px-3 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Fiber Link
+            </button>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
+  }
+
+  const node = (floor.nodes || []).find(n => n.id === selectedNodeId);
   if (!node) {
     container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">No element selected.</span>`;
     return;
@@ -1433,7 +2454,7 @@ function renderInspector() {
         </div>
 
         <div>
-          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Assigned Floor / Level:</label>
+          <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Assigned Floor/Building:</label>
           <select onchange="moveClosetToFloor('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-semibold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-amber-500">
             ${facilityFloors.map(f => `
               <option value="${f.id}" ${f.id === node.floorId ? 'selected' : ''}>${f.name}</option>
@@ -1461,7 +2482,8 @@ function renderInspector() {
             `).join('')}
             ${rackMounted.map(it => {
               const isStack = it.stackedUnits && it.stackedUnits >= 2;
-              const stackSpan = (parseInt(it.rackUnits, 10) || 1) * (isStack ? it.stackedUnits : (parseInt(it.qty, 10) || 1));
+              const ppSpan = (isStack && it.patchPanelBetween) ? (it.stackedUnits - 1) : 0;
+              const stackSpan = (parseInt(it.rackUnits, 10) || 1) * (isStack ? it.stackedUnits : (parseInt(it.qty, 10) || 1)) + ppSpan;
               return `
                 <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-slate-800 flex justify-between text-slate-200">
                   <span class="truncate"><strong class="text-indigo-400">[${isStack ? `Stack: ${it.stackedUnits}x` : 'Hardware'}]</strong> ${escapeHTML(it.model)}</span>
@@ -1495,11 +2517,29 @@ function renderInspector() {
       </div>
     `;
   } else {
+    // Look up BOM item
+    const item = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.find(i => (i.instanceId && (i.instanceId === node.instanceId || i.instanceId === node.id || ('dev-' + i.instanceId) === node.id)) || i.model === node.name)
+      : null;
+
+    // Get all switches across BOM
+    const allSwitches = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.filter(i => !i.parentInstanceId && (
+          (i.role || "").toLowerCase().includes("switch") || (i.category || "").toLowerCase().includes("switch") ||
+          i.role === "Access" || i.role === "Core" || i.role === "Aggregation" || i.role === "Core & Agg" || i.role === "Security WAN"
+        ))
+      : [];
+
+    const hostSwitch = (item && item.uplinkTargetId) ? allSwitches.find(s => s.instanceId === item.uplinkTargetId) : null;
+    const hostSwitchPorts = (hostSwitch && typeof PortEngine !== "undefined") ? PortEngine.initSwitchPorts(hostSwitch) : [];
+    const pwrBadge = (item && typeof PortEngine !== "undefined") ? PortEngine.getPowerBadge(item) : { label: "PoE", badgeLabel: "PoE", isExternal: false };
+    const pwrWatts = item ? (parseFloat(item.powerConsumptionWatts || item.maxPowerWatts || 15.0) * (parseInt(item.qty, 10) || 1)) : 15.0;
+
     container.innerHTML = `
       <div class="space-y-2.5">
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Device Label:</label>
-          <input type="text" value="${node.name}" onchange="updateNodeName('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
+          <input type="text" value="${escapeHTML(node.name)}" onchange="updateNodeName('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
         </div>
 
         <div>
@@ -1516,6 +2556,59 @@ function renderInspector() {
               `).join('')}
             </optgroup>
           </select>
+        </div>
+
+        <!-- Host Switch & Port Assignment Card -->
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] uppercase font-bold text-sky-400 flex items-center gap-1 font-mono">
+              <i data-lucide="network" class="w-3 h-3 text-sky-400"></i> Host Switch & Port
+            </span>
+            ${hostSwitch ? `
+              <button type="button" onclick="openPortMatrixStudio('${hostSwitch.instanceId}')" class="text-[9px] font-mono text-amber-400 hover:text-amber-300 underline cursor-pointer flex items-center gap-1" title="Open Port Matrix Studio">
+                <i data-lucide="grid" class="w-2.5 h-2.5"></i> Matrix
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Switch Select -->
+          <div>
+            <label class="text-[9px] uppercase font-mono text-slate-400 block mb-0.5">Switch</label>
+            <select onchange="updateNodeHostSwitch('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
+              <option value="">-- No Switch Assigned --</option>
+              ${allSwitches.map(sw => {
+                const swLoc = sw.closetName || sw.rackId || "Rack";
+                const isSelected = hostSwitch && hostSwitch.instanceId === sw.instanceId;
+                return `<option value="${sw.instanceId}" ${isSelected ? 'selected' : ''}>${escapeHTML(sw.friendlyName || sw.model)} (${escapeHTML(swLoc)})</option>`;
+              }).join('')}
+            </select>
+          </div>
+
+          <!-- Port Select -->
+          ${hostSwitch ? `
+            <div>
+              <div class="flex items-center justify-between mb-0.5">
+                <label class="text-[9px] uppercase font-mono text-slate-400">Switch Port</label>
+                <span class="text-[9px] font-mono ${pwrBadge.isExternal ? 'text-amber-400' : 'text-emerald-400'}">${pwrBadge.badgeLabel || 'PoE'} (${pwrWatts}W)</span>
+              </div>
+              <select onchange="updateNodeSwitchPort('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
+                ${hostSwitchPorts.filter(p => p.role === "access" && !p.isUplink).map(p => {
+                  const isCurPort = (item && item.assignedSwitchPort === p.portNumber);
+                  const isOcc = p.connectedDeviceId && !isCurPort;
+                  const poeDesc = p.poeStandard ? `[${p.poeStandard.toUpperCase()} PoE]` : '[Data Only]';
+                  return `
+                    <option value="${p.portNumber}" ${isCurPort ? 'selected' : ''} ${isOcc ? 'class="text-slate-500"' : ''}>
+                      ${p.shortLabel || `Port ${p.portNumber}`} (${p.speed || '1G'}) ${poeDesc} - ${isCurPort ? 'Current' : (isOcc ? `Occupied: ${escapeHTML(p.connectedDeviceModel || 'Other')}` : 'Free')}
+                    </option>
+                  `;
+                }).join('')}
+              </select>
+            </div>
+          ` : `
+            <div class="text-[10px] text-amber-400/90 font-mono bg-amber-950/20 p-1.5 rounded border border-amber-800/40">
+              Not connected to any switch. Select a switch above or auto-link from rack.
+            </div>
+          `}
         </div>
 
         <div>
@@ -1551,6 +2644,14 @@ function renderInspector() {
           </button>
           <button 
             type="button" 
+            onclick="if ('${hostSwitch ? hostSwitch.instanceId : ''}') openPortMatrixStudio('${hostSwitch ? hostSwitch.instanceId : ''}'); else showToast('Assign a host switch first', 'warning');"
+            class="flex-1 min-w-[65px] py-1 bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            title="Open Port Matrix Studio for this switch"
+          >
+            <i data-lucide="grid" class="w-3 h-3 text-amber-400"></i> Matrix
+          </button>
+          <button 
+            type="button" 
             onclick="jumpToBomTarget('${node.instanceId || node.id}')"
             class="flex-1 min-w-[65px] py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Inspect line item in BOM Drawer"
@@ -1565,23 +2666,20 @@ function renderInspector() {
           >
             <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
           </button>
-          <button 
-            type="button" 
-            onclick="const cl = allClosets.find(c => c.id === '${node.assignedClosetId}'); if (cl) jumpToFacilitySpace(cl.name);"
-            class="flex-1 min-w-[65px] py-1 bg-cyan-950/40 hover:bg-cyan-900/60 text-cyan-300 border border-cyan-700/60 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
-            title="Open Space in Facility Manager"
-          >
-            <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
-          </button>
         </div>
 
         <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
           <button onclick="clearNodeWaypoints('${node.id}')" class="px-2 py-1 bg-slate-800 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px]">
             Reset Bends
           </button>
-          <button onclick="deleteNode('${node.id}')" class="px-2.5 py-1 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/60 rounded-lg text-xs font-semibold flex items-center gap-1">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete
-          </button>
+          <div class="flex items-center gap-1.5">
+            <button onclick="deleteNode('${node.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Remove drop from canvas only">
+              <span>Delete Drop</span>
+            </button>
+            <button onclick="deleteDropFromBOM('${node.id}')" class="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-700/80 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Delete device from Quote BOM and canvas">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete from BOM
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -1592,7 +2690,8 @@ function renderInspector() {
 
 function clearNodeWaypoints(id) {
   const floor = getActiveFloor();
-  const node = floor.nodes.find(n => n.id === id);
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === id);
   if (node) {
     node.waypoints = [];
     recalculateCurrentFloorCables();
@@ -1618,13 +2717,22 @@ function deepLinkToRackElevation(closetName) {
 
 function updateNodeName(id, val) {
   const floor = getActiveFloor();
-  const node = floor.nodes.find(n => n.id === id);
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === id);
   if (node && val && val.trim()) {
     const oldName = node.name;
     const newName = val.trim();
     node.name = newName;
     if (node.type === "closet" && typeof FacilityStore !== "undefined") {
       FacilityStore.renameLocation(oldName, newName);
+    } else if (node.type === "device" && node.instanceId && typeof projectBOM !== "undefined") {
+      const item = projectBOM.find(i => i.instanceId === node.instanceId);
+      if (item && typeof DeviceTaxonomy !== "undefined") {
+        DeviceTaxonomy.setFriendlyName(item, newName);
+        if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+          FacilityStore.notifyWorkspaceChange();
+        }
+      }
     }
     recalculateCurrentFloorCables();
     renderCableCanvas();
@@ -1635,7 +2743,8 @@ function updateNodeName(id, val) {
 
 function updateNodeCloset(id, closetId) {
   const floor = getActiveFloor();
-  const node = floor.nodes.find(n => n.id === id);
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === id);
   if (node) {
     node.assignedClosetId = closetId;
 
@@ -1657,6 +2766,9 @@ function updateNodeCloset(id, closetId) {
       if (match && targetClosetName) {
         match.closetName = targetClosetName;
         match.rackId = targetClosetName;
+        if (typeof PortEngine !== "undefined") {
+          PortEngine.autoAssignDeviceToClosetSwitch(match, targetClosetName);
+        }
       }
     }
     if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
@@ -1672,7 +2784,8 @@ function updateNodeCloset(id, closetId) {
 
 function updateNodeMountMethod(id, method) {
   const floor = getActiveFloor();
-  const node = floor.nodes.find(n => n.id === id);
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === id);
   if (node) {
     node.mountMethod = method;
     if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
@@ -1691,9 +2804,88 @@ function updateNodeMountMethod(id, method) {
   }
 }
 
+function updateNodeHostSwitch(nodeId, newSwitchId) {
+  const floor = getActiveFloor();
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === nodeId);
+  if (!node) return;
+
+  const item = projectBOM.find(i => (i.instanceId && (i.instanceId === node.instanceId || i.instanceId === node.id || ('dev-' + i.instanceId) === node.id)) || i.model === node.name);
+  if (!item) return;
+
+  const oldSwitchId = item.uplinkTargetId;
+
+  if (typeof PortEngine !== "undefined") {
+    if (oldSwitchId) {
+      const oldSw = projectBOM.find(i => i.instanceId === oldSwitchId);
+      if (oldSw && item.assignedSwitchPort) {
+        PortEngine.disconnectPort(oldSw, item.assignedSwitchPort);
+      }
+    }
+    if (newSwitchId) {
+      const newSw = projectBOM.find(i => i.instanceId === newSwitchId);
+      if (newSw) {
+        PortEngine.allocatePort(newSw, item);
+        // Also sync node's closet to match the switch's closet if possible
+        const swClosetName = newSw.closetName || newSw.rackId;
+        if (swClosetName) {
+          const allClosets = getAllClosetsAcrossFacility();
+          const targetCloset = allClosets.find(c => c.name === swClosetName || swClosetName.startsWith(c.name));
+          if (targetCloset) {
+            node.assignedClosetId = targetCloset.id;
+          }
+          item.closetName = swClosetName;
+          item.rackId = swClosetName;
+        }
+      }
+    } else {
+      item.uplinkTargetId = null;
+      item.assignedSwitchPort = null;
+    }
+  }
+
+  FacilityStore.notifyWorkspaceChange();
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  saveFacilityState();
+  if (typeof showToast === "function") {
+    const sw = newSwitchId ? projectBOM.find(i => i.instanceId === newSwitchId) : null;
+    showToast(sw ? `Connected ${item.model} to ${sw.friendlyName || sw.model} Port ${item.assignedSwitchPort || ''}` : `Disconnected ${item.model}`);
+  }
+}
+
+function updateNodeSwitchPort(nodeId, newPortNumber) {
+  const floor = getActiveFloor();
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === nodeId);
+  if (!node) return;
+
+  const item = projectBOM.find(i => (i.instanceId && (i.instanceId === node.instanceId || i.instanceId === node.id || ('dev-' + i.instanceId) === node.id)) || i.model === node.name);
+  if (!item || !item.uplinkTargetId) return;
+
+  const sw = projectBOM.find(i => i.instanceId === item.uplinkTargetId);
+  if (!sw) return;
+
+  const portNum = parseInt(newPortNumber, 10);
+  if (typeof PortEngine !== "undefined") {
+    PortEngine.connect(sw, portNum, item, 1);
+  } else {
+    item.assignedSwitchPort = portNum;
+  }
+
+  FacilityStore.notifyWorkspaceChange();
+  renderInspector();
+  saveFacilityState();
+  if (typeof showToast === "function") {
+    showToast(`Assigned ${item.model} to ${sw.friendlyName || sw.model} Port ${portNum}`);
+  }
+}
+
 function moveClosetToFloor(closetId, newFloorId) {
   let foundCloset = null;
   facilityFloors.forEach(fl => {
+    if (!fl.nodes) fl.nodes = [];
     const idx = fl.nodes.findIndex(n => n.id === closetId);
     if (idx !== -1) {
       foundCloset = fl.nodes.splice(idx, 1)[0];
@@ -1724,7 +2916,9 @@ function moveClosetToFloor(closetId, newFloorId) {
 
 function deleteNode(id) {
   const floor = getActiveFloor();
-  floor.nodes = floor.nodes.filter(n => n.id !== id);
+  if (floor) {
+    floor.nodes = (floor.nodes || []).filter(n => n.id !== id);
+  }
   selectedNodeId = null;
   recalculateCurrentFloorCables();
   renderCableCanvas();
@@ -1732,6 +2926,24 @@ function deleteNode(id) {
   renderFloorSelector();
   renderSidebarTabContent();
   saveFacilityState();
+}
+
+function deleteDropFromBOM(id) {
+  const floor = getActiveFloor();
+  const node = floor ? (floor.nodes || []).find(n => n.id === id) : null;
+  let instanceId = id;
+  if (node) {
+    instanceId = node.instanceId || (node.id && node.id.startsWith("dev-") ? node.id.replace("dev-", "") : node.id);
+  }
+
+  // Delete from Quote BOM and all dependent subsystems
+  if (typeof deleteDeviceFromBOM === "function") {
+    deleteDeviceFromBOM(instanceId);
+  } else if (typeof removeBomItem === "function") {
+    removeBomItem(instanceId);
+  }
+  // Ensure canvas node is removed
+  deleteNode(id);
 }
 
 // -----------------------------------------------------------
@@ -1742,6 +2954,24 @@ function renderCableCanvas() {
   if (!svg) return;
 
   const floor = getActiveFloor();
+  if (!floor) {
+    svg.innerHTML = `
+      <defs>
+        <pattern id="cableGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(51, 65, 85, 0.15)" stroke-width="1"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#cableGrid)" />
+      <g transform="translate(450, 300)" text-anchor="middle" class="cursor-pointer" onclick="promptAddNewFloor()">
+        <rect x="-180" y="-80" width="360" height="160" rx="16" fill="#0f172a" stroke="#334155" stroke-dasharray="6,6" stroke-width="2"/>
+        <circle cx="0" cy="-20" r="28" fill="#1e293b"/>
+        <path d="M -12 -20 L 12 -20 M 0 -32 L 0 -8" stroke="#f59e0b" stroke-width="3" stroke-linecap="round"/>
+        <text x="0" y="25" fill="#f8fafc" font-size="16" font-weight="bold" font-family="system-ui, sans-serif">No Floors/Buildings Defined</text>
+        <text x="0" y="48" fill="#94a3b8" font-size="12" font-family="system-ui, sans-serif">Click here or "+ Floor/Building" to create your first plan</text>
+      </g>
+    `;
+    return;
+  }
   const allClosets = getAllClosetsAcrossFacility();
 
   svg.innerHTML = `
@@ -1758,43 +2988,221 @@ function renderCableCanvas() {
   `;
 
   // 1. Fiber Backbones
-  (floor.fiberBackbones || []).forEach(fb => {
-    const c1 = floor.nodes.find(n => n.id === fb.fromId);
-    const c2 = floor.nodes.find(n => n.id === fb.toId);
-    if (!c1 || !c2) return;
+  if (physicalLayerFilters.pathways) {
+    const sortedFbs = [...(floor.fiberBackbones || [])].sort((a, b) => {
+      if (a.id === selectedFiberBackboneId) return 1;
+      if (b.id === selectedFiberBackboneId) return -1;
+      return 0;
+    });
+    sortedFbs.forEach(fb => {
+      const c1 = floor.nodes.find(n => n.id === fb.fromId);
+      const c2 = floor.nodes.find(n => n.id === fb.toId);
+      if (!c1 || !c2) return;
 
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    path.setAttribute("x1", c1.x);
-    path.setAttribute("y1", c1.y);
-    path.setAttribute("x2", c2.x);
-    path.setAttribute("y2", c2.y);
-    path.setAttribute("stroke", "#06b6d4");
-    path.setAttribute("stroke-width", "4");
-    path.setAttribute("stroke-dasharray", "8,4");
-    path.setAttribute("opacity", "0.9");
-    svg.appendChild(path);
+      const isSelected = (fb.id === selectedFiberBackboneId);
+      const fType = (fb.fiberType || (typeof getProjectFiberType === "function" ? getProjectFiberType() : "mmf")).toLowerCase();
+      const isSMF = (fType === "smf");
+      const strands = fb.strandCount || 12;
+      const strokeColor = isSMF ? "#eab308" : "#06b6d4"; // Gold for SMF, Cyan for MMF
+      const textColor = isSMF ? "#fde047" : "#67e8f9";
+      const badgeBorder = isSMF ? "#ca8a04" : "#0891b2";
+      const typeLabel = isSMF ? "OS2 SMF" : "OM4 MMF";
 
-    const midX = (c1.x + c2.x) / 2;
-    const midY = (c1.y + c2.y) / 2;
-    const tag = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    tag.setAttribute("x", midX);
-    tag.setAttribute("y", midY - 8);
-    tag.setAttribute("text-anchor", "middle");
-    tag.setAttribute("fill", "#67e8f9");
-    tag.setAttribute("font-size", "11");
-    tag.setAttribute("font-family", "monospace");
-    tag.setAttribute("font-weight", "bold");
-    tag.textContent = `Fiber Backbone: ${fb.totalFt || 100} ft`;
-    svg.appendChild(tag);
-  });
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "fiber-backbone-link cursor-pointer group");
+      g.setAttribute("data-fiber-id", fb.id);
+      g.onclick = (e) => {
+        selectFiberBackbone(fb.id, e);
+      };
+
+      // Selection Halo / Glow
+      if (isSelected) {
+        const halo = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        halo.setAttribute("x1", c1.x);
+        halo.setAttribute("y1", c1.y);
+        halo.setAttribute("x2", c2.x);
+        halo.setAttribute("y2", c2.y);
+        halo.setAttribute("stroke", isSMF ? "#fef08a" : "#a5f3fc");
+        halo.setAttribute("stroke-width", "14");
+        halo.setAttribute("stroke-linecap", "round");
+        halo.setAttribute("opacity", "0.4");
+        g.appendChild(halo);
+      }
+
+      // Invisible wider hit area for easy clicking
+      const hitArea = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      hitArea.setAttribute("x1", c1.x);
+      hitArea.setAttribute("y1", c1.y);
+      hitArea.setAttribute("x2", c2.x);
+      hitArea.setAttribute("y2", c2.y);
+      hitArea.setAttribute("stroke", "transparent");
+      hitArea.setAttribute("stroke-width", "24");
+      hitArea.setAttribute("cursor", "pointer");
+      g.appendChild(hitArea);
+
+      // Main dashed fiber line
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      path.setAttribute("x1", c1.x);
+      path.setAttribute("y1", c1.y);
+      path.setAttribute("x2", c2.x);
+      path.setAttribute("y2", c2.y);
+      path.setAttribute("stroke", strokeColor);
+      path.setAttribute("stroke-width", isSelected ? "5" : "4");
+      path.setAttribute("stroke-dasharray", "8,4");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("opacity", isSelected ? "1.0" : "0.9");
+      g.appendChild(path);
+
+      // Midpoint badge
+      const midX = (c1.x + c2.x) / 2;
+      const midY = (c1.y + c2.y) / 2;
+
+      // Badge background rect
+      const labelText = `${strands}F ${typeLabel} • ${fb.totalFt || 100} ft`;
+      const badgeWidth = Math.max(140, labelText.length * 7.5 + 44);
+      const badgeHeight = 24;
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", midX - (badgeWidth / 2));
+      rect.setAttribute("y", midY - 12);
+      rect.setAttribute("width", badgeWidth);
+      rect.setAttribute("height", badgeHeight);
+      rect.setAttribute("rx", "12");
+      rect.setAttribute("fill", isSelected ? (isSMF ? "#854d0e" : "#0e7490") : "#090d16");
+      rect.setAttribute("stroke", isSelected ? (isSMF ? "#fef08a" : "#67e8f9") : badgeBorder);
+      rect.setAttribute("stroke-width", isSelected ? "2" : "1.5");
+      rect.setAttribute("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.5))");
+      g.appendChild(rect);
+
+      const tag = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      tag.setAttribute("x", midX - 9);
+      tag.setAttribute("y", midY + 4);
+      tag.setAttribute("text-anchor", "middle");
+      tag.setAttribute("fill", textColor);
+      tag.setAttribute("font-size", "10");
+      tag.setAttribute("font-family", "ui-monospace, SFMono-Regular, monospace");
+      tag.setAttribute("font-weight", "bold");
+      tag.textContent = labelText;
+      g.appendChild(tag);
+
+      // On-canvas delete button (circle + ✕) on the right edge of badge
+      const delCircleX = midX + (badgeWidth / 2) - 13;
+      const delCircleY = midY;
+      
+      const delG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      delG.setAttribute("class", "cursor-pointer fiber-link-delete-btn fiber-link-badge-delete-circle");
+      delG.setAttribute("role", "button");
+      delG.setAttribute("data-action", "delete-fiber");
+      delG.setAttribute("data-fiber-id", fb.id);
+      delG.setAttribute("aria-label", "Delete fiber backbone");
+      delG.style.pointerEvents = "all";
+
+      const onDelTrigger = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+        }
+        deleteFiberBackbone(fb.id, e);
+      };
+      delG.onpointerdown = (e) => e.stopPropagation();
+      delG.onmousedown = onDelTrigger;
+      delG.onclick = onDelTrigger;
+
+      const delCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      delCircle.setAttribute("cx", delCircleX);
+      delCircle.setAttribute("cy", delCircleY);
+      delCircle.setAttribute("r", "8");
+      delCircle.setAttribute("fill", "#be123c");
+      delCircle.setAttribute("stroke", "#fda4af");
+      delCircle.setAttribute("stroke-width", "1");
+      delCircle.style.pointerEvents = "all";
+      delG.appendChild(delCircle);
+
+      const delCross = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      delCross.setAttribute("x", delCircleX);
+      delCross.setAttribute("y", delCircleY + 3.5);
+      delCross.setAttribute("text-anchor", "middle");
+      delCross.setAttribute("fill", "#ffffff");
+      delCross.setAttribute("font-size", "10");
+      delCross.setAttribute("font-family", "sans-serif");
+      delCross.setAttribute("font-weight", "bold");
+      delCross.style.pointerEvents = "none";
+      delCross.textContent = "✕";
+      delG.appendChild(delCross);
+
+      g.appendChild(delG);
+
+      // When selected, also draw a floating action button above the badge: [ Delete Link ✕ ]
+      if (isSelected) {
+        const actionG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        actionG.setAttribute("class", "cursor-pointer fiber-link-delete-btn fiber-link-floating-delete-pill");
+        actionG.setAttribute("role", "button");
+        actionG.setAttribute("data-action", "delete-fiber");
+        actionG.setAttribute("data-fiber-id", fb.id);
+        actionG.style.pointerEvents = "all";
+
+        const onActionTrigger = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+          }
+          deleteFiberBackbone(fb.id, e);
+        };
+        actionG.onpointerdown = (e) => e.stopPropagation();
+        actionG.onmousedown = onActionTrigger;
+        actionG.onclick = onActionTrigger;
+
+        const pillW = 114;
+        const pillH = 22;
+        const pillX = midX - (pillW / 2);
+        const pillY = midY - 38;
+
+        const pillRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        pillRect.setAttribute("x", pillX);
+        pillRect.setAttribute("y", pillY);
+        pillRect.setAttribute("width", pillW);
+        pillRect.setAttribute("height", pillH);
+        pillRect.setAttribute("rx", "11");
+        pillRect.setAttribute("fill", "#be123c");
+        pillRect.setAttribute("stroke", "#ffffff");
+        pillRect.setAttribute("stroke-width", "1.5");
+        pillRect.setAttribute("filter", "drop-shadow(0 4px 6px rgba(0,0,0,0.6))");
+        pillRect.style.pointerEvents = "all";
+        actionG.appendChild(pillRect);
+
+        const pillText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        pillText.setAttribute("x", midX);
+        pillText.setAttribute("y", pillY + 14);
+        pillText.setAttribute("text-anchor", "middle");
+        pillText.setAttribute("fill", "#ffffff");
+        pillText.setAttribute("font-size", "10");
+        pillText.setAttribute("font-family", "ui-sans-serif, system-ui, sans-serif");
+        pillText.setAttribute("font-weight", "bold");
+        pillText.style.pointerEvents = "none";
+        pillText.textContent = "🗑 Delete Link ✕";
+        actionG.appendChild(pillText);
+
+        g.appendChild(actionG);
+      }
+
+      svg.appendChild(g);
+    });
+  }
 
   // 2. Horizontal Cable Pathways
-  floor.nodes.filter(n => n.type === "device").forEach(dev => {
-    let closet = allClosets.find(c => c.id === dev.assignedClosetId);
-    if (!closet && allClosets.length > 0) closet = allClosets[0];
-    if (!closet) return;
+  if (physicalLayerFilters.pathways) {
+    floor.nodes.filter(n => n.type === "device").forEach(dev => {
+      const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+      const layerType = getDeviceLayerType(bomItem || dev);
+      if (!physicalLayerFilters[layerType]) return;
 
-    const run = dev.calculatedRun || { totalFt: 0, points: [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }] };
+      let closet = allClosets.find(c => c.id === dev.assignedClosetId);
+      if (!closet && allClosets.length > 0) closet = allClosets[0];
+      if (!closet) return;
+
+      const run = dev.calculatedRun || { totalFt: 0, points: [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }] };
     const isSelected = dev.id === selectedNodeId || closet.id === selectedNodeId;
     const isCrossFloor = closet.floorId !== floor.id;
     const pts = run.points || [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }];
@@ -1844,199 +3252,206 @@ function renderCableCanvas() {
     tag.setAttribute("font-weight", "bold");
     tag.textContent = `${run.totalFt} ft ${isCrossFloor ? `(Riser)` : ''}`;
     svg.appendChild(tag);
-  });
+    });
+  }
 
   // 3. Closets & Mounting Hosts (Poles, NEMA Boxes, Cabinets, Racks, Backboards)
-  floor.nodes.filter(n => n.type === "closet").forEach(closet => {
-    const isSelected = closet.id === selectedNodeId;
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.setAttribute("class", "draggable-canvas-node cursor-pointer");
-    g.setAttribute("data-node-id", closet.id);
-    g.setAttribute("transform", `translate(${closet.x}, ${closet.y})`);
+  if (physicalLayerFilters.closets) {
+    floor.nodes.filter(n => n.type === "closet").forEach(closet => {
+      const isSelected = closet.id === selectedNodeId;
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "draggable-canvas-node cursor-pointer");
+      g.setAttribute("data-node-id", closet.id);
+      g.setAttribute("transform", `translate(${closet.x}, ${closet.y})`);
 
-    let hostType = closet.hostType;
-    if (!hostType && typeof FacilityStore !== "undefined") {
-      const parsed = FacilityStore.parse(closet.name);
-      hostType = parsed.hostType;
-    }
-    hostType = hostType || "equipment_rack";
-    const isFieldSpace = (hostType === "field") || (closet.name && closet.name.endsWith(" • Field"));
+      let hostType = closet.hostType;
+      if (!hostType && typeof FacilityStore !== "undefined") {
+        const parsed = FacilityStore.parse(closet.name);
+        hostType = parsed.hostType;
+      }
+      hostType = hostType || "equipment_rack";
+      const isFieldSpace = (hostType === "field") || (closet.name && closet.name.endsWith(" • Field"));
 
-    if (isFieldSpace) {
-      // 0. Field Space / Unenclosed Area Boundary
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
-      rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
-      rect.setAttribute("rx", "12");
-      rect.setAttribute("fill", isSelected ? "#451a03" : "#1c1917");
-      rect.setAttribute("stroke", isSelected ? "#fbbf24" : "#f59e0b");
-      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-      rect.setAttribute("stroke-dasharray", "4 3");
-      g.appendChild(rect);
+      if (isFieldSpace) {
+        // 0. Field Space / Unenclosed Area Boundary
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
+        rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
+        rect.setAttribute("rx", "12");
+        rect.setAttribute("fill", isSelected ? "#451a03" : "#1c1917");
+        rect.setAttribute("stroke", isSelected ? "#fbbf24" : "#f59e0b");
+        rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+        rect.setAttribute("stroke-dasharray", "4 3");
+        g.appendChild(rect);
 
-      const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      centerCircle.setAttribute("r", "8");
-      centerCircle.setAttribute("fill", "#d97706");
-      centerCircle.setAttribute("opacity", "0.4");
-      g.appendChild(centerCircle);
+        const centerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        centerCircle.setAttribute("r", "8");
+        centerCircle.setAttribute("fill", "#d97706");
+        centerCircle.setAttribute("opacity", "0.4");
+        g.appendChild(centerCircle);
 
-      const centerDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      centerDot.setAttribute("r", "3.5");
-      centerDot.setAttribute("fill", "#fbbf24");
-      g.appendChild(centerDot);
+        const centerDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        centerDot.setAttribute("r", "3.5");
+        centerDot.setAttribute("fill", "#fbbf24");
+        g.appendChild(centerDot);
 
-    } else if (hostType === "structural_mount") {
-      // 1. Structural Pole Mast (Circular Base with Mast Crosshairs & Radar Boundary)
-      const outerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      outerCircle.setAttribute("r", isSelected ? "32" : "28");
-      outerCircle.setAttribute("fill", "none");
-      outerCircle.setAttribute("stroke", isSelected ? "#38bdf8" : "#0284c7");
-      outerCircle.setAttribute("stroke-width", "1.5");
-      outerCircle.setAttribute("stroke-dasharray", "4 2");
-      g.appendChild(outerCircle);
+      } else if (hostType === "structural_mount") {
+        // 1. Structural Pole Mast (Circular Base with Mast Crosshairs & Radar Boundary)
+        const outerCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        outerCircle.setAttribute("r", isSelected ? "32" : "28");
+        outerCircle.setAttribute("fill", "none");
+        outerCircle.setAttribute("stroke", isSelected ? "#38bdf8" : "#0284c7");
+        outerCircle.setAttribute("stroke-width", "1.5");
+        outerCircle.setAttribute("stroke-dasharray", "4 2");
+        g.appendChild(outerCircle);
 
-      const mastCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      mastCircle.setAttribute("r", "20");
-      mastCircle.setAttribute("fill", isSelected ? "#0c4a6e" : "#082f49");
-      mastCircle.setAttribute("stroke", isSelected ? "#38bdf8" : "#0284c7");
-      mastCircle.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-      g.appendChild(mastCircle);
+        const mastCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        mastCircle.setAttribute("r", "20");
+        mastCircle.setAttribute("fill", isSelected ? "#0c4a6e" : "#082f49");
+        mastCircle.setAttribute("stroke", isSelected ? "#38bdf8" : "#0284c7");
+        mastCircle.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+        g.appendChild(mastCircle);
 
-      const lineH = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      lineH.setAttribute("x1", "-12"); lineH.setAttribute("y1", "0");
-      lineH.setAttribute("x2", "12"); lineH.setAttribute("y2", "0");
-      lineH.setAttribute("stroke", "#38bdf8"); lineH.setAttribute("stroke-width", "1.5");
-      g.appendChild(lineH);
+        const lineH = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        lineH.setAttribute("x1", "-12"); lineH.setAttribute("y1", "0");
+        lineH.setAttribute("x2", "12"); lineH.setAttribute("y2", "0");
+        lineH.setAttribute("stroke", "#38bdf8"); lineH.setAttribute("stroke-width", "1.5");
+        g.appendChild(lineH);
 
-      const lineV = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      lineV.setAttribute("x1", "0"); lineV.setAttribute("y1", "-12");
-      lineV.setAttribute("x2", "0"); lineV.setAttribute("y2", "12");
-      lineV.setAttribute("stroke", "#38bdf8"); lineV.setAttribute("stroke-width", "1.5");
-      g.appendChild(lineV);
+        const lineV = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        lineV.setAttribute("x1", "0"); lineV.setAttribute("y1", "-12");
+        lineV.setAttribute("x2", "0"); lineV.setAttribute("y2", "12");
+        lineV.setAttribute("stroke", "#38bdf8"); lineV.setAttribute("stroke-width", "1.5");
+        g.appendChild(lineV);
 
-      const centerDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-      centerDot.setAttribute("r", "3.5");
-      centerDot.setAttribute("fill", "#38bdf8");
-      g.appendChild(centerDot);
+        const centerDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        centerDot.setAttribute("r", "3.5");
+        centerDot.setAttribute("fill", "#38bdf8");
+        g.appendChild(centerDot);
 
-    } else if (hostType === "industrial_din") {
-      // 2. Weatherproof DIN / NEMA Box (Industrial Enclosure with Dual Rails)
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
-      rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
-      rect.setAttribute("rx", "8");
-      rect.setAttribute("fill", isSelected ? "#78350f" : "#451a03");
-      rect.setAttribute("stroke", isSelected ? "#fbbf24" : "#d97706");
-      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-      g.appendChild(rect);
+      } else if (hostType === "industrial_din") {
+        // 2. Weatherproof DIN / NEMA Box (Industrial Enclosure with Dual Rails)
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
+        rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
+        rect.setAttribute("rx", "8");
+        rect.setAttribute("fill", isSelected ? "#78350f" : "#451a03");
+        rect.setAttribute("stroke", isSelected ? "#fbbf24" : "#d97706");
+        rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+        g.appendChild(rect);
 
-      const r1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      r1.setAttribute("x1", "-16"); r1.setAttribute("y1", "-8");
-      r1.setAttribute("x2", "16"); r1.setAttribute("y2", "-8");
-      r1.setAttribute("stroke", "#fbbf24"); r1.setAttribute("stroke-width", "2.5");
-      g.appendChild(r1);
+        const r1 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        r1.setAttribute("x1", "-16"); r1.setAttribute("y1", "-8");
+        r1.setAttribute("x2", "16"); r1.setAttribute("y2", "-8");
+        r1.setAttribute("stroke", "#fbbf24"); r1.setAttribute("stroke-width", "2.5");
+        g.appendChild(r1);
 
-      const r2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      r2.setAttribute("x1", "-16"); r2.setAttribute("y1", "8");
-      r2.setAttribute("x2", "16"); r2.setAttribute("y2", "8");
-      r2.setAttribute("stroke", "#fbbf24"); r2.setAttribute("stroke-width", "2.5");
-      g.appendChild(r2);
+        const r2 = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        r2.setAttribute("x1", "-16"); r2.setAttribute("y1", "8");
+        r2.setAttribute("x2", "16"); r2.setAttribute("y2", "8");
+        r2.setAttribute("stroke", "#fbbf24"); r2.setAttribute("stroke-width", "2.5");
+        g.appendChild(r2);
 
-    } else if (hostType === "security_cabinet") {
-      // 3. Security Cabinet (Trove Subplate Bay Grid)
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
-      rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
-      rect.setAttribute("rx", "8");
-      rect.setAttribute("fill", isSelected ? "#064e3b" : "#022c22");
-      rect.setAttribute("stroke", isSelected ? "#34d399" : "#059669");
-      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-      g.appendChild(rect);
+      } else if (hostType === "security_cabinet") {
+        // 3. Security Cabinet (Trove Subplate Bay Grid)
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", "-24"); rect.setAttribute("y", "-24");
+        rect.setAttribute("width", "48"); rect.setAttribute("height", "48");
+        rect.setAttribute("rx", "8");
+        rect.setAttribute("fill", isSelected ? "#064e3b" : "#022c22");
+        rect.setAttribute("stroke", isSelected ? "#34d399" : "#059669");
+        rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+        g.appendChild(rect);
 
-      [[-16, -16], [2, -16], [-16, 2], [2, 2]].forEach(([bx, by]) => {
-        const bay = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        bay.setAttribute("x", bx); bay.setAttribute("y", by);
-        bay.setAttribute("width", "14"); bay.setAttribute("height", "14");
-        bay.setAttribute("rx", "2");
-        bay.setAttribute("fill", "#047857");
-        bay.setAttribute("opacity", "0.7");
-        g.appendChild(bay);
-      });
+        [[-16, -16], [2, -16], [-16, 2], [2, 2]].forEach(([bx, by]) => {
+          const bay = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          bay.setAttribute("x", bx); bay.setAttribute("y", by);
+          bay.setAttribute("width", "14"); bay.setAttribute("height", "14");
+          bay.setAttribute("rx", "2");
+          bay.setAttribute("fill", "#047857");
+          bay.setAttribute("opacity", "0.7");
+          g.appendChild(bay);
+        });
 
-    } else if (hostType === "architectural_backboard") {
-      // 4. Architectural Backboard (Plywood Wallfield)
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", "-26"); rect.setAttribute("y", "-20");
-      rect.setAttribute("width", "52"); rect.setAttribute("height", "40");
-      rect.setAttribute("rx", "4");
-      rect.setAttribute("fill", isSelected ? "#581c87" : "#3b0764");
-      rect.setAttribute("stroke", isSelected ? "#d8b4fe" : "#a855f7");
-      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-      g.appendChild(rect);
+      } else if (hostType === "architectural_backboard") {
+        // 4. Architectural Backboard (Plywood Wallfield)
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", "-26"); rect.setAttribute("y", "-20");
+        rect.setAttribute("width", "52"); rect.setAttribute("height", "40");
+        rect.setAttribute("rx", "4");
+        rect.setAttribute("fill", isSelected ? "#581c87" : "#3b0764");
+        rect.setAttribute("stroke", isSelected ? "#d8b4fe" : "#a855f7");
+        rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+        g.appendChild(rect);
 
-      [-6, 6].forEach(py => {
-        const pb = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        pb.setAttribute("x1", "-18"); pb.setAttribute("y1", py);
-        pb.setAttribute("x2", "18"); pb.setAttribute("y2", py);
-        pb.setAttribute("stroke", "#e9d5ff");
-        pb.setAttribute("stroke-width", "1.5");
-        pb.setAttribute("stroke-dasharray", "4 2");
-        g.appendChild(pb);
-      });
+        [-6, 6].forEach(py => {
+          const pb = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          pb.setAttribute("x1", "-18"); pb.setAttribute("y1", py);
+          pb.setAttribute("x2", "18"); pb.setAttribute("y2", py);
+          pb.setAttribute("stroke", "#e9d5ff");
+          pb.setAttribute("stroke-width", "1.5");
+          pb.setAttribute("stroke-dasharray", "4 2");
+          g.appendChild(pb);
+        });
 
-    } else {
-      // 5. Standard 19" EIA Rack Chassis
-      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-      rect.setAttribute("x", "-22"); rect.setAttribute("y", "-26");
-      rect.setAttribute("width", "44"); rect.setAttribute("height", "52");
-      rect.setAttribute("rx", "6");
-      rect.setAttribute("fill", isSelected ? "#312e81" : "#1e1b4b");
-      rect.setAttribute("stroke", isSelected ? "#a5b4fc" : "#6366f1");
-      rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
-      g.appendChild(rect);
+      } else {
+        // 5. Standard 19" EIA Rack Chassis
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", "-22"); rect.setAttribute("y", "-26");
+        rect.setAttribute("width", "44"); rect.setAttribute("height", "52");
+        rect.setAttribute("rx", "6");
+        rect.setAttribute("fill", isSelected ? "#312e81" : "#1e1b4b");
+        rect.setAttribute("stroke", isSelected ? "#a5b4fc" : "#6366f1");
+        rect.setAttribute("stroke-width", isSelected ? "3.5" : "2.5");
+        g.appendChild(rect);
 
-      [-16, -7, 2, 11].forEach(ry => {
-        const ru = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        ru.setAttribute("x", "-15"); ru.setAttribute("y", ry);
-        ru.setAttribute("width", "30"); ru.setAttribute("height", "5");
-        ru.setAttribute("rx", "1");
-        ru.setAttribute("fill", "#4338ca");
-        ru.setAttribute("opacity", "0.8");
-        g.appendChild(ru);
-      });
-    }
+        [-16, -7, 2, 11].forEach(ry => {
+          const ru = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          ru.setAttribute("x", "-15"); ru.setAttribute("y", ry);
+          ru.setAttribute("width", "30"); ru.setAttribute("height", "5");
+          ru.setAttribute("rx", "1");
+          ru.setAttribute("fill", "#4338ca");
+          ru.setAttribute("opacity", "0.8");
+          g.appendChild(ru);
+        });
+      }
 
-    // Host Type Badge
-    const typeLabel = isFieldSpace ? "FIELD" : (hostType === "structural_mount" ? "POLE" : (hostType === "industrial_din" ? "NEMA" : (hostType === "security_cabinet" ? "SEC-CAB" : (hostType === "architectural_backboard" ? "BOARD" : "RACK"))));
-    const badgeColor = isFieldSpace ? "#fbbf24" : (hostType === "structural_mount" ? "#38bdf8" : (hostType === "industrial_din" ? "#fbbf24" : (hostType === "security_cabinet" ? "#34d399" : (hostType === "architectural_backboard" ? "#d8b4fe" : "#a5b4fc"))));
+      // Host Type Badge
+      const typeLabel = isFieldSpace ? "FIELD" : (hostType === "structural_mount" ? "POLE" : (hostType === "industrial_din" ? "NEMA" : (hostType === "security_cabinet" ? "SEC-CAB" : (hostType === "architectural_backboard" ? "BOARD" : "RACK"))));
+      const badgeColor = isFieldSpace ? "#fbbf24" : (hostType === "structural_mount" ? "#38bdf8" : (hostType === "industrial_din" ? "#fbbf24" : (hostType === "security_cabinet" ? "#34d399" : (hostType === "architectural_backboard" ? "#d8b4fe" : "#a5b4fc"))));
 
-    const badgeTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    badgeTxt.setAttribute("x", 0);
-    badgeTxt.setAttribute("y", -30);
-    badgeTxt.setAttribute("text-anchor", "middle");
-    badgeTxt.setAttribute("fill", badgeColor);
-    badgeTxt.setAttribute("font-size", "9");
-    badgeTxt.setAttribute("font-weight", "bold");
-    badgeTxt.setAttribute("font-family", "monospace");
-    badgeTxt.textContent = `[${typeLabel}]`;
-    g.appendChild(badgeTxt);
+      const badgeTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      badgeTxt.setAttribute("x", 0);
+      badgeTxt.setAttribute("y", -30);
+      badgeTxt.setAttribute("text-anchor", "middle");
+      badgeTxt.setAttribute("fill", badgeColor);
+      badgeTxt.setAttribute("font-size", "9");
+      badgeTxt.setAttribute("font-weight", "bold");
+      badgeTxt.setAttribute("font-family", "monospace");
+      badgeTxt.textContent = `[${typeLabel}]`;
+      g.appendChild(badgeTxt);
 
-    // Label with clean styling
-    const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    txt.setAttribute("x", 0);
-    txt.setAttribute("y", 38);
-    txt.setAttribute("text-anchor", "middle");
-    txt.setAttribute("fill", "#ffffff");
-    txt.setAttribute("font-size", "11");
-    txt.setAttribute("font-weight", "bold");
-    txt.textContent = closet.name;
-    g.appendChild(txt);
+      // Label with clean styling
+      const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      txt.setAttribute("x", 0);
+      txt.setAttribute("y", 38);
+      txt.setAttribute("text-anchor", "middle");
+      txt.setAttribute("fill", "#ffffff");
+      txt.setAttribute("font-size", "11");
+      txt.setAttribute("font-weight", "bold");
+      txt.textContent = closet.name;
+      g.appendChild(txt);
 
-    svg.appendChild(g);
-  });
+      svg.appendChild(g);
+    });
+  }
 
   // 4. Drops
   floor.nodes.filter(n => n.type === "device").forEach(dev => {
+    const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+    const layerType = getDeviceLayerType(bomItem || dev);
+    if (!physicalLayerFilters[layerType]) return;
+
     const isSelected = dev.id === selectedNodeId;
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.setAttribute("class", "draggable-canvas-node cursor-pointer");
@@ -2049,6 +3464,20 @@ function renderCableCanvas() {
     circle.setAttribute("stroke", isSelected ? "#34d399" : "#10b981");
     circle.setAttribute("stroke-width", isSelected ? "3.5" : "2");
     g.appendChild(circle);
+
+    const devNum = (bomItem && bomItem.deviceNumber) || dev.deviceNumber;
+    if (devNum) {
+      const numTag = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      numTag.setAttribute("x", 0);
+      numTag.setAttribute("y", -18);
+      numTag.setAttribute("text-anchor", "middle");
+      numTag.setAttribute("fill", "#34d399");
+      numTag.setAttribute("font-size", "9");
+      numTag.setAttribute("font-weight", "bold");
+      numTag.setAttribute("font-family", "monospace");
+      numTag.textContent = `[${devNum}]`;
+      g.appendChild(numTag);
+    }
 
     const txt = document.createElementNS("http://www.w3.org/2000/svg", "text");
     txt.setAttribute("x", 0);
@@ -2065,22 +3494,31 @@ function renderCableCanvas() {
 }
 
 // -----------------------------------------------------------
-// BOM Commit with Fiber Backbone Sizing
+// BOM Commit with Per-Closet Allocation & Fiber Backbone Sizing
 // -----------------------------------------------------------
-function commitCablingToBOM() {
+function commitCablingToBOM(options = {}) {
   let grossFootage = 0;
   let totalDrops = 0;
+  const dropsByCloset = {}; // key: closetName -> { name, drops, footage, closetId }
 
   facilityFloors.forEach(fl => {
-    fl.nodes.filter(n => n.type === "device").forEach(dev => {
+    (fl.nodes || []).filter(n => n.type === "device").forEach(dev => {
       totalDrops++;
-      if (dev.calculatedRun) grossFootage += dev.calculatedRun.totalFt;
+      const runFt = (dev.calculatedRun && dev.calculatedRun.totalFt) ? dev.calculatedRun.totalFt : 0;
+      grossFootage += runFt;
+
+      const closetName = dev.assignedCloset || (dev.calculatedRun && dev.calculatedRun.closetName) || "MDF • Rack-1";
+      const normalizedCloset = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(closetName) : closetName;
+      if (!dropsByCloset[normalizedCloset]) {
+        dropsByCloset[normalizedCloset] = { name: normalizedCloset, drops: 0, footage: 0, closetId: dev.assignedClosetId || dev.closetId };
+      }
+      dropsByCloset[normalizedCloset].drops++;
+      dropsByCloset[normalizedCloset].footage += runFt;
     });
   });
 
-  const orderedFootage = Math.ceil(grossFootage * 1.1);
+  const orderedFootage = Math.ceil(grossFootage * 1.15); // 15% slack & waste buffer
   const spoolCount = Math.max(1, Math.ceil(orderedFootage / 1000));
-  const patchPanelCount = Math.max(1, Math.ceil(totalDrops / 24));
 
   const selectedCable = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.bulkCable?.find(c => c.sku === activeCableSku)) || {
     sku: activeCableSku,
@@ -2096,27 +3534,65 @@ function commitCablingToBOM() {
     msrp: 145
   };
 
-  const defaultPanel = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.[0]) || {
+  const defaultPanel24 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.[0]) || {
     sku: "PP-1U-24P-MOD",
     name: "1U 24-Port Modular Keystone Patch Panel",
     vendor: "Panduit",
     msrp: 68
   };
 
-  const defaultCord = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords?.[0]) || {
+  const defaultPanel48 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.[1]) || {
+    sku: "PP-2U-48P-MOD",
+    name: "2U 48-Port Modular Keystone Patch Panel",
+    vendor: "Panduit",
+    msrp: 115
+  };
+
+  const defaultCord1ft = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords?.find(c => c.lengthFt === 1)) || {
     sku: "C6A-SLIM-1FT-BL",
     name: "Cat6A Slim 28AWG 1-Foot Patch Cords",
     vendor: "Panduit",
-    msrp: 7.50
+    msrp: 7.50,
+    lengthFt: 1,
+    lengthMeters: 0.3
   };
 
-  if (typeof projectBOM !== "undefined") {
-    projectBOM = projectBOM.filter(i => i.role !== "Structured Cabling");
+  const defaultCord7ft = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords?.find(c => c.lengthFt === 7)) || {
+    sku: "C6A-SLIM-7FT-BL",
+    name: "Cat6A Slim 28AWG 7-Foot Patch Cords (Field Device)",
+    vendor: "Panduit",
+    msrp: 11.00,
+    lengthFt: 7,
+    lengthMeters: 2.1
+  };
 
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    // Preserve existing mounted patch panel slots per closet so re-generated panels keep their rack positions
+    const existingMountedPanelsByCloset = {};
+    projectBOM.forEach(i => {
+      if ((i.role === "Structured Cabling" || i.category === "cabling") && (i.model || '').includes("Patch Panel") && i.rackSlot) {
+        const c = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId);
+        if (!existingMountedPanelsByCloset[c]) existingMountedPanelsByCloset[c] = [];
+        existingMountedPanelsByCloset[c].push(i.rackSlot);
+      }
+    });
+
+    // 1. Remove previously committed structured cabling items in-place
+    for (let i = projectBOM.length - 1; i >= 0; i--) {
+      if (projectBOM[i].role === "Structured Cabling" || projectBOM[i].source === "cabling_sync") {
+        projectBOM.splice(i, 1);
+      }
+    }
+
+    // Determine primary closet for bulk spools
+    const closetKeys = Object.keys(dropsByCloset);
+    const primaryCloset = closetKeys.find(k => k.toLowerCase().includes("mdf")) || closetKeys[0] || "MDF • Rack-1";
+
+    // 2. Add Bulk Cable Spools (Allocated to primary MDF or bulk pool)
     projectBOM.push({
       instanceId: `spool-${Date.now()}`,
       id: selectedCable.sku,
-      model: selectedCable.name,
+      model: `${selectedCable.name} (${spoolCount}x 1,000' Spools for ${grossFootage.toLocaleString()} ft run)`,
       sku: selectedCable.sku,
       role: "Structured Cabling",
       vendor: selectedCable.vendor,
@@ -2124,95 +3600,222 @@ function commitCablingToBOM() {
       poeBudget: 0,
       baseWatts: 0,
       qty: spoolCount,
-      closetName: "MDF • Rack-1",
-      rackId: "MDF • Rack-1",
-      rackSlot: null
+      closetName: primaryCloset,
+      rackId: primaryCloset,
+      rackSlot: null,
+      source: "cabling_sync"
     });
 
-    projectBOM.push({
-      instanceId: `jacks-${Date.now()}`,
-      id: defaultJack.sku,
-      model: defaultJack.name,
-      sku: defaultJack.sku,
-      role: "Structured Cabling",
-      vendor: defaultJack.vendor,
-      msrp: defaultJack.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: patchPanelCount,
-      closetName: "MDF • Rack-1",
-      rackId: "MDF • Rack-1",
-      rackSlot: null
+    // 3. For each telecom closet with drops, allocate dedicated patch panels, keystone packs, and patch cords
+    Object.values(dropsByCloset).forEach((cd, idx) => {
+      const closetDropsCount = cd.drops;
+      if (closetDropsCount === 0) return;
+
+      const p48 = Math.floor(closetDropsCount / 48);
+      const rem = closetDropsCount % 48;
+      const p24 = rem > 0 ? (rem <= 24 ? 1 : 2) : (closetDropsCount === 0 ? 0 : 0);
+      const keystonePacks = Math.ceil(closetDropsCount / 24);
+
+      if (p48 > 0) {
+        projectBOM.push({
+          instanceId: `pp48-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+          id: defaultPanel48.sku,
+          model: defaultPanel48.name,
+          sku: defaultPanel48.sku,
+          role: "Structured Cabling",
+          vendor: defaultPanel48.vendor,
+          msrp: defaultPanel48.msrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          rackUnits: 2,
+          qty: p48,
+          closetName: cd.name,
+          rackId: cd.name,
+          rackSlot: (existingMountedPanelsByCloset[cd.name]?.length > 0) ? existingMountedPanelsByCloset[cd.name].shift() : null,
+          source: "cabling_sync"
+        });
+      }
+
+      if (p24 > 0 || (p48 === 0 && closetDropsCount > 0)) {
+        const qty24 = p24 > 0 ? p24 : 1;
+        projectBOM.push({
+          instanceId: `pp24-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+          id: defaultPanel24.sku,
+          model: defaultPanel24.name,
+          sku: defaultPanel24.sku,
+          role: "Structured Cabling",
+          vendor: defaultPanel24.vendor,
+          msrp: defaultPanel24.msrp,
+          poeBudget: 0,
+          baseWatts: 0,
+          rackUnits: 1,
+          qty: qty24,
+          closetName: cd.name,
+          rackId: cd.name,
+          rackSlot: (existingMountedPanelsByCloset[cd.name]?.length > 0) ? existingMountedPanelsByCloset[cd.name].shift() : null,
+          source: "cabling_sync"
+        });
+      }
+
+      // Keystone packs for this closet
+      projectBOM.push({
+        instanceId: `jacks-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+        id: defaultJack.sku,
+        model: defaultJack.name,
+        sku: defaultJack.sku,
+        role: "Structured Cabling",
+        vendor: defaultJack.vendor,
+        msrp: defaultJack.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: keystonePacks,
+        closetName: cd.name,
+        rackId: cd.name,
+        rackSlot: null,
+        source: "cabling_sync"
+      });
+
+      // Dynamic switch-to-panel patch cord calculation based on U-separation in this closet
+      let closetPatchCord = defaultCord1ft;
+      let closetUDiff = 1;
+      const normLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cd.name) : cd.name;
+      const closetSwitches = projectBOM.filter(i => 
+        (typeof isNetworkSwitchItem === "function" ? isNetworkSwitchItem(i) : (i.role === "Access" || (i.model || '').includes("Switch"))) &&
+        ((typeof FacilityStore !== "undefined" ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId)) === normLoc) &&
+        (typeof parseRackU === "function" ? parseRackU(i.rackSlot) !== null : i.rackSlot)
+      );
+      const closetPanels = projectBOM.filter(i => 
+        (i.role === "Structured Cabling" || i.category === "cabling") && 
+        (i.model || '').includes("Patch Panel") && 
+        ((typeof FacilityStore !== "undefined" ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId)) === normLoc) &&
+        (typeof parseRackU === "function" ? parseRackU(i.rackSlot) !== null : i.rackSlot)
+      );
+
+      if (closetSwitches.length > 0 && closetPanels.length > 0 && typeof getPatchCordLengthForUDiff === "function" && typeof findPatchCordItem === "function") {
+        const uDiffs = [];
+        closetSwitches.forEach(sw => {
+          const swU = parseRackU(sw.rackSlot);
+          if (swU !== null) {
+            let minD = 999;
+            closetPanels.forEach(pp => {
+              const ppU = parseRackU(pp.rackSlot);
+              if (ppU !== null) {
+                const dist = Math.abs(swU - ppU);
+                if (dist < minD) minD = dist;
+              }
+            });
+            if (minD < 999) uDiffs.push(minD);
+          }
+        });
+        if (uDiffs.length > 0) {
+          closetUDiff = Math.round(uDiffs.reduce((a, b) => a + b, 0) / uDiffs.length);
+          const cordSpec = getPatchCordLengthForUDiff(closetUDiff);
+          const matched = findPatchCordItem(cordSpec.lengthFt, "Panduit");
+          if (matched) {
+            closetPatchCord = {
+              sku: matched.sku,
+              name: `${matched.name} (${closetUDiff}U Separation)`,
+              vendor: matched.vendor || "Panduit",
+              msrp: matched.msrp,
+              lengthFt: cordSpec.lengthFt,
+              lengthMeters: cordSpec.lengthMeters
+            };
+          }
+        }
+      }
+
+      // Patch cords for this closet (dynamic switch-to-panel + 7ft field end)
+      projectBOM.push({
+        instanceId: `patch1ft-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+        id: closetPatchCord.sku,
+        model: closetPatchCord.name,
+        sku: closetPatchCord.sku,
+        role: "Structured Cabling",
+        vendor: closetPatchCord.vendor,
+        msrp: closetPatchCord.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: closetDropsCount,
+        closetName: cd.name,
+        rackId: cd.name,
+        rackSlot: null,
+        source: "cabling_sync",
+        lengthFt: closetPatchCord.lengthFt || 1,
+        lengthMeters: closetPatchCord.lengthMeters || 0.3,
+        uDiff: closetUDiff
+      });
+
+      projectBOM.push({
+        instanceId: `patch7ft-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+        id: defaultCord7ft.sku,
+        model: defaultCord7ft.name,
+        sku: defaultCord7ft.sku,
+        role: "Structured Cabling",
+        vendor: defaultCord7ft.vendor,
+        msrp: defaultCord7ft.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: closetDropsCount,
+        closetName: cd.name,
+        rackId: cd.name,
+        rackSlot: null,
+        source: "cabling_sync"
+      });
     });
 
-    projectBOM.push({
-      instanceId: `pp-${Date.now()}`,
-      id: defaultPanel.sku,
-      model: defaultPanel.name,
-      sku: defaultPanel.sku,
-      role: "Structured Cabling",
-      vendor: defaultPanel.vendor,
-      msrp: defaultPanel.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      rackUnits: 1,
-      qty: patchPanelCount,
-      closetName: "MDF • Rack-1",
-      rackId: "MDF • Rack-1",
-      rackSlot: null
-    });
-
-    projectBOM.push({
-      instanceId: `patch-${Date.now()}`,
-      id: defaultCord.sku,
-      model: defaultCord.name,
-      sku: defaultCord.sku,
-      role: "Structured Cabling",
-      vendor: defaultCord.vendor,
-      msrp: defaultCord.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: totalDrops * 2,
-      closetName: "MDF • Rack-1",
-      rackId: "MDF • Rack-1",
-      rackSlot: null
-    });
-
+    // 4. Fiber Trunks between closets
     facilityFloors.forEach(fl => {
       (fl.fiberBackbones || []).forEach(fb => {
-        const trunkItem = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.fiberBackbone?.[0]) || {
-          sku: "FIBER-OM4-6STRAND",
-          name: "6-Strand OM4 Armored Pre-Term Fiber Trunk",
-          msrpPerFt: 1.85,
-          baseTerminationMsrp: 180
-        };
+        const fType = (fb.fiberType || (typeof getProjectFiberType === "function" ? getProjectFiberType() : "mmf")).toLowerCase();
+        const strands = parseInt(fb.strandCount) || 12;
+        const catalogList = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.fiberBackbone) ? CABLING_CATALOG.fiberBackbone : [];
+        const trunkItem = catalogList.find(i => i.medium === fType && i.strands === strands) ||
+          catalogList.find(i => i.medium === fType) ||
+          catalogList[0] || {
+            sku: fType === "smf" ? "FIBER-OS2-12STRAND" : "FIBER-OM4-12STRAND",
+            name: `${strands}-Strand ${fType === "smf" ? "OS2 Single-Mode" : "OM4 Multi-Mode"} Armored Pre-Term LC Fiber Trunk Assembly`,
+            msrpPerFt: fType === "smf" ? 2.60 : 2.45,
+            baseTerminationMsrp: 280
+          };
 
         const trunkPrice = Math.round((fb.totalFt * trunkItem.msrpPerFt) + trunkItem.baseTerminationMsrp);
+        const fromName = fb.fromClosetName || "MDF";
+        const toName = fb.toClosetName || "IDF-1";
+        const ratingLabel = (fb.rating || "plenum").toUpperCase();
 
         projectBOM.push({
-          instanceId: `trunk-${fb.id}`,
+          instanceId: `trunk-${fb.id || Date.now()}`,
           id: trunkItem.sku,
-          model: `${trunkItem.name} (${fb.totalFt} ft)`,
+          model: `${trunkItem.name} (${fromName} to ${toName}, ${fb.totalFt} ft, ${ratingLabel})`,
           sku: trunkItem.sku,
           role: "Structured Cabling",
-          vendor: "Corning",
+          vendor: "Corning / Panduit",
           msrp: trunkPrice,
           poeBudget: 0,
           baseWatts: 0,
           qty: 1,
-          closetName: "MDF • Rack-1",
-          rackId: "MDF • Rack-1",
-          rackSlot: null
+          closetName: fromName,
+          rackId: fromName,
+          rackSlot: null,
+          source: "cabling_sync"
         });
       });
     });
   }
 
-  FacilityStore.notifyWorkspaceChange();
-  if (typeof showToast === "function") {
-    showToast(`Committed structured cabling and fiber trunks to Quote BOM!`);
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
   }
-  toggleCableLayoutModal();
+  if (typeof renderBOM === "function") renderBOM();
+  if (typeof updateBOMBadge === "function") updateBOMBadge();
+  if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+    StorageService.queueAutoSave();
+  }
+  if (options && options.userInitiated) {
+    if (typeof showToast === "function") {
+      showToast(`Committed structured cabling (${totalDrops} drops, ${spoolCount} spools, per-closet panels & patch cords) to Quote BOM!`);
+    }
+  }
 }
 
 // -----------------------------------------------------------
@@ -2537,9 +4140,15 @@ if (typeof window !== "undefined") {
   window.jumpToPhysicalLayoutTarget = jumpToPhysicalLayoutTarget;
   window.deepLinkToRackElevation = deepLinkToRackElevation;
   window.switchActiveFloor = switchActiveFloor;
+  window.promptAddNewFloor = promptAddNewFloor;
+  window.promptRenameActiveFloor = promptRenameActiveFloor;
+  window.promptDeleteActiveFloor = promptDeleteActiveFloor;
+  window.deleteFloorLevel = promptDeleteActiveFloor;
   window.initCableCanvas = initCableCanvas;
   window.renderCableCanvas = renderCableCanvas;
   window.updateNodeMountMethod = updateNodeMountMethod;
+  window.updateNodeHostSwitch = updateNodeHostSwitch;
+  window.updateNodeSwitchPort = updateNodeSwitchPort;
   window.deselectNode = deselectNode;
   window.fitPhysicalLayoutToScreen = fitPhysicalLayoutToScreen;
   window.centerPhysNodeInViewport = centerPhysNodeInViewport;
@@ -2550,4 +4159,25 @@ if (typeof window !== "undefined") {
   window.getUnplacedDevicesForFloor = getUnplacedDevicesForFloor;
   window.placeAllUnplacedOnActiveFloor = placeAllUnplacedOnActiveFloor;
   window.placeBomItemOnFloor = placeBomItemOnFloor;
+  window.syncBOMDevicesToFloors = syncBOMDevicesToFloors;
+  window.clearPhysicalLayoutDrops = clearPhysicalLayoutDrops;
+  window.removePhysicalLayoutDropByInstanceId = removePhysicalLayoutDropByInstanceId;
+  window.commitCablingToBOM = commitCablingToBOM;
+  window.syncCablingToBOM = commitCablingToBOM;
+  window.togglePhysicalInspector = togglePhysicalInspector;
+  window.togglePhysicalLayerMenu = togglePhysicalLayerMenu;
+  window.setPhysicalLayerFilter = setPhysicalLayerFilter;
+  window.toggleAllPhysicalLayers = toggleAllPhysicalLayers;
+  window.updatePhysicalLayerCountBadge = updatePhysicalLayerCountBadge;
+  window.getDeviceLayerType = getDeviceLayerType;
+  window.getAllClosetsAcrossFacility = getAllClosetsAcrossFacility;
+  window.selectFiberBackbone = selectFiberBackbone;
+  window.deselectFiberBackbone = deselectFiberBackbone;
+  window.updateFiberBackbone = updateFiberBackbone;
+  window.deleteFiberBackbone = deleteFiberBackbone;
+  window.manualAutoLinkTopology = manualAutoLinkTopology;
+  window.deleteNode = deleteNode;
+  window.deleteDropFromBOM = deleteDropFromBOM;
+  window.isClosetMatch = isClosetMatch;
+  window.getInterClosetConnections = getInterClosetConnections;
 }
