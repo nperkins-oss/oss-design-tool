@@ -65,7 +65,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-c10zp.png",
+    "image": "assets/images/products/ruckus-icx7150-c10zp.webp",
     "keyFeatures": [
       "Compact fanless 10-port Multi-Gigabit edge switch with 90W PoH",
       "240W PoE budget capable of powering high-power PTZ cameras and Wi-Fi 6/7 APs",
@@ -132,7 +132,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-c12p.png",
+    "image": "assets/images/products/ruckus-icx7150-c12p.webp",
     "keyFeatures": [
       "Compact fanless 12-port PoE+ desktop/wall switch",
       "124W PoE+ budget supporting up to 4 Class 4 cameras/APs concurrently",
@@ -196,7 +196,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-24.png",
+    "image": "assets/images/products/ruckus-icx7150-24.webp",
     "keyFeatures": [
       "24x 1G RJ-45 non-PoE access switch with 4x 10G SFP+ uplinks",
       "Up to 12-unit long-distance stacking over standard SFP+ cabling",
@@ -263,7 +263,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-24p.png",
+    "image": "assets/images/products/ruckus-icx7150-24p.webp",
     "keyFeatures": [
       "24x 1G 802.3at PoE+ ports delivering a 370W dedicated power budget",
       "4x 10G SFP+ wire-speed uplink or stacking cages",
@@ -327,7 +327,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-48.png",
+    "image": "assets/images/products/ruckus-icx7150-48.webp",
     "keyFeatures": [
       "48x 1G RJ-45 non-PoE access switch with 4x 10G SFP+ uplinks",
       "High-density port layout in a compact 1U rackmount form factor",
@@ -394,7 +394,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-48p.png",
+    "image": "assets/images/products/ruckus-icx7150-48p.webp",
     "keyFeatures": [
       "48x 1G 802.3at PoE+ ports with 370W power budget",
       "4x 10G SFP+ uplinks and stacking connections",
@@ -461,7 +461,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-48pf.png",
+    "image": "assets/images/products/ruckus-icx7150-48pf.webp",
     "keyFeatures": [
       "Full 740W PoE+ budget supporting up to 24 simultaneous 30W PoE+ devices",
       "48x 1G RJ-45 + 4x 10G SFP+ high-speed optical ports",
@@ -529,7 +529,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7150-48zp.png",
+    "image": "assets/images/products/ruckus-icx7150-48zp.webp",
     "keyFeatures": [
       "16x Multi-Gigabit 2.5G ports with 90W PoH and 32x 1G PoE+ ports",
       "Dual hot-swap load-sharing PSUs providing up to 1,480W total PoE budget",
@@ -592,14 +592,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 160.0,
     "packetBufferMb": 4,
     "stackCableSku": "40G-QSFP-C-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX7400-4X10GF",
+      "supportedModules": [
+        "ICX7400-4X10GF",
+        "ICX7400-1X40GQ",
+        "ICX7400-4X1GF",
+        "ICX7400-4X10GC",
+        "ICX7400-SERVICE-MOD"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7450-24.png",
+    "image": "assets/images/products/ruckus-icx7450-24.webp",
     "keyFeatures": [
       "24x 1G RJ-45 with 3 modular front-facing uplink/stacking bays",
       "Supports 10GbE SFP+, 10GBASE-T, 40GbE QSFP+, and hardware IPsec VPN modules",
       "Dual redundant hot-swappable AC or DC power supplies",
       "160 Gbps stacking bandwidth with up to 12 switches per stack"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN10-E",
+    "psuSku": "RPS15-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7450-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7450-24p",
@@ -660,14 +681,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 160.0,
     "packetBufferMb": 4,
     "stackCableSku": "40G-QSFP-C-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX7400-4X10GF",
+      "supportedModules": [
+        "ICX7400-4X10GF",
+        "ICX7400-1X40GQ",
+        "ICX7400-4X1GF",
+        "ICX7400-4X10GC",
+        "ICX7400-SERVICE-MOD"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7450-24p.png",
+    "image": "assets/images/products/ruckus-icx7450-24p.webp",
     "keyFeatures": [
       "24x 1G RJ-45 ports with 8 ports delivering 90W PoH for heavy security PTZ cameras",
       "Up to 1,500W PoE budget with dual hot-swappable 1,000W AC power supplies",
       "3x flexible modular slots supporting 40G QSFP+ and hardware IPsec encryption",
       "High-availability stacking across campus wiring closets"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN10-E",
+    "psuSku": "RPS16-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7450-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7450-48",
@@ -724,14 +766,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 196.0,
     "packetBufferMb": 4,
     "stackCableSku": "40G-QSFP-C-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX7400-4X10GF",
+      "supportedModules": [
+        "ICX7400-4X10GF",
+        "ICX7400-1X40GQ",
+        "ICX7400-4X1GF",
+        "ICX7400-4X10GC",
+        "ICX7400-SERVICE-MOD"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7450-48.png",
+    "image": "assets/images/products/ruckus-icx7450-48.webp",
     "keyFeatures": [
       "48x 1G RJ-45 with 3 modular front-facing uplink/stacking bays",
       "High port density with up to 12x 10G SFP+ or 3x 40G QSFP+ ports",
       "Full Layer 3 routing (OSPF, BGP, VRRP, PIM) and policy routing",
       "Reversible front-to-back or back-to-front airflow options"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN10-E",
+    "psuSku": "RPS15-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7450-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7450-48p",
@@ -792,14 +855,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 196.0,
     "packetBufferMb": 4,
     "stackCableSku": "40G-QSFP-C-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX7400-4X10GF",
+      "supportedModules": [
+        "ICX7400-4X10GF",
+        "ICX7400-1X40GQ",
+        "ICX7400-4X1GF",
+        "ICX7400-4X10GC",
+        "ICX7400-SERVICE-MOD"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7450-48p.png",
+    "image": "assets/images/products/ruckus-icx7450-48p.webp",
     "keyFeatures": [
       "48x 1G RJ-45 ports with 8 ports delivering 90W PoH and 40 ports PoE+",
       "Up to 1,500W PoE budget with dual load-sharing hot-swap power supplies",
       "3x modular slots for 10G SFP+, 40G QSFP+, or IPsec VPN acceleration",
       "Hitless stacking failover maintaining nonstop forwarding"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN10-E",
+    "psuSku": "RPS16-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7450-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7450-48f",
@@ -856,14 +940,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 196.0,
     "packetBufferMb": 4,
     "stackCableSku": "40G-QSFP-C-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX7400-4X10GF",
+      "supportedModules": [
+        "ICX7400-4X10GF",
+        "ICX7400-1X40GQ",
+        "ICX7400-4X1GF",
+        "ICX7400-4X10GC",
+        "ICX7400-SERVICE-MOD"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7450-48f.png",
+    "image": "assets/images/products/ruckus-icx7450-48f.webp",
     "keyFeatures": [
       "48x 100/1000 Mbps SFP fiber aggregation switch with 3 modular bays",
       "Ideal for distributed campus fiber runs, IDF aggregation, and perimeter CCTV fiber rings",
       "Dual redundant hot-swap AC or DC power supplies",
       "Supports 40G QSFP+ stacking and hardware-accelerated IPsec encryption"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN10-E",
+    "psuSku": "RPS15-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7450-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-24",
@@ -920,14 +1025,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 333.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24.png",
+    "image": "assets/images/products/ruckus-icx7550-24.webp",
     "keyFeatures": [
       "24x 1G RJ-45 non-PoE enterprise switch with 2x 100G QSFP28 uplink/stacking ports",
       "1x front modular bay for 4x 10G SFP+, 2x 40G QSFP+, or 1x 100G QSFP28",
       "400 Gbps ultra-high bandwidth hardware stacking architecture",
       "Deep 12 MB packet buffer handles high-throughput video streams"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS21-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-24p",
@@ -987,14 +1113,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 333.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24p.png",
+    "image": "assets/images/products/ruckus-icx7550-24p.webp",
     "keyFeatures": [
       "24x 1G 802.3at PoE+ ports with massive 2,000W PoE capacity (with dual PSUs)",
       "2x 100G QSFP28 wire-speed uplinks/stacking ports",
       "1x optional uplink module slot for additional 10G/40G/100G connectivity",
       "Perpetual & Fast PoE for zero-interruption CCTV camera operations"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS22-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-24zp",
@@ -1055,14 +1202,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 416.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24zp.png",
+    "image": "assets/images/products/ruckus-icx7550-24zp.webp",
     "keyFeatures": [
       "24x Multi-Gigabit ports with 90W 802.3bt Class 8 PoE on all ports",
       "16x 2.5G and 8x 10G Multi-Gigabit ports for next-gen Wi-Fi 7 APs",
       "2x 100G QSFP28 wire-speed uplinks with 400 Gbps hardware stacking",
       "Up to 2,000W PoE budget with dual load-sharing power supplies"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS22-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-24f",
@@ -1119,14 +1287,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 654.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-24f.png",
+    "image": "assets/images/products/ruckus-icx7550-24f.webp",
     "keyFeatures": [
       "24x 1G/10G SFP+ fiber aggregation switch with 2x 100G QSFP28 uplinks",
       "High-performance campus core/aggregation switch in compact 1U form factor",
       "Dual redundant hot-swappable AC or DC power supplies and fans",
       "880 Gbps switching capacity and 400 Gbps Virtual Chassis stacking"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS21-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-48",
@@ -1183,14 +1372,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 369.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48.png",
+    "image": "assets/images/products/ruckus-icx7550-48.webp",
     "keyFeatures": [
       "48x 1G RJ-45 non-PoE enterprise switch with 2x 100G QSFP28 uplink/stacking ports",
       "1x front modular bay for 4x 10G SFP+, 2x 40G QSFP+, or 1x 100G QSFP28",
       "400 Gbps ultra-high bandwidth hardware stacking architecture",
       "Redundant hot-swappable load-sharing power supplies"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS21-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-48p",
@@ -1250,14 +1460,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 369.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48p.png",
+    "image": "assets/images/products/ruckus-icx7550-48p.webp",
     "keyFeatures": [
       "48x 1G 802.3at PoE+ ports with 2,000W PoE capacity (with dual PSUs)",
       "2x 100G QSFP28 wire-speed uplinks/stacking ports",
       "1x optional uplink module slot for additional 10G/40G/100G connectivity",
       "Perpetual & Fast PoE for high-reliability physical security infrastructure"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS22-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-48zp",
@@ -1318,14 +1549,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 610.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48zp.png",
+    "image": "assets/images/products/ruckus-icx7550-48zp.webp",
     "keyFeatures": [
       "48x Multi-Gigabit ports with 90W 802.3bt Class 8 PoE on all ports",
       "36x 2.5G and 12x 10G Multi-Gigabit ports for high-density Wi-Fi 7 / enterprise campuses",
       "2x 100G QSFP28 wire-speed uplinks with 400 Gbps hardware stacking",
       "Massive 2,000W PoE budget with dual load-sharing power supplies"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS22-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7550-48f",
@@ -1382,14 +1634,35 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 1010.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7550-4X25GF",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7550-48f.png",
+    "image": "assets/images/products/ruckus-icx7550-48f.webp",
     "keyFeatures": [
       "48x 1G/10G SFP+ optical ports with 2x 100G QSFP28 wire-speed uplinks",
       "1.36 Tbps non-blocking switching throughput for enterprise distribution/core",
       "Dual redundant hot-swappable AC or DC power supplies and fan trays",
       "400 Gbps Virtual Chassis stacking connecting up to 12 switches"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS21-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7550-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7650-48p",
@@ -1450,14 +1723,34 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 416.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7650-48p.png",
+    "image": "assets/images/products/ruckus-icx7650-48p.webp",
     "keyFeatures": [
       "48x 1G ports with 8 ports delivering 90W PoH and 40 ports PoE+",
       "Up to 1,500W PoE budget with dual hot-swap 1,000W load-sharing power supplies",
       "Dedicated rear 100G QSFP28 stacking ports maintaining full front uplink availability",
       "Front modular bay supporting 4x 10G SFP+ or 2x 40G QSFP+ uplinks"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS16-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7650-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7650-48zp",
@@ -1518,14 +1811,34 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 672.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7650-48zp.png",
+    "image": "assets/images/products/ruckus-icx7650-48zp.webp",
     "keyFeatures": [
       "24x Multi-Gigabit 10G ports with 90W PoH and 24x 1G PoE+ ports",
       "Up to 1,500W PoE budget with dual load-sharing power supplies",
       "Front modular slot supporting 1x 100G QSFP28, 2x 40G QSFP+, or 4x 10G SFP+",
       "2x rear 100G QSFP28 dedicated stacking ports with 240 Gbps stacking throughput"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS16-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7650-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7650-48f",
@@ -1582,14 +1895,34 @@ const RUCKUS_SWITCHES = [
     "throughputMpps": 760.0,
     "packetBufferMb": 12,
     "stackCableSku": "100G-QSFP28-TWX-0101",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "ICX-4X10GF",
+      "supportedModules": [
+        "ICX-4X10GF",
+        "ICX-2X100Q",
+        "ICX7650-2X40GQ",
+        "ICX7650-1X100GQ"
+      ]
+    },
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7650-48f.png",
+    "image": "assets/images/products/ruckus-icx7650-48f.webp",
     "keyFeatures": [
       "24x 10G SFP+ and 24x 1G SFP fiber ports for high-density campus aggregation",
       "1x front modular slot supporting 100G QSFP28 uplink module",
       "2x rear 100G QSFP28 dedicated stacking ports",
       "1.02 Tbps wire-speed switching capacity with dual redundant power supplies"
-    ]
+    ],
+    "mountSku": "ICX-RMK-4POST-TL",
+    "fanSku": "ICX-FAN12-E",
+    "psuSku": "RPS15-E",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "ICX7650-PREM-LIC",
+        "ICX-MACSEC-LIC"
+      ]
+    }
   },
   {
     "id": "ruckus-icx7750-26q",
@@ -1647,7 +1980,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "40G-QSFP-C-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7750-26q.png",
+    "image": "assets/images/products/ruckus-icx7750-26q.webp",
     "keyFeatures": [
       "26x 40G QSFP+ ports in compact 1U for high-density campus core / data center",
       "Up to 32x 40G QSFP+ ports with rear expansion module (or 128x 10G breakout)",
@@ -1711,7 +2044,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "40G-QSFP-C-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7750-48f.png",
+    "image": "assets/images/products/ruckus-icx7750-48f.webp",
     "keyFeatures": [
       "48x 10G SFP+ and 6x 40G QSFP+ ports for enterprise aggregation",
       "Expandable to 12x 40G QSFP+ with optional rear interface module",
@@ -1775,7 +2108,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "40G-QSFP-C-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7750-48c.png",
+    "image": "assets/images/products/ruckus-icx7750-48c.webp",
     "keyFeatures": [
       "48x 10GBASE-T copper ports and 6x 40G QSFP+ uplinks",
       "High-density 10GbE copper server and storage interconnect",
@@ -1839,7 +2172,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "100G-QSFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-32q.png",
+    "image": "assets/images/products/ruckus-icx7850-32q.webp",
     "keyFeatures": [
       "Huge 32 MB buffer absorbs heavy VMS video ingest bursts",
       "32x 100G QSFP28 wire-speed ports in 1U for spine/leaf aggregation",
@@ -1903,7 +2236,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "100G-QSFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48f.png",
+    "image": "assets/images/products/ruckus-icx7850-48f.webp",
     "keyFeatures": [
       "48x 10G/25G SFP28 and 8x 100G QSFP28 optical ports",
       "4.0 Tbps switching capacity with sub-microsecond latency",
@@ -1967,7 +2300,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "100G-QSFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48fs.png",
+    "image": "assets/images/products/ruckus-icx7850-48fs.webp",
     "keyFeatures": [
       "Hardware-based IEEE 802.1AE MACsec 128/256-bit encryption on all 48x 10G ports",
       "8x 100G QSFP28 wire-speed uplinks for zero-compromise security backbone",
@@ -2031,7 +2364,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "100G-QSFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 7850 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx7850-48c.png",
+    "image": "assets/images/products/ruckus-icx7850-48c.webp",
     "keyFeatures": [
       "48x 10GBASE-T RJ-45 copper and 8x 100G QSFP28 high-speed optical ports",
       "High-density copper aggregation for high-speed NVR and server clusters",
@@ -2098,7 +2431,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8200-c08pf.webp",
     "keyFeatures": [
       "Next-gen compact fanless switch with 8x 1G PoE+ (124W budget)",
       "2x 10G SFP+ uplink ports for high-speed campus backhaul",
@@ -2166,7 +2499,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-c08zp.png",
+    "image": "assets/images/products/ruckus-icx8200-c08zp.webp",
     "keyFeatures": [
       "4x 2.5G 90W 802.3bt ports and 4x 1G PoE+ ports with 240W PoE budget",
       "Fanless, whisper-quiet design with shallow depth",
@@ -2230,7 +2563,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24.png",
+    "image": "assets/images/products/ruckus-icx8200-24.webp",
     "keyFeatures": [
       "24x 1G RJ-45 non-PoE access switch with 4x 25G SFP28 uplinks",
       "Future-proof 25GbE connectivity at edge pricing",
@@ -2297,7 +2630,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24p.png",
+    "image": "assets/images/products/ruckus-icx8200-24p.webp",
     "keyFeatures": [
       "24x 1G 802.3at PoE+ ports (370W budget) with 4x 25G SFP28 uplinks",
       "25 Gbps stacking & uplinks provide massive backhaul headroom",
@@ -2365,7 +2698,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24zp.png",
+    "image": "assets/images/products/ruckus-icx8200-24zp.webp",
     "keyFeatures": [
       "24x Multi-Gigabit 2.5G ports with 90W 802.3bt PoE on all ports",
       "740W PoE budget with 4x 25G SFP28 high-speed uplinks",
@@ -2429,7 +2762,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48.png",
+    "image": "assets/images/products/ruckus-icx8200-48.webp",
     "keyFeatures": [
       "48x 1G RJ-45 non-PoE access switch with 4x 25G SFP28 uplinks",
       "High-density port layout with wire-speed non-blocking performance",
@@ -2496,7 +2829,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48p.png",
+    "image": "assets/images/products/ruckus-icx8200-48p.webp",
     "keyFeatures": [
       "48x 1G 802.3at PoE+ ports with 370W power budget",
       "4x 25G SFP28 high-speed uplinks/stacking ports",
@@ -2563,7 +2896,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48pf.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf.webp",
     "keyFeatures": [
       "Full 740W PoE+ power budget across all 48 ports",
       "4x 25G SFP28 uplinks providing non-blocking 100 Gbps uplink capacity",
@@ -2630,7 +2963,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48pf2.png",
+    "image": "assets/images/products/ruckus-icx8200-48pf2.webp",
     "keyFeatures": [
       "Dual hot-swap load sharing power supplies with up to 1,480W PoE budget",
       "48x 1G 802.3at PoE+ and 4x 25G SFP28 high-speed uplinks",
@@ -2698,7 +3031,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48zp2.png",
+    "image": "assets/images/products/ruckus-icx8200-48zp2.webp",
     "keyFeatures": [
       "24x 2.5G 90W 802.3bt Class 8 ports and 24x 1G PoE+ ports",
       "Dual hot-swap power supplies delivering 1,480W PoE budget",
@@ -2766,7 +3099,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24xp2.png",
+    "image": "assets/images/products/ruckus-icx8200-24xp2.webp",
     "keyFeatures": [
       "24x full 10GbE Multi-Gigabit copper ports with 90W 802.3bt PoE",
       "4x 25G SFP28 wire-speed uplinks with 200 Gbps stacking",
@@ -2834,7 +3167,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48np2.png",
+    "image": "assets/images/products/ruckus-icx8200-48np2.webp",
     "keyFeatures": [
       "24x 2.5G 90W bt and 24x 1G PoE+ with dual hot-swap PSUs",
       "1,480W total PoE capacity supporting heavy campus security drops",
@@ -2898,7 +3231,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24f.png",
+    "image": "assets/images/products/ruckus-icx8200-24f.webp",
     "keyFeatures": [
       "24x 1G SFP optical ports with 4x 25G SFP28 uplinks",
       "Ideal for distributed campus fiber runs and IDF aggregation",
@@ -2962,7 +3295,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-48f.png",
+    "image": "assets/images/products/ruckus-icx8200-48f.webp",
     "keyFeatures": [
       "48x 1G SFP optical ports with 4x 25G SFP28 uplinks",
       "High-density 1G fiber concentration in compact 1U form factor",
@@ -3026,7 +3359,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "25G-SFP28-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8200-24fx.png",
+    "image": "assets/images/products/ruckus-icx8200-24fx.webp",
     "keyFeatures": [
       "24x 10G SFP+ optical ports with 4x 25G SFP28 wire-speed uplinks",
       "680 Gbps non-blocking switching throughput for mid-sized campus core",
@@ -3093,7 +3426,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-c08pf.png",
+    "image": "assets/images/products/ruckus-icx8100-c08pf.webp",
     "keyFeatures": [
       "Entry compact fanless PoE+ switch with 124W budget",
       "2x 10G SFP+ uplinks for cost-effective branch edge connectivity",
@@ -3160,7 +3493,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-c16p.png",
+    "image": "assets/images/products/ruckus-icx8100-c16p.webp",
     "keyFeatures": [
       "16x 1G PoE+ ports in compact fanless desktop/wall housing",
       "124W PoE budget and 2x 10G SFP+ uplink ports",
@@ -3224,7 +3557,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-24.png",
+    "image": "assets/images/products/ruckus-icx8100-24.webp",
     "keyFeatures": [
       "24x 1G RJ-45 non-PoE access switch with shallow 11-inch depth and fanless cooling",
       "4x 10G SFP+ uplinks supporting up to 8 switches per stack",
@@ -3291,7 +3624,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-24p.png",
+    "image": "assets/images/products/ruckus-icx8100-24p.webp",
     "keyFeatures": [
       "24x 1G 802.3at PoE+ ports with 370W dedicated power budget",
       "4x 10G SFP+ uplink ports and 40 Gbps stacking throughput",
@@ -3355,7 +3688,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-48.png",
+    "image": "assets/images/products/ruckus-icx8100-48.webp",
     "keyFeatures": [
       "48x 1G RJ-45 non-PoE access switch with silent fanless operation",
       "4x 10G SFP+ uplink ports and shallow 11-inch chassis depth",
@@ -3422,7 +3755,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-48p.png",
+    "image": "assets/images/products/ruckus-icx8100-48p.webp",
     "keyFeatures": [
       "48x 1G 802.3at PoE+ ports with 370W budget",
       "4x 10G SFP+ high-speed uplinks in shallow 11-inch rack depth",
@@ -3489,7 +3822,7 @@ const RUCKUS_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "10G-SFPP-TWX-0101",
     "datasheet": "Datasheets/Network/Ruckus/RUCKUS ICX 8100 Switch Data Sheet.pdf",
-    "image": "assets/images/products/ruckus-icx8100-48pf.png",
+    "image": "assets/images/products/ruckus-icx8100-48p.webp",
     "keyFeatures": [
       "Full 740W PoE+ power budget across all 48 ports",
       "4x 10G SFP+ uplinks and stacking connections",

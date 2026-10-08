@@ -38,6 +38,105 @@ const CABLING_CATALOG = {
       jacketType: "Plenum"
     },
     {
+      sku: "C6A-CMP-1K-YL",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Yellow)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "Yellow",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMR-1K-YL",
+      name: "Cat6A F/UTP Riser (CMR) Solid Bulk Cable (1,000 ft Spool Box, Yellow)",
+      vendor: "Superior Essex",
+      rating: "CMR",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 340,
+      color: "Yellow",
+      jacketType: "Riser"
+    },
+    {
+      sku: "C6-CMP-1K-YL",
+      name: "Cat6 U/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Yellow)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6",
+      ftPerBox: 1000,
+      msrp: 290,
+      color: "Yellow",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMP-1K-GN",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Green)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "Green",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMP-1K-OR",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Orange)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "Orange",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMP-1K-VT",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Violet/Purple)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "Purple",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMP-1K-WH",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, White)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "White",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMP-1K-GY",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Gray)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "Gray",
+      jacketType: "Plenum"
+    },
+    {
+      sku: "C6A-CMP-1K-RD",
+      name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Red)",
+      vendor: "Superior Essex",
+      rating: "CMP",
+      standard: "Cat6A",
+      ftPerBox: 1000,
+      msrp: 410,
+      color: "Red",
+      jacketType: "Plenum"
+    },
+    {
       sku: "C6A-OUTDOOR-1K",
       name: "Cat6A Shielded OSP Direct Burial / UV Outdoor Cable (1,000 ft Spool)",
       vendor: "Superior Essex",
@@ -156,12 +255,85 @@ const CABLING_CATALOG = {
     }
   ],
   patchCords: [
-    // Panduit 28AWG Slim High-Density Cat6A Patch Cords
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Yellow - Security Default)
+    {
+      sku: "C6A-SLIM-6IN-YL",
+      name: "Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 0.5,
+      lengthMeters: 0.15,
+      msrp: 6.20
+    },
+    {
+      sku: "C6A-SLIM-1FT-YL",
+      name: "Cat6A 28AWG Slim High-Density Patch Cord (1-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 1,
+      lengthMeters: 0.3,
+      msrp: 7.50
+    },
+    {
+      sku: "C6A-SLIM-2FT-YL",
+      name: "Cat6A 28AWG Slim High-Density Patch Cord (2-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 2,
+      lengthMeters: 0.6,
+      msrp: 7.90
+    },
+    {
+      sku: "C6A-SLIM-3FT-YL",
+      name: "Cat6A 28AWG Slim High-Density Patch Cord (3-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 3,
+      lengthMeters: 1.0,
+      msrp: 8.50
+    },
+    {
+      sku: "C6A-SLIM-5FT-YL",
+      name: "Cat6A 28AWG Slim High-Density Patch Cord (5-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 5,
+      lengthMeters: 1.5,
+      msrp: 9.80
+    },
+    {
+      sku: "C6A-SLIM-7FT-YL",
+      name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 7,
+      lengthMeters: 2.1,
+      msrp: 11.00
+    },
+    {
+      sku: "C6A-SLIM-10FT-YL",
+      name: "Cat6A 28AWG Slim Patch Cord (10-Foot, Yellow)",
+      vendor: "Panduit",
+      standard: "Cat6A",
+      color: "Yellow",
+      lengthFt: 10,
+      lengthMeters: 3.0,
+      msrp: 13.50
+    },
+
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Blue - Data)
     {
       sku: "C6A-SLIM-6IN-BL",
       name: "Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
+      color: "Blue",
       lengthFt: 0.5,
       lengthMeters: 0.15,
       msrp: 6.20
@@ -234,10 +406,41 @@ const CABLING_CATALOG = {
       name: "Cat6A 28AWG Slim Patch Cord (25-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
+      color: "Blue",
       lengthFt: 25,
       lengthMeters: 7.6,
       msrp: 22.00
     },
+
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Green - Environmental/Audio)
+    { sku: "C6A-SLIM-6IN-GN", name: "Cat6A 28AWG Slim Patch Cord (6-Inch, Green)", vendor: "Panduit", standard: "Cat6A", color: "Green", lengthFt: 0.5, lengthMeters: 0.15, msrp: 6.20 },
+    { sku: "C6A-SLIM-1FT-GN", name: "Cat6A 28AWG Slim Patch Cord (1-Foot, Green)", vendor: "Panduit", standard: "Cat6A", color: "Green", lengthFt: 1, lengthMeters: 0.3, msrp: 7.50 },
+    { sku: "C6A-SLIM-3FT-GN", name: "Cat6A 28AWG Slim Patch Cord (3-Foot, Green)", vendor: "Panduit", standard: "Cat6A", color: "Green", lengthFt: 3, lengthMeters: 1.0, msrp: 8.50 },
+    { sku: "C6A-SLIM-7FT-GN", name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Green)", vendor: "Panduit", standard: "Cat6A", color: "Green", lengthFt: 7, lengthMeters: 2.1, msrp: 11.00 },
+
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Orange - Access Control / PoE+)
+    { sku: "C6A-SLIM-6IN-OR", name: "Cat6A 28AWG Slim Patch Cord (6-Inch, Orange)", vendor: "Panduit", standard: "Cat6A", color: "Orange", lengthFt: 0.5, lengthMeters: 0.15, msrp: 6.20 },
+    { sku: "C6A-SLIM-1FT-OR", name: "Cat6A 28AWG Slim Patch Cord (1-Foot, Orange)", vendor: "Panduit", standard: "Cat6A", color: "Orange", lengthFt: 1, lengthMeters: 0.3, msrp: 7.50 },
+    { sku: "C6A-SLIM-3FT-OR", name: "Cat6A 28AWG Slim Patch Cord (3-Foot, Orange)", vendor: "Panduit", standard: "Cat6A", color: "Orange", lengthFt: 3, lengthMeters: 1.0, msrp: 8.50 },
+    { sku: "C6A-SLIM-7FT-OR", name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Orange)", vendor: "Panduit", standard: "Cat6A", color: "Orange", lengthFt: 7, lengthMeters: 2.1, msrp: 11.00 },
+
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Violet/Purple - Intercom/AV)
+    { sku: "C6A-SLIM-6IN-VT", name: "Cat6A 28AWG Slim Patch Cord (6-Inch, Purple)", vendor: "Panduit", standard: "Cat6A", color: "Purple", lengthFt: 0.5, lengthMeters: 0.15, msrp: 6.20 },
+    { sku: "C6A-SLIM-1FT-VT", name: "Cat6A 28AWG Slim Patch Cord (1-Foot, Purple)", vendor: "Panduit", standard: "Cat6A", color: "Purple", lengthFt: 1, lengthMeters: 0.3, msrp: 7.50 },
+    { sku: "C6A-SLIM-3FT-VT", name: "Cat6A 28AWG Slim Patch Cord (3-Foot, Purple)", vendor: "Panduit", standard: "Cat6A", color: "Purple", lengthFt: 3, lengthMeters: 1.0, msrp: 8.50 },
+    { sku: "C6A-SLIM-7FT-VT", name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Purple)", vendor: "Panduit", standard: "Cat6A", color: "Purple", lengthFt: 7, lengthMeters: 2.1, msrp: 11.00 },
+
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (White - Wireless / APs)
+    { sku: "C6A-SLIM-6IN-WH", name: "Cat6A 28AWG Slim Patch Cord (6-Inch, White)", vendor: "Panduit", standard: "Cat6A", color: "White", lengthFt: 0.5, lengthMeters: 0.15, msrp: 6.20 },
+    { sku: "C6A-SLIM-1FT-WH", name: "Cat6A 28AWG Slim Patch Cord (1-Foot, White)", vendor: "Panduit", standard: "Cat6A", color: "White", lengthFt: 1, lengthMeters: 0.3, msrp: 7.50 },
+    { sku: "C6A-SLIM-3FT-WH", name: "Cat6A 28AWG Slim Patch Cord (3-Foot, White)", vendor: "Panduit", standard: "Cat6A", color: "White", lengthFt: 3, lengthMeters: 1.0, msrp: 8.50 },
+    { sku: "C6A-SLIM-7FT-WH", name: "Cat6A 28AWG Slim Patch Cord (7-Foot, White)", vendor: "Panduit", standard: "Cat6A", color: "White", lengthFt: 7, lengthMeters: 2.1, msrp: 11.00 },
+
+    // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Red - Critical / Duress / Life Safety)
+    { sku: "C6A-SLIM-6IN-RD", name: "Cat6A 28AWG Slim Patch Cord (6-Inch, Red)", vendor: "Panduit", standard: "Cat6A", color: "Red", lengthFt: 0.5, lengthMeters: 0.15, msrp: 6.20 },
+    { sku: "C6A-SLIM-1FT-RD", name: "Cat6A 28AWG Slim Patch Cord (1-Foot, Red)", vendor: "Panduit", standard: "Cat6A", color: "Red", lengthFt: 1, lengthMeters: 0.3, msrp: 7.50 },
+    { sku: "C6A-SLIM-3FT-RD", name: "Cat6A 28AWG Slim Patch Cord (3-Foot, Red)", vendor: "Panduit", standard: "Cat6A", color: "Red", lengthFt: 3, lengthMeters: 1.0, msrp: 8.50 },
+    { sku: "C6A-SLIM-7FT-RD", name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Red)", vendor: "Panduit", standard: "Cat6A", color: "Red", lengthFt: 7, lengthMeters: 2.1, msrp: 11.00 },
 
     // UniFi Etherlighting™ Ultra-Thin RJ45 Patch Cords
     {
@@ -428,5 +631,12 @@ const CABLING_CATALOG = {
       msrpPerFt: 4.10,
       baseTerminationMsrp: 420
     }
-  ],
+  ]
 };
+
+if (typeof window !== "undefined") {
+  window.CABLING_CATALOG = CABLING_CATALOG;
+}
+if (typeof module !== "undefined") {
+  module.exports = { CABLING_CATALOG };
+}

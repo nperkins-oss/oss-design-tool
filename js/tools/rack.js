@@ -123,20 +123,28 @@ function checkDeviceHostCompatibility(item, hostType) {
   const model = item.model || "";
   const modelLower = model.toLowerCase();
 
-  const isRackDev = (item.rackUnits && parseInt(item.rackUnits, 10) > 0) || 
-                    role === "Access" || role === "Core" || role === "Aggregation" || 
-                    role === "Server" || role === "Storage" || role === "UPS" || 
-                    role === "Structured Cabling" || role === "Core & Agg" || 
-                    cat === "switch" || cat === "server" || cat === "ups" ||
-                    (item.mounting && item.mounting.toLowerCase().includes("rack"));
+  const isDinOnly = (item.isDinMounted || (item.mounting && /din/i.test(item.mounting))) && 
+                    (!item.mounting || !item.mounting.includes("19\""));
+  const isZeroU = (item.rackUnits !== undefined && parseInt(item.rackUnits, 10) === 0) || isDinOnly;
+
+  const isRackDev = !isZeroU && (
+    (item.rackUnits && parseInt(item.rackUnits, 10) > 0) || 
+    (item.mounting && (item.mounting.includes("19\"") || item.mounting.toLowerCase().includes("rack")) && item.rackUnits !== 0) ||
+    ((role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Server" || role === "Storage" || role === "UPS" || role === "Structured Cabling") && item.rackUnits !== 0) ||
+    (role === "Access" && item.rackUnits !== 0 && !isDinOnly)
+  );
 
   const isSecurityDev = cat === "access_control" || role === "Access Control" || 
                         item.doorCapacity || item.controllerType || 
                         /lp1501|lp1502|lp2500|lp4502|mr52|mr50|mr16|trove|fpo|eflow/i.test(model);
 
-  const isDinDev = item.isDinMounted || /din/i.test(model) || item.mounting === "DIN" || cat === "industrial_din";
+  const isDinDev = item.isDinMounted || /din/i.test(model) || (item.mounting && /din/i.test(item.mounting)) || item.mounting === "DIN" || cat === "industrial_din";
+  const isDinCapable = isDinDev || (
+    !isRackDev &&
+    (item.rackUnits === 0 || item.shallowDepth || /flex|ultra|lite/i.test(item.sku || '') || /flex|ultra|lite/i.test(model))
+  );
 
-  const isEdgeField = !isRackDev && (
+  const isEdgeField = !isRackDev && !isDinCapable && (
                       role === "Surveillance" || role === "Video" || role === "Camera" || 
                       role === "Wireless Bridge" || role === "Wireless" || role === "Access Point" || 
                       role === "Accessory" || role === "Field" || role === "Sensor" || 
@@ -166,6 +174,7 @@ function checkDeviceHostCompatibility(item, hostType) {
   } else if (hostType === "industrial_din") {
     if (isEdgeField) return { compatible: false, matchBadge: "Field Device", advisory: "Mounts at edge field location" };
     if (isDinDev) return { compatible: true, matchBadge: "DIN-Rail Match", advisory: "" };
+    if (isDinCapable) return { compatible: true, matchBadge: "DIN-Mountable", advisory: "Attaches via TS-35 DIN-rail bracket" };
     if (isRackDev && (item.depthInches > 12 || parseInt(item.rackUnits, 10) > 1)) {
       return { compatible: false, matchBadge: "Exceeds Depth", advisory: "Full-depth 19\" unit exceeds NEMA box dimensions" };
     }
@@ -1345,9 +1354,11 @@ function autoMountAllToActiveRack() {
 
     // 1. Mount network & server gear top-to-bottom: ISP > Firewalls > Core > Aggregation > Access > Servers
     nonUpsItems.forEach(item => {
+      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 1;
+      if (rawRU === 0) return; // 0U accessories or DIN devices do not consume vertical rack rail slots
       const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (parseInt(item.rackUnits || 1, 10) * stackUnits) + ppOffset;
+      const itemHeight = (rawRU * stackUnits) + ppOffset;
       const slot = findNextAvailableSlotFromTop(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -1362,9 +1373,11 @@ function autoMountAllToActiveRack() {
 
     // 2. Mount heavy UPS / battery backup systems at the bottom of the rack (U1+) ascending
     upsItems.forEach(item => {
+      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 2;
+      if (rawRU === 0) return;
       const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (parseInt(item.rackUnits || 1, 10) * stackUnits) + ppOffset;
+      const itemHeight = (rawRU * stackUnits) + ppOffset;
       const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -1612,6 +1625,165 @@ function renderRackLocationTransferBar() {
 }
 
 // -----------------------------------------------------------
+// Physical Enclosure Catalog Hardware Specification Bar
+// -----------------------------------------------------------
+function renderEnclosureHardwareBar(activeEnc, parsed) {
+  const container = document.getElementById("enclosureHardwareBar");
+  if (!container) return;
+
+  if (!activeEnc) {
+    container.innerHTML = "";
+    container.classList.add("hidden");
+    return;
+  }
+
+  container.classList.remove("hidden");
+  const hostType = parsed.hostType || activeEnc.hostType || "equipment_rack";
+  const catalogRacks = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRacks === "function")
+    ? CatalogRegistry.getRacks(hostType)
+    : [];
+
+  const vendor = activeEnc.catalogVendor || "Generic";
+  const sku = activeEnc.catalogSku || "CUSTOM-RACK";
+  const model = activeEnc.catalogModel || activeEnc.name || "Physical Enclosure";
+  const msrp = (activeEnc.msrp !== undefined) ? activeEnc.msrp : 0;
+  const maxWeight = activeEnc.maxWeightLbs || (hostType === "equipment_rack" ? 3000 : 250);
+  const tareWeight = activeEnc.tareWeightLbs || (hostType === "equipment_rack" ? 275 : 45);
+  const depth = activeEnc.depthInches || (hostType === "equipment_rack" ? 42 : 12);
+  const doorType = activeEnc.doorType || "Standard";
+  const inBOM = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isEnclosureInBOM === "function")
+    ? FacilityStore.isEnclosureInBOM(activeEnc.id)
+    : Boolean(activeEnc.inBOM);
+
+  // Form factor label
+  let formFactorBadge = "";
+  if (hostType === "equipment_rack") {
+    formFactorBadge = `${activeEnc.heightU || activeRackHeight || 24}U EIA-310-D`;
+  } else if (hostType === "security_cabinet") {
+    formFactorBadge = `${activeEnc.subplateBays || 8}-Bay Subplate`;
+  } else if (hostType === "industrial_din") {
+    formFactorBadge = `${activeEnc.dinRails || 2}x DIN Rail (NEMA 4X)`;
+  } else if (hostType === "architectural_backboard") {
+    formFactorBadge = `${activeEnc.widthFt || 4}'x${activeEnc.heightFt || 8}' Plywood`;
+  } else {
+    formFactorBadge = "Structural Mount";
+  }
+
+  // Build catalog part selector options
+  let optionsHtml = "";
+  if (catalogRacks.length > 0) {
+    optionsHtml = catalogRacks.map(r => {
+      const isSelected = r.sku === sku || (r.sku && sku && r.sku.toLowerCase() === sku.toLowerCase());
+      return `<option value="${escapeHTML(r.sku)}" ${isSelected ? 'selected' : ''}>${escapeHTML(r.vendor)} ${escapeHTML(r.sku)} - ${escapeHTML(r.model)} ($${(r.msrp || 0).toLocaleString()})</option>`;
+    }).join('');
+  }
+
+  // If current part is custom or not in catalogRacks, add it
+  const matchInList = catalogRacks.some(r => r.sku === sku);
+  if (!matchInList && sku) {
+    optionsHtml = `<option value="${escapeHTML(sku)}" selected>${escapeHTML(vendor)} ${escapeHTML(sku)} (Custom Model)</option>` + optionsHtml;
+  }
+
+  container.innerHTML = `
+    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-indigo-500/40 rounded-xl p-3 shadow-lg select-none">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <!-- Left: Hardware Identity & Specs -->
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 shadow-inner">
+            <i data-lucide="${hostType === 'security_cabinet' ? 'shield' : (hostType === 'industrial_din' ? 'box' : (hostType === 'architectural_backboard' ? 'layers' : 'server'))}" class="w-5 h-5"></i>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 flex-wrap mb-0.5">
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/60 shadow-sm flex items-center gap-1">
+                <i data-lucide="tag" class="w-2.5 h-2.5"></i>
+                ${escapeHTML(vendor)} &bull; ${escapeHTML(sku)}
+              </span>
+              <span class="text-xs font-bold text-white truncate max-w-xs md:max-w-md" title="${escapeHTML(model)}">
+                ${escapeHTML(model)}
+              </span>
+            </div>
+            <!-- Dimension & Rating Badges -->
+            <div class="flex items-center gap-1.5 flex-wrap text-[9.5px] font-mono text-slate-400">
+              <span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-slate-300 font-bold">${formFactorBadge}</span>
+              ${depth ? `<span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-cyan-300 font-bold">${depth}" Usable Depth</span>` : ''}
+              <span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-emerald-300 font-bold">${maxWeight.toLocaleString()} lbs Capacity</span>
+              <span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-slate-400">${tareWeight} lbs Tare</span>
+              ${doorType ? `<span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-purple-300">${escapeHTML(doorType)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Real Catalog Switcher Dropdown & 1-Click BOM Toggle -->
+        <div class="flex items-center gap-2.5 ml-auto">
+          <!-- Catalog Hardware Model Switcher -->
+          <div class="flex items-center gap-1.5">
+            <label class="text-[10px] uppercase font-bold text-slate-400 font-mono hidden sm:inline">Model:</label>
+            <select 
+              id="enclosureModelSelect" 
+              onchange="window.handleEnclosureHardwareChange('${activeEnc.id}', this.value)"
+              class="bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 font-medium focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer max-w-[210px] sm:max-w-[260px] truncate"
+              title="Select physical enclosure hardware from catalog"
+            >
+              ${optionsHtml}
+            </select>
+          </div>
+
+          <!-- MSRP Price Display -->
+          <div class="text-right px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800/80">
+            <span class="text-[9px] uppercase font-mono text-slate-400 block leading-tight">MSRP</span>
+            <span class="text-xs font-mono font-bold text-emerald-400">$${msrp.toLocaleString()}</span>
+          </div>
+
+          <!-- 1-Click Project BOM & Quote Toggle Button -->
+          <button 
+            type="button"
+            onclick="window.toggleEnclosureBOM('${activeEnc.id}')"
+            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${inBOM ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40' : 'bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700'}"
+            title="${inBOM ? 'Physical enclosure included in Project BOM Quote. Click to remove.' : 'Click to include physical enclosure frame in Project BOM & Quote'}"
+          >
+            <i data-lucide="${inBOM ? 'check' : 'plus'}" class="w-3.5 h-3.5"></i>
+            <span>${inBOM ? 'In BOM Quote' : '+ Add to Quote'}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleEnclosureHardwareChange(enclosureId, sku) {
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.setEnclosureCatalogPart === "function") {
+    FacilityStore.setEnclosureCatalogPart(enclosureId, sku, true);
+    loadRackSettings();
+    if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+    if (typeof renderFacilityManager === "function") renderFacilityManager();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof showToast === "function") {
+      const rack = typeof CatalogRegistry !== "undefined" ? CatalogRegistry.getRack(sku) : null;
+      showToast(`Enclosure hardware updated to ${rack ? rack.vendor + ' ' + rack.sku : sku}`);
+    }
+  }
+}
+window.handleEnclosureHardwareChange = handleEnclosureHardwareChange;
+
+function toggleEnclosureBOM(enclosureId) {
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.syncEnclosureToBOM === "function") {
+    const isCurrentlyIn = FacilityStore.isEnclosureInBOM(enclosureId);
+    FacilityStore.syncEnclosureToBOM(enclosureId, !isCurrentlyIn);
+    if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+    if (typeof renderFacilityManager === "function") renderFacilityManager();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof showToast === "function") {
+      showToast(!isCurrentlyIn ? "Enclosure added to Project BOM & Quote" : "Enclosure removed from Project BOM");
+    }
+  }
+}
+window.toggleEnclosureBOM = toggleEnclosureBOM;
+
+// -----------------------------------------------------------
 // Main Visualizer Router
 // -----------------------------------------------------------
 function renderRackVisualizer() {
@@ -1625,6 +1797,9 @@ function renderRackVisualizer() {
   const rackLocations = locations.filter(l => l.hostType !== "field" && !l.isField);
 
   if (rackLocations.length === 0 || !activeRackId) {
+    const barEl = document.getElementById("enclosureHardwareBar");
+    if (barEl) { barEl.innerHTML = ""; barEl.classList.add("hidden"); }
+
     frame.innerHTML = `
       <div class="h-full min-h-[380px] flex flex-col items-center justify-center p-8 text-center bg-slate-950/60 rounded-xl border border-dashed border-slate-800">
         <div class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 mb-4">
@@ -1656,6 +1831,10 @@ function renderRackVisualizer() {
   const hostType = parsed.hostType || "equipment_rack";
   const enclosures = FacilityStore.getEnclosures();
   const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === (parsed.hostName || '').toLowerCase()) || null;
+
+  if (activeEnc && activeEnc.heightU && activeEnc.hostType === "equipment_rack") {
+    activeRackHeight = activeEnc.heightU;
+  }
 
   const assignedItems = [];
   const unassignedItems = [];
@@ -1723,6 +1902,9 @@ function renderRackVisualizer() {
     `;
   }
 
+  // Render Enclosure Hardware Specification Bar directly above elevation
+  renderEnclosureHardwareBar(activeEnc, parsed);
+
   // Render Prominent Staging Dock at the TOP of elevation column (Requirement 2)
   renderRackUnassignedStagingDock(unassignedItems, parsed, activeEnc);
   renderHostStagingDrawer(unassignedItems, parsed, activeEnc);
@@ -1755,7 +1937,7 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
 
   assignedItems.forEach(item => {
     const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-    const baseRU = parseInt(item.rackUnits || 1, 10);
+    const baseRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 0) : 1;
     const hasPPBetween = (stackUnits >= 2 && !!item.patchPanelBetween);
     const hasHCMBetween = (stackUnits >= 2 && !!item.cableManagerBetween);
     const isStdPod = !!item.standardPod;
@@ -1783,7 +1965,7 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
   if (rackViewOrientation === "rear") {
     renderEquipmentRackRearFrame(frame, assignedItems, slots, activeRackHeight, activeEnc);
   } else {
-    renderEquipmentRackFrontFrame(frame, assignedItems, slots, activeRackHeight);
+    renderEquipmentRackFrontFrame(frame, assignedItems, slots, activeRackHeight, activeEnc);
   }
 
   const badgeEl = document.getElementById("rackUtilizationBadge");
@@ -1851,8 +2033,10 @@ function isFiberOrFirewall(item) {
 
 function getRackItemHeight(it) {
   if (!it) return 1;
+  const isZeroU = (it.rackUnits !== undefined && it.rackUnits !== null && parseInt(it.rackUnits, 10) === 0) || it.isDinMounted || (it.mounting && it.mounting.toLowerCase() === "din");
+  if (isZeroU) return 0;
   const stack = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
-  const baseRU = parseInt(it.rackUnits, 10) || 1;
+  const baseRU = (it.rackUnits !== undefined && it.rackUnits !== null) ? (parseInt(it.rackUnits, 10) || 0) : 1;
 
   if (it.standardPod) {
     // Standard Pod: 1U 24P Patch panel directly above and 1U 24P patch panel directly below each switch unit
@@ -1865,7 +2049,7 @@ function getRackItemHeight(it) {
   return (baseRU * stack) + interleave;
 }
 
-function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
+function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, activeEnc) {
   let railHTML = "";
 
   for (let u = maxU; u >= 1; u--) {
@@ -1911,9 +2095,19 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
                       </button>
                     ` : ''}
                     <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">FRONT</span>
-                    <!-- Status LEDs or Passive Badge -->
+                    <!-- Status LEDs or Passive/UPS Badge -->
                     ${(it.role === "Structured Cabling" || it.sku?.startsWith("PP-") || it.sku?.startsWith("HCM-")) ? `
                       <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono font-bold text-[8.5px]">PASSIVE INFRA</span>
+                    ` : (it.role === "UPS" || it.category === "ups") ? `
+                      <span class="px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-600/60 font-mono font-bold text-[8.5px] flex items-center gap-1 shadow-sm" title="UPS Battery Protected">
+                        <i data-lucide="zap" class="w-2.5 h-2.5 text-amber-400"></i>
+                        <span>UPS BATTERY PROTECTED</span>
+                      </span>
+                    ` : (it.role === "Battery Pack" || it.type === "ebp" || it.isEbp) ? `
+                      <span class="px-1.5 py-0.2 rounded bg-purple-950/90 text-purple-300 border border-purple-600/60 font-mono font-bold text-[8.5px] flex items-center gap-1 shadow-sm" title="External Battery Pack">
+                        <i data-lucide="battery-charging" class="w-2.5 h-2.5 text-purple-400"></i>
+                        <span>EXTENDED BATTERY PACK</span>
+                      </span>
                     ` : `
                       <div class="flex items-center gap-1 text-[8px] font-mono">
                         <span class="px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold" title="Power Supply Good">PWR ●</span>
@@ -1930,6 +2124,10 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
                     <span>&bull;</span>
                     ${(it.role === "Structured Cabling" || it.sku?.startsWith("PP-") || it.sku?.startsWith("HCM-")) ? `
                       <span class="text-purple-300 font-semibold">${it.ports ? `${it.ports}x Keystone Ports` : (it.model.includes("Manager") ? "Cable Management" : "Passive Panel")}</span>
+                    ` : (it.role === "UPS" || it.category === "ups") ? `
+                      <span class="text-emerald-400 font-semibold">${it.va || 1500}VA / ${it.powerWatts || 1000}W Rated &bull; Inverter Output</span>
+                    ` : (it.role === "Battery Pack" || it.type === "ebp" || it.isEbp) ? `
+                      <span class="text-purple-300 font-semibold">${it.dcVoltage || 72}VDC Bus &bull; Multi-Hour Standby Module</span>
                     ` : `
                       ${portPreview ? `<span class="text-indigo-300 font-semibold">${portPreview}</span><span>&bull;</span>` : ''}
                       <span>${totalBaseWatts}W Base${totalPoEWatts > 0 ? ` + ${totalPoEWatts}W PoE` : ''}</span>
@@ -2207,7 +2405,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
                 <div class="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap text-[9px] font-mono text-slate-400">
                   ${Array.from({ length: stackUnits }, (_, idx) => `
                     <span class="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800 ${idx === 0 ? 'text-sky-300 font-bold border-sky-500/40' : 'text-slate-300'}">
-                      Unit ${idx + 1} (${idx === 0 ? 'Master Chassis' : 'Member Chassis'} &bull; ${parseInt(it.rackUnits || 1, 10)}U)
+                      Unit ${idx + 1} (${idx === 0 ? 'Master Chassis' : 'Member Chassis'} &bull; ${(it.rackUnits !== undefined && it.rackUnits !== null) ? parseInt(it.rackUnits, 10) : 1}U)
                     </span>
                   `).join('')}
                   <span class="text-indigo-400 font-semibold flex items-center gap-1">
@@ -2236,16 +2434,37 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU) {
   const vertChannels = getRackVerticalChannels();
   const activeEnclosures = FacilityStore.getEnclosures();
   const parsedHost = FacilityStore.parse(activeRackId);
-  const activeEncObj = activeEnclosures.find(e => e.id === parsedHost.hostId) || activeEnclosures.find(e => e.name.toLowerCase() === (parsedHost.hostName || '').toLowerCase()) || null;
+  const activeEncObj = activeEnc || activeEnclosures.find(e => e.id === parsedHost.hostId) || activeEnclosures.find(e => e.name.toLowerCase() === (parsedHost.hostName || '').toLowerCase()) || null;
   const pduMetrics = calculateRackPduMetrics(assignedItems, activeEncObj);
 
   const leftColHtml = renderVerticalChannelHtml("frontLeft", vertChannels.frontLeft, pduMetrics, false);
   const rightColHtml = renderVerticalChannelHtml("frontRight", vertChannels.frontRight, pduMetrics, false);
 
+  const vendor = activeEncObj?.catalogVendor || "EIA-310-D";
+  const sku = activeEncObj?.catalogSku || `${maxU}U Standard Rack`;
+  const model = activeEncObj?.catalogModel || "19\" Equipment Rack";
+  const depth = activeEncObj?.depthInches || 42;
+  const maxWt = activeEncObj?.maxWeightLbs || 3000;
+
+  const topFasciaHtml = `
+    <div class="px-3 py-1.5 mb-1.5 rounded-lg bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/80 shadow-md flex items-center justify-between text-xs select-none">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
+        <span class="font-mono font-bold text-slate-200 tracking-wide uppercase text-[11px] truncate">${escapeHTML(vendor)} &bull; ${escapeHTML(sku)}</span>
+        <span class="text-[10px] text-slate-400 hidden md:inline truncate max-w-[220px]">${escapeHTML(model)}</span>
+      </div>
+      <div class="flex items-center gap-2 font-mono text-[10px] text-slate-400 shrink-0">
+        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-cyan-300 font-bold">${depth}" Depth</span>
+        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-emerald-300 font-bold">${maxWt.toLocaleString()} lbs Max</span>
+      </div>
+    </div>
+  `;
+
   frame.innerHTML = `
     <div class="flex gap-2 sm:gap-3 w-full items-stretch">
       ${leftColHtml}
       <div class="flex-1 min-w-0 space-y-1">
+        ${topFasciaHtml}
         ${railHTML}
       </div>
       ${rightColHtml}
@@ -2607,11 +2826,33 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
     </div>
   ` : '';
 
+  const targetEnc = activeEnc;
+  const vendor = targetEnc?.catalogVendor || "EIA-310-D";
+  const sku = targetEnc?.catalogSku || `${maxU}U Standard Rack`;
+  const model = targetEnc?.catalogModel || "19\" Equipment Rack";
+  const depth = targetEnc?.depthInches || 42;
+  const maxWt = targetEnc?.maxWeightLbs || 3000;
+
+  const topFasciaHtml = `
+    <div class="px-3 py-1.5 mb-1.5 rounded-lg bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/80 shadow-md flex items-center justify-between text-xs select-none">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
+        <span class="font-mono font-bold text-slate-200 tracking-wide uppercase text-[11px] truncate">${escapeHTML(vendor)} &bull; ${escapeHTML(sku)} [REAR]</span>
+        <span class="text-[10px] text-slate-400 hidden md:inline truncate max-w-[220px]">${escapeHTML(model)}</span>
+      </div>
+      <div class="flex items-center gap-2 font-mono text-[10px] text-slate-400 shrink-0">
+        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-cyan-300 font-bold">${depth}" Depth</span>
+        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-emerald-300 font-bold">${maxWt.toLocaleString()} lbs Max</span>
+      </div>
+    </div>
+  `;
+
   frame.innerHTML = `
     ${topHorizontalPduHtml}
     <div class="flex gap-2 sm:gap-3 w-full items-stretch">
       ${leftColHtml}
       <div class="flex-1 min-w-0 space-y-1">
+        ${topFasciaHtml}
         ${rearRailHTML}
       </div>
       ${rightColHtml}
@@ -2655,11 +2896,12 @@ function renderSecurityCabinetFrame(frame, assignedItems, unassignedItems, parse
           <i data-lucide="shield-check" class="w-4 h-4"></i>
         </div>
         <div>
-          <span class="text-xs font-bold text-white block">Trove / LifeSafety Subplate Chassis</span>
-          <span class="text-[10px] text-emerald-400 font-mono">${totalBays} Modular Bays &bull; ${dcVoltage === 'dual_12_24' ? 'Dual 12V / 24VDC Bus' : '24VDC Lock Power'}</span>
+          <span class="text-xs font-bold text-white block">${escapeHTML(activeEnc?.catalogVendor || 'Altronix')} ${escapeHTML(activeEnc?.catalogSku || 'Trove')} &bull; ${escapeHTML(activeEnc?.catalogModel || 'Access & Power Integration Enclosure')}</span>
+          <span class="text-[10px] text-emerald-400 font-mono">${totalBays} Modular Subplate Bays &bull; ${dcVoltage === 'dual_12_24' ? 'Dual 12V / 24VDC Bus' : '24VDC Lock Power'} &bull; Max ${activeEnc?.maxWeightLbs || 150} lbs Rating</span>
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <span class="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800">$${(activeEnc?.msrp || 0).toLocaleString()} MSRP</span>
         <span class="text-[10px] font-mono text-slate-400 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Tamper Monitored</span>
       </div>
     </div>
@@ -2790,13 +3032,14 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
           <i data-lucide="${isPoleMounted ? 'radio-tower' : 'box'}" class="w-4 h-4"></i>
         </div>
         <div>
-          <span class="text-xs font-bold text-white block">NEMA 4X / IP66 Weatherproof Enclosure</span>
+          <span class="text-xs font-bold text-white block">${escapeHTML(activeEnc?.catalogVendor || 'Altelix')} ${escapeHTML(activeEnc?.catalogSku || 'NEMA-4X')} &bull; ${escapeHTML(activeEnc?.catalogModel || 'Weatherproof Industrial Enclosure')}</span>
           <span class="text-[10px] ${isPoleMounted ? 'text-cyan-400' : 'text-amber-400'} font-mono">
-            ${isPoleMounted ? 'Pole Mount (Stainless Steel Banding)' : 'Wall Mount (Heavy-Duty Strut Flanges)'} &bull; ${numRails}x 35mm Rails &bull; ${railLengthMm}mm Width
+            ${isPoleMounted ? 'Pole Mount (Stainless Steel Banding)' : 'Wall Mount (Heavy-Duty Strut Flanges)'} &bull; ${numRails}x 35mm Rails &bull; ${railLengthMm}mm Width &bull; Max ${activeEnc?.maxWeightLbs || 100} lbs
           </span>
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800">$${(activeEnc?.msrp || 0).toLocaleString()} MSRP</span>
         ${isPoleMounted ? `
           <button 
             onclick="switchActiveRackElevation('${parsed.space} • Pole Mount')"
@@ -3101,11 +3344,12 @@ function renderArchitecturalBackboardFrame(frame, assignedItems, unassignedItems
           <i data-lucide="layers" class="w-4 h-4"></i>
         </div>
         <div>
-          <span class="text-xs font-bold text-white block">AC-Grade Fire-Rated Plywood Backboard</span>
+          <span class="text-xs font-bold text-white block">${escapeHTML(activeEnc?.catalogVendor || 'Superior Telecom')} ${escapeHTML(activeEnc?.catalogSku || 'BB-4X8-FR')} &bull; ${escapeHTML(activeEnc?.catalogModel || 'Fire-Retardant Plywood Backboard')}</span>
           <span class="text-[10px] text-purple-400 font-mono">${widthFt}' x ${heightFt}' (${sqFt} sq ft) &bull; Fire-Marshal Rated Stamp &bull; NEC 110.26 Compliant</span>
         </div>
       </div>
       <div class="flex items-center gap-2">
+        <span class="text-[10px] font-mono font-bold text-purple-400 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-800">$${(activeEnc?.msrp || 0).toLocaleString()} MSRP</span>
         <span class="text-[10px] font-mono text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800">3/4" Thick Plywood</span>
       </div>
     </div>
@@ -3435,9 +3679,11 @@ function mountItemToFirstAvailableSlot(instanceId) {
     // Calculate total required RU to ensure fit
     let totalRU = 0;
     mountableItems.forEach(item => {
+      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 1;
+      if (rawRU === 0) return; // 0U items do not consume rack rail slots
       const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const h = (parseInt(item.rackUnits || 1, 10) * stackUnits) + ppOffset;
+      const h = (rawRU * stackUnits) + ppOffset;
       totalRU += h;
     });
 
@@ -3473,9 +3719,11 @@ function mountItemToFirstAvailableSlot(instanceId) {
 
     // 1. Mount network & server gear top-to-bottom: ISP > Firewalls > Core > Aggregation > Access > Servers
     nonUpsItems.forEach(item => {
+      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 1;
+      if (rawRU === 0) return;
       const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (parseInt(item.rackUnits || 1, 10) * stackUnits) + ppOffset;
+      const itemHeight = (rawRU * stackUnits) + ppOffset;
       const slot = findNextAvailableSlotFromTop(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -3487,9 +3735,11 @@ function mountItemToFirstAvailableSlot(instanceId) {
 
     // 2. Mount heavy UPS / battery backup systems at the bottom of the rack (U1+) ascending
     upsItems.forEach(item => {
+      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 2;
+      if (rawRU === 0) return;
       const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (parseInt(item.rackUnits || 1, 10) * stackUnits) + ppOffset;
+      const itemHeight = (rawRU * stackUnits) + ppOffset;
       const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -3734,8 +3984,11 @@ function handleRackSlotDrop(e, targetU) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
+  const dropHostType = (typeof FacilityStore !== "undefined" && typeof FacilityStore.parse === "function") 
+    ? (FacilityStore.parse(activeRackId).hostType || "equipment_rack")
+    : "equipment_rack";
   if (typeof autoSelectMountingForHost === "function") {
-    autoSelectMountingForHost(item, activeRackId, "equipment_rack");
+    autoSelectMountingForHost(item, activeRackId, dropHostType);
   }
 
   const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
@@ -3823,7 +4076,7 @@ function updateSwitchStackFromRack(instanceId, newCount) {
   const targetCount = Math.max(1, Math.min(8, parseInt(newCount, 10) || 1));
   const currentAssignedU = parseInt(item.rackSlot, 10);
   const isMounted = currentAssignedU && !isNaN(currentAssignedU) && currentAssignedU >= 1;
-  const baseRU = parseInt(item.rackUnits, 10) || 1;
+  const baseRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 0) : 1;
 
   if (targetCount === 1) {
     item.stackedUnits = 0;
@@ -3926,7 +4179,7 @@ function toggleStackPatchPanel(instanceId) {
 
   const willEnable = !item.patchPanelBetween;
   const stackUnits = item.stackedUnits;
-  const baseRU = parseInt(item.rackUnits || 1, 10);
+  const baseRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 0) : 1;
   const currentAssignedU = parseInt(item.rackSlot, 10);
 
   if (willEnable && currentAssignedU && currentAssignedU >= 1) {
@@ -4508,6 +4761,339 @@ function handleBackboardQuadDrop(e, quadId) {
 // -----------------------------------------------------------
 // Telemetry & Engineering Calculations (Per Host Type)
 // -----------------------------------------------------------
+window.currentUpsTargetRuntime = window.currentUpsTargetRuntime || 15;
+window.currentUpsSafetyMargin = window.currentUpsSafetyMargin || 0.75;
+window.currentUpsVoltage = window.currentUpsVoltage || 120;
+window.currentUpsModelSku = window.currentUpsModelSku || "auto";
+window.currentUpsLoadMode = window.currentUpsLoadMode || "connected"; // "connected" | "nameplate"
+window.currentUpsBatteryAging = window.currentUpsBatteryAging || 0.85; // 0.85 (IEEE 1188 End of Life) | 1.0 (New)
+window.currentUpsComplianceStandard = window.currentUpsComplianceStandard || "ul294"; // "ul294" | "sla_60m" | "sla_30m" | "sla_15m" | "none"
+
+window.handleUpsRuntimeChange = function(minutes) {
+  window.currentUpsTargetRuntime = Number(minutes) || 15;
+  renderRackVisualizer();
+};
+
+window.handleUpsMarginChange = function(margin) {
+  window.currentUpsSafetyMargin = Number(margin) || 0.75;
+  renderRackVisualizer();
+};
+
+window.handleUpsVoltageChange = function(volts) {
+  window.currentUpsVoltage = Number(volts) || 120;
+  renderRackVisualizer();
+};
+
+window.handleUpsModelChange = function(sku) {
+  window.currentUpsModelSku = sku || "auto";
+  renderRackVisualizer();
+};
+
+window.handleUpsLoadModeChange = function(mode) {
+  window.currentUpsLoadMode = mode;
+  renderRackVisualizer();
+};
+
+window.handleUpsAgingChange = function(aging) {
+  window.currentUpsBatteryAging = Number(aging) || 0.85;
+  renderRackVisualizer();
+};
+
+window.handleUpsComplianceStandardChange = function(std) {
+  window.currentUpsComplianceStandard = std;
+  if (std === "ul294") window.currentUpsTargetRuntime = 240;
+  else if (std === "nfpa72") window.currentUpsTargetRuntime = 1440;
+  else if (std === "sla_120m") window.currentUpsTargetRuntime = 120;
+  else if (std === "sla_60m") window.currentUpsTargetRuntime = 60;
+  else if (std === "sla_30m") window.currentUpsTargetRuntime = 30;
+  else if (std === "sla_15m") window.currentUpsTargetRuntime = 15;
+  renderRackVisualizer();
+};
+
+window.addSpecificEbpCountToRack = function(targetEbpCount) {
+  if (!activeRackId || typeof projectBOM === "undefined") {
+    if (typeof showToast === "function") showToast("Please select an active rack location first.");
+    return;
+  }
+  const hostId = FacilityStore.normalize(activeRackId);
+  const assignedItems = projectBOM.filter(i => FacilityStore.normalize(i.closetName || i.location || i.rackId) === hostId);
+  let existingUps = assignedItems.find(i => i.role === "UPS" || i.category === "ups" || i.type === "ups");
+
+  if (!existingUps) {
+    window.addRecommendedUpsAndEbpToRack();
+    return;
+  }
+
+  // Remove existing EBPs from this host so we set the exact count requested
+  projectBOM = projectBOM.filter(i => !(FacilityStore.normalize(i.closetName || i.location || i.rackId) === hostId && (i.role === "Battery Pack" || i.type === "ebp" || i.isEbp)));
+
+  if (targetEbpCount <= 0) {
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") FacilityStore.notifyWorkspaceChange();
+    renderRackVisualizer();
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof showToast === "function") showToast("Configured UPS for internal battery only.");
+    return;
+  }
+
+  // Determine compatible EBP model
+  let ebpCatalog = [];
+  if (typeof CatalogRegistry !== "undefined" && CatalogRegistry.infrastructure && Array.isArray(CatalogRegistry.infrastructure.ups)) {
+    ebpCatalog = CatalogRegistry.infrastructure.ups.filter(a => a.type === "ebp" || a.isEbp);
+  }
+  if (ebpCatalog.length === 0 && typeof ACCESSORY_DATABASE !== "undefined") {
+    ebpCatalog = ACCESSORY_DATABASE.filter(a => a.type === "ebp" || a.isEbp);
+  }
+
+  const ebpDef = ebpCatalog.find(e => e.compatibleUps?.includes(existingUps.sku) || (existingUps.ebpModel && e.sku === existingUps.ebpModel)) || ebpCatalog[0] || {
+    id: "ebp-bp72vrm2u",
+    sku: "BP72VRM2U",
+    model: `${existingUps.vendor || 'Tripp Lite'} BP72VRM2U External Battery Pack (2U)`,
+    vendor: existingUps.vendor || "Tripp Lite",
+    rackUnits: 2,
+    msrp: 899,
+    weightLbs: 68
+  };
+
+  const occupiedSlots = new Set();
+  projectBOM.filter(i => FacilityStore.normalize(i.closetName || i.location || i.rackId) === hostId).forEach(it => {
+    if (it.rackSlot) {
+      const u = it.rackSlot;
+      const h = getRackItemHeight(it);
+      for (let i = 0; i < h; i++) occupiedSlots.add(u + i);
+    }
+  });
+
+  const locations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocations() : [];
+  const activeEnc = locations.find(l => l.name === activeRackId || l.id === activeRackId);
+  const maxRU = (activeEnc && activeEnc.rackUnits) ? activeEnc.rackUnits : 42;
+
+  function findSlot(neededRU) {
+    for (let u = 1; u <= maxRU - neededRU + 1; u++) {
+      let fits = true;
+      for (let s = 0; s < neededRU; s++) {
+        if (occupiedSlots.has(u + s)) { fits = false; break; }
+      }
+      if (fits) {
+        for (let s = 0; s < neededRU; s++) occupiedSlots.add(u + s);
+        return u;
+      }
+    }
+    return null;
+  }
+
+  let added = 0;
+  const ebpRU = ebpDef.rackUnits || 2;
+  for (let q = 0; q < targetEbpCount; q++) {
+    const slot = findSlot(ebpRU);
+    if (!slot) {
+      if (typeof showToast === "function") showToast(`Rack full: No continuous ${ebpRU}U slot available for EBP #${q + 1}.`);
+      break;
+    }
+    const instId = "inst-ebp-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6);
+    projectBOM.push({
+      instanceId: instId,
+      id: ebpDef.id,
+      sku: ebpDef.sku,
+      model: ebpDef.model || ebpDef.name,
+      name: ebpDef.name || ebpDef.model,
+      vendor: ebpDef.vendor,
+      category: "ups",
+      type: "ebp",
+      role: "Battery Pack",
+      isEbp: true,
+      rackUnits: ebpRU,
+      rackSlot: slot,
+      closetName: activeRackId,
+      location: activeRackId,
+      rackId: activeRackId,
+      msrp: ebpDef.msrp || 899,
+      qty: 1,
+      baseWatts: 0,
+      powerWatts: 0,
+      weightLbs: ebpDef.weightLbs || 68
+    });
+    added++;
+  }
+
+  if (added > 0) {
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    renderRackVisualizer();
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
+    if (typeof showToast === "function") showToast(`Added ${added}x ${ebpDef.sku} External Battery Pack(s) to ${activeRackId}.`);
+  }
+};
+
+window.addRecommendedUpsAndEbpToRack = function() {
+  if (!activeRackId || typeof projectBOM === "undefined") {
+    if (typeof showToast === "function") showToast("Please select an active rack location first.");
+    return;
+  }
+
+  const assignedItems = projectBOM.filter(i => (i.closetName === activeRackId || i.location === activeRackId || i.rackId === activeRackId));
+  const plan = (typeof NetworkSizer !== "undefined" && typeof NetworkSizer.calculateUPSPlan === "function")
+    ? NetworkSizer.calculateUPSPlan(assignedItems, {
+        targetRuntimeMinutes: window.currentUpsTargetRuntime,
+        safetyMargin: window.currentUpsSafetyMargin,
+        preferredVoltage: window.currentUpsVoltage,
+        selectedModelSku: window.currentUpsModelSku
+      })
+    : null;
+
+  if (!plan || !plan.upsModel) {
+    if (typeof showToast === "function") showToast("Unable to calculate UPS recommendation.");
+    return;
+  }
+
+  // Scan occupied rack slots in the active rack
+  const occupiedSlots = new Set();
+  assignedItems.forEach(it => {
+    if (it.rackSlot && typeof it.rackSlot === "number") {
+      const u = it.rackSlot;
+      const h = getRackItemHeight(it);
+      for (let i = 0; i < h; i++) {
+        occupiedSlots.add(u + i);
+      }
+    }
+  });
+
+  const locations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocations() : [];
+  const activeEnc = locations.find(l => l.name === activeRackId || l.id === activeRackId);
+  const maxRU = (activeEnc && activeEnc.rackUnits) ? activeEnc.rackUnits : 42;
+
+  // Helper to find lowest available continuous slot from bottom (U1+)
+  function findLowestOpenSlot(neededRU) {
+    for (let u = 1; u <= maxRU - neededRU + 1; u++) {
+      let fits = true;
+      for (let s = 0; s < neededRU; s++) {
+        if (occupiedSlots.has(u + s)) {
+          fits = false;
+          break;
+        }
+      }
+      if (fits) {
+        for (let s = 0; s < neededRU; s++) occupiedSlots.add(u + s);
+        return u;
+      }
+    }
+    return null;
+  }
+
+  let unitsAdded = 0;
+  const addedSkus = [];
+
+  // Add Recommended UPS Units
+  for (let q = 0; q < plan.upsQty; q++) {
+    const upsRU = plan.upsModel.rackUnits || 2;
+    const slot = findLowestOpenSlot(upsRU);
+    if (!slot) {
+      if (typeof showToast === "function") showToast(`Rack full: No continuous ${upsRU}U slot available at bottom for UPS.`);
+      break;
+    }
+    const instId = "inst-ups-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6);
+    projectBOM.push({
+      instanceId: instId,
+      id: plan.upsModel.id || plan.upsModel.sku,
+      sku: plan.upsModel.sku,
+      model: plan.upsModel.model || plan.upsModel.name,
+      name: plan.upsModel.name || plan.upsModel.model,
+      vendor: plan.upsModel.vendor || "Tripp Lite",
+      category: "ups",
+      type: "ups",
+      role: "UPS",
+      rackUnits: upsRU,
+      rackSlot: slot,
+      closetName: activeRackId,
+      location: activeRackId,
+      rackId: activeRackId,
+      msrp: plan.upsModel.msrp || 1199,
+      qty: 1,
+      baseWatts: plan.upsModel.baseWatts || 30,
+      powerWatts: plan.upsModel.powerWatts || 1000,
+      weightLbs: plan.upsModel.weightLbs || 60,
+      receptacles: plan.upsModel.receptacles,
+      inputConnector: plan.upsModel.inputConnector,
+      keyFeatures: plan.upsModel.keyFeatures
+    });
+    unitsAdded++;
+    addedSkus.push(`${plan.upsModel.sku} (U${slot})`);
+  }
+
+  // Add EBP Units if needed and supported
+  if (plan.totalEbpQty > 0 && plan.hasEbpSupport) {
+    let ebpCatalog = [];
+    if (typeof CatalogRegistry !== "undefined" && CatalogRegistry.infrastructure && Array.isArray(CatalogRegistry.infrastructure.ups)) {
+      ebpCatalog = CatalogRegistry.infrastructure.ups.filter(a => a.type === "ebp" || a.isEbp);
+    }
+    if (ebpCatalog.length === 0 && typeof ACCESSORY_DATABASE !== "undefined") {
+      ebpCatalog = ACCESSORY_DATABASE.filter(a => a.type === "ebp" || a.isEbp);
+    }
+    const ebpDef = ebpCatalog.find(e => e.sku === plan.ebpModel || e.model?.includes(plan.ebpModel) || e.id?.includes(plan.ebpModel.toLowerCase())) || {
+      id: "ebp-" + plan.ebpModel.toLowerCase(),
+      sku: plan.ebpModel,
+      model: `${plan.upsModel.vendor} ${plan.ebpModel} External Battery Module (${plan.ebpRackHeight || 2}U)`,
+      name: `${plan.upsModel.vendor} ${plan.ebpModel} External Battery Module (${plan.ebpRackHeight || 2}U)`,
+      vendor: plan.upsModel.vendor,
+      rackUnits: plan.ebpRackHeight || 2,
+      msrp: 899,
+      weightLbs: 70
+    };
+
+    for (let eq = 0; eq < plan.totalEbpQty; eq++) {
+      const ebpRU = ebpDef.rackUnits || plan.ebpRackHeight || 2;
+      const slot = findLowestOpenSlot(ebpRU);
+      if (!slot) {
+        if (typeof showToast === "function") showToast(`Rack full: No continuous ${ebpRU}U slot available for EBP.`);
+        break;
+      }
+      const instId = "inst-ebp-" + Date.now() + "-" + Math.random().toString(36).substr(2, 6);
+      projectBOM.push({
+        instanceId: instId,
+        id: ebpDef.id,
+        sku: ebpDef.sku,
+        model: ebpDef.model || ebpDef.name,
+        name: ebpDef.name || ebpDef.model,
+        vendor: ebpDef.vendor,
+        category: "ups",
+        type: "ebp",
+        role: "Battery Pack",
+        isEbp: true,
+        rackUnits: ebpRU,
+        rackSlot: slot,
+        closetName: activeRackId,
+        location: activeRackId,
+        rackId: activeRackId,
+        msrp: ebpDef.msrp || 899,
+        qty: 1,
+        baseWatts: 0,
+        powerWatts: 0,
+        weightLbs: ebpDef.weightLbs || 70,
+        keyFeatures: ebpDef.keyFeatures
+      });
+      unitsAdded++;
+      addedSkus.push(`${ebpDef.sku} (U${slot})`);
+    }
+  }
+
+  if (unitsAdded > 0) {
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    renderRackVisualizer();
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof showToast === "function") {
+      showToast(`Slotted power hardware into ${activeRackId}: ${addedSkus.join(", ")}`);
+    }
+  }
+};
+
 function renderHostTelemetry(assignedItems, parsed, activeEnc) {
   const hostType = parsed.hostType;
   const container = document.getElementById("hostTelemetryContainer");
@@ -4793,7 +5379,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
 
     assignedItems.forEach(it => {
       const units = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
-      const ru = parseInt(it.rackUnits || 1, 10);
+      const ru = (it.rackUnits !== undefined && it.rackUnits !== null) ? (parseInt(it.rackUnits, 10) || 0) : 1;
       if (it.rackSlot) occupiedU += (ru * units);
       totalPoE += parseFloat(it.poeBudget || 0) * units;
       totalBaseWatts += parseFloat(it.baseWatts || 0) * units;
@@ -4825,9 +5411,31 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     const worstCaseAmps = Math.round((worstCaseWatts / (120 * 0.92)) * 10) / 10;
     const circuitSpec = worstCaseWatts > 1440 ? "120V 20A Dedicated Circuit (NEMA 5-20R)" : "120V 15A Dedicated Circuit (NEMA 5-15R)";
 
-    const tareWeight = 160;
+    const tareWeight = (activeEnc && activeEnc.tareWeightLbs) ? activeEnc.tareWeightLbs : 160;
+    const maxWeight = (activeEnc && activeEnc.maxWeightLbs) ? activeEnc.maxWeightLbs : 3000;
+    const enclosureDepth = (activeEnc && activeEnc.depthInches) ? activeEnc.depthInches : 42;
     const grossWeightLbs = Math.round(tareWeight + totalEquipmentWeightLbs);
     const grossWeightKg = Math.round(grossWeightLbs * 0.453592);
+    const isWeightOverload = totalEquipmentWeightLbs > maxWeight;
+    const weightPct = Math.round((totalEquipmentWeightLbs / maxWeight) * 100);
+
+    // Audit device depth compliance against physical enclosure depth
+    const depthViolations = [];
+    assignedItems.forEach(it => {
+      let itemDepth = it.depthInches;
+      if (!itemDepth) {
+        const m = (it.model || '').toLowerCase();
+        const r = (it.role || '').toLowerCase();
+        if (r === "server" || m.includes("server") || m.includes("poweredge") || m.includes("proliant")) itemDepth = 29.5;
+        else if (r === "ups" || m.includes("ups") || m.includes("smart-ups")) itemDepth = 24;
+        else if (m.includes("ex4300") || m.includes("qfx") || m.includes("catalyst")) itemDepth = 18;
+        else if (r === "structured cabling" || m.includes("patch panel")) itemDepth = 4;
+        else itemDepth = 12;
+      }
+      if (itemDepth > enclosureDepth) {
+        depthViolations.push(`${it.model || it.sku} (${itemDepth}" deep > ${enclosureDepth}" max)`);
+      }
+    });
 
     const upsMinVA = Math.round(worstCaseWatts / 0.90);
     const upsRecVA = Math.round((worstCaseWatts / 0.90) * 1.25);
@@ -4873,52 +5481,365 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     `;
 
     if (auxContainer) {
+      // Calculate actual active field PoE draw homered to this rack
+      const hostNorm = FacilityStore.normalize(activeRackId);
+      let fieldPoEWatts = 0;
+      let fieldDeviceCount = 0;
+
+      if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+        projectBOM.forEach(item => {
+          if (item.parentInstanceId) return;
+          const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
+          if (itemLoc === hostNorm && !isPassiveInfrastructure(item)) {
+            const r = (item.role || "").toLowerCase();
+            const c = (item.category || "").toLowerCase();
+            const isField = r === "camera" || r === "access control" || r === "intercom" ||
+                            c.includes("camera") || c.includes("access") || c.includes("intercom") ||
+                            c.includes("wireless") || r === "wireless bridge" || r === "edge device";
+            if (isField) {
+              const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "poe_switch");
+              if (pwr === "poe_switch") {
+                const draw = parseFloat(item.poeWattsDrawn || item.powerConsumptionWatts || item.baseWatts || 15);
+                fieldPoEWatts += draw * (parseInt(item.qty, 10) || 1);
+                fieldDeviceCount += (parseInt(item.qty, 10) || 1);
+              }
+            }
+          }
+        });
+      }
+
+      if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+        facilityFloors.forEach(floor => {
+          if (!floor.nodes) return;
+          const floorClosets = floor.nodes.filter(n => n.type === "closet");
+          floor.nodes.filter(n => n.type === "device").forEach(dev => {
+            let c = floorClosets.find(cl => cl.id === dev.assignedClosetId);
+            if (!c && floorClosets.length > 0) c = floorClosets[0];
+            const cNorm = c ? FacilityStore.normalize(c.name) : hostNorm;
+            if (cNorm === hostNorm) {
+              if (!dev.instanceId || !projectBOM.some(b => b.instanceId === dev.instanceId && FacilityStore.normalize(b.closetName) === hostNorm)) {
+                const devWatts = parseFloat(dev.powerConsumptionWatts || dev.poeWattsDrawn || 15);
+                fieldPoEWatts += devWatts;
+                fieldDeviceCount++;
+              }
+            }
+          });
+        });
+      }
+
+      const totalConnectedPoEWithLoss = Math.round(fieldPoEWatts * 1.10);
+      const effectiveConnectedPoE = fieldDeviceCount > 0 ? totalConnectedPoEWithLoss : Math.round(totalPoE * 0.40);
+      const connectedAcWatts = Math.round(totalBaseWatts + effectiveConnectedPoE);
+
+      // Sizing calculation powered by upgraded NetworkSizer engine
+      const upsPlan = (typeof NetworkSizer !== "undefined" && typeof NetworkSizer.calculateUPSPlan === "function")
+        ? NetworkSizer.calculateUPSPlan(assignedItems, {
+            targetRuntimeMinutes: window.currentUpsTargetRuntime,
+            safetyMargin: window.currentUpsSafetyMargin,
+            preferredVoltage: window.currentUpsVoltage,
+            selectedModelSku: window.currentUpsModelSku,
+            loadMode: window.currentUpsLoadMode || "connected",
+            connectedWatts: connectedAcWatts,
+            agingFactor: window.currentUpsBatteryAging || 0.85,
+            complianceStandard: window.currentUpsComplianceStandard || "ul294"
+          })
+        : null;
+
+      let upsList = [];
+      if (typeof CatalogRegistry !== "undefined" && CatalogRegistry.infrastructure && Array.isArray(CatalogRegistry.infrastructure.ups)) {
+        upsList = CatalogRegistry.infrastructure.ups.filter(u => (u.type === "ups" || u.category === "ups") && !u.isEbp && !u.isPdu);
+      }
+      if (upsList.length === 0 && typeof ACCESSORY_DATABASE !== "undefined") {
+        upsList = ACCESSORY_DATABASE.filter(u => (u.type === "ups" || u.category === "ups") && !u.isEbp && !u.isPdu);
+      }
+
+      const upsCatalogOptionsHtml = upsList.map(u => `
+        <option value="${u.sku}" ${(window.currentUpsModelSku === u.sku) ? 'selected' : ''}>
+          ${u.vendor} ${u.sku} (${u.va || 1500}VA / ${u.powerWatts || 1000}W &bull; ${u.rackUnits || 2}U)
+        </option>
+      `).join('');
+
+      const planModelName = upsPlan ? upsPlan.upsModel.model : upsModel;
+      const planCapWatts = upsPlan ? upsPlan.upsModel.powerWatts : 1500;
+      const planLoadWatts = upsPlan ? upsPlan.runtimeLoadWatts : connectedAcWatts;
+      const planLoadPct = upsPlan ? upsPlan.runtimeLoadPercent : 45;
+      const planIntRuntime = upsPlan ? upsPlan.internalRuntime : 14;
+      const planAchievedRuntime = upsPlan ? upsPlan.achievedRuntime : 14;
+      const planTargetRuntime = upsPlan ? upsPlan.targetRuntime : window.currentUpsTargetRuntime;
+      const planUpsQty = upsPlan ? upsPlan.upsQty : 1;
+      const planEbpQty = upsPlan ? upsPlan.totalEbpQty : 0;
+      const planEbpModel = upsPlan ? upsPlan.ebpModel : "BP72VRM2U";
+      const planBreakerStatus = upsPlan ? upsPlan.feederCircuit.circuitStatus : "SAFE";
+      const planLoadingPct = upsPlan ? upsPlan.feederCircuit.circuitLoadingPct : 65;
+      const isConnectedMode = (window.currentUpsLoadMode || "connected") === "connected";
+      const isUL294Passed = upsPlan ? upsPlan.ul294.compliant : (planAchievedRuntime >= 240);
+
+      // Render Multi-EBP Runtime Curve Pills (0 to 4 EBPs)
+      const curveHtml = (upsPlan && Array.isArray(upsPlan.runtimeCurve)) ? upsPlan.runtimeCurve.map(c => `
+        <div class="p-1.5 rounded-lg border flex flex-col items-center justify-between transition-all ${c.ebpQty === planEbpQty ? 'bg-indigo-950/80 border-indigo-500 shadow-sm ring-1 ring-indigo-500/40' : (c.meetsUL294 ? 'bg-slate-900 border-emerald-800/60 hover:border-emerald-600' : 'bg-slate-900 border-slate-800 hover:border-slate-700')}">
+          <div class="text-[9px] font-mono text-slate-400 font-semibold mb-0.5">${c.ebpQty === 0 ? 'Internal' : `+${c.ebpQty} EBP`}</div>
+          <div class="text-xs font-mono font-bold ${c.meetsUL294 ? 'text-emerald-300' : (c.meetsTarget ? 'text-sky-300' : 'text-slate-300')}">
+            ${c.runtimeMin >= 60 ? `${c.runtimeHours}h` : `${c.runtimeMin}m`}
+          </div>
+          <div class="text-[8.5px] font-mono text-slate-500 mt-0.5">
+            ${c.meetsUL294 ? '<span class="text-emerald-400 font-bold">UL 294</span>' : (c.meetsTarget ? '<span class="text-sky-400">Target</span>' : `${c.runtimeMin}m`)}
+          </div>
+          <button 
+            type="button" 
+            onclick="window.addSpecificEbpCountToRack(${c.ebpQty})" 
+            class="mt-1 w-full py-0.5 rounded text-[8.5px] font-mono font-bold transition-all cursor-pointer ${c.ebpQty === planEbpQty ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-indigo-700 hover:text-white'}"
+            title="Configure rack with ${c.ebpQty}x external battery pack(s)"
+          >
+            ${c.ebpQty === planEbpQty ? 'Active' : 'Select'}
+          </button>
+        </div>
+      `).join('') : '';
+
       auxContainer.innerHTML = `
         <div class="space-y-3">
-          <div>
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-              <i data-lucide="battery-charging" class="w-4 h-4 text-emerald-400"></i> UPS Sizing Recommendation
-            </h3>
-            <div class="text-xs text-slate-300 space-y-1">
-              <div class="font-bold text-emerald-400 flex items-center justify-between">
-                <span class="truncate max-w-[240px]">${upsModel}</span>
-                <span class="font-mono text-[11px] text-emerald-300 font-bold shrink-0">${upsRecVA} VA</span>
+          <!-- Interactive UPS Sizing Engine Panel -->
+          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 shadow-xl">
+            <div class="flex items-center justify-between mb-2">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> UPS & Battery Standby Engine
+              </h3>
+              <span class="text-[9.5px] font-mono px-2 py-0.5 rounded-md font-bold ${isUL294Passed ? 'bg-emerald-950/90 border border-emerald-600/50 text-emerald-300' : (planBreakerStatus === 'SAFE' ? 'bg-sky-950/80 border border-sky-600/40 text-sky-400' : 'bg-amber-950/80 border border-amber-600/40 text-amber-300')}">
+                ${isUL294Passed ? 'UL 294 OK' : `${planBreakerStatus} (${planLoadingPct}% Feeder)`}
+              </span>
+            </div>
+
+            <!-- Active Connected Load vs Nameplate Capacity Toggle -->
+            <div class="mb-2 p-1 bg-slate-900 border border-slate-800 rounded-xl grid grid-cols-2 gap-1 text-[11px] font-semibold select-none">
+              <button 
+                type="button" 
+                onclick="window.handleUpsLoadModeChange('connected')" 
+                class="py-1 px-2 rounded-lg transition-all flex flex-col items-center justify-center cursor-pointer ${isConnectedMode ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'}"
+                title="Calculate battery runtime based on actual headend equipment plus active connected edge PoE devices"
+              >
+                <span>Active Connected Load</span>
+                <span class="font-mono text-[9px] opacity-80">${connectedAcWatts}W (${fieldDeviceCount} Drops)</span>
+              </button>
+              <button 
+                type="button" 
+                onclick="window.handleUpsLoadModeChange('nameplate')" 
+                class="py-1 px-2 rounded-lg transition-all flex flex-col items-center justify-center cursor-pointer ${!isConnectedMode ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'}"
+                title="Calculate battery runtime assuming switches are running at 100% full maximum PoE nameplate budget"
+              >
+                <span>Full Nameplate Budget</span>
+                <span class="font-mono text-[9px] opacity-80">${worstCaseWatts}W (100% Saturation)</span>
+              </button>
+            </div>
+
+            <!-- Parameters Grid (Runtime, Safety Margin, Standards, Aging) -->
+            <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Target Runtime</label>
+                <select onchange="window.handleUpsRuntimeChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                  <option value="5" ${window.currentUpsTargetRuntime === 5 ? 'selected' : ''}>5 Minutes</option>
+                  <option value="15" ${window.currentUpsTargetRuntime === 15 ? 'selected' : ''}>15 Minutes (Standard)</option>
+                  <option value="30" ${window.currentUpsTargetRuntime === 30 ? 'selected' : ''}>30 Minutes</option>
+                  <option value="60" ${window.currentUpsTargetRuntime === 60 ? 'selected' : ''}>60 Minutes (1 Hour)</option>
+                  <option value="120" ${window.currentUpsTargetRuntime === 120 ? 'selected' : ''}>120 Minutes (2 Hours)</option>
+                  <option value="240" ${window.currentUpsTargetRuntime === 240 ? 'selected' : ''}>240 Minutes (4-Hr UL 294)</option>
+                </select>
               </div>
-              <div class="text-[11px] text-slate-400">
-                Minimum ${upsMinVA}VA load + 25% buffer &bull; 2U Rackmount
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Standby Standard</label>
+                <select onchange="window.handleUpsComplianceStandardChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-medium rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                  <option value="ul294" ${window.currentUpsComplianceStandard === 'ul294' ? 'selected' : ''}>UL 294 / NFPA 731 (4-Hr)</option>
+                  <option value="sla_60m" ${window.currentUpsComplianceStandard === 'sla_60m' ? 'selected' : ''}>Enterprise SLA (60m)</option>
+                  <option value="sla_30m" ${window.currentUpsComplianceStandard === 'sla_30m' ? 'selected' : ''}>Graceful Shutdown (30m)</option>
+                  <option value="sla_15m" ${window.currentUpsComplianceStandard === 'sla_15m' ? 'selected' : ''}>Basic IT Backup (15m)</option>
+                </select>
               </div>
-              <div class="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 mt-0.5">
-                <i data-lucide="clock" class="w-3 h-3 text-slate-400 shrink-0"></i>
-                <span>12 - 18 minutes on battery</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Battery Aging Factor</label>
+                <select onchange="window.handleUpsAgingChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                  <option value="0.85" ${window.currentUpsBatteryAging === 0.85 ? 'selected' : ''}>85% (IEEE 1188 End-of-Life)</option>
+                  <option value="1.0" ${window.currentUpsBatteryAging === 1.0 ? 'selected' : ''}>100% (Factory New Battery)</option>
+                </select>
               </div>
+              <div>
+                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Safety Headroom</label>
+                <select onchange="window.handleUpsMarginChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                  <option value="0.60" ${window.currentUpsSafetyMargin === 0.60 ? 'selected' : ''}>60% Max Load</option>
+                  <option value="0.75" ${window.currentUpsSafetyMargin === 0.75 ? 'selected' : ''}>75% (Recommended)</option>
+                  <option value="0.80" ${window.currentUpsSafetyMargin === 0.80 ? 'selected' : ''}>80% Standard</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- UPS Model Selector -->
+            <div class="mb-2">
+              <label class="text-[10px] font-mono text-slate-400 block mb-0.5">UPS Hardware Selection</label>
+              <select onchange="window.handleUpsModelChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-medium rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500 truncate">
+                <option value="auto" ${window.currentUpsModelSku === 'auto' ? 'selected' : ''}>⚡ Auto-Recommend Optimal (${upsPlan ? upsPlan.upsModel.sku : 'Best Fit'})</option>
+                ${upsCatalogOptionsHtml}
+              </select>
+            </div>
+
+            <!-- Scalable Multi-EBP Runtime Curve Matrix -->
+            <div class="mb-2 p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+              <div class="flex items-center justify-between mb-1.5 text-[10px] font-mono">
+                <span class="text-slate-400 font-bold uppercase">Scalable Runtime Curve:</span>
+                <span class="text-indigo-300 font-bold">${planLoadWatts}W Active Load</span>
+              </div>
+              <div class="grid grid-cols-5 gap-1">
+                ${curveHtml}
+              </div>
+            </div>
+
+            <!-- UL 294 / NFPA 731 Life Safety Compliance Banner -->
+            <div class="mb-2 p-2 rounded-xl border ${isUL294Passed ? 'bg-emerald-950/60 border-emerald-600/40 text-emerald-300' : 'bg-amber-950/60 border-amber-600/40 text-amber-200'} text-xs">
+              <div class="flex items-center justify-between font-bold">
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="${isUL294Passed ? 'shield-check' : 'alert-triangle'}" class="w-4 h-4 ${isUL294Passed ? 'text-emerald-400' : 'text-amber-400'}"></i>
+                  <span>${isUL294Passed ? 'UL 294 / NFPA 731: 4-Hour Standby PASSED' : 'UL 294 Standby Deficit: Needs EBP'}</span>
+                </span>
+                <span class="font-mono text-[11px]">${upsPlan ? upsPlan.ul294.achievedHours : (planAchievedRuntime / 60).toFixed(1)} / 4.0 Hrs</span>
+              </div>
+              <p class="text-[10px] opacity-90 mt-1">
+                ${isUL294Passed 
+                  ? `Rack backup system achieves ${upsPlan.ul294.achievedHours} hours continuous runtime, fully compliant with UL 294 access control standards.`
+                  : `Current runtime is ${planAchievedRuntime} mins (-${upsPlan ? upsPlan.ul294.deficitMin : 0} min shortfall vs 4-Hour code requirement). Add ${upsPlan ? upsPlan.ul294.requiredEbpQty : 1}x ${planEbpModel} external battery pack to achieve compliance.`
+                }
+              </p>
+              ${!isUL294Passed && upsPlan && upsPlan.ul294.requiredEbpQty > 0 ? `
+                <button 
+                  type="button" 
+                  onclick="window.addSpecificEbpCountToRack(${upsPlan.ul294.requiredEbpQty})" 
+                  class="mt-1.5 w-full py-1 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10.5px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow"
+                >
+                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                  <span>+ Add ${upsPlan.ul294.requiredEbpQty}x ${planEbpModel} for UL 294 4-Hour Compliance</span>
+                </button>
+              ` : ''}
+            </div>
+
+            <!-- Live Telemetry Readout -->
+            <div class="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 space-y-1.5 text-xs font-mono">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 font-sans">Required Sizing:</span>
+                <span class="text-emerald-400 font-bold font-sans truncate max-w-[210px]">${planUpsQty}x ${upsPlan ? upsPlan.upsModel.sku : 'UPS'} (${upsPlan ? upsPlan.upsModel.va : 1500}VA / ${planCapWatts}W)</span>
+              </div>
+
+              <!-- Load Bar -->
+              <div>
+                <div class="flex justify-between text-[11px] mb-0.5">
+                  <span class="text-slate-400 font-sans">Unit Load (${isConnectedMode ? 'Active PoE' : 'Peak'}):</span>
+                  <span class="font-bold ${planLoadPct <= 75 ? 'text-emerald-300' : (planLoadPct <= 85 ? 'text-amber-300' : 'text-rose-400')}">
+                    ${planLoadWatts}W / ${planCapWatts}W (${planLoadPct}%)
+                  </span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-300 ${planLoadPct <= 75 ? 'bg-emerald-500' : (planLoadPct <= 85 ? 'bg-amber-500' : 'bg-rose-500')}" style="width: ${Math.min(100, planLoadPct)}%"></div>
+                </div>
+              </div>
+
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                <span class="text-slate-400 font-sans">Internal Battery:</span>
+                <span class="text-sky-300 font-bold">${planIntRuntime} minutes</span>
+              </div>
+
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 font-sans">Battery Modules:</span>
+                <span class="${planEbpQty > 0 ? 'text-purple-300 font-bold' : 'text-slate-500'}">
+                  ${planEbpQty > 0 ? `${planEbpQty}x ${planEbpModel} (${upsPlan.rackSpace.ebpRU}U)` : 'None (Internal Only)'}
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 font-sans font-bold">
+                <span class="text-slate-200">Achieved Runtime:</span>
+                <span class="text-emerald-400 flex items-center gap-1 font-mono">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-emerald-400"></i> ${planAchievedRuntime} min (${(planAchievedRuntime / 60).toFixed(1)} hrs)
+                </span>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
+                <span class="font-sans">Branch Feeder:</span>
+                <span class="text-slate-300 font-bold">${upsPlan ? upsPlan.feederCircuit.actualInputAmps : operatingAmps}A Continuous (${upsPlan ? upsPlan.feederCircuit.breakerAmps : 20}A Breaker)</span>
+              </div>
+
+              <div class="flex items-center justify-between text-[11px] text-slate-400">
+                <span class="font-sans">Power Footprint:</span>
+                <span class="text-indigo-300 font-bold">${upsPlan ? upsPlan.rackSpace.totalRU : 2}U Total Space</span>
+              </div>
+            </div>
+
+            <!-- Auto-Slot Action Button -->
+            <div class="pt-2">
+              <button onclick="window.addRecommendedUpsAndEbpToRack()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 cursor-pointer transition-all active:scale-[0.98]">
+                <i data-lucide="zap" class="w-4 h-4 text-emerald-200"></i>
+                <span>Slot ${planUpsQty}x UPS ${planEbpQty > 0 ? `+ ${planEbpQty}x EBP` : ''} to Rack (U1+)</span>
+              </button>
             </div>
           </div>
 
           <div class="pt-2.5 border-t border-slate-800">
-            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 mb-1.5">
-              <i data-lucide="scale" class="w-4 h-4 text-purple-400"></i> Weight & Structural Telemetry
-            </h3>
-            <div class="space-y-1 text-xs">
+            <div class="flex items-center justify-between mb-1.5">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="scale" class="w-4 h-4 text-purple-400"></i> Structural Load & Capacity
+              </h3>
+              <span class="text-[9.5px] font-mono px-2 py-0.5 rounded font-bold ${isWeightOverload ? 'bg-rose-950/80 border border-rose-600 text-rose-300' : 'bg-slate-900 border border-slate-700 text-slate-300'}">
+                ${activeEnc?.catalogSku || 'Custom Frame'}
+              </span>
+            </div>
+            <div class="space-y-1.5 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-400 mb-1">
+                  <span>Equipment Payload:</span>
+                  <span class="font-mono font-bold ${isWeightOverload ? 'text-rose-400' : 'text-purple-300'}">
+                    ${Math.round(totalEquipmentWeightLbs)} / ${maxWeight.toLocaleString()} lbs (${weightPct}%)
+                  </span>
+                </div>
+                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full rounded-full transition-all duration-300 ${weightPct > 100 ? 'bg-rose-500' : (weightPct > 80 ? 'bg-amber-500' : 'bg-purple-500')}" style="width: ${Math.min(100, weightPct)}%"></div>
+                </div>
+              </div>
               <div class="flex justify-between text-slate-400">
-                <span>Equipment Payload:</span>
-                <span class="font-mono text-purple-300 font-bold">${Math.round(totalEquipmentWeightLbs)} lbs (${Math.round(totalEquipmentWeightLbs * 0.453592)} kg)</span>
+                <span>Frame Tare Weight:</span>
+                <span class="font-mono text-slate-300">${tareWeight} lbs (${Math.round(tareWeight * 0.453592)} kg)</span>
               </div>
               <div class="flex justify-between text-slate-400">
                 <span>Cabinet Gross Weight:</span>
                 <span class="font-mono text-white font-bold">${grossWeightLbs} lbs (${grossWeightKg} kg)</span>
               </div>
+              <div class="flex justify-between text-slate-400">
+                <span>Rail Depth Clearance:</span>
+                <span class="font-mono ${depthViolations.length > 0 ? 'text-amber-400 font-bold' : 'text-cyan-300'}">${enclosureDepth}" Usable Space</span>
+              </div>
+
+              <!-- Overload Alert -->
+              ${isWeightOverload ? `
+                <div class="p-2 rounded-lg bg-rose-950/80 border border-rose-500/80 text-[10.5px] text-rose-200 flex items-start gap-1.5 mt-1.5">
+                  <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
+                  <span><strong>STRUCTURAL OVERLOAD:</strong> Payload (${Math.round(totalEquipmentWeightLbs)} lbs) exceeds rated capacity (${maxWeight.toLocaleString()} lbs) for ${escapeHTML(activeEnc?.catalogModel || 'this enclosure')}.</span>
+                </div>
+              ` : ''}
+
+              <!-- Depth Clearance Warning -->
+              ${depthViolations.length > 0 ? `
+                <div class="p-2 rounded-lg bg-amber-950/80 border border-amber-500/80 text-[10.5px] text-amber-200 flex items-start gap-1.5 mt-1.5">
+                  <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+                  <span><strong>DEPTH CLEARANCE:</strong> ${escapeHTML(depthViolations[0])}</span>
+                </div>
+              ` : ''}
+
               <div class="pt-1">
                 ${cogAdvisories.length > 0 ? `
                   <div class="p-1.5 rounded-lg bg-amber-950/60 border border-amber-600/40 text-[10.5px] text-amber-300 flex items-start gap-1.5">
                     <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5"></i>
                     <span>${escapeHTML(cogAdvisories[0])}</span>
                   </div>
-                ` : `
+                ` : (!isWeightOverload && depthViolations.length === 0 ? `
                   <div class="text-[10.5px] text-emerald-400 font-mono flex items-center gap-1">
                     <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-                    <span>Low Center of Gravity (Seismic Stable)</span>
+                    <span>Structural Capacity &amp; Clearances Compliant</span>
                   </div>
-                `}
+                ` : '')}
               </div>
             </div>
           </div>
@@ -5643,6 +6564,13 @@ function saveRackSettings() {
 function loadRackSettings() {
   try {
     const projKey = FacilityStore.getProjectId();
+    const parsed = FacilityStore.parse(activeRackId);
+    const enclosures = FacilityStore.getEnclosures();
+    const enc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === (parsed.hostName || '').toLowerCase());
+    if (enc && enc.heightU && enc.hostType === "equipment_rack") {
+      activeRackHeight = enc.heightU;
+      return;
+    }
     const val = localStorage.getItem(`netselect_rack_height_${projKey}_${activeRackId}`);
     activeRackHeight = val ? parseInt(val, 10) : 24;
   } catch (e) {

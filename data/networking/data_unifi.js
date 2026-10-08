@@ -2523,7 +2523,9 @@ const UNIFI_SWITCHES = [
     "acousticNoiseDb": 0,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
-    "compatibleAccessories": []
+    "compatibleAccessories": [
+      "UACC-DIN-Rail"
+    ]
   },
   {
     "id": "unifi-usw-lite-8-poe",
@@ -2586,7 +2588,9 @@ const UNIFI_SWITCHES = [
     "acousticNoiseDb": 0,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
-    "compatibleAccessories": []
+    "compatibleAccessories": [
+      "UACC-DIN-Rail"
+    ]
   },
   {
     "id": "unifi-usw-ultra-210w",
@@ -2627,7 +2631,8 @@ const UNIFI_SWITCHES = [
     "throughputMpps": 11.9,
     "packetBufferMb": 2,
     "compatibleAccessories": [
-      "UACC-Adapter-210W"
+      "UACC-Adapter-210W",
+      "UACC-DIN-Rail"
     ],
     "keyFeatures": [
       "Ultra-compact 8-port switch with 7x PoE+ outputs",
@@ -2693,7 +2698,8 @@ const UNIFI_SWITCHES = [
     "packetBufferMb": 2,
     "compatibleAccessories": [
       "UACC-Adapter-60W",
-      "UACC-Adapter-210W"
+      "UACC-Adapter-210W",
+      "UACC-DIN-Rail"
     ],
     "keyFeatures": [
       "Ultra-compact 8-port switch with 7x PoE+ outputs",
@@ -2762,7 +2768,8 @@ const UNIFI_SWITCHES = [
     "packetBufferMb": 2,
     "compatibleAccessories": [
       "UACC-Adapter-60W",
-      "UACC-Adapter-210W"
+      "UACC-Adapter-210W",
+      "UACC-DIN-Rail"
     ],
     "keyFeatures": [
       "Ultra-compact 8-port switch powered entirely via 802.3bt PoE++ input",
@@ -2848,7 +2855,9 @@ const UNIFI_SWITCHES = [
     "acousticNoiseDb": 0,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
-    "compatibleAccessories": []
+    "compatibleAccessories": [
+      "UACC-DIN-Rail"
+    ]
   },
   {
     "id": "unifi-usw-flex-2-5g-5",
@@ -2908,7 +2917,9 @@ const UNIFI_SWITCHES = [
     "acousticNoiseDb": 0,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
-    "compatibleAccessories": []
+    "compatibleAccessories": [
+      "UACC-DIN-Rail"
+    ]
   },
   {
     "id": "unifi-usw-flex-xg",
@@ -2969,7 +2980,9 @@ const UNIFI_SWITCHES = [
     "acousticNoiseDb": 0,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
-    "compatibleAccessories": []
+    "compatibleAccessories": [
+      "UACC-DIN-Rail"
+    ]
   },
   {
     "id": "unifi-usw-flex",
@@ -3013,7 +3026,8 @@ const UNIFI_SWITCHES = [
     "throughputMpps": 7.44,
     "packetBufferMb": 2,
     "compatibleAccessories": [
-      "USW-Flex-Utility"
+      "USW-Flex-Utility",
+      "UACC-Flex-DIN"
     ],
     "keyFeatures": [
       "Weatherproof outdoor-rated Gigabit switch for light poles and cameras",
@@ -3096,7 +3110,9 @@ const UNIFI_SWITCHES = [
     "acousticNoiseDb": 0,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
-    "compatibleAccessories": []
+    "compatibleAccessories": [
+      "UACC-DIN-Rail"
+    ]
   },
   {
     "id": "unifi-usw-industrial",
@@ -3158,7 +3174,7 @@ const UNIFI_SWITCHES = [
     "dryContacts": false,
     "substationCertified": false,
     "poePassThrough": false,
-    "isDinMounted": false,
+    "isDinMounted": true,
     "acousticNoiseDb": 0,
     "compatibleAccessories": []
   },

@@ -11,6 +11,7 @@ const CatalogRegistry = {
     firewalls: [],
     wireless: [],
     optics: [],
+    accessories: [],
     modularUplinks: {},
     powerSupplies: {},
     featureLicenses: {},
@@ -29,11 +30,13 @@ const CatalogRegistry = {
     workstations: []
   },
   infrastructure: {
-    accessories: [],
-    cabling: {},
     racks: [],
+    enclosures: [],
     ups: [],
-    pathways: []
+    pdus: [],
+    cabling: {},
+    pathways: [],
+    accessories: []
   },
   software: {
     vms: [],
@@ -59,9 +62,13 @@ const CatalogRegistry = {
     if (mode === "firewalls") return this.networking.firewalls || [];
     if (mode === "optics") return this.networking.optics || [];
     if (mode === "wireless") return this.networking.wireless || [];
-    if (mode === "accessories") return this.infrastructure.accessories || [];
-    if (mode === "ups") return this.infrastructure.ups || [];
+    if (mode === "accessories" || mode === "net_accessories" || mode === "networking_accessories") {
+      return this.networking.accessories || [];
+    }
     if (mode === "racks") return this.infrastructure.racks || [];
+    if (mode === "enclosures") return this.infrastructure.enclosures || [];
+    if (mode === "ups") return this.infrastructure.ups || [];
+    if (mode === "pdus") return this.infrastructure.pdus || [];
     if (mode === "cabling") {
       if (Array.isArray(this.infrastructure.cabling)) return this.infrastructure.cabling;
       if (this.infrastructure.cabling && typeof this.infrastructure.cabling === "object") {
@@ -112,13 +119,110 @@ const CatalogRegistry = {
     this.infrastructure.accessories = typeof ACCESSORY_DATABASE !== "undefined" ? ACCESSORY_DATABASE : [];
     this.infrastructure.cabling = typeof CABLING_CATALOG !== "undefined" ? CABLING_CATALOG : (typeof CABLING_DATABASE !== "undefined" ? CABLING_DATABASE : {});
 
-    // Populate specialized Infrastructure sub-mode collections from ACCESSORY_DATABASE
+    // Populate Networking Accessories (Mounts, Media Converters, Licenses, Modular Uplinks, Power Supplies, PoE Midspans)
+    const netMounts = Object.values(typeof MOUNTING_CATALOG !== "undefined" ? MOUNTING_CATALOG : {});
+    const netLicenses = [
+      ...Object.values(typeof FEATURE_LICENSE_CATALOG !== "undefined" ? FEATURE_LICENSE_CATALOG : {}),
+      ...Object.values(typeof MGMT_SUBSCRIPTION_CATALOG !== "undefined" ? MGMT_SUBSCRIPTION_CATALOG : {})
+    ];
+    const netUplinks = Object.values(typeof MODULAR_UPLINK_CATALOG !== "undefined" ? MODULAR_UPLINK_CATALOG : {});
+    const netPsus = Object.values(typeof POWER_SUPPLY_CATALOG !== "undefined" ? POWER_SUPPLY_CATALOG : {});
+
+    const netFromAccDb = this.infrastructure.accessories.filter(a =>
+      a.category === "media_converter" || a.type === "media_converter" ||
+      a.category === "mounting" || a.type === "mounting" ||
+      a.category === "power_injector" || a.type === "poe_injector" || a.type === "poe_splitter" ||
+      (a.category === "power_supply" && !a.isPdu) ||
+      a.type === "time_server"
+    );
+
+    const rawNetAccessories = [
+      ...netFromAccDb.map(item => ({
+        ...item,
+        domain: "networking",
+        subCategory: item.type === "media_converter" || item.category === "media_converter" ? "media_converters" :
+                     (item.type === "mounting" || item.category === "mounting" ? "mounts" :
+                     (item.type === "poe_injector" || item.category === "power_injector" || item.type === "poe_splitter" ? "poe_injectors" :
+                     (item.type === "power_supply" || item.category === "power_supply" ? "power_supplies" : "other")))
+      })),
+      ...netMounts.map(item => ({
+        ...item,
+        domain: "networking",
+        category: "mounting",
+        type: "mounting",
+        subCategory: "mounts",
+        role: "Mounting Kit"
+      })),
+      ...netLicenses.map(item => ({
+        ...item,
+        domain: "networking",
+        category: "licenses",
+        type: "license",
+        subCategory: "licenses",
+        role: item.role || "Software License"
+      })),
+      ...netUplinks.map(item => ({
+        ...item,
+        domain: "networking",
+        category: "modular_uplinks",
+        type: "modular_uplink",
+        subCategory: "modular_uplinks",
+        role: "Modular Expansion"
+      })),
+      ...netPsus.map(item => ({
+        ...item,
+        domain: "networking",
+        category: "power_supplies",
+        type: "power_supply",
+        subCategory: "power_supplies",
+        role: "Power Supply"
+      }))
+    ];
+
+    const seenNetAcc = new Set();
+    this.networking.accessories = [];
+    rawNetAccessories.forEach(item => {
+      const key = item.sku || item.id;
+      if (key && !seenNetAcc.has(key)) {
+        seenNetAcc.add(key);
+        this.networking.accessories.push(item);
+      }
+    });
+
+    // Populate Infrastructure Collections
+    // 1. 19" Equipment Racks (Open-frame racks, server cabinets, wall-mount swing racks)
     this.infrastructure.racks = this.infrastructure.accessories.filter(a =>
-      a.category === "racks" || a.type === "equipment_rack" || a.category === "enclosure" || a.type === "enclosure"
+      (a.type === "equipment_rack" || a.category === "racks") &&
+      a.category !== "mounting" && a.type !== "mounting" && a.type !== "rack_shelf" && a.type !== "rack_kit" &&
+      a.type !== "media_converter" && a.category !== "media_converter" &&
+      !a.type?.includes("security") && !a.type?.includes("din") && !a.type?.includes("backboard") && a.type !== "enclosure" &&
+      !a.model?.toLowerCase().includes("media converter") && !a.description?.toLowerCase().includes("media converter")
     );
+
+    // 2. Cabinets & Enclosures (Weatherproof NEMA 4X, Security Subplate Trove/LSP, DIN rail, Architectural Plywood Backboard)
+    this.infrastructure.enclosures = this.infrastructure.accessories.filter(a =>
+      a.type === "security_cabinet" || a.category === "security_cabinet" ||
+      a.type === "enclosure" || a.category === "enclosure" || a.category === "outdoor_enclosure" ||
+      a.type === "industrial_din" || a.category === "industrial_din" ||
+      a.type === "architectural_backboard" || a.category === "architectural_backboard"
+    );
+
+    // 3. UPS & Battery Backup
     this.infrastructure.ups = this.infrastructure.accessories.filter(a =>
-      a.category === "ups" || a.type === "ups"
+      a.category === "ups" || a.type === "ups" || a.type === "ebp" || a.isEbp
     );
+
+    // 4. Rackmount PDUs & Power Distribution
+    this.infrastructure.pdus = this.infrastructure.accessories.filter(a =>
+      (a.type === "pdu" || a.isPdu || a.category === "pdu" || (a.category === "power_distribution" && !a.type?.includes("poe") && !a.model?.toLowerCase().includes("poe"))) &&
+      a.type !== "poe_injector" && a.type !== "poe_splitter" && a.category !== "power_injector" && a.category !== "media_converter" && a.type !== "media_converter"
+    );
+
+    this.infrastructure.ebps = this.infrastructure.accessories.filter(a =>
+      a.type === "ebp" || a.isEbp || a.category === "ebp"
+    );
+
+    // 5. Pathways & Cable Tray
     this.infrastructure.pathways = this.infrastructure.accessories.filter(a =>
       a.category === "pathways" || a.type === "pathway" || a.category === "cable_management"
     );
@@ -171,6 +275,12 @@ const CatalogRegistry = {
     if (this.networking.featureLicenses) {
       allItems.push(...Object.values(this.networking.featureLicenses));
     }
+    if (this.networking.mgmtSubscriptions) {
+      allItems.push(...Object.values(this.networking.mgmtSubscriptions));
+    }
+    if (this.networking.accessories) {
+      allItems.push(...this.networking.accessories);
+    }
 
     // Enrich with Datasheet and Product Image Assets if available
     if (typeof CATALOG_ASSETS !== "undefined") {
@@ -200,8 +310,11 @@ const CatalogRegistry = {
     window.ACCESSORY_DATABASE = this.infrastructure.accessories;
     window.CABLING_CATALOG = this.infrastructure.cabling;
     window.RACKS_DATABASE = this.infrastructure.racks;
+    window.ENCLOSURES_DATABASE = this.infrastructure.enclosures;
     window.UPS_DATABASE = this.infrastructure.ups;
+    window.PDUS_DATABASE = this.infrastructure.pdus;
     window.PATHWAYS_DATABASE = this.infrastructure.pathways;
+    window.NETWORKING_ACCESSORIES = this.networking.accessories;
     window.CAMERAS_DATABASE = this.physical_security.cameras;
     window.ACCESS_CONTROL_DATABASE = this.physical_security.accessControl;
     window.SERVERS_DATABASE = this.compute_storage.servers;
@@ -232,6 +345,34 @@ const CatalogRegistry = {
     const item = this.get(idOrSku);
     if (item && (item.ports !== undefined || item.role === "Access" || item.role === "Core" || item.role === "Aggregation")) return item;
     return (this.networking.switches || []).find(s => s.id === idOrSku || s.sku === idOrSku) || null;
+  },
+
+  /**
+   * Retrieves racks, cabinets, and enclosures, optionally filtered by hostType
+   */
+  getRacks(hostType = null) {
+    const all = this.infrastructure.racks || [];
+    if (!hostType) return all;
+    return all.filter(r => {
+      if (hostType === "equipment_rack") return r.type === "equipment_rack" || r.category === "racks";
+      if (hostType === "security_cabinet") return r.type === "security_cabinet" || r.category === "security_cabinet" || /trove|lsp|prowire/i.test(r.model || '');
+      if (hostType === "industrial_din") return r.type === "industrial_din" || r.category === "industrial_din" || r.category === "outdoor_enclosure" || /nema|altelix|hoffman/i.test(r.model || '');
+      if (hostType === "architectural_backboard") return r.type === "architectural_backboard" || r.category === "architectural_backboard" || /backboard|plywood/i.test(r.model || '');
+      return true;
+    });
+  },
+
+  /**
+   * Retrieves a specific rack or enclosure by SKU or ID
+   */
+  getRack(idOrSku) {
+    if (!idOrSku) return null;
+    const s = String(idOrSku).toLowerCase();
+    const item = this.get(idOrSku);
+    if (item && (item.type === "equipment_rack" || item.type === "security_cabinet" || item.type === "industrial_din" || item.type === "architectural_backboard" || item.category === "racks" || item.category === "security_cabinet" || item.category === "industrial_din")) {
+      return item;
+    }
+    return (this.infrastructure.racks || []).find(r => r.sku?.toLowerCase() === s || r.id?.toLowerCase() === s) || null;
   },
 
   /**

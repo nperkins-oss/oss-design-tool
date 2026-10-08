@@ -1,8 +1,14 @@
 // ==========================================
-// SIDEBAR FILTER RENDERER (NetSelect Enterprise)
-// Builds dynamic faceted filter controls for the active hardware mode
-// Attached to dynamicSidebarContent
-// ==========================================
+// Global SubCategory Controller for Networking Accessories
+if (typeof window.setAccSubCategory !== "function") {
+  window.setAccSubCategory = function(catId) {
+    if (typeof selectedAccSubCategory !== "undefined") selectedAccSubCategory = catId;
+    window.selectedAccSubCategory = catId;
+    if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+    if (typeof buildSidebarFilters === "function") buildSidebarFilters();
+    if (typeof runActiveFilter === "function") runActiveFilter();
+  };
+}
 
 function getCurrentDataset() {
   if (typeof currentMode === "undefined") return [];
@@ -20,7 +26,11 @@ function getCurrentDataset() {
   } else if (currentMode === "wireless") {
     return (typeof WIRELESS_DATABASE !== "undefined") ? WIRELESS_DATABASE : [];
   } else if (currentMode === "accessories") {
-    return (typeof ACCESSORY_DATABASE !== "undefined") ? ACCESSORY_DATABASE : [];
+    return (typeof NETWORKING_ACCESSORIES !== "undefined") ? NETWORKING_ACCESSORIES : (typeof ACCESSORY_DATABASE !== "undefined" ? ACCESSORY_DATABASE : []);
+  } else if (currentMode === "enclosures") {
+    return (typeof ENCLOSURES_DATABASE !== "undefined") ? ENCLOSURES_DATABASE : [];
+  } else if (currentMode === "pdus") {
+    return (typeof PDUS_DATABASE !== "undefined") ? PDUS_DATABASE : [];
   }
   return [];
 }
@@ -47,8 +57,12 @@ function buildSidebarFilters() {
     buildAccessoriesSidebar(container, baseSet);
   } else if (currentMode === "racks") {
     buildRacksSidebar(container, baseSet);
+  } else if (currentMode === "enclosures") {
+    buildEnclosuresSidebar(container, baseSet);
   } else if (currentMode === "ups") {
     buildUpsSidebar(container, baseSet);
+  } else if (currentMode === "pdus") {
+    buildPdusSidebar(container, baseSet);
   } else if (currentMode === "cabling") {
     buildCablingSidebar(container, baseSet);
   } else if (currentMode === "pathways") {
@@ -260,6 +274,12 @@ function buildSwitchSidebar(container, baseSet) {
             <div class="flex items-center gap-2">
               <input type="checkbox" onchange="requireDualPsu = this.checked; runActiveFilter();" ${(typeof requireDualPsu !== "undefined" && requireDualPsu) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
               <span>Dual / Redundant PSUs</span>
+            </div>
+          </label>
+          <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" onchange="if (typeof requireModularUplink !== 'undefined') requireModularUplink = this.checked; window.requireModularUplink = this.checked; runActiveFilter();" ${(typeof requireModularUplink !== 'undefined' && requireModularUplink) || (typeof window.requireModularUplink !== 'undefined' && window.requireModularUplink) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-brand-500 focus:ring-0">
+              <span>Modular Uplink Bays (Swappable Sleds)</span>
             </div>
           </label>
           <label class="flex items-center justify-between hover:text-white cursor-pointer py-0.5 select-none">
@@ -639,31 +659,70 @@ function buildWirelessSidebar(container, baseSet) {
 }
 
 function buildAccessoriesSidebar(container, baseSet) {
-  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))];
-  const types = [
-    { id: "power_supply", label: "Power Supplies (DIN/AC)" },
-    { id: "poe_injector", label: "PoE Midspan Injectors" },
-    { id: "media_converter", label: "Media Converters" },
-    { id: "time_server", label: "Time Servers (NTP / GPS)" },
-    { id: "power_distribution", label: "Managed PDUs" },
-    { id: "enclosure", label: "Weatherproof Enclosures" },
-    { id: "surge_protector", label: "Surge Suppressors" },
-    { id: "mounting", label: "Mounting Kits & Shelves" }
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))].sort();
+  const subCategories = [
+    { id: "all", label: "All Network Accessories" },
+    { id: "mounts", label: "Mounts & Brackets" },
+    { id: "media_converters", label: "Media Converters & Extenders" },
+    { id: "licenses", label: "Licenses & Subscriptions" },
+    { id: "modular_uplinks", label: "Modular Uplinks & Expansion" },
+    { id: "power_supplies", label: "Modular Power Supplies" },
+    { id: "poe_injectors", label: "PoE Midspans & Injectors" }
   ];
+
+  const currentSubCat = typeof selectedAccSubCategory !== "undefined" ? selectedAccSubCategory : "all";
 
   container.innerHTML = `
     <div class="space-y-4 text-xs">
       <div>
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1.5 flex items-center justify-between">
+          <span>Accessory Category</span>
+          ${currentSubCat !== 'all' ? `
+            <button onclick="setAccSubCategory('all')" class="text-[10px] text-rose-400 hover:text-rose-300 font-semibold lowercase">
+              reset
+            </button>
+          ` : ''}
+        </span>
         <div class="space-y-1">
+          ${subCategories.map(sc => {
+            const isSelected = currentSubCat === sc.id;
+            let count = 0;
+            if (sc.id === "all") {
+              count = baseSet.length;
+            } else {
+              count = baseSet.filter(a => {
+                if (a.subCategory === sc.id) return true;
+                if (sc.id === "mounts" && (a.type === "mounting" || a.category === "mounting" || a.type === "rack_kit" || a.type === "wall_bracket" || (a.role && a.role.toLowerCase().includes("mount")))) return true;
+                if (sc.id === "media_converters" && (a.type === "media_converter" || a.category === "media_converter")) return true;
+                if (sc.id === "licenses" && (a.type === "license" || a.category === "licenses" || a.type === "feature_license" || a.type === "cloud_subscription" || (a.role && a.role.toLowerCase().includes("license")))) return true;
+                if (sc.id === "modular_uplinks" && (a.type === "modular_uplink" || a.category === "modular_uplinks" || (a.role && a.role.toLowerCase().includes("modular")))) return true;
+                if (sc.id === "power_supplies" && (a.type === "power_supply" || a.category === "power_supplies" || (a.role && a.role.toLowerCase().includes("power supply")))) return true;
+                if (sc.id === "poe_injectors" && (a.type === "poe_injector" || a.type === "poe_splitter" || a.category === "power_injector" || (a.role && a.role.toLowerCase().includes("injector")))) return true;
+                return false;
+              }).length;
+            }
+            if (count === 0 && sc.id !== "all") return '';
+            return `
+              <button onclick="setAccSubCategory('${sc.id}')" class="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-left transition-all ${isSelected ? '!bg-indigo-600 !border-indigo-400 !text-white font-bold shadow-md shadow-indigo-950/50 ring-2 ring-indigo-400/60' : 'bg-slate-950/60 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'}">
+                <span class="truncate">${sc.label}</span>
+                <span class="text-[10px] font-mono shrink-0 ml-1.5 ${isSelected ? '!text-indigo-100 font-bold' : 'text-slate-400'}">${count}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1 max-h-48 overflow-y-auto pr-1">
           ${vendors.map(v => {
             const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
             const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
             return `
               <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
                 <div class="flex items-center gap-2">
-                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
-                  <span>${v}</span>
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-0">
+                  <span class="truncate max-w-[130px]">${v}</span>
                 </div>
                 <span class="text-[10px] font-mono text-slate-500">${count}</span>
               </label>
@@ -673,32 +732,26 @@ function buildAccessoriesSidebar(container, baseSet) {
       </div>
 
       <div class="pt-3 border-t border-slate-800">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Accessory Type</span>
-        <div class="space-y-1">
-          ${types.map(t => {
-            const isChecked = (typeof selectedAccTypes !== "undefined" && selectedAccTypes.includes(t.id));
-            const count = baseSet.filter(a => a.type === t.id || a.category === t.id).length;
-            return `
-              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" onchange="toggleFilterItem('accType', '${t.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
-                  <span>${t.label}</span>
-                </div>
-                <span class="text-[10px] font-mono text-slate-500">${count}</span>
-              </label>
-            `;
-          }).join('')}
-        </div>
-      </div>
-
-      <div class="pt-3 border-t border-slate-800">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Mounting Environment</span>
-        <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Mounting Form</span>
+        <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-500">
           <option value="all" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'all') ? 'selected' : ''}>All Mountings</option>
-          <option value="DIN" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'DIN') ? 'selected' : ''}>DIN-Rail</option>
-          <option value="Rack" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Rack') ? 'selected' : ''}>19" Rackmount (1U)</option>
-          <option value="Wall" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Wall') ? 'selected' : ''}>Wall / Surface</option>
-          <option value="Pole" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Pole') ? 'selected' : ''}>Outdoor Pole Box</option>
+          <option value="Rack" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Rack') ? 'selected' : ''}>19" Rackmount (Ears / Tray)</option>
+          <option value="DIN" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'DIN') ? 'selected' : ''}>DIN-Rail Clip</option>
+          <option value="Wall" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Wall') ? 'selected' : ''}>Wall / Surface Bracket</option>
+          <option value="Magnetic" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Magnetic') ? 'selected' : ''}>Magnetic Mount</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Minimum Output Power</span>
+        <select onchange="accMinPowerWatts = Number(this.value); runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-indigo-500">
+          <option value="0" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 0) ? 'selected' : ''}>Any Capacity</option>
+          <option value="30" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 30) ? 'selected' : ''}>&ge; 30W (PoE+)</option>
+          <option value="60" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 60) ? 'selected' : ''}>&ge; 60W (PoE++ / bt)</option>
+          <option value="90" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 90) ? 'selected' : ''}>&ge; 90W (PoE++ bt Type 4)</option>
+          <option value="120" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 120) ? 'selected' : ''}>&ge; 120W (High-Power DIN)</option>
+          <option value="250" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 250) ? 'selected' : ''}>&ge; 250W (Switch PSU)</option>
+          <option value="500" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 500) ? 'selected' : ''}>&ge; 500W+ (RPS High-Density)</option>
         </select>
       </div>
     </div>
@@ -743,6 +796,43 @@ function buildRacksSidebar(container, baseSet) {
   `;
 }
 
+function buildEnclosuresSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))].sort();
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Enclosure Environment</span>
+        <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'all') ? 'selected' : ''}>All Enclosure Types</option>
+          <option value="Pole" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Pole') ? 'selected' : ''}>Outdoor Pole Box (NEMA 4X)</option>
+          <option value="Wall" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Wall') ? 'selected' : ''}>Wall / Security Cabinet</option>
+          <option value="DIN" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'DIN') ? 'selected' : ''}>DIN Rail Cabinet</option>
+        </select>
+      </div>
+    </div>
+  `;
+}
+
 function buildUpsSidebar(container, baseSet) {
   const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))];
 
@@ -768,12 +858,34 @@ function buildUpsSidebar(container, baseSet) {
       </div>
 
       <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Hardware Category</span>
+        <select onchange="selectedUpsCategory = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'all') ? 'selected' : ''}>All Power Infrastructure</option>
+          <option value="ups" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'ups') ? 'selected' : ''}>UPS Systems (Battery Backup)</option>
+          <option value="ebp" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'ebp') ? 'selected' : ''}>Extended Battery Packs (EBP)</option>
+          <option value="pdu" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'pdu') ? 'selected' : ''}>Rack Power Distribution (PDUs)</option>
+          <option value="power_cord" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'power_cord') ? 'selected' : ''}>Power Cords & Jumpers</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Nominal Voltage</span>
+        <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === 'all') ? 'selected' : ''}>All Voltages</option>
+          <option value="120" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '120') ? 'selected' : ''}>120V AC (Standard)</option>
+          <option value="240" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '240') ? 'selected' : ''}>208V / 240V AC (High-Density)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Minimum Output Wattage</span>
         <select onchange="accMinPowerWatts = Number(this.value); runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
           <option value="0" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 0) ? 'selected' : ''}>Any Capacity</option>
           <option value="500" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 500) ? 'selected' : ''}>&ge; 500W</option>
           <option value="1000" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 1000) ? 'selected' : ''}>&ge; 1,000W</option>
+          <option value="1500" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 1500) ? 'selected' : ''}>&ge; 1,500W</option>
           <option value="2000" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 2000) ? 'selected' : ''}>&ge; 2,000W</option>
+          <option value="3000" ${(typeof accMinPowerWatts !== "undefined" && accMinPowerWatts === 3000) ? 'selected' : ''}>&ge; 3,000W</option>
         </select>
       </div>
 
@@ -796,6 +908,51 @@ function buildUpsSidebar(container, baseSet) {
             <span>Extended Battery (EBM) Support</span>
           </div>
         </label>
+      </div>
+    </div>
+  `;
+}
+
+function buildPdusSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))].sort();
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Input Voltage</span>
+        <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="all" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === 'all') ? 'selected' : ''}>All Voltages</option>
+          <option value="120" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '120') ? 'selected' : ''}>120V AC (15A / 20A)</option>
+          <option value="240" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '240') ? 'selected' : ''}>208V / 240V AC (30A L6-30P)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Form Factor</span>
+        <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="all" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'all') ? 'selected' : ''}>All Form Factors</option>
+          <option value="0U" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === '0U') ? 'selected' : ''}>0U Vertical High-Density</option>
+          <option value="Rack" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Rack') ? 'selected' : ''}>1U/2U Horizontal Rackmount</option>
+        </select>
       </div>
     </div>
   `;

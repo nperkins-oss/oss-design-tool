@@ -24,10 +24,22 @@ function toggleCompareItem(id) {
 
 function updateCompareBadge() {
   const badge = document.getElementById("compareCountBadge");
-  if (!badge) return;
-  badge.innerText = comparisonList.length;
-  if (comparisonList.length > 0) badge.classList.remove("hidden");
-  else badge.classList.add("hidden");
+  const navBtn = document.getElementById("compareNavButton");
+  const hasItems = comparisonList.length > 0;
+  
+  if (badge) {
+    badge.innerText = comparisonList.length;
+    if (hasItems) badge.classList.remove("hidden");
+    else badge.classList.add("hidden");
+  }
+
+  if (navBtn) {
+    if (hasItems) {
+      navBtn.classList.remove("hidden");
+    } else {
+      navBtn.classList.add("hidden");
+    }
+  }
 }
 
 function clearComparison() {

@@ -478,14 +478,23 @@ const StorageService = {
           retentionDays: 30,
           promptAnalytics: true
         },
-        cabling: {
-          horizontalCategories: ["C6A-CMP-1K-BL"],
-          compositeType: "AC-COMP-CMP-500",
-          rackTermination: "patch_panels",
-          patchCordLength: 0.5,
-          patchCordColors: { security: "Yellow", data: "Blue" },
-          fiberType: bundle.projectFiberType || "mmf"
-        }
+        cabling: (typeof DEFAULT_PROJECT_STANDARDS !== "undefined")
+          ? JSON.parse(JSON.stringify(DEFAULT_PROJECT_STANDARDS.cabling))
+          : {
+              horizontalCategories: ["C6A-CMP-1K-YL", "C6A-CMP-1K-BL"],
+              compositeType: "AC-COMP-CMP-500",
+              rackTermination: "patch_panels",
+              patchCordLength: 0.5,
+              fiberType: bundle.projectFiberType || "mmf",
+              standards: {
+                defaultRunColor: "Yellow",
+                defaultRunCategory: "C6A-CMP-1K-YL",
+                defaultPatchColor: "Yellow",
+                defaultPatchLength: 0.5,
+                defaultPatchType: "slim",
+                byDeviceType: {}
+              }
+            }
       }, projId);
     }
 

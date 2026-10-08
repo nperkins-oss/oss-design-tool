@@ -89,13 +89,14 @@ const GlobalSearchEngine = {
       };
     }
 
-    // 4. UPS Power Systems
-    if (sourceMode === "ups" || cat === "ups" || type === "ups") {
+    // 4. UPS Power Systems, EBPs & PDUs
+    if (sourceMode === "ups" || cat === "ups" || type === "ups" || type === "ebp" || item.isEbp || type === "pdu" || item.isPdu || type === "power_cord" || cat === "pdu") {
+      const modeLabel = (type === "pdu" || item.isPdu) ? "Rack PDU" : ((type === "ebp" || item.isEbp) ? "Extended Battery Pack (EBP)" : (type === "power_cord" ? "Power Jumper Cable" : "Rack UPS Power"));
       return {
         domain: "infrastructure",
         mode: "ups",
         domainLabel: "Infrastructure",
-        modeLabel: "Rack UPS Power",
+        modeLabel: modeLabel,
         icon: "zap",
         badgeColor: "border-amber-500/40 bg-amber-500/10 text-amber-300",
         searchCategory: "racks_ups"

@@ -556,7 +556,7 @@ const FacilityStore = {
       list = JSON.parse(JSON.stringify(this.defaultEnclosures));
     }
 
-    // Ensure all hosts have guaranteed hostType
+    // Ensure all hosts have guaranteed hostType and catalog part specifications
     list.forEach(e => {
       if (!e.hostType) {
         if (e.isDin || e.type === "nema_box" || (e.name && (e.name.toLowerCase().includes("nema") || e.name.toLowerCase().includes("din")))) {
@@ -571,12 +571,263 @@ const FacilityStore = {
           e.hostType = "equipment_rack";
         }
       }
+
+      // Tie enclosure to real catalog hardware part if not already specified
+      if (!e.catalogSku) {
+        const best = this.getBestFitCatalogRack(e);
+        if (best) {
+          e.catalogSku = best.sku;
+          e.catalogModel = best.model;
+          e.catalogVendor = best.vendor;
+          e.msrp = best.msrp || 0;
+          e.maxWeightLbs = best.maxWeightLbs || (e.hostType === "equipment_rack" ? 3000 : 250);
+          e.tareWeightLbs = best.tareWeightLbs || (e.hostType === "equipment_rack" ? 275 : 50);
+          e.doorType = best.doorType || "Standard Doors";
+          if (!e.depthInches && best.depthInches) e.depthInches = best.depthInches;
+        }
+      }
     });
 
     if (spaceId) {
       return list.filter(e => e.spaceId === spaceId);
     }
     return list;
+  },
+
+  /**
+   * Resolves the optimal real-world catalog hardware model for an enclosure
+   */
+  getBestFitCatalogRack(enc) {
+    if (!enc) return null;
+    if (enc.catalogSku) {
+      const found = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRack === "function")
+        ? CatalogRegistry.getRack(enc.catalogSku)
+        : null;
+      if (found) return found;
+    }
+
+    const hostType = enc.hostType || "equipment_rack";
+    const nameLower = (enc.name || "").toLowerCase();
+    const ru = parseInt(enc.heightU, 10) || 0;
+
+    let available = [];
+    if (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRacks === "function") {
+      available = CatalogRegistry.getRacks(hostType);
+    } else if (typeof ACCESSORY_DATABASE !== "undefined") {
+      available = ACCESSORY_DATABASE.filter(a => a.type === hostType || a.category === "racks");
+    }
+
+    if (available.length === 0) return null;
+
+    if (hostType === "equipment_rack") {
+      if (nameLower.includes("wall") || enc.mountingMethod === "wall") {
+        if (ru >= 24) return available.find(r => r.sku === "DWR-24-26") || available.find(r => r.sku === "SRW26US") || available[0];
+        if (ru >= 18) return available.find(r => r.sku === "DWR-18-26") || available.find(r => r.sku === "SRW18US") || available[0];
+        if (ru >= 12) return available.find(r => r.sku === "SRW12US") || available.find(r => r.sku === "UACC-Rack-12U-Wall-SW-G") || available[0];
+        return available.find(r => r.sku === "SRW6US") || available[0];
+      }
+      if (nameLower.includes("2-post") || nameLower.includes("relay")) {
+        return available.find(r => r.sku === "CPI-55053-703") || available[0];
+      }
+      if (ru >= 48) return available.find(r => r.sku === "AR3107") || available[0];
+      if (ru === 45) return available.find(r => r.sku === "CPI-55053-703") || available.find(r => r.sku === "CPI-50110-703") || available[0];
+      if (ru >= 38) return available.find(r => r.sku === "AR3100") || available.find(r => r.sku === "SR42UB") || available[0];
+      if (ru >= 20) return available.find(r => r.sku === "AR3104") || available.find(r => r.sku === "SR24UB") || available[0];
+      if (ru >= 12) return available.find(r => r.sku === "SRW12US") || available[0];
+      if (ru <= 8) return available.find(r => r.sku === "U-Rack-6U-TL") || available.find(r => r.sku === "SRW6US") || available[0];
+      return available.find(r => r.sku === "AR3100") || available[0];
+    }
+
+    if (hostType === "security_cabinet") {
+      if (enc.subplateBays >= 12 || nameLower.includes("24") || nameLower.includes("large")) {
+        return available.find(r => r.sku === "T3KV712") || available.find(r => r.sku === "FPO150/250-4E4") || available[0];
+      }
+      if (enc.subplateBays >= 8 || nameLower.includes("16") || nameLower.includes("mid")) {
+        return available.find(r => r.sku === "T2KV78") || available.find(r => r.sku === "FPO75/250-2E2") || available[0];
+      }
+      if (nameLower.includes("outdoor") || nameLower.includes("nema")) {
+        return available.find(r => r.sku === "Trove1WP1") || available[0];
+      }
+      return available.find(r => r.sku === "T1KV14") || available.find(r => r.sku === "T2KV78") || available[0];
+    }
+
+    if (hostType === "industrial_din") {
+      if (nameLower.includes("steel") || enc.railLengthMm >= 400) {
+        return available.find(r => r.sku === "A242008LP") || available[0];
+      }
+      if (enc.dinRails >= 2 || nameLower.includes("dual")) {
+        return available.find(r => r.sku === "NF171408") || available[0];
+      }
+      if (nameLower.includes("flex") || nameLower.includes("utility")) {
+        return available.find(r => r.sku === "USW-Flex-Utility") || available[0];
+      }
+      return available.find(r => r.sku === "NF141208") || available[0];
+    }
+
+    if (hostType === "architectural_backboard") {
+      if (enc.widthFt <= 4 && enc.heightFt <= 4) {
+        return available.find(r => r.sku === "BB-4X4-FR") || available[0];
+      }
+      return available.find(r => r.sku === "BB-4X8-FR") || available[0];
+    }
+
+    return available[0] || null;
+  },
+
+  /**
+   * Assigns a real catalog hardware product to an enclosure
+   */
+  setEnclosureCatalogPart(enclosureId, skuOrPart, autoSyncBOM = false) {
+    const list = this.getEnclosures();
+    const enc = list.find(e => e.id === enclosureId);
+    if (!enc) return false;
+
+    let part = null;
+    if (skuOrPart && typeof skuOrPart === "object") {
+      part = skuOrPart;
+    } else if (skuOrPart && typeof skuOrPart === "string") {
+      if (skuOrPart === "custom" || skuOrPart === "generic") {
+        enc.catalogSku = null;
+        enc.catalogModel = "Custom / Unspecified Hardware";
+        enc.catalogVendor = "Custom";
+        enc.msrp = 0;
+        this.saveEnclosures(list);
+        if (enc.bomInstanceId) this.syncEnclosureToBOM(enc.id, false);
+        this.notifyWorkspaceChange();
+        return true;
+      }
+      part = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRack === "function")
+        ? CatalogRegistry.getRack(skuOrPart)
+        : null;
+    }
+
+    if (!part) return false;
+
+    enc.catalogSku = part.sku;
+    enc.catalogModel = part.model || part.name;
+    enc.catalogVendor = part.vendor;
+    enc.msrp = part.msrp || 0;
+    enc.depthInches = part.depthInches || enc.depthInches;
+    enc.maxWeightLbs = part.maxWeightLbs || (enc.hostType === "equipment_rack" ? 3000 : 250);
+    enc.tareWeightLbs = part.tareWeightLbs || (enc.hostType === "equipment_rack" ? 275 : 50);
+    enc.doorType = part.doorType || "Standard Doors";
+    enc.image = part.image || null;
+    enc.datasheetPath = part.datasheetPath || null;
+
+    if (enc.hostType === "equipment_rack" && part.rackUnits && part.rackUnits > 0) {
+      enc.heightU = part.rackUnits;
+    } else if (enc.hostType === "security_cabinet" && part.subplateBays) {
+      enc.subplateBays = part.subplateBays;
+    } else if (enc.hostType === "industrial_din" && part.dinRails) {
+      enc.dinRails = part.dinRails;
+      if (part.railLengthMm) enc.railLengthMm = part.railLengthMm;
+    } else if (enc.hostType === "architectural_backboard" && part.widthFt) {
+      enc.widthFt = part.widthFt;
+      if (part.heightFt) enc.heightFt = part.heightFt;
+    }
+
+    this.saveEnclosures(list);
+
+    if (enc.inBOM || autoSyncBOM) {
+      this.syncEnclosureToBOM(enc.id, true);
+    }
+
+    this.notifyWorkspaceChange();
+    return true;
+  },
+
+  /**
+   * Adds or removes this enclosure hardware as a real priced line item in projectBOM
+   */
+  syncEnclosureToBOM(enclosureId, shouldBeInBOM = true) {
+    if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return false;
+    const list = this.getEnclosures();
+    const enc = list.find(e => e.id === enclosureId);
+    if (!enc) return false;
+
+    const spaces = this.getSpaces();
+    const space = spaces.find(s => s.id === enc.spaceId);
+    const fullLoc = space ? `${space.name} • ${enc.name}` : enc.name;
+
+    let existingIndex = -1;
+    if (enc.bomInstanceId) {
+      existingIndex = projectBOM.findIndex(i => i.instanceId === enc.bomInstanceId);
+    }
+    if (existingIndex === -1) {
+      existingIndex = projectBOM.findIndex(i => i.enclosureId === enc.id || (i.isEnclosureFrame && i.closetName === fullLoc));
+    }
+
+    if (shouldBeInBOM) {
+      const catPart = this.getBestFitCatalogRack(enc);
+      const sku = enc.catalogSku || catPart?.sku || "CUSTOM-RACK";
+      const model = enc.catalogModel || catPart?.model || `${enc.name} (${enc.heightU || 24}U Enclosure)`;
+      const vendor = enc.catalogVendor || catPart?.vendor || "Generic";
+      const msrp = (enc.msrp !== undefined) ? enc.msrp : (catPart?.msrp || 0);
+      const role = enc.hostType === "equipment_rack" ? "Equipment Rack" : 
+                   (enc.hostType === "security_cabinet" ? "Security Cabinet" : 
+                   (enc.hostType === "industrial_din" ? "Industrial NEMA Enclosure" : "Architectural Backboard"));
+
+      const instanceId = (existingIndex >= 0 && projectBOM[existingIndex].instanceId) ? projectBOM[existingIndex].instanceId : `enc-bom-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+
+      const bomItem = {
+        instanceId,
+        enclosureId: enc.id,
+        isEnclosureFrame: true,
+        id: sku,
+        sku: sku,
+        model: model,
+        vendor: vendor,
+        role: role,
+        category: "racks",
+        msrp: msrp,
+        rackUnits: enc.heightU || 0,
+        depthInches: enc.depthInches || 0,
+        baseWatts: 0,
+        powerWatts: 0,
+        poeBudget: 0,
+        closetName: fullLoc,
+        rackId: fullLoc,
+        qty: 1
+      };
+
+      if (existingIndex >= 0) {
+        projectBOM[existingIndex] = { ...projectBOM[existingIndex], ...bomItem };
+      } else {
+        projectBOM.push(bomItem);
+      }
+
+      enc.inBOM = true;
+      enc.bomInstanceId = instanceId;
+      enc.catalogSku = sku;
+      enc.catalogModel = model;
+      enc.catalogVendor = vendor;
+      enc.msrp = msrp;
+    } else {
+      if (existingIndex >= 0) {
+        projectBOM.splice(existingIndex, 1);
+      }
+      enc.inBOM = false;
+      enc.bomInstanceId = null;
+    }
+
+    this.saveEnclosures(list);
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
+    this.notifyWorkspaceChange();
+    return true;
+  },
+
+  isEnclosureInBOM(enclosureId) {
+    if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return false;
+    const enc = this.getEnclosures().find(e => e.id === enclosureId);
+    if (!enc) return false;
+    if (enc.bomInstanceId) {
+      return projectBOM.some(i => i.instanceId === enc.bomInstanceId);
+    }
+    return projectBOM.some(i => i.enclosureId === enc.id);
   },
 
   // Host Accessor Alias
@@ -618,6 +869,10 @@ const FacilityStore = {
       }
     }
 
+    const catPart = (options.catalogSku && typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRack === "function")
+      ? CatalogRegistry.getRack(options.catalogSku)
+      : null;
+
     const isDin = hostType === "industrial_din" || type === "din_rail" || type === "nema_box";
     const newEnc = {
       id,
@@ -625,25 +880,40 @@ const FacilityStore = {
       name: cleanName,
       hostType,
       type: type || (isDin ? "nema_box" : "rack_4post"),
-      heightU: parseInt(heightU, 10) || (hostType === "equipment_rack" ? 24 : 0),
+      heightU: parseInt(heightU, 10) || (catPart?.rackUnits !== undefined ? catPart.rackUnits : (hostType === "equipment_rack" ? 24 : 0)),
       isDin,
       maxWatts: parseInt(maxWatts, 10) || (hostType === "equipment_rack" ? 3000 : (hostType === "security_cabinet" ? 1200 : 800)),
       pduCount: hostType === "equipment_rack" ? 2 : 1,
       mountingMethod: options.mountingMethod || (hostType === "industrial_din" ? "wall" : null),
       mountHeightFt: options.mountHeightFt || null,
+      // Real Catalog Hardware Integration:
+      catalogSku: catPart?.sku || options.catalogSku || null,
+      catalogModel: catPart?.model || options.catalogModel || null,
+      catalogVendor: catPart?.vendor || options.catalogVendor || null,
+      msrp: (catPart?.msrp !== undefined) ? catPart.msrp : (options.msrp || 0),
+      maxWeightLbs: catPart?.maxWeightLbs || (hostType === "equipment_rack" ? 3000 : 250),
+      tareWeightLbs: catPart?.tareWeightLbs || (hostType === "equipment_rack" ? 275 : 50),
+      doorType: catPart?.doorType || "Standard Doors",
+      inBOM: !!options.addToBOM,
+      bomInstanceId: null,
       // Specific host parameters:
-      subplateBays: options.subplateBays || (hostType === "security_cabinet" ? 8 : null),
+      subplateBays: options.subplateBays || (catPart?.subplateBays) || (hostType === "security_cabinet" ? 8 : null),
       dcVoltage: options.dcVoltage || (hostType === "security_cabinet" ? "dual_12_24" : null),
-      dinRails: options.dinRails || (hostType === "industrial_din" ? 2 : null),
-      railLengthMm: options.railLengthMm || (hostType === "industrial_din" ? 350 : null),
-      depthInches: options.depthInches || (hostType === "equipment_rack" ? 24 : null),
+      dinRails: options.dinRails || (catPart?.dinRails) || (hostType === "industrial_din" ? 2 : null),
+      railLengthMm: options.railLengthMm || (catPart?.railLengthMm) || (hostType === "industrial_din" ? 350 : null),
+      depthInches: options.depthInches || (catPart?.depthInches) || (hostType === "equipment_rack" ? 36 : null),
       poleDiameterInches: options.poleDiameterInches || (hostType === "structural_mount" ? 4 : null),
-      widthFt: options.widthFt || (hostType === "architectural_backboard" ? 4 : null),
-      heightFt: options.heightFt || (hostType === "architectural_backboard" ? 8 : null),
+      widthFt: options.widthFt || (catPart?.widthFt) || (hostType === "architectural_backboard" ? 4 : null),
+      heightFt: options.heightFt || (catPart?.heightFt) || (hostType === "architectural_backboard" ? 8 : null),
       config: options.config || {}
     };
     list.push(newEnc);
     this.saveEnclosures(list);
+
+    if (options.addToBOM) {
+      this.syncEnclosureToBOM(newEnc.id, true);
+    }
+
     this.notifyWorkspaceChange();
     return newEnc;
   },
@@ -1650,14 +1920,7 @@ function switchFacilityView(viewName, targetLocName) {
   const portMatrixView = document.getElementById("facilityPortMatrixView");
   const titleHierarchy = document.getElementById("facilityTitleHierarchy");
   const titleVisualizer = document.getElementById("facilityTitleVisualizer");
-  const tabBtnHierarchy = document.getElementById("facilityTabBtnHierarchy");
-  const tabBtnVisualizer = document.getElementById("facilityTabBtnVisualizer");
-  const tabBtnPortMatrix = document.getElementById("facilityTabBtnPortMatrix");
   const visualizerControls = document.getElementById("facilityVisualizerControls");
-
-  if (tabBtnHierarchy) tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer";
-  if (tabBtnVisualizer) tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer";
-  if (tabBtnPortMatrix) tabBtnPortMatrix.className = "px-3 py-1.5 rounded-lg text-slate-400 hover:text-slate-200 transition-all flex items-center gap-1.5 cursor-pointer";
 
   if (facilityActiveView === "port_matrix") {
     if (hierarchyView) hierarchyView.classList.add("hidden");
@@ -1666,9 +1929,6 @@ function switchFacilityView(viewName, targetLocName) {
     if (titleHierarchy) titleHierarchy.classList.add("hidden");
     if (titleVisualizer) titleVisualizer.classList.remove("hidden");
     if (visualizerControls) visualizerControls.classList.add("hidden");
-    if (tabBtnPortMatrix) {
-      tabBtnPortMatrix.className = "px-3 py-1.5 rounded-lg text-white bg-indigo-600 transition-all flex items-center gap-1.5 shadow cursor-pointer";
-    }
     if (typeof syncRackSelectorOptions === "function") {
       syncRackSelectorOptions();
     }
@@ -1688,10 +1948,6 @@ function switchFacilityView(viewName, targetLocName) {
     if (titleVisualizer) titleVisualizer.classList.remove("hidden");
     if (visualizerControls) visualizerControls.classList.remove("hidden");
 
-    if (tabBtnVisualizer) {
-      tabBtnVisualizer.className = "px-3 py-1.5 rounded-lg text-white bg-indigo-600 transition-all flex items-center gap-1.5 shadow cursor-pointer";
-    }
-
     if (targetLocName && typeof switchActiveRackElevation === "function") {
       switchActiveRackElevation(targetLocName);
     } else {
@@ -1709,10 +1965,6 @@ function switchFacilityView(viewName, targetLocName) {
     if (titleVisualizer) titleVisualizer.classList.add("hidden");
     if (visualizerControls) visualizerControls.classList.add("hidden");
 
-    if (tabBtnHierarchy) {
-      tabBtnHierarchy.className = "px-3 py-1.5 rounded-lg text-white bg-sky-600 transition-all flex items-center gap-1.5 shadow cursor-pointer";
-    }
-
     // Restore previous floor and space if set
     const floors = FacilityStore.getFloors();
     if (previousFacilityFloorId && floors.some(f => f.id === previousFacilityFloorId)) {
@@ -1726,6 +1978,7 @@ function switchFacilityView(viewName, targetLocName) {
     renderFacilityManager();
   }
 
+  if (typeof updateFacilitySubNavUI === "function") updateFacilitySubNavUI();
   if (window.lucide) lucide.createIcons();
 }
 
@@ -2794,6 +3047,28 @@ function renderFacilityManager() {
                   </div>
                 </div>
 
+                <!-- Real Catalog Part & BOM Quote Bar -->
+                <div class="flex items-center justify-between p-2 rounded-lg bg-slate-900/90 border border-slate-800 text-[11px]">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="px-2 py-0.5 rounded font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/60 shadow-sm shrink-0">
+                      ${escapeHTML(e.catalogVendor || '')} ${escapeHTML(e.catalogSku || 'Custom Hardware')}
+                    </span>
+                    <span class="text-slate-300 truncate max-w-[180px] sm:max-w-[240px]" title="${escapeHTML(e.catalogModel || '')}">${escapeHTML(e.catalogModel || '')}</span>
+                    <span class="font-mono text-emerald-400 font-bold shrink-0">$${(e.msrp || 0).toLocaleString()} MSRP</span>
+                  </div>
+                  <div class="shrink-0 ml-2">
+                    ${FacilityStore.isEnclosureInBOM(e.id) ? `
+                      <button onclick="event.stopPropagation(); FacilityStore.syncEnclosureToBOM('${e.id}', false); renderFacilityManager(); if (typeof renderBOM === 'function') renderBOM(); if (typeof updateBOMView === 'function') updateBOMView();" class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 hover:bg-emerald-900 text-emerald-300 border border-emerald-600 flex items-center gap-1 transition-colors cursor-pointer" title="Enclosure frame included in project quote. Click to remove.">
+                        <i data-lucide="check" class="w-3 h-3"></i> In Quote
+                      </button>
+                    ` : `
+                      <button onclick="event.stopPropagation(); FacilityStore.syncEnclosureToBOM('${e.id}', true); renderFacilityManager(); if (typeof renderBOM === 'function') renderBOM(); if (typeof updateBOMView === 'function') updateBOMView();" class="px-2.5 py-0.5 rounded text-[10px] font-bold bg-slate-850 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 flex items-center gap-1 transition-colors cursor-pointer" title="Add physical enclosure frame to project BOM and quote">
+                        <i data-lucide="plus" class="w-3 h-3"></i> Add to Quote
+                      </button>
+                    `}
+                  </div>
+                </div>
+
                 <!-- Telemetry Row -->
                 <div class="grid grid-cols-4 gap-2 pt-2 border-t border-slate-850 text-[10px] font-mono">
                   <div class="bg-slate-900/80 p-1.5 rounded-lg border border-slate-800">
@@ -3337,6 +3612,10 @@ function openRackViewerFor(locationName) {
   if (topoModal && !topoModal.classList.contains("hidden")) {
     if (typeof toggleTopologyModal === "function") toggleTopologyModal();
   }
+  const bomModal = document.getElementById("bomModal");
+  if (bomModal && !bomModal.classList.contains("hidden")) {
+    if (typeof toggleBomModal === "function") toggleBomModal();
+  }
 
   previousFacilityFloorId = activeFacilityFloorId;
   previousFacilitySpaceId = activeFacilitySpaceId;
@@ -3363,6 +3642,10 @@ function jumpToFacilitySpace(target) {
   const topoModal = document.getElementById("topologyModal");
   if (topoModal && !topoModal.classList.contains("hidden")) {
     if (typeof toggleTopologyModal === "function") toggleTopologyModal();
+  }
+  const bomModalTarget = document.getElementById("bomModal");
+  if (bomModalTarget && !bomModalTarget.classList.contains("hidden")) {
+    if (typeof toggleBomModal === "function") toggleBomModal();
   }
 
   const parsed = FacilityStore.parse(target);
@@ -3470,8 +3753,88 @@ function promptAssignHardwareToSpace(spaceName) {
 // -----------------------------------------------------------
 // Quick Add Enclosure / Rack Modal Functions
 // -----------------------------------------------------------
+function handleQuickAddCatalogPartChange(sku) {
+  const priceLabel = document.getElementById("quickAddPriceLabel");
+  const nameInput = document.getElementById("quickAddHostNameInput");
+  const typeSelect = document.getElementById("quickAddHostTypeSelect");
+  const hostType = typeSelect ? typeSelect.value : "equipment_rack";
+
+  if (!sku || sku === "custom") {
+    if (priceLabel) priceLabel.textContent = "$0";
+    return;
+  }
+
+  const part = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRack === "function")
+    ? CatalogRegistry.getRack(sku)
+    : null;
+
+  if (!part) return;
+
+  if (priceLabel) {
+    priceLabel.textContent = `$${(part.msrp || 0).toLocaleString()}`;
+  }
+
+  if (nameInput) {
+    const encCount = FacilityStore.getEnclosures().length;
+    const prefix = hostType === "equipment_rack" ? "Rack" : (hostType === "security_cabinet" ? "Sec-Cab" : (hostType === "industrial_din" ? "NEMA" : "Backboard"));
+    nameInput.value = `${prefix}-${encCount + 1} (${part.vendor} ${part.sku})`;
+  }
+
+  if (hostType === "equipment_rack") {
+    const hSelect = document.getElementById("quickAddRackHeight");
+    if (hSelect && part.rackUnits) hSelect.value = String(part.rackUnits);
+    const dSelect = document.getElementById("quickAddRackDepth");
+    if (dSelect && part.depthInches) {
+      if (part.depthInches >= 40) dSelect.value = "42";
+      else if (part.depthInches >= 30) dSelect.value = "36";
+      else dSelect.value = "24";
+    }
+  } else if (hostType === "security_cabinet") {
+    const bSelect = document.getElementById("quickAddCabinetBays");
+    if (bSelect && part.subplateBays) bSelect.value = String(part.subplateBays);
+  } else if (hostType === "industrial_din") {
+    const rSelect = document.getElementById("quickAddDinRails");
+    if (rSelect && part.dinRails) rSelect.value = String(part.dinRails);
+  } else if (hostType === "architectural_backboard") {
+    const wSelect = document.getElementById("quickAddBackboardSize");
+    if (wSelect) {
+      if (part.widthFt <= 4 && part.heightFt <= 4) wSelect.value = "4x4";
+      else if (part.widthFt) wSelect.value = String(part.widthFt);
+    }
+  }
+}
+window.handleQuickAddCatalogPartChange = handleQuickAddCatalogPartChange;
+
 function updateQuickAddTypeFields(hostType) {
   const container = document.getElementById("quickAddSpecificFields");
+  const catSelect = document.getElementById("quickAddCatalogPartSelect");
+
+  let availableRacks = [];
+  if (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getRacks === "function") {
+    availableRacks = CatalogRegistry.getRacks(hostType);
+  } else if (typeof ACCESSORY_DATABASE !== "undefined") {
+    availableRacks = ACCESSORY_DATABASE.filter(a => a.type === hostType || a.category === "racks");
+  }
+
+  if (catSelect) {
+    catSelect.innerHTML = availableRacks.map(r => {
+      const specSnippet = (hostType === "equipment_rack")
+        ? `${r.rackUnits}U • ${r.depthInches ? `${r.depthInches}"D` : ''} • $${(r.msrp || 0).toLocaleString()}`
+        : (hostType === "security_cabinet")
+        ? `${r.subplateBays || 8} Bays • $${(r.msrp || 0).toLocaleString()}`
+        : (hostType === "industrial_din")
+        ? `${r.dinRails || 2}x DIN • $${(r.msrp || 0).toLocaleString()}`
+        : `${r.widthFt || 4}'x${r.heightFt || 8}' • $${(r.msrp || 0).toLocaleString()}`;
+      return `<option value="${r.sku}">${r.vendor} ${r.sku} (${r.model}) - $${(r.msrp || 0).toLocaleString()}</option>`;
+    }).join('') + `<option value="custom">⚡ Custom / Unspecified Hardware ($0)</option>`;
+
+    if (availableRacks.length > 0) {
+      handleQuickAddCatalogPartChange(availableRacks[0].sku);
+    } else {
+      handleQuickAddCatalogPartChange("custom");
+    }
+  }
+
   if (!container) return;
 
   if (hostType === "equipment_rack") {
@@ -3479,16 +3842,20 @@ function updateQuickAddTypeFields(hostType) {
       <div>
         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Rack Height:</label>
         <select id="quickAddRackHeight" class="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="6">6U Mini / Wallbox</option>
           <option value="12">12U Wallbox</option>
           <option value="18">18U Wallbox</option>
           <option value="24" selected>24U Half-Rack</option>
           <option value="42">42U Full-Rack</option>
+          <option value="45">45U Relay / Open Frame</option>
           <option value="48">48U Enterprise</option>
         </select>
       </div>
       <div>
         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Frame Depth:</label>
         <select id="quickAddRackDepth" class="w-full bg-slate-950 border border-slate-700 text-white font-mono rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
+          <option value="15">15" Relay Rack</option>
+          <option value="21">21.6" Wallbox</option>
           <option value="24">24" Shallow</option>
           <option value="36" selected>36" Standard</option>
           <option value="42">42" Server Deep</option>
@@ -3500,9 +3867,10 @@ function updateQuickAddTypeFields(hostType) {
       <div>
         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Subplate Bays:</label>
         <select id="quickAddCabinetBays" class="w-full bg-slate-950 border border-slate-700 text-emerald-300 font-bold rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
-          <option value="4">4 Bays (Small LSP/Trove)</option>
-          <option value="8" selected>8 Bays (Medium Trove2)</option>
-          <option value="12">12 Bays (Enterprise Trove3)</option>
+          <option value="4">4 Bays (Trove1 / Small LSP)</option>
+          <option value="8" selected>8 Bays (Trove2 / Medium LSP)</option>
+          <option value="12">12 Bays (Trove3 High-Density)</option>
+          <option value="16">16 Bays (Large Enterprise)</option>
         </select>
       </div>
       <div>
@@ -3539,6 +3907,7 @@ function updateQuickAddTypeFields(hostType) {
         <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Plywood Field Size:</label>
         <select id="quickAddBackboardSize" class="w-full bg-slate-950 border border-slate-700 text-purple-300 font-bold rounded-lg px-2 py-1.5 text-xs focus:border-indigo-500 focus:outline-none">
           <option value="4" selected>4' x 8' Sheet (32 sq ft)</option>
+          <option value="4x4">4' x 4' Sheet (16 sq ft)</option>
           <option value="8">8' x 8' Wallfield (64 sq ft)</option>
           <option value="12">12' x 8' Room Field (96 sq ft)</option>
         </select>
@@ -3610,6 +3979,11 @@ function submitQuickAddEnclosure() {
     return;
   }
 
+  const catSelect = document.getElementById("quickAddCatalogPartSelect");
+  const addToBomCheck = document.getElementById("quickAddAddToBOMCheckbox");
+  const selectedSku = catSelect ? catSelect.value : null;
+  const addToBOM = addToBomCheck ? addToBomCheck.checked : false;
+
   const options = {};
   if (hostType === "equipment_rack") {
     const hSelect = document.getElementById("quickAddRackHeight");
@@ -3629,9 +4003,20 @@ function submitQuickAddEnclosure() {
     options.railLengthMm = 350;
   } else if (hostType === "architectural_backboard") {
     const wSelect = document.getElementById("quickAddBackboardSize");
-    options.widthFt = wSelect ? parseInt(wSelect.value, 10) : 4;
-    options.heightFt = 8;
+    const val = wSelect ? wSelect.value : "4";
+    if (val === "4x4") {
+      options.widthFt = 4;
+      options.heightFt = 4;
+    } else {
+      options.widthFt = parseInt(val, 10) || 4;
+      options.heightFt = 8;
+    }
   }
+
+  if (selectedSku && selectedSku !== "custom") {
+    options.catalogSku = selectedSku;
+  }
+  options.addToBOM = addToBOM;
 
   FacilityStore.addHost(name, hostType, spaceId, options);
   closeQuickAddEnclosureModal();

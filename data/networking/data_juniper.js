@@ -56,7 +56,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-c-12t.png",
+    "image": "assets/images/products/juniper-ex2300-c-12t.webp",
     "keyFeatures": [
       "Silent 100% fanless operation for classroom or retail spaces",
       "Compact 9.4\" depth fits tight enclosures and credenzas",
@@ -119,7 +119,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-c-12p.png",
+    "image": "assets/images/products/juniper-ex2300-c-12p.webp",
     "keyFeatures": [
       "12x 802.3at PoE+ ports with 124W total power budget",
       "Silent fanless design ideal for conference rooms and clinics",
@@ -179,7 +179,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-24t.png",
+    "image": "assets/images/products/juniper-ex2300-24p.webp",
     "keyFeatures": [
       "24x 1G RJ-45 non-PoE ports with shallow 10.2\" depth",
       "4x 10G SFP+ uplinks supporting up to 4-member Virtual Chassis",
@@ -242,7 +242,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-24p.png",
+    "image": "assets/images/products/juniper-ex2300-24p.webp",
     "keyFeatures": [
       "24x 1G 802.3at PoE+ ports with 370W dedicated power budget",
       "4x 10G SFP+ uplinks for high-speed core connectivity",
@@ -305,7 +305,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-24mp.png",
+    "image": "assets/images/products/juniper-ex2300-24mp.webp",
     "keyFeatures": [
       "8x 2.5GBASE-T ports for Wi-Fi 6 access points",
       "16x 1G PoE+ ports with 380W total power budget",
@@ -365,7 +365,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-48t.png",
+    "image": "assets/images/products/juniper-ex2300-48p.webp",
     "keyFeatures": [
       "48x high-density 1G access ports in a shallow 10.2\" chassis",
       "4x 10G SFP+ uplinks supporting 4-member Virtual Chassis",
@@ -428,7 +428,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-48p.png",
+    "image": "assets/images/products/juniper-ex2300-48p.webp",
     "keyFeatures": [
       "48x 1G PoE+ ports with 740W power budget",
       "4x 10G SFP+ uplinks for backbone connectivity",
@@ -491,7 +491,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-48mp.png",
+    "image": "assets/images/products/juniper-ex2300-48mp.webp",
     "keyFeatures": [
       "16x 2.5G mGig ports + 32x 1G ports with 740W PoE+ budget",
       "6x 10G SFP+ uplinks for aggregation and stacking",
@@ -552,7 +552,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex3400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex3400-24t.png",
+    "image": "assets/images/products/juniper-ex3400-24p.webp",
     "keyFeatures": [
       "Dual hot-swappable load-sharing power supplies",
       "2x 40G QSFP+ dedicated Virtual Chassis stacking ports",
@@ -616,7 +616,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex3400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex3400-24p.png",
+    "image": "assets/images/products/juniper-ex3400-24p.webp",
     "keyFeatures": [
       "24x 1G PoE+ with up to 720W budget (dual hot-swap PSUs)",
       "2x 40G QSFP+ stacking ports delivering 80 Gbps stacking fabric",
@@ -677,7 +677,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex3400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex3400-48t.png",
+    "image": "assets/images/products/juniper-ex3400-48p.webp",
     "keyFeatures": [
       "48x 1G RJ-45 access ports with redundant dual power",
       "2x 40G QSFP+ ports for 80 Gbps Virtual Chassis stacking",
@@ -741,7 +741,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex3400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex3400-48p.png",
+    "image": "assets/images/products/juniper-ex3400-48p.webp",
     "keyFeatures": [
       "48x 1G PoE+ with massive 1440W power budget (dual 920W PSUs)",
       "2x 40G QSFP+ stacking ports delivering 80 Gbps fabric",
@@ -801,7 +801,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-f-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-f-12t.png",
+    "image": "assets/images/products/juniper-ex4100-f-12t.webp",
     "keyFeatures": [
       "100% silent fanless design with zero acoustic noise",
       "Mist AI cloud-native provisioning with Marvis VNA",
@@ -864,7 +864,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-f-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-f-12p.png",
+    "image": "assets/images/products/juniper-ex4100-f-12p.webp",
     "keyFeatures": [
       "100% silent fanless compact enclosure with 180W PoE budget",
       "Perpetual & Fast PoE keeps access control readers powered",
@@ -924,7 +924,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 6,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-f-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-f-24t.png",
+    "image": "assets/images/products/juniper-ex4100-f-24t.webp",
     "keyFeatures": [
       "Shallow 11.8\" depth fits standard wall mount cabinets",
       "4x 10G SFP+ uplinks + 2x 20G Virtual Chassis ports",
@@ -987,7 +987,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 6,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-f-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-f-24p.png",
+    "image": "assets/images/products/juniper-ex4100-f-24p.webp",
     "keyFeatures": [
       "24x 1G PoE+ with 370W fixed power budget",
       "Perpetual & Fast PoE keeps security devices powered",
@@ -1047,7 +1047,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 6,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-f-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-f-48t.png",
+    "image": "assets/images/products/juniper-ex4100-f-48t.webp",
     "keyFeatures": [
       "48x high-density 1G access ports in a cost-optimized fixed 1U",
       "4x 10G SFP+ uplinks + 2x 20G Virtual Chassis ports",
@@ -1110,7 +1110,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 6,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-f-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-f-48p.png",
+    "image": "assets/images/products/juniper-ex4100-f-48p.webp",
     "keyFeatures": [
       "48x 1G PoE+ with 740W fixed internal power budget",
       "Perpetual & Fast PoE keeps CCTV online during reboot",
@@ -1171,7 +1171,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-24t.png",
+    "image": "assets/images/products/juniper-ex4100-24t.webp",
     "keyFeatures": [
       "Dual hot-swap load-sharing redundant power supplies",
       "4x 25G SFP28 uplinks & 2x 100G QSFP28 Virtual Chassis ports",
@@ -1235,7 +1235,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-24p.png",
+    "image": "assets/images/products/juniper-ex4100-24p.webp",
     "keyFeatures": [
       "24x 1G PoE+ with 740W budget and dual hot-swap PSUs",
       "Perpetual & Fast PoE keeps cameras active during reload",
@@ -1301,7 +1301,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-24mp.png",
+    "image": "assets/images/products/juniper-ex4100-24mp.webp",
     "keyFeatures": [
       "8x 10G multi-gigabit ports with 90W 802.3bt PoE++",
       "16x 1G PoE+ ports with up to 1440W power budget",
@@ -1362,7 +1362,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-48t.png",
+    "image": "assets/images/products/juniper-ex4100-48t.webp",
     "keyFeatures": [
       "48x 1G RJ-45 access ports with dual hot-swap power supplies",
       "4x 25G SFP28 uplinks + 2x 100G Virtual Chassis ports",
@@ -1426,7 +1426,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-48p.png",
+    "image": "assets/images/products/juniper-ex4100-48p.webp",
     "keyFeatures": [
       "48x 1G PoE+ with 1440W power budget and dual hot-swap PSUs",
       "Perpetual & Fast PoE keeps IP surveillance online through reboot",
@@ -1492,7 +1492,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-48mp.png",
+    "image": "assets/images/products/juniper-ex4100-48mp.webp",
     "keyFeatures": [
       "16x 10G multi-gigabit ports with 90W 802.3bt PoE++",
       "32x 1G PoE+ ports with 1620W massive dual-PSU power budget",
@@ -1554,7 +1554,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-h-12t.png",
+    "image": "assets/images/products/juniper-ex4100-h-12t.webp",
     "keyFeatures": [
       "Ruggedized fanless vertical brick for utility cabinets (-40\u00b0C to +75\u00b0C)",
       "IEC 61850-3 & IEEE 1613 power substation certified",
@@ -1621,7 +1621,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-h-12mp.png",
+    "image": "assets/images/products/juniper-ex4100-h-12t.webp",
     "keyFeatures": [
       "4x 90W 802.3bt PoE++ ports with Perpetual & Fast PoE",
       "Extreme temperature range (-40\u00b0C to +75\u00b0C) 100% silent fanless",
@@ -1687,7 +1687,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 6,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-h-24mp.png",
+    "image": "assets/images/products/juniper-ex4100-h-24mp.webp",
     "keyFeatures": [
       "1U 19\" rackmount hardened switch with fanless convection cooling",
       "Substation IEC 61850-3 & IEEE 1613 certified (-40\u00b0C to +75\u00b0C)",
@@ -1732,7 +1732,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-350-AC-AFI",
+    "psuSku": "JPSU-350-AC-AFO",
     "evpnVxlan": false,
     "taa": true,
     "msrp": 4600,
@@ -1747,14 +1747,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 333.0,
     "packetBufferMb": 12,
     "stackCableSku": "QFX-QSFP-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX-UM-4X4SFP",
+      "supportedModules": [
+        "EX-UM-4X4SFP",
+        "EX-UM-2QSFP",
+        "EX-UM-8X8SFP"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-24t.png",
+    "image": "assets/images/products/juniper-ex4300-24p.webp",
     "keyFeatures": [
       "4x 40G QSFP+ ports configurable as high-speed Virtual Chassis or uplinks",
       "Modular uplink sled bay (supports 4x 10G SFP+ or 1x 40G QSFP+)",
       "Redundant hot-swappable AC/DC power supplies and fan trays",
       "Front-panel LCD display for system status and diagnostics"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4300-FAN",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C2-P",
+        "S-EX-P-C2-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4300-24p",
@@ -1796,7 +1815,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-715-AC-AFI",
+    "psuSku": "JPSU-715-AC-AFO",
     "evpnVxlan": false,
     "taa": true,
     "msrp": 5900,
@@ -1811,14 +1830,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 333.0,
     "packetBufferMb": 12,
     "stackCableSku": "QFX-QSFP-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX-UM-4X4SFP",
+      "supportedModules": [
+        "EX-UM-4X4SFP",
+        "EX-UM-2QSFP",
+        "EX-UM-8X8SFP"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-24p.png",
+    "image": "assets/images/products/juniper-ex4300-24p.webp",
     "keyFeatures": [
       "24x 1G PoE+ with 740W power budget and dual hot-swap PSUs",
       "4x 40G QSFP+ ports for 320 Gbps Virtual Chassis stacking fabric",
       "Front-panel LCD menu for quick IP configuration",
       "Full Layer 3 routing including BGP, OSPF, and multicast PIM"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4300-FAN",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C2-P",
+        "S-EX-P-C2-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4300-48t",
@@ -1857,7 +1895,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-350-AC-AFI",
+    "psuSku": "JPSU-350-AC-AFO",
     "evpnVxlan": false,
     "taa": true,
     "msrp": 6800,
@@ -1872,14 +1910,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 369.0,
     "packetBufferMb": 12,
     "stackCableSku": "QFX-QSFP-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX-UM-4X4SFP",
+      "supportedModules": [
+        "EX-UM-4X4SFP",
+        "EX-UM-2QSFP",
+        "EX-UM-8X8SFP"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-48t.png",
+    "image": "assets/images/products/juniper-ex4300-48p.webp",
     "keyFeatures": [
       "48x high-density copper access ports with redundant power",
       "4x 40G QSFP+ ports + optional 4x 10G uplink module",
       "Virtual Chassis stacking up to 10 switches as one",
       "Graceful Routing Engine switchover (GRES) for zero downtime"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4300-FAN",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4300-48p",
@@ -1921,7 +1978,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-1100-AC-AFI",
+    "psuSku": "JPSU-1100-AC-AFO",
     "evpnVxlan": false,
     "taa": true,
     "msrp": 8400,
@@ -1936,14 +1993,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 369.0,
     "packetBufferMb": 12,
     "stackCableSku": "QFX-QSFP-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX-UM-4X4SFP",
+      "supportedModules": [
+        "EX-UM-4X4SFP",
+        "EX-UM-2QSFP",
+        "EX-UM-8X8SFP"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-48p.png",
+    "image": "assets/images/products/juniper-ex4300-48p.webp",
     "keyFeatures": [
       "48x 1G PoE+ with 1440W power budget (dual hot-swap 1100W PSUs)",
       "4x 40G QSFP+ ports for high-capacity Virtual Chassis interconnect",
       "Modular uplink sled supporting 4x 10G SFP+ or 1x 40G QSFP+",
       "Comprehensive hardware redundancy and high availability"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4300-FAN",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4300-48mp",
@@ -1987,7 +2063,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-1100-AC-AFI",
+    "psuSku": "JPSU-1100-AC-AFO",
     "evpnVxlan": false,
     "taa": true,
     "msrp": 9900,
@@ -2002,14 +2078,34 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 714.0,
     "packetBufferMb": 16,
     "stackCableSku": "QFX-QSFP-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX-UM-4SFPP-MR",
+      "supportedModules": [
+        "EX-UM-4SFPP-MR",
+        "EX-UM-2QSFP-MR",
+        "EX-UM-4X4SFP",
+        "EX-UM-2QSFP"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-48mp.png",
+    "image": "assets/images/products/juniper-ex4300-48mp.webp",
     "keyFeatures": [
       "24x multi-gigabit 10G ports with 90W 802.3bt PoE++",
       "24x 1G PoE+ ports with 1620W power budget",
       "4x 40G QSFP+ stacking and uplink cages",
       "Deep 16 MB packet buffer to eliminate camera jitter"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4300-FAN",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4300-32f",
@@ -2048,7 +2144,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-350-AC-AFI",
+    "psuSku": "JPSU-350-AC-AFO",
     "evpnVxlan": false,
     "taa": true,
     "msrp": 8200,
@@ -2063,14 +2159,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 345.0,
     "packetBufferMb": 12,
     "stackCableSku": "QFX-QSFP-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX-UM-8X8SFP",
+      "supportedModules": [
+        "EX-UM-8X8SFP",
+        "EX-UM-4X4SFP",
+        "EX-UM-2QSFP"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-32f.png",
+    "image": "assets/images/products/juniper-ex4300-32f.webp",
     "keyFeatures": [
       "32x 1G SFP optical ports for campus distribution",
       "4x 10G SFP+ + 2x 40G QSFP+ uplinks & Virtual Chassis stacking",
       "Dual hot-swap redundant power supplies and fans",
       "Full Layer 3 routing engine with MPLS support"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4300-FAN",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-24t",
@@ -2109,7 +2224,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-550-AC-AFI",
+    "psuSku": "JPSU-550-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 3800,
@@ -2124,14 +2239,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 157.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-24t.png",
+    "image": "assets/images/products/juniper-ex4400-24t.webp",
     "keyFeatures": [
       "Dedicated 2x 100G QSFP28 rear Virtual Chassis stacking ports",
       "Modular uplink bay (4x 25G SFP28 or 1x 100G QSFP28)",
       "Full EVPN-VXLAN campus fabric support with microsegmentation",
       "Huge 16 MB packet buffer absorbs CCTV camera spikes"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-24p",
@@ -2173,7 +2307,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-920-AC-AFI",
+    "psuSku": "JPSU-1050-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 4600,
@@ -2188,14 +2322,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 157.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-24p.png",
+    "image": "assets/images/products/juniper-ex4400-24p.webp",
     "keyFeatures": [
       "24x 1G PoE+ with 740W budget and dual hot-swap PSUs",
       "Perpetual & Fast PoE keeps access control & cameras online",
       "Dedicated 2x 100G Virtual Chassis stacking ports",
       "Full EVPN-VXLAN campus fabric and MACsec AES-256"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-24mp",
@@ -2239,7 +2392,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-920-AC-AFI",
+    "psuSku": "JPSU-1600-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 6800,
@@ -2254,14 +2407,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 244.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-24mp.png",
+    "image": "assets/images/products/juniper-ex4400-24mp.webp",
     "keyFeatures": [
       "All 24 ports support full 10G mGig & 90W 802.3bt PoE++",
       "Perpetual PoE ensures critical physical security never power-cycles",
       "Dedicated rear 2x 100G Virtual Chassis stacking ports",
       "16 MB buffer absorbs high-megapixel camera bursts"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-24x",
@@ -2300,7 +2472,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-550-AC-AFI",
+    "psuSku": "JPSU-550-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 8400,
@@ -2315,14 +2487,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 363.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-24x.png",
+    "image": "assets/images/products/juniper-ex4400-24x.webp",
     "keyFeatures": [
       "24x wire-speed 10G SFP+ optical ports for campus core/aggregation",
       "Dedicated 2x 100G QSFP28 Virtual Chassis stacking ports",
       "Modular uplink sled supporting 4x 25G SFP28 or 1x 100G QSFP28",
       "Full EVPN-VXLAN campus fabric support with MACsec AES-256"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-48t",
@@ -2361,7 +2552,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-550-AC-AFI",
+    "psuSku": "JPSU-550-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 5800,
@@ -2376,14 +2567,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 193.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-48t.png",
+    "image": "assets/images/products/juniper-ex4400-48t.webp",
     "keyFeatures": [
       "48x 1G RJ-45 ports with dual load-sharing hot-swap power",
       "2x 100G QSFP28 dedicated Virtual Chassis stacking ports",
       "Modular uplink sled bay (4x 25G SFP28 or 1x 100G QSFP28)",
       "Full EVPN-VXLAN campus fabric support"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-48p",
@@ -2425,7 +2635,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-920-AC-AFI",
+    "psuSku": "JPSU-1050-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 6900,
@@ -2440,14 +2650,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 193.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-48p.png",
+    "image": "assets/images/products/juniper-ex4400-48p.webp",
     "keyFeatures": [
       "48x 1G PoE+ with dual hot-swappable 1+1 redundant PSUs",
       "Perpetual PoE keeps cameras powered across Junos reboots",
       "Dedicated 2x 100G Virtual Chassis ports on rear panel",
       "Full EVPN-VXLAN campus fabric support"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-48mp",
@@ -2491,7 +2720,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-920-AC-AFI",
+    "psuSku": "JPSU-1600-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 9800,
@@ -2506,14 +2735,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 315.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-48mp.png",
+    "image": "assets/images/products/juniper-ex4400-48mp.webp",
     "keyFeatures": [
       "All 48 ports support 90W 802.3bt PoE++ (1800W max budget)",
       "Perpetual & Fast PoE keeps CCTV online during reboot",
       "Huge 16 MB packet buffer prevents VMS camera frame drops",
       "Dedicated dual 100G Virtual Chassis stacking ports"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4400-48f",
@@ -2552,7 +2800,7 @@ const JUNIPER_SWITCHES = [
     "mounting": "19\" Rackmount (1U)",
     "stacking": true,
     "dualPsu": true,
-    "psuSku": "JPSU-550-AC-AFI",
+    "psuSku": "JPSU-550-C-AC-AFO",
     "evpnVxlan": true,
     "taa": true,
     "msrp": 12500,
@@ -2567,14 +2815,33 @@ const JUNIPER_SWITCHES = [
     "throughputMpps": 541.0,
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
+    "modularUplink": {
+      "hasSlot": true,
+      "defaultModuleSku": "EX4400-EM-4Y",
+      "supportedModules": [
+        "EX4400-EM-4Y",
+        "EX4400-EM-1C",
+        "EX4400-EM-4S"
+      ]
+    },
     "datasheet": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4400-48f.png",
+    "image": "assets/images/products/juniper-ex4400-48f.webp",
     "keyFeatures": [
       "48x 10G/1G SFP+ optical distribution ports for campus backbone",
       "Dedicated 2x 100G Virtual Chassis stacking ports",
       "Full EVPN-VXLAN campus fabric support with MACsec AES-256",
       "Dual hot-swap redundant load-sharing AC/DC power supplies"
-    ]
+    ],
+    "mountSku": "EX-4PST-RMK",
+    "fanSku": "EX4400-FAN-AFO",
+    "featureLicense": {
+      "hasLicense": true,
+      "supportedLicenses": [
+        "S-EX-A-C3-P",
+        "S-EX-P-C3-P",
+        "EX-QFX-MACSEC-ACC4"
+      ]
+    }
   },
   {
     "id": "juniper-ex4600-40f",
@@ -2629,7 +2896,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 12,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4600-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4600-40f.png",
+    "image": "assets/images/products/juniper-ex4600-40f.webp",
     "keyFeatures": [
       "24x 10G SFP+ ports + 4x 40G QSFP+ uplinks in fixed base",
       "Two modular expansion bays for up to 40x 10G or 12x 40G ports",
@@ -2690,7 +2957,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4650-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4650-48y.png",
+    "image": "assets/images/products/juniper-ex4650-48y.webp",
     "keyFeatures": [
       "48x 10G/25G SFP28 optical aggregation cages",
       "8x 100G QSFP28 spine uplinks and Virtual Chassis ports",
@@ -2751,7 +3018,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 16,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/qfx5110-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-qfx5110-48s.png",
+    "image": "assets/images/products/juniper-qfx5110-48s.webp",
     "keyFeatures": [
       "48x wire-speed 10G SFP+ ports for server/NVR and campus aggregation",
       "4x 100G QSFP28 spine uplinks with sub-600ns latency",
@@ -2812,7 +3079,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/qfx5120-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-qfx5120-48y.png",
+    "image": "assets/images/products/juniper-qfx5120-48y.webp",
     "keyFeatures": [
       "Deep 32 MB buffer & EVPN-VXLAN core fabric",
       "48x 25G SFP28 + 8x 100G QSFP28 cages",
@@ -2873,7 +3140,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/qfx5120-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-qfx5120-48t.png",
+    "image": "assets/images/products/juniper-qfx5120-48t.webp",
     "keyFeatures": [
       "48x native 10GBASE-T RJ-45 copper ports for server/NVR headends",
       "6x 100G QSFP28 spine uplinks",
@@ -2934,7 +3201,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/qfx5120-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-qfx5120-32c.png",
+    "image": "assets/images/products/juniper-qfx5120-32c.webp",
     "keyFeatures": [
       "32x 100G QSFP28 wire-speed core spine cages",
       "6.4 Tbps non-blocking throughput with sub-550ns latency",
@@ -2995,7 +3262,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/qfx5120-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-qfx5120-48ym.png",
+    "image": "assets/images/products/juniper-qfx5120-48ym.webp",
     "keyFeatures": [
       "Hardware line-rate MACsec AES-256 on all 48x 25G & 8x 100G ports",
       "Full EVPN-VXLAN campus core and secure data center interconnect",
@@ -3056,7 +3323,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 32,
     "stackCableSku": "JNP-100G-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-qfx5200-32c.png",
+    "image": "assets/images/products/juniper-qfx5200-32c.webp",
     "keyFeatures": [
       "Ultra high-density 32x 100G QSFP28 spine switch in compact 1U",
       "6.4 Tbps / 2.4 Bpps non-blocking switching throughput",

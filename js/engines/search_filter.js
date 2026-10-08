@@ -330,6 +330,12 @@ function filterSwitchesStrategy(items, ctx) {
     results = results.filter(s => s.shallowDepth === true || (s.depthInches > 0 && s.depthInches <= 12.0));
   }
   if (typeof requireDualPsu !== "undefined" && requireDualPsu) results = results.filter(s => s.dualPsu);
+  const isModularUplink = typeof ctx.requireModularUplink !== "undefined" 
+    ? ctx.requireModularUplink 
+    : ((typeof requireModularUplink !== "undefined" && requireModularUplink) || (typeof window.requireModularUplink !== "undefined" && window.requireModularUplink));
+  if (isModularUplink) {
+    results = results.filter(s => s.modularUplink && s.modularUplink.hasSlot);
+  }
   if (typeof requireStacking !== "undefined" && requireStacking) results = results.filter(s => s.stacking);
   if (typeof requireTAA !== "undefined" && requireTAA) results = results.filter(s => s.taa);
   if (typeof requireSubstation !== "undefined" && requireSubstation) results = results.filter(s => s.substationCertified);
@@ -341,11 +347,11 @@ function filterSwitchesStrategy(items, ctx) {
     results = results.filter(s => checkSwitchMultiGig(s));
   }
 
-  const selectedSwitchLayers = ctx.selectedSwitchLayers || (typeof selectedSwitchLayers !== "undefined" ? selectedSwitchLayers : []);
-  if (selectedSwitchLayers.length > 0 && typeof getSwitchManagementLayer === "function") {
+  const switchLayers = ctx.selectedSwitchLayers || (typeof selectedSwitchLayers !== "undefined" ? selectedSwitchLayers : []);
+  if (switchLayers.length > 0 && typeof getSwitchManagementLayer === "function") {
     results = results.filter(s => {
       const lay = getSwitchManagementLayer(s);
-      return selectedSwitchLayers.includes(lay);
+      return switchLayers.includes(lay);
     });
   }
 
@@ -615,10 +621,26 @@ FilterEngine.register("wireless", filterWirelessStrategy);
 // 5. Infrastructure Accessories Strategy
 function filterAccessoriesStrategy(items, ctx) {
   let results = items;
+  const subCategory = ctx.selectedAccSubCategory || (typeof selectedAccSubCategory !== "undefined" ? selectedAccSubCategory : "all");
   const vendors = ctx.selectedAccVendors || (typeof selectedAccVendors !== "undefined" ? selectedAccVendors : []);
   const types = ctx.selectedAccTypes || (typeof selectedAccTypes !== "undefined" ? selectedAccTypes : []);
   const mounting = ctx.selectedAccMounting || (typeof selectedAccMounting !== "undefined" ? selectedAccMounting : "all");
   const minWatts = typeof ctx.accMinPowerWatts !== "undefined" ? ctx.accMinPowerWatts : (typeof accMinPowerWatts !== "undefined" ? accMinPowerWatts : 0);
+  const pwrCat = ctx.selectedUpsCategory || (typeof selectedUpsCategory !== "undefined" ? selectedUpsCategory : "all");
+  const pwrVolt = ctx.selectedUpsVoltage || (typeof selectedUpsVoltage !== "undefined" ? selectedUpsVoltage : "all");
+
+  if (subCategory && subCategory !== "all") {
+    results = results.filter(a => {
+      if (a.subCategory === subCategory) return true;
+      if (subCategory === "mounts" && (a.type === "mounting" || a.category === "mounting" || a.type === "rack_kit" || a.type === "wall_bracket" || (a.role && a.role.toLowerCase().includes("mount")))) return true;
+      if (subCategory === "media_converters" && (a.type === "media_converter" || a.category === "media_converter")) return true;
+      if (subCategory === "licenses" && (a.type === "license" || a.category === "licenses" || a.type === "feature_license" || a.type === "cloud_subscription" || (a.role && a.role.toLowerCase().includes("license")))) return true;
+      if (subCategory === "modular_uplinks" && (a.type === "modular_uplink" || a.category === "modular_uplinks" || (a.role && a.role.toLowerCase().includes("modular")))) return true;
+      if (subCategory === "power_supplies" && (a.type === "power_supply" || a.category === "power_supplies" || (a.role && a.role.toLowerCase().includes("power supply")))) return true;
+      if (subCategory === "poe_injectors" && (a.type === "poe_injector" || a.type === "poe_splitter" || a.category === "power_injector" || (a.role && a.role.toLowerCase().includes("injector")))) return true;
+      return false;
+    });
+  }
 
   if (vendors.length > 0) results = results.filter(a => vendors.includes((a.vendor || '').trim()));
   if (types.length > 0) results = results.filter(a => types.includes(a.type) || types.includes(a.category));
@@ -627,6 +649,29 @@ function filterAccessoriesStrategy(items, ctx) {
   }
   if (minWatts > 0) {
     results = results.filter(a => (a.powerWatts || 0) >= minWatts);
+  }
+
+  if (pwrCat !== "all") {
+    if (pwrCat === "ups") {
+      results = results.filter(a => (a.type === "ups" || a.category === "ups") && !a.isEbp && !a.isPdu && a.type !== "power_cord");
+    } else if (pwrCat === "ebp") {
+      results = results.filter(a => a.type === "ebp" || a.isEbp);
+    } else if (pwrCat === "pdu") {
+      results = results.filter(a => a.type === "pdu" || a.isPdu);
+    } else if (pwrCat === "power_cord") {
+      results = results.filter(a => a.type === "power_cord");
+    }
+  }
+
+  if (pwrVolt !== "all") {
+    const vNum = parseInt(pwrVolt, 10);
+    results = results.filter(a => {
+      const inV = a.inputVoltage || 0;
+      const outV = a.outputVoltage || 0;
+      if (vNum === 120) return inV === 120 || outV === 120;
+      if (vNum === 240) return inV >= 200 || outV >= 200;
+      return true;
+    });
   }
 
   const isSineReq = typeof ctx.requireUpsSineWave !== "undefined" ? ctx.requireUpsSineWave : (typeof requireUpsSineWave !== "undefined" && requireUpsSineWave);
@@ -649,7 +694,9 @@ function filterAccessoriesStrategy(items, ctx) {
 
 FilterEngine.register("accessories", filterAccessoriesStrategy);
 FilterEngine.register("racks", filterAccessoriesStrategy);
+FilterEngine.register("enclosures", filterAccessoriesStrategy);
 FilterEngine.register("ups", filterAccessoriesStrategy);
+FilterEngine.register("pdus", filterAccessoriesStrategy);
 FilterEngine.register("pathways", filterAccessoriesStrategy);
 
 // 6. Structured Cabling Strategy
@@ -723,7 +770,8 @@ function renderActiveFilterPills() {
   }
 
   // Switch Pills
-  if (typeof currentMode !== "undefined" && (currentMode === "access" || currentMode === "backbone")) {
+  const activeMode = (typeof currentMode !== "undefined") ? currentMode : (typeof window.currentMode !== "undefined" ? window.currentMode : "access");
+  if (activeMode === "access" || activeMode === "backbone") {
     if (typeof selectedVendors !== "undefined") {
       selectedVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('vendor', v) }));
     }
@@ -746,6 +794,8 @@ function renderActiveFilterPills() {
     if (typeof requireShallowDepth !== "undefined" && requireShallowDepth) pills.push({ label: "Shallow Depth", onRemove: () => { requireShallowDepth = false; } });
     if (typeof requireStacking !== "undefined" && requireStacking) pills.push({ label: "Stackable", onRemove: () => { requireStacking = false; } });
     if (typeof requireDualPsu !== "undefined" && requireDualPsu) pills.push({ label: "Dual PSU", onRemove: () => { requireDualPsu = false; } });
+    const hasModularFilter = (typeof requireModularUplink !== "undefined" && requireModularUplink) || (typeof window.requireModularUplink !== "undefined" && window.requireModularUplink);
+    if (hasModularFilter) pills.push({ label: "Modular Uplinks", onRemove: () => { if (typeof requireModularUplink !== "undefined") requireModularUplink = false; window.requireModularUplink = false; } });
     if (typeof requireDinMount !== "undefined" && requireDinMount) pills.push({ label: "DIN Mount", onRemove: () => { requireDinMount = false; } });
     if (typeof requirePerpetualPoE !== "undefined" && requirePerpetualPoE) pills.push({ label: "Perpetual PoE", onRemove: () => { requirePerpetualPoE = false; } });
     if (typeof requireTAA !== "undefined" && requireTAA) pills.push({ label: "TAA Compliant", onRemove: () => { requireTAA = false; } });
@@ -851,7 +901,30 @@ function renderActiveFilterPills() {
   }
 
   // Accessories & Infrastructure Pills
-  if (typeof currentMode !== "undefined" && (currentMode === "accessories" || currentMode === "ups" || currentMode === "racks" || currentMode === "pathways" || currentMode === "cabling")) {
+  if (typeof currentMode !== "undefined" && (currentMode === "accessories" || currentMode === "ups" || currentMode === "racks" || currentMode === "enclosures" || currentMode === "pdus" || currentMode === "pathways" || currentMode === "cabling")) {
+    if (typeof selectedAccSubCategory !== "undefined" && selectedAccSubCategory !== "all") {
+      const subLabels = {
+        mounts: "Mounts & Brackets",
+        media_converters: "Media Converters",
+        licenses: "Licenses & Cloud Subs",
+        modular_uplinks: "Modular Uplinks",
+        power_supplies: "Power Supplies",
+        poe_injectors: "PoE Midspans"
+      };
+      pills.push({
+        label: `Category: ${subLabels[selectedAccSubCategory] || selectedAccSubCategory}`,
+        onRemove: () => {
+          if (typeof setAccSubCategory === "function") {
+            setAccSubCategory("all");
+          } else {
+            selectedAccSubCategory = "all";
+            if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+            if (typeof buildSidebarFilters === "function") buildSidebarFilters();
+            if (typeof runActiveFilter === "function") runActiveFilter();
+          }
+        }
+      });
+    }
     if (typeof selectedAccVendors !== "undefined") {
       selectedAccVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('accVendor', v) }));
     }

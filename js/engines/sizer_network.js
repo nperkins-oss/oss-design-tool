@@ -302,39 +302,20 @@ const NetworkSizer = {
       circuitUtilization = Math.round((worstCaseAcWatts / (120 * 15 * ELECTRICAL_CONSTANTS.NEC_CONTINUOUS_DERATING)) * 100);
     }
 
-    // 5. UPS Sizing Engine (VA = Watts / Power Factor, sized with growth margin)
+    // 5. UPS Sizing Engine (calibrated with calculateUPSPlan)
     const minVA = Math.round(worstCaseAcWatts / powerFactor);
     const recommendedVA = Math.round(minVA * (1 + growthMargin));
 
-    let upsRecommendation = "1000VA 1U Line-Interactive (NEMA 5-15P)";
-    let upsFormFactor = "1U / 2U Rackmount";
-    let batteryRuntimeEstimate = "12 - 18 minutes on internal battery";
+    const upsPlan = this.calculateUPSPlan(rackItems, {
+      targetRuntimeMinutes: options.targetRuntimeMinutes || 15,
+      safetyMargin: options.safetyMargin || 0.75,
+      preferredVoltage: nominalVoltage,
+      selectedModelSku: options.selectedModelSku || "auto"
+    });
 
-    if (worstCaseAcWatts > 4500) {
-      upsRecommendation = "6000VA (6kVA) 4U Online Double-Conversion (Hardwired / L6-30P)";
-      upsFormFactor = "4U Modular";
-      batteryRuntimeEstimate = "7 - 10 minutes at full load (~25 min with EBP battery pack)";
-    } else if (worstCaseAcWatts > 2400) {
-      upsRecommendation = "5000VA (5kVA) 3U/4U Online Double-Conversion (NEMA L6-30P 208V)";
-      upsFormFactor = "3U / 4U Rackmount";
-      batteryRuntimeEstimate = "8 - 12 minutes at full load (~30 min with EBP battery pack)";
-    } else if (worstCaseAcWatts > 1600) {
-      upsRecommendation = "3000VA 2U Online Double-Conversion (NEMA L5-30P 120V or L6-20P 208V)";
-      upsFormFactor = "2U Rackmount";
-      batteryRuntimeEstimate = "9 - 14 minutes at full load (~35 min with EBP battery pack)";
-    } else if (worstCaseAcWatts > 1000) {
-      upsRecommendation = "2200VA 2U Line-Interactive (NEMA 5-20P)";
-      upsFormFactor = "2U Rackmount";
-      batteryRuntimeEstimate = "10 - 15 minutes at typical operating load";
-    } else if (worstCaseAcWatts > 550) {
-      upsRecommendation = "1500VA 2U Line-Interactive (NEMA 5-15P)";
-      upsFormFactor = "2U Rackmount";
-      batteryRuntimeEstimate = "14 - 20 minutes at typical operating load";
-    } else {
-      upsRecommendation = "1000VA 1U Line-Interactive (NEMA 5-15P)";
-      upsFormFactor = "1U Rackmount";
-      batteryRuntimeEstimate = "18 - 25 minutes at typical operating load";
-    }
+    const upsRecommendation = `${upsPlan.upsQty}x ${upsPlan.upsModel.model}`;
+    const upsFormFactor = `${upsPlan.rackSpace.totalRU}U Total (${upsPlan.upsQty}x ${upsPlan.upsModel.rackUnits || 2}U UPS${upsPlan.totalEbpQty > 0 ? ` + ${upsPlan.totalEbpQty}x ${upsPlan.upsModel.ebpRackHeight || 2}U EBP` : ''})`;
+    const batteryRuntimeEstimate = `${upsPlan.achievedRuntime} minutes (${upsPlan.internalRuntime}m internal${upsPlan.totalEbpQty > 0 ? ` + ${upsPlan.totalEbpQty}x EBP` : ''})`;
 
     return {
       occupiedU,
@@ -361,7 +342,8 @@ const NetworkSizer = {
         recommendedVA,
         recommendation: upsRecommendation,
         formFactor: upsFormFactor,
-        batteryRuntimeEstimate
+        batteryRuntimeEstimate,
+        plan: upsPlan
       }
     };
   },
@@ -546,6 +528,279 @@ const NetworkSizer = {
     });
 
     return switchAudits;
+  },
+
+  /**
+   * Enterprise UPS & Power Sizing Engine (derived from Orion Power Calculator v6.3)
+   * Calibrated with 26 enterprise UPS models, Extended Battery Packs (EBPs), and Rack PDUs.
+   *
+   * @param {Array|number} rackItemsOrWatts - Rack BOM equipment or direct wattage
+   * @param {Object} options - { targetRuntimeMinutes, safetyMargin, preferredVoltage, selectedModelSku }
+   * @returns {Object} Comprehensive power sizing, runtime, circuit loading, and outlet plan
+   */
+  calculateUPSPlan(rackItemsOrWatts = [], options = {}) {
+    let worstCaseWatts = 0;
+    let operatingWatts = 0;
+    let totalBaseWatts = 0;
+    let totalPoEWatts = 0;
+    const equipmentPlugs = [];
+
+    if (typeof rackItemsOrWatts === "number") {
+      worstCaseWatts = rackItemsOrWatts;
+      operatingWatts = Math.round(rackItemsOrWatts * 0.85);
+    } else if (Array.isArray(rackItemsOrWatts)) {
+      rackItemsOrWatts.forEach(it => {
+        if (!it) return;
+        const units = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : (parseInt(it.qty, 10) || 1);
+        const base = parseFloat(it.baseWatts || 0);
+        const poe = parseFloat(it.poeBudget || it.consumedPoEWatts || 0);
+        totalBaseWatts += (base * units);
+        totalPoEWatts += (poe * units);
+
+        // Detect equipment plug
+        const plug = (it.equipmentPlug || it.plugType || (it.powerSupplyVoltages?.includes("240") ? "C14" : (base + poe > 1400 ? "5-20P" : "5-15P")));
+        for (let u = 0; u < units; u++) {
+          equipmentPlugs.push({ model: it.model || it.name, plug });
+        }
+      });
+      worstCaseWatts = Math.round(totalBaseWatts + totalPoEWatts);
+      operatingWatts = Math.round(totalBaseWatts + (totalPoEWatts * 0.5));
+    }
+
+    if (worstCaseWatts <= 0) worstCaseWatts = 300; // minimum baseline if empty
+    if (operatingWatts <= 0) operatingWatts = Math.round(worstCaseWatts * 0.7);
+
+    const targetRuntime = options.targetRuntimeMinutes || 15;
+    const safetyMargin = options.safetyMargin || 0.75;
+    const preferredVoltage = options.preferredVoltage || 120;
+    const selectedModelSku = options.selectedModelSku || "auto";
+    const loadMode = options.loadMode || "connected"; // "connected" | "nameplate"
+    const agingFactor = typeof options.agingFactor === "number" ? options.agingFactor : 0.85; // IEEE 1188 battery end-of-life derate (0.85 default, 1.0 new)
+    const connectedWatts = options.connectedWatts && options.connectedWatts > 0 ? Math.round(options.connectedWatts) : operatingWatts;
+
+    // Determine load wattage used specifically for battery runtime curves
+    const runtimeLoadWatts = (loadMode === "connected" && connectedWatts > 0) ? connectedWatts : worstCaseWatts;
+
+    // Gather available enterprise UPS catalog
+    let upsCatalog = [];
+    if (typeof CatalogRegistry !== "undefined" && CatalogRegistry.infrastructure && Array.isArray(CatalogRegistry.infrastructure.ups)) {
+      upsCatalog = CatalogRegistry.infrastructure.ups.filter(u => (u.type === "ups" || u.category === "ups") && !u.isEbp && !u.isPdu);
+    }
+    if (upsCatalog.length === 0 && typeof ACCESSORY_DATABASE !== "undefined") {
+      upsCatalog = ACCESSORY_DATABASE.filter(u => (u.type === "ups" || u.category === "ups") && !u.isEbp && !u.isPdu);
+    }
+
+    // Candidate selection
+    let selectedUnit = null;
+    if (selectedModelSku !== "auto") {
+      selectedUnit = upsCatalog.find(u => u.sku === selectedModelSku || u.id === selectedModelSku);
+    }
+
+    if (!selectedUnit) {
+      // Auto-recommend optimal UPS based on preferred voltage and capacity
+      const voltageCandidates = upsCatalog.filter(u => {
+        const v = u.outputVoltage || u.inputVoltage || 120;
+        return preferredVoltage >= 208 ? (v >= 200) : (v <= 130);
+      });
+      const pool = voltageCandidates.length > 0 ? voltageCandidates : upsCatalog;
+
+      // Find smallest capacity unit that satisfies: capacity * safetyMargin >= worstCaseWatts
+      const fitUnits = pool.filter(u => ((u.powerWatts || u.maxCapacityWatts || 1000) * safetyMargin) >= worstCaseWatts);
+      if (fitUnits.length > 0) {
+        fitUnits.sort((a, b) => (a.powerWatts || a.maxCapacityWatts || 1000) - (b.powerWatts || b.maxCapacityWatts || 1000));
+        selectedUnit = fitUnits[0];
+      } else {
+        // Find highest capacity unit in pool to minimize unit count
+        const sortedDesc = [...pool].sort((a, b) => (b.powerWatts || b.maxCapacityWatts || 1000) - (a.powerWatts || a.maxCapacityWatts || 1000));
+        selectedUnit = sortedDesc[0] || pool[0];
+      }
+    }
+
+    if (!selectedUnit) {
+      // Absolute fallback if database somehow unavailable
+      selectedUnit = {
+        id: "tripplite-smart2200rmxl2u",
+        sku: "SMART2200RMXL2U",
+        model: "Tripp Lite SMART2200RMXL2U (2200VA/1950W 2U)",
+        name: "Tripp Lite SMART2200RMXL2U (2200VA/1950W 2U)",
+        vendor: "Tripp Lite",
+        rackUnits: 2,
+        msrp: 1199,
+        va: 2200,
+        powerWatts: 1950,
+        maxCapacityWatts: 1950,
+        inputVoltage: 120,
+        outputVoltage: 120,
+        inputCircuitAmps: 20,
+        inputConnector: "L5-20P",
+        receptacles: "4x 5-15R, 4x 5-20R",
+        internalRuntimeFullLoad: 4.5,
+        internalRuntimeHalfLoad: 12.0,
+        ebpModel: "BP72VRM2U",
+        ebpRackHeight: 2,
+        ebpRuntimeFullLoad: 35.0,
+        ebpRuntimeHalfLoad: 78.0,
+        topology: "Line-Interactive Pure Sine Wave"
+      };
+    }
+
+    const unitCapacity = selectedUnit.powerWatts || selectedUnit.maxCapacityWatts || 1000;
+    const effectiveCapPerUnit = unitCapacity * safetyMargin;
+    const upsQty = Math.max(1, Math.ceil(worstCaseWatts / effectiveCapPerUnit));
+
+    // Electrical load fraction for breaker and capacity
+    const loadPerUnit = Math.round(worstCaseWatts / upsQty);
+    const loadFraction = Math.min(1.0, loadPerUnit / unitCapacity);
+    const loadPercent = Math.round(loadFraction * 100);
+
+    // Active load fraction specifically for battery discharge calculations
+    const runtimeLoadPerUnit = Math.round(runtimeLoadWatts / upsQty);
+    const runtimeLoadFraction = Math.min(1.0, Math.max(0.04, runtimeLoadPerUnit / unitCapacity));
+    const runtimeLoadPercent = Math.round(runtimeLoadFraction * 100);
+
+    // Internal Battery Runtime (Calibrated discharge curve with low-load Peukert expansion & IEEE aging derate)
+    const rFull = selectedUnit.internalRuntimeFullLoad || 6.0;
+    const rHalf = selectedUnit.internalRuntimeHalfLoad || 18.0;
+    let baseInternalRuntime = 0;
+    if (runtimeLoadFraction <= 0.5) {
+      // Non-linear scaling for low discharge rates (Peukert's effect)
+      const ratio = 0.5 / runtimeLoadFraction;
+      baseInternalRuntime = rHalf * Math.pow(ratio, 0.72);
+    } else {
+      baseInternalRuntime = rFull + (rHalf - rFull) * ((1.0 - runtimeLoadFraction) / 0.5);
+    }
+    const internalRuntime = Math.round(baseInternalRuntime * agingFactor * 10) / 10;
+
+    // Extended Battery Pack (EBP) Calculation
+    const hasEbpSupport = selectedUnit.ebpModel && selectedUnit.ebpModel !== "None" && selectedUnit.ebpModel !== "N/A";
+    let ebpQtyPerUps = 0;
+    let addedPerEbp = 0;
+    let achievedRuntime = internalRuntime;
+
+    if (hasEbpSupport) {
+      const ebpFull = selectedUnit.ebpRuntimeFullLoad || (rFull * 4);
+      const ebpHalf = selectedUnit.ebpRuntimeHalfLoad || (ebpFull * 2.2);
+      const deltaFull = Math.max(5, ebpFull - rFull);
+      const deltaHalf = Math.max(10, ebpHalf - rHalf);
+
+      let baseAddedEbp = 0;
+      if (runtimeLoadFraction <= 0.5) {
+        const ratio = 0.5 / runtimeLoadFraction;
+        baseAddedEbp = deltaHalf * Math.pow(ratio, 0.72);
+      } else {
+        baseAddedEbp = deltaFull + (deltaHalf - deltaFull) * ((1.0 - runtimeLoadFraction) / 0.5);
+      }
+      addedPerEbp = Math.max(1, Math.round(baseAddedEbp * agingFactor * 10) / 10);
+
+      if (targetRuntime > internalRuntime) {
+        ebpQtyPerUps = Math.ceil((targetRuntime - internalRuntime) / addedPerEbp);
+      }
+      achievedRuntime = Math.round((internalRuntime + (ebpQtyPerUps * addedPerEbp)) * 10) / 10;
+    }
+
+    // Generate Scalable Multi-EBP Runtime Curve (0, 1, 2, 3, 4 EBPs)
+    const runtimeCurve = [];
+    const maxCurvePacks = hasEbpSupport ? 4 : 0;
+    for (let p = 0; p <= maxCurvePacks; p++) {
+      const packRuntimeMin = Math.round((internalRuntime + (p * addedPerEbp)) * 10) / 10;
+      const packRuntimeHours = Math.round((packRuntimeMin / 60) * 10) / 10;
+      runtimeCurve.push({
+        ebpQty: p,
+        totalEbpQty: p * upsQty,
+        runtimeMin: packRuntimeMin,
+        runtimeHours: packRuntimeHours,
+        meetsTarget: packRuntimeMin >= targetRuntime,
+        meetsUL294: packRuntimeMin >= 240, // 4-hour standby
+        meetsNFPA72: packRuntimeMin >= 1440 // 24-hour standby
+      });
+    }
+
+    // UL 294 / NFPA 731 Standby Compliance Evaluation (4-Hour = 240 minutes)
+    const ul294TargetMin = 240;
+    const isUL294Compliant = achievedRuntime >= ul294TargetMin;
+    const ul294DeficitMin = Math.max(0, Math.round(ul294TargetMin - achievedRuntime));
+    let ul294RequiredEbp = 0;
+    if (hasEbpSupport && !isUL294Compliant && addedPerEbp > 0) {
+      ul294RequiredEbp = Math.ceil((ul294TargetMin - internalRuntime) / addedPerEbp);
+    }
+
+    const totalEbpQty = upsQty * ebpQtyPerUps;
+    const upsTotalRU = upsQty * (selectedUnit.rackUnits || 2);
+    const ebpTotalRU = totalEbpQty * (selectedUnit.ebpRackHeight || 2);
+    const totalPowerRU = upsTotalRU + ebpTotalRU;
+
+    // Feeder Branch Circuit Loading (with 92% inverter efficiency derating)
+    const inverterEfficiency = 0.92;
+    const inputWattsTotal = Math.round(worstCaseWatts / inverterEfficiency);
+    const inVolt = selectedUnit.inputVoltage || 120;
+    const breakerAmps = selectedUnit.inputCircuitAmps || 20;
+    const actualInputAmps = Math.round((inputWattsTotal / inVolt) * 10) / 10;
+    const circuitCapacityWatts = Math.round(inVolt * breakerAmps);
+    const circuitLoadingPct = Math.round((inputWattsTotal / circuitCapacityWatts) * 100);
+    const circuitStatus = circuitLoadingPct <= 80 ? "SAFE" : (circuitLoadingPct <= 100 ? "WARNING" : "OVERLOADED");
+
+    // Equipment Plug vs UPS/PDU Receptacle Audit
+    const plugCounts = {};
+    equipmentPlugs.forEach(p => {
+      plugCounts[p.plug] = (plugCounts[p.plug] || 0) + 1;
+    });
+
+    return {
+      worstCaseWatts,
+      operatingWatts,
+      connectedWatts,
+      runtimeLoadWatts,
+      loadMode,
+      agingFactor,
+      targetRuntime,
+      safetyMargin,
+      preferredVoltage,
+      upsModel: selectedUnit,
+      upsQty,
+      loadPerUnit,
+      loadFraction,
+      loadPercent,
+      runtimeLoadPerUnit,
+      runtimeLoadFraction,
+      runtimeLoadPercent,
+      internalRuntime,
+      hasEbpSupport,
+      ebpModel: selectedUnit.ebpModel,
+      ebpRackHeight: selectedUnit.ebpRackHeight,
+      ebpQtyPerUps,
+      totalEbpQty,
+      addedTimePerEbp: addedPerEbp,
+      achievedRuntime,
+      runtimeMet: achievedRuntime >= targetRuntime,
+      runtimeCurve,
+      ul294: {
+        targetMin: ul294TargetMin,
+        achievedHours: Math.round((achievedRuntime / 60) * 10) / 10,
+        compliant: isUL294Compliant,
+        deficitMin: ul294DeficitMin,
+        requiredEbpQty: ul294RequiredEbp
+      },
+      rackSpace: {
+        upsRU: upsTotalRU,
+        ebpRU: ebpTotalRU,
+        totalRU: totalPowerRU
+      },
+      feederCircuit: {
+        inputWattsTotal,
+        inVolt,
+        breakerAmps,
+        actualInputAmps,
+        circuitCapacityWatts,
+        circuitLoadingPct,
+        circuitStatus,
+        spec: `${inVolt}V ${breakerAmps}A Dedicated Branch Circuit (${selectedUnit.inputConnector || 'NEMA'})`
+      },
+      outletAudit: {
+        plugCount: equipmentPlugs.length,
+        plugBreakdown: plugCounts,
+        upsReceptacles: selectedUnit.receptacles || "Standard NEMA/IEC Outlets"
+      }
+    };
   }
 };
 

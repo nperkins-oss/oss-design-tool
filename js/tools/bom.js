@@ -4,7 +4,12 @@
 // ==========================================
 
 let projectBOM = [];
-let bomViewMode = "grouped";
+let bomViewMode = "grouped"; // "grouped" | "category" | "flat"
+let bomSearchQuery = "";
+let bomSelectedLocation = "all";
+let bomSelectedCategory = "all";
+let bomCollapsedLocations = new Set();
+let bomAllExpanded = true;
 let globalSelectedTerm = "1YR";
 
 function saveBOMState() {
@@ -47,23 +52,158 @@ function autoFixMerakiLicenses() {
 }
 
 // -----------------------------------------------------------
+// BOM Taxonomy Categories & Display Profiles
+// -----------------------------------------------------------
+const BOM_CATEGORIES = {
+  switches: { id: "switches", label: "Switches & Core Networking", icon: "network", color: "indigo" },
+  firewalls: { id: "firewalls", label: "Firewalls & Security Appliances", icon: "shield", color: "rose" },
+  wireless: { id: "wireless", label: "Wireless APs & Bridges", icon: "wifi", color: "sky" },
+  surveillance: { id: "surveillance", label: "Video Surveillance & Cameras", icon: "video", color: "amber" },
+  access_control: { id: "access_control", label: "Access Control (PACS)", icon: "key-round", color: "orange" },
+  servers: { id: "servers", label: "Servers & Compute Systems", icon: "hard-drive", color: "blue" },
+  racks_power: { id: "racks_power", label: "Racks, Enclosures & PDUs", icon: "server", color: "purple" },
+  optics_cabling: { id: "optics_cabling", label: "Transceivers, DACs & Structured Cabling", icon: "cable", color: "emerald" },
+  licensing: { id: "licensing", label: "Software Licenses & Subscriptions", icon: "key", color: "fuchsia" },
+  other: { id: "other", label: "Accessories & Supporting Hardware", icon: "box", color: "slate" }
+};
+
+function getBomItemCategoryKey(item) {
+  if (!item) return "other";
+  const cat = String(item.category || "").toLowerCase();
+  const role = String(item.role || "").toLowerCase();
+
+  if (cat === "licensing" || cat === "software" || role.includes("license") || role.includes("subscription")) {
+    return "licensing";
+  }
+  if (cat === "camera" || role.includes("camera") || role.includes("surveillance") || item.deviceTypePrefix === "CAM" || item.deviceTypePrefix === "LPR") {
+    return "surveillance";
+  }
+  if (cat === "access_control" || role.includes("access control") || role.includes("door") || role.includes("reader") || item.deviceTypePrefix === "AC") {
+    return "access_control";
+  }
+  if (cat === "firewall" || role.includes("firewall") || role.includes("security gateway") || item.deviceTypePrefix === "FW") {
+    return "firewalls";
+  }
+  if (cat === "wireless" || role.includes("wireless") || role.includes("access point") || item.deviceTypePrefix === "AP") {
+    return "wireless";
+  }
+  if (cat === "servers" || cat === "server" || role.includes("server") || item.deviceTypePrefix === "SRV") {
+    return "servers";
+  }
+  if (cat === "racks" || cat === "rack" || cat === "pdu" || cat === "ups" || role.includes("rack") || role.includes("pdu") || role.includes("ups") || role.includes("enclosure")) {
+    return "racks_power";
+  }
+  if (cat === "optics" || cat === "cabling" || cat === "transceivers" || role.includes("optic") || role.includes("dac") || role.includes("patch") || role.includes("cabling")) {
+    return "optics_cabling";
+  }
+  if (cat === "switches" || role.includes("access") || role.includes("core") || role.includes("aggregation") || role.includes("switch") || item.deviceTypePrefix === "SW") {
+    return "switches";
+  }
+  return "other";
+}
+
+// -----------------------------------------------------------
 // View Mode Switcher
 // -----------------------------------------------------------
 function setBomViewMode(mode) {
-  bomViewMode = (mode === "flat") ? "flat" : "grouped";
+  bomViewMode = (mode === "flat") ? "flat" : (mode === "category" ? "category" : "grouped");
   const grpBtn = document.getElementById("bomViewMode-grouped");
+  const catBtn = document.getElementById("bomViewMode-category");
   const fltBtn = document.getElementById("bomViewMode-flat");
 
-  if (grpBtn && fltBtn) {
-    if (bomViewMode === "grouped") {
-      grpBtn.className = "px-2.5 py-0.5 rounded font-medium text-white bg-brand-600 transition-colors cursor-pointer";
-      fltBtn.className = "px-2.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition-colors cursor-pointer";
+  const activeClass = "px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-brand-600 transition-colors cursor-pointer flex items-center gap-1.5";
+  const inactiveClass = "px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5";
+
+  if (grpBtn) grpBtn.className = (bomViewMode === "grouped") ? activeClass : inactiveClass;
+  if (catBtn) catBtn.className = (bomViewMode === "category") ? activeClass : inactiveClass;
+  if (fltBtn) fltBtn.className = (bomViewMode === "flat") ? activeClass : inactiveClass;
+
+  bomCollapsedLocations.clear();
+  bomAllExpanded = true;
+  const btnText = document.getElementById("bomExpandCollapseText");
+  if (btnText) btnText.textContent = "Collapse All";
+
+  updateBOMView();
+}
+
+function setBomSearchQuery(query) {
+  bomSearchQuery = (query || "").trim();
+  const clearBtn = document.getElementById("bomSearchClearBtn");
+  if (clearBtn) {
+    if (bomSearchQuery.length > 0) {
+      clearBtn.classList.remove("hidden");
     } else {
-      fltBtn.className = "px-2.5 py-0.5 rounded font-medium text-white bg-brand-600 transition-colors cursor-pointer";
-      grpBtn.className = "px-2.5 py-0.5 rounded font-medium text-slate-400 hover:text-white transition-colors cursor-pointer";
+      clearBtn.classList.add("hidden");
     }
   }
+  updateBOMView();
+}
 
+function clearBomSearch() {
+  bomSearchQuery = "";
+  const input = document.getElementById("bomSearchInput");
+  if (input) input.value = "";
+  const clearBtn = document.getElementById("bomSearchClearBtn");
+  if (clearBtn) clearBtn.classList.add("hidden");
+  updateBOMView();
+}
+
+function setBomLocationFilter(loc) {
+  bomSelectedLocation = loc || "all";
+  updateBOMView();
+}
+
+function setBomCategoryFilter(cat) {
+  bomSelectedCategory = cat || "all";
+  updateBOMView();
+}
+
+function toggleBomLocationCollapse(locKey) {
+  if (bomCollapsedLocations.has(locKey)) {
+    bomCollapsedLocations.delete(locKey);
+  } else {
+    bomCollapsedLocations.add(locKey);
+  }
+  updateBOMView();
+}
+
+function toggleBomExpandAll() {
+  bomAllExpanded = !bomAllExpanded;
+  const btnText = document.getElementById("bomExpandCollapseText");
+  if (btnText) {
+    btnText.textContent = bomAllExpanded ? "Collapse All" : "Expand All";
+  }
+  if (bomAllExpanded) {
+    bomCollapsedLocations.clear();
+  } else {
+    if (bomViewMode === "category") {
+      bomCollapsedLocations = new Set(Object.keys(BOM_CATEGORIES));
+    } else {
+      const locKeys = new Set();
+      projectBOM.forEach(item => {
+        if (!item.parentInstanceId) {
+          const rawLoc = item.closetName || item.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+          locKeys.add(typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc);
+        }
+      });
+      bomCollapsedLocations = locKeys;
+    }
+  }
+  updateBOMView();
+}
+
+function resetBomFilters() {
+  bomSearchQuery = "";
+  bomSelectedLocation = "all";
+  bomSelectedCategory = "all";
+  const searchInput = document.getElementById("bomSearchInput");
+  if (searchInput) searchInput.value = "";
+  const clearBtn = document.getElementById("bomSearchClearBtn");
+  if (clearBtn) clearBtn.classList.add("hidden");
+  const locSelect = document.getElementById("bomLocationFilter");
+  if (locSelect) locSelect.value = "all";
+  const catSelect = document.getElementById("bomCategoryFilter");
+  if (catSelect) catSelect.value = "all";
   updateBOMView();
 }
 
@@ -195,8 +335,103 @@ function setItemLocation(instanceId, combinedKey) {
 }
 
 // -----------------------------------------------------------
-// Hardware Line Item Creation
+// Universal Catalog Enrichment & Hardware Line Item Creation
 // -----------------------------------------------------------
+function enrichBOMItemFromCatalog(item) {
+  if (!item) return item;
+
+  const lookupKey = item.sku || item.id || item.model;
+  let catItem = null;
+  if (typeof CatalogRegistry !== "undefined") {
+    if (typeof CatalogRegistry.getSwitch === "function") {
+      catItem = CatalogRegistry.getSwitch(lookupKey);
+    }
+    if (!catItem && typeof CatalogRegistry.get === "function") {
+      catItem = CatalogRegistry.get(lookupKey);
+    }
+  }
+  if (!catItem && typeof SWITCH_DATABASE !== "undefined" && Array.isArray(SWITCH_DATABASE)) {
+    catItem = SWITCH_DATABASE.find(s => s.sku === lookupKey || s.id === lookupKey || s.model === lookupKey);
+  }
+
+  if (catItem) {
+    // 1. Rack Units & Form Factor (Preserve 0U!)
+    if (catItem.rackUnits !== undefined && catItem.rackUnits !== null) {
+      if (item.rackUnits === undefined || item.rackUnits === null || (item.rackUnits === 1 && catItem.rackUnits === 0 && !item.mountSku?.includes("19"))) {
+        item.rackUnits = catItem.rackUnits;
+      }
+    } else if (item.rackUnits === undefined) {
+      item.rackUnits = 1;
+    }
+
+    // 2. Port & Uplink Summaries
+    if (!item.portFormFactorSummary && catItem.portFormFactorSummary) {
+      item.portFormFactorSummary = catItem.portFormFactorSummary;
+    }
+    if (!item.uplinksSummary && catItem.uplinksSummary) {
+      item.uplinksSummary = catItem.uplinksSummary;
+    }
+    if (!item.portsBreakdown && catItem.portsBreakdown) {
+      item.portsBreakdown = catItem.portsBreakdown;
+    }
+    if (!item.interfaces && catItem.interfaces) {
+      item.interfaces = catItem.interfaces;
+    }
+
+    // 3. Speeds & Backbones
+    if (catItem.maxBackboneSpeed) {
+      item.maxBackboneSpeed = catItem.maxBackboneSpeed;
+    }
+    if (catItem.portSpeed && (!item.portSpeed || item.portSpeed === "10G")) {
+      item.portSpeed = catItem.portSpeed;
+    }
+
+    // 4. PoE Breakdown & Standards
+    if (item.poeAfPorts === undefined && catItem.poeAfPorts !== undefined) item.poeAfPorts = catItem.poeAfPorts;
+    if (item.poeAtPorts === undefined && catItem.poeAtPorts !== undefined) item.poeAtPorts = catItem.poeAtPorts;
+    if (item.poeBt60Ports === undefined && catItem.poeBt60Ports !== undefined) item.poeBt60Ports = catItem.poeBt60Ports;
+    if (item.poeBt90Ports === undefined && catItem.poeBt90Ports !== undefined) item.poeBt90Ports = catItem.poeBt90Ports;
+    if (!item.poeStandardsSupported && catItem.poeStandardsSupported) item.poeStandardsSupported = catItem.poeStandardsSupported;
+
+    // 5. Electrical & Thermal Telemetry
+    if (catItem.baseWatts !== undefined && (item.baseWatts === undefined || item.baseWatts === 35 || item.baseWatts === 65)) {
+      item.baseWatts = Number(catItem.baseWatts);
+    }
+    if (item.maxPowerWatts === undefined) {
+      item.maxPowerWatts = catItem.maxPowerWatts !== undefined ? Number(catItem.maxPowerWatts) : ((item.baseWatts || 0) + (item.poeBudget || 0));
+    }
+    if (item.heatBtuPerHour === undefined) {
+      item.heatBtuPerHour = catItem.heatBtuPerHour !== undefined ? Number(catItem.heatBtuPerHour) : Math.round((item.baseWatts || 0) * 3.412);
+    }
+
+    // 6. Dimensions & Hardware Spec
+    if (catItem.depthInches !== undefined && (!item.depthInches || item.depthInches === 12)) item.depthInches = catItem.depthInches;
+    if (catItem.weightLbs !== undefined && !item.weightLbs) item.weightLbs = catItem.weightLbs;
+    if (!item.mounting && catItem.mounting) item.mounting = catItem.mounting;
+    if (item.fanless === undefined && catItem.fanless !== undefined) item.fanless = catItem.fanless;
+    if (item.dualPsu === undefined && catItem.dualPsu !== undefined) item.dualPsu = catItem.dualPsu;
+    if (!item.psuSku && catItem.psuSku) item.psuSku = catItem.psuSku;
+    if (!item.switchingCapacity && catItem.switchingCapacity) item.switchingCapacity = catItem.switchingCapacity;
+    if (!item.throughputMpps && catItem.throughputMpps) item.throughputMpps = catItem.throughputMpps;
+    if (!item.packetBufferMb && catItem.packetBufferMb) item.packetBufferMb = catItem.packetBufferMb;
+    if (!item.stackCableSku && catItem.stackCableSku) item.stackCableSku = catItem.stackCableSku;
+    if (!item.image && catItem.image) item.image = catItem.image;
+    if (!item.datasheetPath && (catItem.datasheet || catItem.datasheetPath)) item.datasheetPath = catItem.datasheet || catItem.datasheetPath;
+
+    if (!item.modularUplink && catItem.modularUplink) {
+      item.modularUplink = catItem.modularUplink;
+    }
+
+    // 7. Mounting & Form Factor Flag
+    if (item.isDinMounted === undefined) {
+      item.isDinMounted = Boolean(catItem.mounting && catItem.mounting.includes("DIN") && !catItem.mounting.includes("19\""));
+    }
+  }
+
+  return item;
+}
+window.enrichBOMItemFromCatalog = enrichBOMItemFromCatalog;
+
 function addToProjectBOM(id, targetLocation = null) {
   const sw = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getSwitch === "function" ? CatalogRegistry.getSwitch(id) : null) ||
              (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(id) : null) ||
@@ -225,7 +460,8 @@ function addToProjectBOM(id, targetLocation = null) {
 
   const isDinOnly = sw.mounting && sw.mounting.includes("DIN") && !sw.mounting.includes("19\"");
   let initialMgmtProfile = sw.defaultMgmtProfile || ((sw.vendor === "Meraki" || sw.vendor === "Cisco") ? "cloud" : "standalone");
-  const baseWatts = sw.role === "Core" ? 250 : (sw.role === "Aggregation" ? 150 : (sw.ports >= 48 ? 65 : 35));
+  const fallbackBaseWatts = sw.role === "Core" ? 250 : (sw.role === "Aggregation" ? 150 : (sw.ports >= 48 ? 65 : 35));
+  const baseWatts = sw.baseWatts !== undefined ? Number(sw.baseWatts) : fallbackBaseWatts;
 
   const newParent = {
     instanceId: instanceId,
@@ -239,9 +475,30 @@ function addToProjectBOM(id, targetLocation = null) {
     poeStandard: sw.poeStandard || "802.3at",
     poeBudget: parseInt(sw.poeBudget) || 0,
     baseWatts: baseWatts,
-    rackUnits: sw.rackUnits || 1,
-    depthInches: sw.depthInches || 12,
+    maxPowerWatts: sw.maxPowerWatts !== undefined ? Number(sw.maxPowerWatts) : (baseWatts + (parseInt(sw.poeBudget) || 0)),
+    heatBtuPerHour: sw.heatBtuPerHour !== undefined ? Number(sw.heatBtuPerHour) : Math.round(baseWatts * 3.412),
+    rackUnits: (sw.rackUnits !== undefined ? sw.rackUnits : 1),
+    depthInches: sw.depthInches !== undefined ? sw.depthInches : (sw.shallowDepth ? 10 : 12),
     shallowDepth: sw.shallowDepth || false,
+    weightLbs: sw.weightLbs || 0,
+    mounting: sw.mounting || "",
+    fanless: !!sw.fanless,
+    dualPsu: !!sw.dualPsu,
+    psuSku: sw.psuSku || null,
+    switchingCapacity: sw.switchingCapacity || null,
+    throughputMpps: sw.throughputMpps || null,
+    packetBufferMb: sw.packetBufferMb || null,
+    portFormFactorSummary: sw.portFormFactorSummary || "",
+    uplinksSummary: sw.uplinksSummary || "",
+    portsBreakdown: sw.portsBreakdown || null,
+    interfaces: sw.interfaces || null,
+    poeAfPorts: sw.poeAfPorts || 0,
+    poeAtPorts: sw.poeAtPorts || 0,
+    poeBt60Ports: sw.poeBt60Ports || 0,
+    poeBt90Ports: sw.poeBt90Ports || 0,
+    poeStandardsSupported: sw.poeStandardsSupported || [],
+    image: sw.image || "",
+    datasheetPath: sw.datasheet || sw.datasheetPath || "",
     qty: qtyToAdd,
     canStack: (sw.stacking !== undefined ? sw.stacking : (sw.canStack !== undefined ? sw.canStack : (sw.role === "Access" || sw.role === "Aggregation"))),
     closetName: assignedLoc,
@@ -251,12 +508,13 @@ function addToProjectBOM(id, targetLocation = null) {
     isDinMounted: isDinOnly,
     stackedUnits: 0,
     stackCableSku: sw.stackCableSku || null,
-    portSpeed: sw.portSpeed || "10G",
-    maxBackboneSpeed: sw.maxBackboneSpeed || "10G",
+    portSpeed: sw.portSpeed || "1G",
+    maxBackboneSpeed: sw.maxBackboneSpeed || (sw.uplinksSummary && /100g/i.test(sw.uplinksSummary) ? "100G" : (sw.uplinksSummary && /40g/i.test(sw.uplinksSummary) ? "40G" : (sw.uplinksSummary && /25g/i.test(sw.uplinksSummary) ? "25G" : (sw.uplinksSummary && /10g/i.test(sw.uplinksSummary) ? "10G" : "1G")))),
     selectedMgmtProfile: initialMgmtProfile,
     uplinkTargetId: null,
     uplinkMode: "single",
-    powerSource: "internal_psu"
+    modularUplink: sw.modularUplink || null,
+    powerSource: (sw.poePassThrough && sw.powerSource === "poe_switch") ? "poe_switch" : "internal_psu"
   };
 
   projectBOM.push(newParent);
@@ -327,7 +585,7 @@ function addToProjectBOM(id, targetLocation = null) {
   const fanSpareChecked = document.getElementById(`fanSpare-${sw.id}`)?.checked;
   const fanSku = sw.fanSku || (sw.compatibleAccessories && sw.compatibleAccessories.includes('UACC-Fan-4020') ? 'UACC-Fan-4020' : null);
   if (fanSpareChecked && fanSku) {
-    const fan = (typeof POWER_SUPPLY_CATALOG !== "undefined" && POWER_SUPPLY_CATALOG[fanSku]) || { sku: fanSku, name: "UniFi Hot-Swappable Fan Module (40x20mm)", msrp: 49 };
+    const fan = (typeof POWER_SUPPLY_CATALOG !== "undefined" && POWER_SUPPLY_CATALOG[fanSku]) || { sku: fanSku, name: `${sw.vendor || ''} Hot-Swappable Fan Module (${fanSku})`, msrp: 49 };
     projectBOM.push({
       instanceId: `fan-${instanceId}`,
       parentInstanceId: instanceId,
@@ -361,8 +619,8 @@ function addToProjectBOM(id, targetLocation = null) {
   );
 
   if (sw.sku === "USW-Flex") {
-    if (selectedMountSku === "3rd_party_enclosure" || selectedMountSku === "included") {
-      // User explicitly selected included mount or 3rd-party enclosure - preserve choice!
+    if (selectedMountSku === "3rd_party_enclosure" || selectedMountSku === "included" || selectedMountSku === "UACC-Flex-DIN" || selectedMountSku === "UACC-DIN-Rail") {
+      // User explicitly selected included mount, DIN bracket, or 3rd-party enclosure - preserve choice!
     } else if (isDestEnclosure || hasExistingEnclosureInBOM) {
       selectedMountSku = "3rd_party_enclosure";
     } else if (isDestOutdoor) {
@@ -383,6 +641,11 @@ function addToProjectBOM(id, targetLocation = null) {
   }
 
   newParent.selectedMountSku = selectedMountSku;
+
+  if (selectedMountSku === "UACC-Flex-DIN" || selectedMountSku === "UACC-DIN-Rail" || sw.sku === "USW-Industrial" || (sw.mounting && /din/i.test(sw.mounting))) {
+    newParent.isDinMounted = true;
+    newParent.mountMethod = "din";
+  }
 
   if (selectedMountSku && selectedMountSku !== "included" && selectedMountSku !== "3rd_party_enclosure" && selectedMountSku !== "none") {
     const mountItem = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG[selectedMountSku]) ||
@@ -449,11 +712,88 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
     const parsed = FacilityStore.parse(targetLocation);
     resolvedHostType = parsed.hostType;
   }
-  const isEnclosure = resolvedHostType === "industrial_din" || resolvedHostType === "security_cabinet" || locStr.includes("enclosure") || locStr.includes("nema") || locStr.includes("trove") || locStr.includes("box");
+  const isDinHost = resolvedHostType === "industrial_din" || locStr.includes("din");
+  const isEnclosure = isDinHost || resolvedHostType === "security_cabinet" || locStr.includes("enclosure") || locStr.includes("nema") || locStr.includes("trove") || locStr.includes("box");
   const isRack = !isEnclosure && (resolvedHostType === "equipment_rack" || locStr.includes("rack") || locStr.includes("cabinet") || locStr.includes("mdf") || locStr.includes("idf"));
   const isOutdoorOrPole = resolvedHostType === "structural_mount" || locStr.includes("pole") || locStr.includes("outdoor") || locStr.includes("exterior") || locStr.includes("utility");
 
-  // 1. USW-Pro-Max-16 in 19" Equipment Rack
+  // 1. Compact / Edge UniFi switches into Industrial DIN Rail Enclosure
+  if (isDinHost) {
+    if (sku === "USW-Industrial" || (item.mounting && /din/i.test(item.mounting))) {
+      item.isDinMounted = true;
+      item.mountMethod = "din";
+      item.rackUnits = 0;
+      return;
+    }
+
+    if (sku === "USW-Flex") {
+      item.isDinMounted = true;
+      item.mountMethod = "din";
+      item.rackUnits = 0;
+      const hasDinMount = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "UACC-Flex-DIN" || ch.sku === "UACC-DIN-Rail" || ch.role === "Mounting Hardware"));
+      if (!hasDinMount) {
+        const mountKit = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-Flex-DIN"]) || {
+          sku: "UACC-Flex-DIN",
+          name: "UniFi Switch Flex DIN Rail Mount Bracket",
+          msrp: 19
+        };
+        projectBOM.push({
+          instanceId: `mount-flex-din-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          parentInstanceId: item.instanceId,
+          id: mountKit.sku,
+          sku: mountKit.sku,
+          model: `DIN Rail Mount: ${mountKit.name || mountKit.model}`,
+          role: "Mounting Hardware",
+          category: "Infrastructure",
+          vendor: item.vendor || "UniFi",
+          msrp: mountKit.msrp || 19,
+          rackUnits: 0,
+          closetName: targetLocation,
+          rackId: targetLocation,
+          qty: 1
+        });
+        if (typeof showToast === "function") {
+          showToast(`Auto-selected DIN Rail Mount (UACC-Flex-DIN) for ${model}`);
+        }
+      }
+      return;
+    }
+
+    if (sku.includes("Ultra") || sku.includes("Lite") || sku.includes("Flex-Mini") || sku.includes("Flex-2.5G") || sku.includes("Flex-XG") || (item.rackUnits === 0 && item.vendor === "UniFi")) {
+      item.isDinMounted = true;
+      item.mountMethod = "din";
+      item.rackUnits = 0;
+      const hasDinMount = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "UACC-DIN-Rail" || ch.role === "Mounting Hardware"));
+      if (!hasDinMount) {
+        const mountKit = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-DIN-Rail"]) || {
+          sku: "UACC-DIN-Rail",
+          name: "UniFi DIN Rail Mount Kit",
+          msrp: 19
+        };
+        projectBOM.push({
+          instanceId: `mount-din-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+          parentInstanceId: item.instanceId,
+          id: mountKit.sku,
+          sku: mountKit.sku,
+          model: `DIN Rail Mount: ${mountKit.name || mountKit.model}`,
+          role: "Mounting Hardware",
+          category: "Infrastructure",
+          vendor: item.vendor || "UniFi",
+          msrp: mountKit.msrp || 19,
+          rackUnits: 0,
+          closetName: targetLocation,
+          rackId: targetLocation,
+          qty: 1
+        });
+        if (typeof showToast === "function") {
+          showToast(`Auto-selected DIN Rail Mount Kit (UACC-DIN-Rail) for ${model}`);
+        }
+      }
+      return;
+    }
+  }
+
+  // 2. USW-Pro-Max-16 in 19" Equipment Rack
   if (isRack && sku.includes("Pro-Max-16")) {
     const hasMount = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "UACC-Pro-Max-16-RM" || ch.role === "Mounting Hardware"));
     if (!hasMount) {
@@ -484,7 +824,7 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
     }
   }
 
-  // 2. USW-Flex on Outdoor Pole, Exterior Location, or Enclosure
+  // 3. USW-Flex on Outdoor Pole, Exterior Location, or Enclosure
   if (isOutdoorOrPole && sku === "USW-Flex") {
     // Check if location is already an enclosure or has an outdoor enclosure item in BOM
     const hasEnclosureInBOM = projectBOM.some(ch => 
@@ -532,8 +872,8 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
     }
   }
 
-  // 3. Compact 0U Switches in 19" Equipment Rack (Shelf allocation)
-  if (isRack && (sku === "USW-Flex" || sku === "USW-Flex-Mini" || sku.includes("Ultra") || sku === "USW-Lite-8-PoE")) {
+  // 4. Compact 0U Switches in 19" Equipment Rack (Shelf allocation)
+  if (isRack && (sku === "USW-Flex" || sku === "USW-Flex-Mini" || sku.includes("Ultra") || sku === "USW-Lite-8-PoE" || sku === "USW-Lite-16-PoE")) {
     item.rackUnits = 1;
     const hasShelf = projectBOM.some(ch => ch.parentInstanceId === item.instanceId && (ch.sku === "UACC-Rack-Shelf-SD" || ch.role === "Mounting Hardware"));
     if (!hasShelf) {
@@ -570,15 +910,31 @@ function cleanupMountingForHost(item, targetLocation, hostType = null) {
   const locStr = (targetLocation || "").toLowerCase();
   const isUnassignedOrDesktop = locStr.includes("unassigned") || locStr.includes("desktop") || locStr.includes("table");
   const isEnclosure = hostType === "industrial_din" || hostType === "security_cabinet" || locStr.includes("enclosure") || locStr.includes("nema") || locStr.includes("trove") || locStr.includes("box");
+  const isRack = hostType === "equipment_rack" || (!isEnclosure && (locStr.includes("rack") || locStr.includes("cabinet") || locStr.includes("mdf") || locStr.includes("idf")));
 
   if (isUnassignedOrDesktop) {
     projectBOM = projectBOM.filter(ch => {
       if (ch.parentInstanceId !== item.instanceId) return true;
-      if (ch.sku === "UACC-Pro-Max-16-RM" || ch.sku === "UACC-Rack-Shelf-SD" || ch.sku === "USW-Flex-Utility") {
+      if (ch.sku === "UACC-Pro-Max-16-RM" || ch.sku === "UACC-Rack-Shelf-SD" || ch.sku === "USW-Flex-Utility" || ch.sku === "UACC-DIN-Rail" || ch.sku === "UACC-Flex-DIN") {
         return false;
       }
       return true;
     });
+    if (item.sku !== "USW-Industrial" && !(item.mounting && /din/i.test(item.mounting))) {
+      item.isDinMounted = false;
+    }
+  } else if (isRack) {
+    // If moving to a standard 19" rack, remove DIN rail brackets
+    projectBOM = projectBOM.filter(ch => {
+      if (ch.parentInstanceId !== item.instanceId) return true;
+      if (ch.sku === "UACC-DIN-Rail" || ch.sku === "UACC-Flex-DIN") {
+        return false;
+      }
+      return true;
+    });
+    if (item.sku !== "USW-Industrial" && !(item.mounting && /din/i.test(item.mounting))) {
+      item.isDinMounted = false;
+    }
   } else if (isEnclosure && item.sku === "USW-Flex") {
     // If moving into an enclosure, remove standalone pole utility box if it was previously auto-added
     projectBOM = projectBOM.filter(ch => {
@@ -1455,6 +1811,63 @@ function changeBomQty(instanceId, delta) {
   FacilityStore.notifyWorkspaceChange();
 }
 
+function changeBomUplinkModule(parentInstanceId, newModuleSku) {
+  if (!parentInstanceId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const parent = projectBOM.find(i => i.instanceId === parentInstanceId);
+  if (!parent) return;
+
+  const existingIdx = projectBOM.findIndex(i => i.parentInstanceId === parentInstanceId && i.role === "Uplink Module");
+
+  if (!newModuleSku || newModuleSku === "none") {
+    if (existingIdx !== -1) {
+      projectBOM.splice(existingIdx, 1);
+    }
+  } else if (typeof MODULAR_UPLINK_CATALOG !== "undefined" && MODULAR_UPLINK_CATALOG[newModuleSku]) {
+    const mod = MODULAR_UPLINK_CATALOG[newModuleSku];
+    if (existingIdx !== -1) {
+      projectBOM[existingIdx].id = mod.sku;
+      projectBOM[existingIdx].model = mod.name;
+      projectBOM[existingIdx].sku = mod.sku;
+      projectBOM[existingIdx].msrp = mod.msrp;
+      projectBOM[existingIdx].qty = parent.qty || 1;
+    } else {
+      projectBOM.push({
+        instanceId: `mod-${parentInstanceId}`,
+        parentInstanceId: parentInstanceId,
+        id: mod.sku,
+        model: mod.name,
+        sku: mod.sku,
+        role: "Uplink Module",
+        vendor: parent.vendor,
+        msrp: mod.msrp,
+        poeBudget: 0,
+        baseWatts: 15,
+        qty: parent.qty || 1
+      });
+    }
+  }
+
+  if (typeof PortEngine !== "undefined" && typeof PortEngine.initSwitchPorts === "function") {
+    PortEngine.initSwitchPorts(parent, true);
+  }
+  if (typeof recalculateAutoUplinks === "function") {
+    recalculateAutoUplinks();
+  }
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  if (typeof renderBomModalContent === "function") {
+    renderBomModalContent();
+  }
+  if (typeof updateBOMView === "function") {
+    updateBOMView();
+  }
+  if (typeof showToast === "function") {
+    showToast(`Updated modular uplink sled for ${parent.friendlyName || parent.model}`);
+  }
+}
+window.changeBomUplinkModule = changeBomUplinkModule;
+
 function removeBomItem(instanceId) {
   deleteDeviceFromBOM(instanceId, true);
 }
@@ -1527,20 +1940,30 @@ function clearBom() {
   showToast("Project BOM reset.");
 }
 
-function toggleBomDrawer() {
+function toggleBomModal() {
+  const modal = document.getElementById("bomModal");
   const drawer = document.getElementById("bomDrawer");
-  if (!drawer) return;
-  const isOpening = drawer.classList.contains("translate-x-full");
+  if (!modal) return;
+  const isOpening = modal.classList.contains("hidden");
   if (isOpening) {
-    const openModals = ["facilityModal", "cableLayoutModal", "topologyModal", "portMatrixStudioModal"];
+    const openModals = ["facilityModal", "cableLayoutModal", "topologyModal", "portMatrixStudioModal", "rackElevationModal", "licenseModal", "projectHealthModal"];
     openModals.forEach(id => {
       const el = document.getElementById(id);
       if (el && !el.classList.contains("hidden")) {
         el.classList.add("hidden");
       }
     });
+    modal.classList.remove("hidden");
+    if (drawer) drawer.classList.remove("translate-x-full");
+    updateBOMView();
+  } else {
+    modal.classList.add("hidden");
+    if (drawer) drawer.classList.add("translate-x-full");
   }
-  drawer.classList.toggle("translate-x-full");
+}
+
+function toggleBomDrawer() {
+  toggleBomModal();
 }
 
 // -----------------------------------------------------------
@@ -1645,7 +2068,16 @@ function setPowerSource(childInstanceId, powerType) {
 // -----------------------------------------------------------
 // BOM View HTML Renderers
 // -----------------------------------------------------------
+// -----------------------------------------------------------
+// BOM View HTML Renderers & Studio Engine
+// -----------------------------------------------------------
 function updateBOMView() {
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    projectBOM.forEach(item => {
+      enrichBOMItemFromCatalog(item);
+    });
+  }
+
   const merakiAlertEl = document.getElementById("merakiLicenseAlert");
   if (merakiAlertEl) {
     const compliance = checkMerakiCompliance();
@@ -1666,30 +2098,124 @@ function updateBOMView() {
   // Live Project Health & Deficit Telemetry
   updateProjectHealthUI();
 
+  // Top header badges
   const badge = document.getElementById("bomCountBadge");
   if (badge) badge.innerText = totalUnits;
+  const headerUnitsEl = document.getElementById("bomHeaderUnits");
+  if (headerUnitsEl) headerUnitsEl.innerText = totalUnits;
+  const headerPoEEl = document.getElementById("bomHeaderPoE");
+  if (headerPoEEl) headerPoEEl.innerText = `${totalPoE.toLocaleString()} W`;
+  const headerMSRPEl = document.getElementById("bomHeaderMSRP");
+  if (headerMSRPEl) headerMSRPEl.innerText = `$${Math.round(totalMSRP).toLocaleString()}`;
+
+  // Bottom footer telemetry
   const totalUnitsEl = document.getElementById("bomTotalUnits");
   if (totalUnitsEl) totalUnitsEl.innerText = totalUnits;
   const totalPoEEl = document.getElementById("bomTotalPoE");
   if (totalPoEEl) totalPoEEl.innerText = `${totalPoE.toLocaleString()} W`;
   const totalMSRPEl = document.getElementById("bomTotalMSRP");
-  if (totalMSRPEl) totalMSRPEl.innerText = `$${totalMSRP.toLocaleString()}`;
+  if (totalMSRPEl) totalMSRPEl.innerText = `$${Math.round(totalMSRP).toLocaleString()}`;
+
+  // Populate dynamic Location filter dropdown
+  const locSelect = document.getElementById("bomLocationFilter");
+  if (locSelect) {
+    const currentVal = bomSelectedLocation;
+    const allLocations = new Set();
+    if (typeof FacilityStore !== "undefined") {
+      const names = FacilityStore.getLocationNames(true);
+      names.forEach(n => allLocations.add(FacilityStore.normalize(n)));
+    }
+    projectBOM.forEach(i => {
+      const rawLoc = i.closetName || i.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+      allLocations.add(typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc);
+    });
+
+    let optsHtml = `<option value="all" ${currentVal === 'all' ? 'selected' : ''}>All Locations & Racks</option>`;
+    Array.from(allLocations).sort().forEach(loc => {
+      const isSelected = currentVal === loc;
+      const isUnassigned = typeof FacilityStore !== "undefined" && loc === FacilityStore.UNASSIGNED;
+      optsHtml += `<option value="${escapeHTML(loc)}" ${isSelected ? 'selected' : ''}>${isUnassigned ? 'Unassigned (Staging)' : escapeHTML(loc)}</option>`;
+    });
+    locSelect.innerHTML = optsHtml;
+  }
 
   const listContainer = document.getElementById("bomItemsList");
   if (!listContainer) return;
 
   if (projectBOM.length === 0) {
-    listContainer.innerHTML = `<div class="py-12 text-center text-slate-500"><p class="text-xs font-semibold text-slate-400">Your Project BOM is empty</p></div>`;
+    listContainer.innerHTML = `
+      <div class="py-16 text-center text-slate-500 flex flex-col items-center justify-center">
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 mb-3 shadow-sm">
+          <i data-lucide="shopping-bag" class="w-8 h-8 text-brand-400"></i>
+        </div>
+        <h3 class="text-sm font-bold text-white mb-1">Your Project BOM is Empty</h3>
+        <p class="text-xs text-slate-400 max-w-sm mb-4">Add switches, cameras, wireless access points, or rack hardware from the catalog to populate your equipment schedule.</p>
+      </div>
+    `;
+    if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
     return;
   }
 
+  // Filter items based on active criteria
+  let filteredItems = projectBOM.filter(item => {
+    // 1. Search Query
+    if (bomSearchQuery) {
+      const q = bomSearchQuery.toLowerCase();
+      const match = (
+        (item.model && item.model.toLowerCase().includes(q)) ||
+        (item.sku && item.sku.toLowerCase().includes(q)) ||
+        (item.id && item.id.toLowerCase().includes(q)) ||
+        (item.friendlyName && item.friendlyName.toLowerCase().includes(q)) ||
+        (item.deviceNumber && item.deviceNumber.toLowerCase().includes(q)) ||
+        (item.role && item.role.toLowerCase().includes(q)) ||
+        (item.vendor && item.vendor.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q)) ||
+        (item.closetName && item.closetName.toLowerCase().includes(q)) ||
+        (item.rackId && item.rackId.toLowerCase().includes(q))
+      );
+      if (!match) return false;
+    }
+
+    // 2. Location Filter
+    if (bomSelectedLocation !== "all") {
+      const rawLoc = item.closetName || item.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+      const itemLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+      if (itemLoc !== bomSelectedLocation) return false;
+    }
+
+    // 3. Category Filter
+    if (bomSelectedCategory !== "all") {
+      const itemCat = getBomItemCategoryKey(item);
+      if (itemCat !== bomSelectedCategory) return false;
+    }
+
+    return true;
+  });
+
+  if (filteredItems.length === 0) {
+    listContainer.innerHTML = `
+      <div class="py-16 text-center text-slate-500 flex flex-col items-center justify-center">
+        <div class="p-4 rounded-2xl bg-slate-900 border border-slate-800 text-slate-400 mb-3 shadow-sm">
+          <i data-lucide="filter-x" class="w-8 h-8 text-amber-400"></i>
+        </div>
+        <h3 class="text-sm font-bold text-white mb-1">No Matching Hardware Found</h3>
+        <p class="text-xs text-slate-400 max-w-sm mb-4">No equipment in the project matched your current search query or active dropdown filters.</p>
+        <button onclick="resetBomFilters()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold border border-slate-700 transition-colors cursor-pointer shadow-sm">
+          Reset Search & Filters
+        </button>
+      </div>
+    `;
+    if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
+    return;
+  }
+
+  // -------------------------------------------------------------
+  // Mode A: Flat Procurement Order
+  // -------------------------------------------------------------
   if (bomViewMode === "flat") {
-    // -------------------------------------------------------------
-    // Flat Order: RAW counts of individual SKUs regardless of location
-    // -------------------------------------------------------------
     const skuMap = new Map();
 
-    projectBOM.forEach(item => {
+    filteredItems.forEach(item => {
       const rawSku = String(item.sku || item.id || item.model || 'GENERIC-SKU').trim();
       const qty = parseInt(item.qty, 10) || 1;
       const msrp = parseFloat(item.msrp) || 0;
@@ -1723,80 +2249,69 @@ function updateBOMView() {
     });
 
     const skuList = Array.from(skuMap.values());
-    // Sort by total cost descending, then raw quantity descending
     skuList.sort((a, b) => (b.totalCost - a.totalCost) || (b.rawQty - a.rawQty) || a.sku.localeCompare(b.sku));
 
     const totalUniqueSkus = skuList.length;
     const totalRawCount = skuList.reduce((acc, s) => acc + s.rawQty, 0);
     const totalOrderCost = skuList.reduce((acc, s) => acc + s.totalCost, 0);
 
-    let flatHtml = `
-      <!-- Flat Order Summary Header -->
-      <div class="p-3 bg-slate-900 border border-indigo-900/60 rounded-xl mb-3 flex items-center justify-between gap-3 shadow-sm select-none">
-        <div class="flex items-center gap-2.5">
-          <div class="p-2 rounded-lg bg-indigo-950 border border-indigo-700/60 text-indigo-400">
-            <i data-lucide="package-check" class="w-4 h-4"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-white">Flat Procurement Order</span>
-              <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-mono font-bold">RAW SKU COUNTS</span>
-            </div>
-            <span class="text-[10px] text-slate-400 font-mono">${totalUniqueSkus} Unique SKUs &bull; ${totalRawCount} Total Raw Units &bull; Regardless of Location</span>
-          </div>
-        </div>
-        <div class="text-right">
-          <span class="text-[9px] text-slate-400 uppercase font-mono block">Order Total</span>
-          <span class="text-xs font-mono font-bold text-emerald-400">$${Math.round(totalOrderCost).toLocaleString()}</span>
-        </div>
-      </div>
+    listContainer.innerHTML = renderBomFlatTable(skuList, totalUniqueSkus, totalRawCount, totalOrderCost);
+  } 
+  // -------------------------------------------------------------
+  // Mode B: Category Breakdown
+  // -------------------------------------------------------------
+  else if (bomViewMode === "category") {
+    const catGroups = {};
+    Object.keys(BOM_CATEGORIES).forEach(k => { catGroups[k] = []; });
 
-      <!-- Raw SKU Line Items -->
-      <div class="space-y-2">
-        ${skuList.map(skuItem => renderBomFlatSkuItemHtml(skuItem)).join('')}
-      </div>
-    `;
+    filteredItems.forEach(item => {
+      if (item.parentInstanceId) return; // Child parts render inside parent rows
+      const catKey = getBomItemCategoryKey(item);
+      if (!catGroups[catKey]) catGroups[catKey] = [];
+      catGroups[catKey].push(item);
+    });
 
-    listContainer.innerHTML = flatHtml;
-  } else {
-    const groups = {};
-    projectBOM.forEach(item => {
-      if (item.parentInstanceId) return;
-      const rawLoc = item.closetName || item.rackId || FacilityStore.UNASSIGNED;
+    let catHtml = '<div class="space-y-4">';
+    let renderedAny = false;
+
+    Object.entries(catGroups).forEach(([catKey, items]) => {
+      if (!items || items.length === 0) return;
+      renderedAny = true;
+      const catMeta = BOM_CATEGORIES[catKey] || { label: catKey, icon: "box" };
+      catHtml += renderBomCategoryAccordion(catKey, catMeta, items);
+    });
+
+    catHtml += '</div>';
+    listContainer.innerHTML = renderedAny ? catHtml : '<div class="py-8 text-center text-slate-500 text-xs">No items in selected categories.</div>';
+  }
+  // -------------------------------------------------------------
+  // Mode C: By Location / Rack (Default)
+  // -------------------------------------------------------------
+  else {
+    const locGroups = {};
+
+    filteredItems.forEach(item => {
+      if (item.parentInstanceId) return; // Child parts render inside parent rows
+      const rawLoc = item.closetName || item.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
       const key = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(item);
+      if (!locGroups[key]) locGroups[key] = [];
+      locGroups[key].push(item);
     });
 
-    let groupedHtml = "";
-    Object.entries(groups).forEach(([locKey, items]) => {
-      let locWatts = 0, locCost = 0;
-      items.forEach(it => {
-        locWatts += ((it.poeBudget || 0) + (it.baseWatts || 0)) * it.qty;
-        locCost += it.msrp * it.qty;
-        projectBOM.filter(ch => ch.parentInstanceId === it.instanceId).forEach(ch => {
-          locCost += ch.msrp * ch.qty;
-          locWatts += (ch.baseWatts || 0) * ch.qty;
-        });
-      });
-
-      const isUnassignedGroup = locKey === FacilityStore.UNASSIGNED;
-
-      groupedHtml += `
-        <div class="space-y-2 pt-1">
-          <div class="${isUnassignedGroup ? 'bg-amber-950/25 border-amber-800/40' : 'bg-slate-850 border-slate-750'} px-3 py-1.5 rounded-lg border flex items-center justify-between text-xs">
-            <span class="font-bold ${isUnassignedGroup ? 'text-amber-300' : 'text-indigo-300'} flex items-center gap-1.5">
-              <i data-lucide="${isUnassignedGroup ? 'inbox' : 'map-pin'}" class="w-3.5 h-3.5 ${isUnassignedGroup ? 'text-amber-400' : 'text-indigo-400'}"></i>
-              ${isUnassignedGroup ? 'Unassigned Equipment (Staging)' : locKey}
-            </span>
-            <span class="font-mono text-slate-400 text-[11px]">${locWatts}W Load &bull; $${locCost.toLocaleString()}</span>
-          </div>
-          <div class="space-y-2">
-            ${items.map(it => renderBomSingleItemHtml(it)).join("")}
-          </div>
-        </div>
-      `;
+    // Sort locations: Assigned spaces/racks first, Unassigned staging last
+    const sortedKeys = Object.keys(locGroups).sort((a, b) => {
+      const isUnA = typeof FacilityStore !== "undefined" && a === FacilityStore.UNASSIGNED;
+      const isUnB = typeof FacilityStore !== "undefined" && b === FacilityStore.UNASSIGNED;
+      if (isUnA && !isUnB) return 1;
+      if (!isUnA && isUnB) return -1;
+      return a.localeCompare(b);
     });
+
+    let groupedHtml = '<div class="space-y-4">';
+    sortedKeys.forEach(locKey => {
+      groupedHtml += renderBomLocationAccordion(locKey, locGroups[locKey]);
+    });
+    groupedHtml += '</div>';
 
     listContainer.innerHTML = groupedHtml;
   }
@@ -1806,69 +2321,553 @@ function updateBOMView() {
   }
 }
 
-function renderBomFlatSkuItemHtml(skuItem) {
-  const locEntries = Object.entries(skuItem.locations);
-  const locSummary = locEntries.map(([loc, count]) => `${loc}: ${count}`).join(" &bull; ");
+// -----------------------------------------------------------
+// Modern Structured Table Row Renderer (Spacious Grid)
+// -----------------------------------------------------------
+function renderBomTableRow(item) {
+  const rawLoc = item.closetName || item.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+  const currentLocationKey = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+  const isUnassigned = typeof FacilityStore !== "undefined" && currentLocationKey === FacilityStore.UNASSIGNED;
+
+  const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
+  const pwrBadge = (typeof PortEngine !== "undefined" && PortEngine.POWER_MODES && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
+  const childItems = projectBOM.filter(ch => ch.parentInstanceId === item.instanceId);
+
+  const catSw = (item.modularUplink ? item : null) || 
+    (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getSwitch === "function" ? CatalogRegistry.getSwitch(item.id || item.sku) : null) ||
+    (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(item.id || item.sku) : null) ||
+    (typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE.find(s => s.id === item.id || s.sku === item.sku) : null);
+  const hasModularBay = !!(catSw && catSw.modularUplink && catSw.modularUplink.hasSlot);
+  const attachedSled = childItems.find(ch => ch.role === "Uplink Module");
+  const otherChildItems = hasModularBay ? childItems.filter(ch => ch.role !== "Uplink Module") : childItems;
+
+  const totalItemCost = (item.msrp || 0) * (item.qty || 1);
+  const isStackable = item.canStack || item.role === "Access" || item.role === "Aggregation";
+  const isStack = isStackable && item.stackedUnits >= 2;
+
+  const uPosition = item.uPosition || (item.startU ? `U${item.startU}${item.heightU > 1 ? `-U${item.startU + item.heightU - 1}` : ''}` : null);
+  const mountLabel = item.mountMethod ? formatMountMethodLabel(item.mountMethod) : null;
 
   return `
-    <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2 shadow-sm hover:border-slate-700 transition-colors">
-      <div class="flex items-center justify-between gap-3">
-        <!-- Left: Prominent Raw Count Badge & Details -->
-        <div class="flex items-center gap-3 min-w-0 flex-1">
-          <div class="flex flex-col items-center justify-center min-w-[52px] px-2.5 py-1.5 rounded-xl bg-indigo-950/80 border border-indigo-500/60 text-indigo-300 shadow-sm shrink-0">
-            <span class="text-base font-mono font-bold leading-none">${skuItem.rawQty}x</span>
-            <span class="text-[8px] font-mono text-indigo-400/80 uppercase mt-0.5 font-bold">RAW</span>
+    <tr id="bom-item-${item.instanceId}" data-bom-instance="${item.instanceId}" class="group border-b border-slate-800/80 hover:bg-slate-900/50 transition-colors">
+      <!-- Col 1: Hardware Identity -->
+      <td class="py-3 px-4 align-top">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            ${item.deviceNumber ? `
+              <span class="px-2 py-0.5 rounded-md bg-brand-950/90 border border-brand-500/50 text-[11px] font-mono font-bold text-brand-300 shadow-sm" title="Device Sequence ID">
+                ${escapeHTML(item.deviceNumber)}
+              </span>
+            ` : ''}
+            <span class="text-xs font-bold text-white tracking-tight" title="${escapeHTML(item.friendlyName || item.model)}">
+              ${escapeHTML(item.friendlyName || item.model)}
+            </span>
+            <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-500 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors cursor-pointer" title="Edit Device Friendly Name">
+              <i data-lucide="pencil" class="w-3 h-3"></i>
+            </button>
+            ${item.vendor ? `
+              <span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700/80 text-[10px] font-mono text-slate-300">
+                ${escapeHTML(item.vendor)}
+              </span>
+            ` : ''}
           </div>
 
-          <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="text-xs font-bold text-white truncate" title="${escapeHTML(skuItem.model)}">${escapeHTML(skuItem.model)}</span>
-              ${skuItem.vendor ? `<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">${escapeHTML(skuItem.vendor)}</span>` : ''}
-              <span class="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-800/80 text-[10px] font-mono text-indigo-300 font-semibold">SKU: ${escapeHTML(skuItem.sku)}</span>
+          <div class="flex items-center gap-2 text-[11px] text-slate-400 font-mono">
+            ${item.friendlyName && item.friendlyName !== item.model ? `
+              <span class="text-slate-300 font-medium">${escapeHTML(item.model)}</span>
+              <span>&bull;</span>
+            ` : ''}
+            <span class="text-slate-400">SKU: <strong class="text-slate-300 font-semibold">${escapeHTML(item.sku)}</strong></span>
+            <span>&bull;</span>
+            <span class="px-1.5 py-0.2 rounded bg-slate-900/80 text-slate-400 text-[10px] border border-slate-800">${escapeHTML(item.role || 'Hardware')}</span>
+          </div>
+
+          <!-- Modular Uplink Bay Selector (if switch has modular uplink slot) -->
+          ${hasModularBay ? `
+            <div class="pt-2">
+              <div class="p-2 rounded-lg bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-colors shadow-sm space-y-1.5">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-400 text-[10px] font-mono font-semibold border border-brand-500/20">
+                      <i data-lucide="cpu" class="w-3 h-3 text-brand-400"></i>
+                      <span>Modular Uplink Bay</span>
+                    </span>
+                    ${attachedSled ? `
+                      <span class="text-[10px] text-slate-400 font-mono">Installed: <span class="text-slate-200 font-semibold">${escapeHTML(attachedSled.sku)}</span></span>
+                    ` : `
+                      <span class="text-[10px] text-amber-400/90 font-mono">No module installed</span>
+                    `}
+                  </div>
+                  ${attachedSled ? `
+                    <span class="font-mono text-emerald-400 font-semibold text-xs">$${((attachedSled.msrp || 0) * (attachedSled.qty || 1)).toLocaleString()}</span>
+                  ` : ''}
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <select 
+                    onchange="changeBomUplinkModule('${item.instanceId}', this.value)" 
+                    class="w-full bg-slate-900 border border-slate-700/80 hover:border-slate-600 text-slate-200 text-xs font-medium rounded-md px-2 py-1 focus:outline-none focus:border-brand-500 cursor-pointer shadow-sm transition-colors"
+                    title="Select expansion sled to install in modular uplink slot"
+                  >
+                    <option value="none" ${!attachedSled ? 'selected' : ''}>-- Empty Bay (No Module) --</option>
+                    ${(catSw.modularUplink.supportedModules || []).map(mSku => {
+                      const mod = (typeof MODULAR_UPLINK_CATALOG !== 'undefined') ? MODULAR_UPLINK_CATALOG[mSku] : null;
+                      const isSel = attachedSled && (attachedSled.sku === mSku || attachedSled.id === mSku);
+                      const label = mod ? `${mod.name} (${mSku}) - $${mod.msrp.toLocaleString()}` : mSku;
+                      return `<option value="${escapeHTML(mSku)}" ${isSel ? 'selected' : ''}>${escapeHTML(label)}</option>`;
+                    }).join('')}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div class="text-[10px] text-slate-400 font-mono mt-0.5">
-              <span>${escapeHTML(skuItem.role)}</span>
-              ${skuItem.totalWatts > 0 ? ` &bull; <span class="text-slate-300">${Math.round(skuItem.totalWatts)}W Total Draw</span>` : ''}
+          ` : ''}
+
+          <!-- Other Attached Sub-items (Child transceivers, licenses, PSUs) -->
+          ${otherChildItems.length > 0 ? `
+            <div class="pt-1.5 space-y-1">
+              ${otherChildItems.map(ch => `
+                <div class="flex items-center gap-2 text-[11px] text-slate-400 bg-slate-950/60 border border-slate-800/80 px-2 py-1 rounded-lg">
+                  <i data-lucide="corner-down-right" class="w-3 h-3 text-brand-400 shrink-0"></i>
+                  <span class="text-slate-200 font-medium truncate">${escapeHTML(ch.model)}</span>
+                  <span class="px-1.5 py-0.2 rounded bg-slate-900 text-slate-400 text-[10px] font-mono border border-slate-800">${escapeHTML(ch.role)}</span>
+                  <span class="text-slate-500 font-mono text-[10px]">SKU: ${escapeHTML(ch.sku)}</span>
+                  <span class="ml-auto font-mono text-emerald-400 font-semibold text-xs">$${((ch.msrp || 0) * (ch.qty || 1)).toLocaleString()}</span>
+                  <span class="text-[10px] text-slate-500 font-mono">(${ch.qty}x)</span>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      </td>
+
+      <!-- Col 2: Placement & Enclosure -->
+      <td class="py-3 px-4 align-top">
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="${isUnassigned ? 'inbox' : (currentLocationKey.endsWith(' • Field') ? 'radio' : 'map-pin')}" class="w-3.5 h-3.5 ${isUnassigned ? 'text-amber-400' : (currentLocationKey.endsWith(' • Field') ? 'text-cyan-400' : 'text-indigo-400')} shrink-0"></i>
+            <select 
+              onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" 
+              data-previous-val="${currentLocationKey}" 
+              class="w-full max-w-[210px] bg-slate-900 border border-slate-700/80 text-slate-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500 truncate cursor-pointer shadow-sm" 
+              title="Change Assigned Space or Rack Enclosure"
+            >
+              ${renderBomLocationOptions(currentLocationKey, item)}
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 flex-wrap">
+            ${uPosition ? `
+              <span class="px-2 py-0.5 rounded bg-sky-950/60 border border-sky-800 text-[10px] font-mono text-sky-300 font-bold flex items-center gap-1" title="Mounted at Rack Unit ${uPosition}">
+                <i data-lucide="server" class="w-3 h-3 text-sky-400"></i>
+                <span>${uPosition}</span>
+              </span>
+            ` : ''}
+
+            ${mountLabel ? `
+              <span class="px-2 py-0.5 rounded bg-cyan-950/60 border border-cyan-800 text-[10px] font-mono text-cyan-300 font-semibold flex items-center gap-1" title="Mounting Method: ${mountLabel}">
+                <i data-lucide="anchor" class="w-3 h-3 text-cyan-400"></i>
+                <span>${mountLabel}</span>
+              </span>
+            ` : ''}
+
+            ${item.closetName && !isUnassigned ? `
+              <button 
+                type="button" 
+                onclick="toggleBomModal(); openRackViewerFor('${item.closetName || item.rackId}')"
+                class="px-2 py-0.5 rounded bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/60 text-indigo-300 hover:text-white text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
+                title="View in Rack Elevation Visualizer"
+              >
+                <i data-lucide="layout-grid" class="w-2.5 h-2.5"></i>
+                <span>View Rack</span>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </td>
+
+      <!-- Col 3: Engineering, Power & Stacking -->
+      <td class="py-3 px-4 align-top">
+        <div class="space-y-1.5 text-xs">
+          <!-- Power badges -->
+          <div class="flex items-center gap-2 flex-wrap">
+            ${item.poeBudget > 0 ? `
+              <span class="px-2 py-0.5 rounded bg-amber-950/70 border border-amber-700/60 text-amber-300 font-mono text-[11px] font-bold flex items-center gap-1" title="PoE Power Budget">
+                <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i>
+                <span>${item.poeBudget}W PoE</span>
+              </span>
+            ` : ''}
+
+            ${item.baseWatts > 0 ? `
+              <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 font-mono text-[10px]" title="Base System Power Consumption">
+                ${item.baseWatts}W Base
+              </span>
+            ` : ''}
+
+            ${pwrBadge ? `
+              <span class="px-2 py-0.5 rounded ${pwrBadge.bgClass || 'bg-slate-900 border border-slate-700 text-slate-300'} font-mono text-[10px] flex items-center gap-1" title="Power Source: ${pwrBadge.label}">
+                <i data-lucide="${pwrBadge.icon || 'plug'}" class="w-3 h-3"></i>
+                <span>${pwrBadge.label}</span>
+              </span>
+            ` : ''}
+          </div>
+
+          <!-- Stacking / Uplink details -->
+          <div class="flex items-center gap-2 flex-wrap">
+            ${isStackable ? `
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${isStack ? 'bg-indigo-950/60 border-indigo-500/40 text-indigo-300 font-bold' : 'bg-slate-900 border-slate-800 text-slate-400'} flex items-center gap-1">
+                  <i data-lucide="layers" class="w-3 h-3 ${isStack ? 'text-indigo-400' : 'text-slate-500'}"></i>
+                  <span>${isStack ? `${item.stackedUnits}-Switch Stack` : 'Standalone (1 Chassis)'}</span>
+                </span>
+                ${isStack ? `
+                  <button 
+                    type="button" 
+                    onclick="if (typeof toggleStackPatchPanel === 'function') toggleStackPatchPanel('${item.instanceId}')"
+                    class="px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all flex items-center gap-1 border ${item.patchPanelBetween ? 'bg-purple-900/80 text-purple-200 border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'}"
+                    title="${item.patchPanelBetween ? 'Remove 24-port patch panel between stacked switches' : 'Place 24-port patch panel in between stacked switches'}"
+                  >
+                    <i data-lucide="${item.patchPanelBetween ? 'check-square' : 'plus-square'}" class="w-2.5 h-2.5 ${item.patchPanelBetween ? 'text-purple-400' : 'text-slate-400'}"></i>
+                    <span>${item.patchPanelBetween ? '24P Patch In-Between' : '+ 24P Patch'}</span>
+                  </button>
+                ` : ''}
+              </div>
+            ` : ''}
+
+            ${item.uplinkTargetId ? `
+              <span class="px-2 py-0.5 rounded bg-emerald-950/50 border border-emerald-800/60 text-emerald-300 text-[10px] font-mono flex items-center gap-1" title="Uplink configured in Topology">
+                <i data-lucide="link" class="w-2.5 h-2.5 text-emerald-400"></i>
+                <span>Linked</span>
+              </span>
+            ` : ''}
+          </div>
+        </div>
+      </td>
+
+      <!-- Col 4: Pricing & Quantity -->
+      <td class="py-3 px-4 align-top">
+        <div class="space-y-1.5">
+          <div class="flex items-center gap-3">
+            <div>
+              <div class="text-sm font-mono font-bold text-emerald-400 tracking-tight">$${totalItemCost.toLocaleString()}</div>
+              <div class="text-[10px] text-slate-400 font-mono">($${(item.msrp || 0).toLocaleString()} ea)</div>
+            </div>
+
+            <!-- Qty Stepper -->
+            <div class="flex items-center bg-slate-900 border border-slate-700/80 rounded-xl overflow-hidden shadow-inner">
+              <button onclick="changeBomQty('${item.instanceId}', -1)" class="px-2.5 py-1 text-slate-400 hover:text-white hover:bg-slate-800 font-bold transition-colors text-xs cursor-pointer" title="Decrease Quantity">-</button>
+              <span class="px-2 text-xs font-mono font-bold text-white min-w-[24px] text-center">${item.qty}</span>
+              <button onclick="changeBomQty('${item.instanceId}', 1)" class="px-2.5 py-1 text-slate-400 hover:text-white hover:bg-slate-800 font-bold transition-colors text-xs cursor-pointer" title="Increase Quantity">+</button>
+            </div>
+          </div>
+        </div>
+      </td>
+
+      <!-- Col 5: Actions -->
+      <td class="py-3 px-4 align-top text-right">
+        <div class="flex items-center justify-end gap-1">
+          <!-- Jump to Topology -->
+          <button 
+            type="button" 
+            onclick="toggleBomModal(); jumpToTopologyTarget('node:${item.instanceId}')" 
+            class="p-1.5 rounded-lg bg-slate-900 hover:bg-indigo-950/80 border border-slate-800 hover:border-indigo-800/60 text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
+            title="Inspect ports, wire speeds, and logical uplinks in Topology"
+          >
+            <i data-lucide="network" class="w-3.5 h-3.5"></i>
+          </button>
+
+          <!-- Jump to Physical Blueprint -->
+          <button 
+            type="button" 
+            onclick="toggleBomModal(); jumpToPhysicalLayoutTarget('${item.instanceId}')" 
+            class="p-1.5 rounded-lg bg-slate-900 hover:bg-amber-950/80 border border-slate-800 hover:border-amber-800/60 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
+            title="Inspect blueprint, floor drops, and cable pathways in Physical Layout"
+          >
+            <i data-lucide="map" class="w-3.5 h-3.5"></i>
+          </button>
+
+          <!-- Delete Item -->
+          <button 
+            type="button" 
+            onclick="removeBomItem('${item.instanceId}')" 
+            class="p-1.5 rounded-lg bg-slate-900 hover:bg-rose-950/80 border border-slate-800 hover:border-rose-800/60 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer"
+            title="Remove equipment from BOM"
+          >
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `;
+}
+
+// -----------------------------------------------------------
+// Location Accordion Renderer
+// -----------------------------------------------------------
+function renderBomLocationAccordion(locKey, items) {
+  let locWatts = 0, locCost = 0, locUnits = 0;
+  items.forEach(it => {
+    locUnits += (it.qty || 1);
+    locWatts += ((it.poeBudget || 0) + (it.baseWatts || 0)) * (it.qty || 1);
+    locCost += (it.msrp || 0) * (it.qty || 1);
+    projectBOM.filter(ch => ch.parentInstanceId === it.instanceId).forEach(ch => {
+      locCost += (ch.msrp || 0) * (ch.qty || 1);
+      locWatts += (ch.baseWatts || 0) * (ch.qty || 1);
+    });
+  });
+
+  const isUnassigned = typeof FacilityStore !== "undefined" && locKey === FacilityStore.UNASSIGNED;
+  const isCollapsed = bomCollapsedLocations.has(locKey);
+
+  return `
+    <div class="bg-slate-950/90 rounded-2xl border ${isUnassigned ? 'border-amber-900/40 bg-amber-950/10' : 'border-slate-800'} overflow-hidden shadow-sm transition-all">
+      <!-- Accordion Header Banner -->
+      <div 
+        onclick="toggleBomLocationCollapse('${escapeHTML(locKey)}')" 
+        class="px-4 py-3 bg-slate-900/90 hover:bg-slate-900 border-b border-slate-800/80 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <i data-lucide="${isCollapsed ? 'chevron-right' : 'chevron-down'}" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          <div class="p-1.5 rounded-lg ${isUnassigned ? 'bg-amber-950/80 text-amber-400 border border-amber-800/60' : 'bg-indigo-950/80 text-indigo-400 border border-indigo-800/60'}">
+            <i data-lucide="${isUnassigned ? 'inbox' : (locKey.endsWith(' • Field') ? 'radio' : 'map-pin')}" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold ${isUnassigned ? 'text-amber-300' : 'text-white'}">
+                ${isUnassigned ? 'Unassigned Equipment (Staging)' : escapeHTML(locKey)}
+              </span>
+              <span class="px-2 py-0.2 rounded-full ${isUnassigned ? 'bg-amber-950/80 text-amber-300 border border-amber-800' : 'bg-slate-800 text-slate-300 border border-slate-700'} text-[10px] font-mono font-bold">
+                ${locUnits} ${locUnits === 1 ? 'unit' : 'units'} (${items.length} ${items.length === 1 ? 'device' : 'devices'})
+              </span>
             </div>
           </div>
         </div>
 
-        <!-- Right: Unit Price & Extended Total + Raw Qty Controls -->
-        <div class="flex items-center gap-3 shrink-0">
-          <div class="text-right">
-            <div class="text-xs font-mono font-bold text-emerald-400">$${Math.round(skuItem.totalCost).toLocaleString()}</div>
-            <div class="text-[10px] text-slate-400 font-mono">($${skuItem.msrp.toLocaleString()} ea)</div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="text-slate-400">${locWatts}W Load</span>
+            <span class="text-slate-600">&bull;</span>
+            <span class="font-bold text-emerald-400 text-sm">$${Math.round(locCost).toLocaleString()}</span>
           </div>
-          <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg">
-            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Decrease Total Quantity">-</button>
-            <span class="px-2 text-xs font-mono font-bold text-white min-w-[20px] text-center">${skuItem.rawQty}</span>
-            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Increase Total Quantity">+</button>
-          </div>
-          <button onclick="deleteRawSkuFromBOM('${escapeHTML(skuItem.sku)}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition-colors rounded hover:bg-slate-900 cursor-pointer" title="Delete all units of this SKU">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
+
+          ${!isUnassigned ? `
+            <button 
+              type="button" 
+              onclick="event.stopPropagation(); toggleBomModal(); openRackViewerFor('${escapeHTML(locKey)}')" 
+              class="px-2.5 py-1 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Open Enclosure Visualizer"
+            >
+              <i data-lucide="server" class="w-3.5 h-3.5"></i>
+              <span>Enclosure</span>
+            </button>
+          ` : ''}
         </div>
       </div>
 
-      <!-- Allocation Across Locations Pill Footer -->
-      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400 gap-2">
-        <div class="flex items-center gap-1.5 min-w-0 truncate" title="Location allocations: ${escapeHTML(locSummary)}">
-          <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400 shrink-0"></i>
-          <span class="text-slate-500 shrink-0">Allocations:</span>
-          <span class="text-slate-300 truncate">${locSummary}</span>
+      <!-- Accordion Body: Table -->
+      ${!isCollapsed ? `
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-950/90 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">
+                <th class="py-2.5 px-4 font-bold w-[34%]">Item & Specification</th>
+                <th class="py-2.5 px-4 font-bold w-[18%]">Placement / Rack Slot</th>
+                <th class="py-2.5 px-4 font-bold w-[22%]">Engineering & Power</th>
+                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Qty</th>
+                <th class="py-2.5 px-4 font-bold w-[10%] text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(it => renderBomTableRow(it)).join('')}
+            </tbody>
+          </table>
         </div>
-        <button 
-          type="button" 
-          onclick="setBomViewMode('grouped')" 
-          class="text-[9.5px] text-indigo-400 hover:text-indigo-300 hover:underline flex items-center gap-0.5 transition-colors shrink-0 cursor-pointer"
-          title="Switch to By Location/Rack view to manage specific device placements"
-        >
-          <span>By Location/Rack</span>
-          <i data-lucide="arrow-right" class="w-2.5 h-2.5"></i>
-        </button>
+      ` : ''}
+    </div>
+  `;
+}
+
+// -----------------------------------------------------------
+// Category Accordion Renderer
+// -----------------------------------------------------------
+function renderBomCategoryAccordion(catKey, catMeta, items) {
+  let catWatts = 0, catCost = 0, catUnits = 0;
+  items.forEach(it => {
+    catUnits += (it.qty || 1);
+    catWatts += ((it.poeBudget || 0) + (it.baseWatts || 0)) * (it.qty || 1);
+    catCost += (it.msrp || 0) * (it.qty || 1);
+    projectBOM.filter(ch => ch.parentInstanceId === it.instanceId).forEach(ch => {
+      catCost += (ch.msrp || 0) * (ch.qty || 1);
+      catWatts += (ch.baseWatts || 0) * (ch.qty || 1);
+    });
+  });
+
+  const isCollapsed = bomCollapsedLocations.has(catKey);
+
+  return `
+    <div class="bg-slate-950/90 rounded-2xl border border-slate-800 overflow-hidden shadow-sm transition-all">
+      <!-- Accordion Header Banner -->
+      <div 
+        onclick="toggleBomLocationCollapse('${escapeHTML(catKey)}')" 
+        class="px-4 py-3 bg-slate-900/90 hover:bg-slate-900 border-b border-slate-800/80 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+      >
+        <div class="flex items-center gap-3">
+          <i data-lucide="${isCollapsed ? 'chevron-right' : 'chevron-down'}" class="w-4 h-4 text-slate-400 transition-transform"></i>
+          <div class="p-1.5 rounded-lg bg-indigo-950/80 text-indigo-400 border border-indigo-800/60">
+            <i data-lucide="${catMeta.icon || 'box'}" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-white">
+                ${escapeHTML(catMeta.label)}
+              </span>
+              <span class="px-2 py-0.2 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-mono font-bold">
+                ${catUnits} ${catUnits === 1 ? 'unit' : 'units'} (${items.length} ${items.length === 1 ? 'device' : 'devices'})
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="text-slate-400">${catWatts}W Load</span>
+            <span class="text-slate-600">&bull;</span>
+            <span class="font-bold text-emerald-400 text-sm">$${Math.round(catCost).toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accordion Body: Table -->
+      ${!isCollapsed ? `
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-950/90 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">
+                <th class="py-2.5 px-4 font-bold w-[34%]">Item & Specification</th>
+                <th class="py-2.5 px-4 font-bold w-[18%]">Placement / Rack Slot</th>
+                <th class="py-2.5 px-4 font-bold w-[22%]">Engineering & Power</th>
+                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Qty</th>
+                <th class="py-2.5 px-4 font-bold w-[10%] text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${items.map(it => renderBomTableRow(it)).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+
+// -----------------------------------------------------------
+// Flat Procurement Order Table Renderer
+// -----------------------------------------------------------
+function renderBomFlatTable(skuList, totalUniqueSkus, totalRawCount, totalOrderCost) {
+  return `
+    <div class="space-y-4">
+      <!-- Flat Order Summary Header -->
+      <div class="p-4 bg-slate-900 border border-indigo-900/60 rounded-2xl flex items-center justify-between gap-3 shadow-sm select-none">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-indigo-950 border border-indigo-700/60 text-indigo-400">
+            <i data-lucide="package-check" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-bold text-white">Flat Procurement Order</span>
+              <span class="px-2 py-0.5 rounded-full bg-indigo-950 text-indigo-300 border border-indigo-800 text-[10px] font-mono font-bold">RAW SKU COUNTS</span>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">${totalUniqueSkus} Unique SKUs &bull; ${totalRawCount} Total Raw Units &bull; Consolidated Regardless of Location</span>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-[10px] text-slate-400 uppercase font-mono block">Order Total</span>
+          <span class="text-base font-mono font-bold text-emerald-400">$${Math.round(totalOrderCost).toLocaleString()}</span>
+        </div>
+      </div>
+
+      <!-- Raw SKU Table -->
+      <div class="bg-slate-950/90 rounded-2xl border border-slate-800 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-950 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">
+                <th class="py-2.5 px-4 font-bold w-[34%]">Part & Catalog Specification</th>
+                <th class="py-2.5 px-4 font-bold w-[28%]">Location Allocations</th>
+                <th class="py-2.5 px-4 font-bold w-[14%]">Power Draw</th>
+                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Quantity</th>
+                <th class="py-2.5 px-4 font-bold w-[8%] text-right">Delete</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${skuList.map(s => renderBomFlatTableRow(s)).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;
+}
+
+function renderBomFlatTableRow(skuItem) {
+  const locEntries = Object.entries(skuItem.locations);
+  const locSummary = locEntries.map(([loc, count]) => `${loc}: ${count}`).join(" • ");
+
+  return `
+    <tr class="border-b border-slate-800/80 hover:bg-slate-900/50 transition-colors">
+      <td class="py-3 px-4 align-top">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs font-bold text-white tracking-tight">${escapeHTML(skuItem.model)}</span>
+            ${skuItem.vendor ? `<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-700 text-[10px] font-mono text-slate-300">${escapeHTML(skuItem.vendor)}</span>` : ''}
+            <span class="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-800/80 text-[10px] font-mono text-indigo-300 font-semibold">SKU: ${escapeHTML(skuItem.sku)}</span>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono">
+            <span>${escapeHTML(skuItem.role)}</span>
+          </div>
+        </div>
+      </td>
+
+      <td class="py-3 px-4 align-top">
+        <div class="flex items-center gap-1.5 text-xs text-slate-300">
+          <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
+          <span class="font-mono text-[11px] truncate max-w-sm" title="${escapeHTML(locSummary)}">${escapeHTML(locSummary)}</span>
+        </div>
+      </td>
+
+      <td class="py-3 px-4 align-top font-mono text-xs text-slate-400">
+        ${skuItem.totalWatts > 0 ? `<span class="text-slate-200 font-semibold">${Math.round(skuItem.totalWatts)}W</span> Total` : '<span class="text-slate-600">-</span>'}
+      </td>
+
+      <td class="py-3 px-4 align-top">
+        <div class="flex items-center gap-3">
+          <div>
+            <div class="text-xs font-mono font-bold text-emerald-400">$${Math.round(skuItem.totalCost).toLocaleString()}</div>
+            <div class="text-[10px] text-slate-400 font-mono">($${(skuItem.msrp || 0).toLocaleString()} ea)</div>
+          </div>
+          <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-inner">
+            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Decrease Total Quantity">-</button>
+            <span class="px-2 text-xs font-mono font-bold text-white min-w-[24px] text-center">${skuItem.rawQty}</span>
+            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Increase Total Quantity">+</button>
+          </div>
+        </div>
+      </td>
+
+      <td class="py-3 px-4 align-top text-right">
+        <button onclick="deleteRawSkuFromBOM('${escapeHTML(skuItem.sku)}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition-colors rounded-lg hover:bg-slate-900 cursor-pointer" title="Delete all units of this SKU">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </td>
+    </tr>
+  `;
+}
+
+// Backwards-compatible card wrappers
+function renderBomFlatSkuItemHtml(skuItem) {
+  return renderBomFlatTableRow(skuItem);
+}
+
+function renderBomSingleItemHtml(item) {
+  return renderBomTableRow(item);
 }
 
 function changeRawSkuQty(skuKey, delta) {
@@ -1949,190 +2948,6 @@ function deleteRawSkuFromBOM(skuKey) {
   if (typeof showToast === "function") {
     showToast(`Removed all ${totalUnits} unit(s) of ${skuName} from BOM.`);
   }
-}
-
-function renderBomSingleItemHtml(item) {
-  if (item.parentInstanceId) {
-    return `
-      <div class="ml-4 bg-slate-950/70 p-2 rounded-lg border border-slate-800/60 flex items-center justify-between text-xs">
-        <div>
-          <span class="text-slate-300 font-medium">${item.model}</span>
-          <div class="text-[10px] font-mono text-slate-500">${item.role} &bull; SKU: ${item.sku}</div>
-        </div>
-        <div class="text-right">
-          <span class="font-mono text-emerald-400 font-semibold">$${(item.msrp * item.qty).toLocaleString()}</span>
-          <span class="text-[10px] text-slate-400 block">${item.qty}x @ $${item.msrp}</span>
-        </div>
-      </div>
-    `;
-  }
-
-  const allLocations = getAllDefinedLocations();
-  const rawLoc = item.closetName || item.rackId || FacilityStore.UNASSIGNED;
-  const currentLocationKey = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
-  const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
-  const pwrBadge = (typeof PortEngine !== "undefined" && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
-
-  return `
-    <div id="bom-item-${item.instanceId}" data-bom-instance="${item.instanceId}" class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2.5 shadow-sm hover:border-slate-700 transition-colors">
-      
-      <!-- Location & Rack Fast-Move Header -->
-      <div class="flex items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
-        <div class="flex items-center gap-1.5 flex-1 min-w-0">
-          <i data-lucide="${currentLocationKey === FacilityStore.UNASSIGNED ? 'inbox' : (currentLocationKey.endsWith(' • Field') ? 'radio' : 'map-pin')}" class="w-3.5 h-3.5 ${currentLocationKey === FacilityStore.UNASSIGNED ? 'text-amber-400' : (currentLocationKey.endsWith(' • Field') ? 'text-cyan-400' : 'text-indigo-400')} shrink-0"></i>
-          <select onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" data-previous-val="${currentLocationKey}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[11px] font-bold rounded px-2 py-0.5 focus:outline-none focus:border-brand-500 max-w-[240px] truncate cursor-pointer" title="Change Assigned Space or Rack Enclosure">
-            ${renderBomLocationOptions(currentLocationKey, item)}
-          </select>
-        </div>
-        <div class="flex items-center gap-1 shrink-0">
-          <span class="text-[10px] text-slate-400 font-mono">
-            ${escapeHTML(item.role || 'Hardware')}
-          </span>
-        </div>
-      </div>
-
-      <!-- Device Info & Quantity Controls -->
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex-1 min-w-0">
-          <div class="flex items-center gap-1.5 flex-wrap">
-            ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[10px] font-mono font-bold text-brand-300" title="Device Sequence ID">${escapeHTML(item.deviceNumber)}</span>` : ''}
-            <span class="text-xs font-bold text-white truncate" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
-            <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
-              <i data-lucide="pencil" class="w-3 h-3"></i>
-            </button>
-          </div>
-          ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium truncate">${escapeHTML(item.model)}</div>` : ''}
-          <div class="text-[10px] font-mono text-slate-400">SKU: ${escapeHTML(item.sku)}</div>
-          <div class="text-[11px] text-emerald-400 font-mono mt-0.5 font-semibold">$${((item.msrp || 0) * (item.qty || 1)).toLocaleString()} <span class="text-slate-500 font-normal">($${(item.msrp || 0).toLocaleString()} ea)</span></div>
-        </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <div class="flex items-center bg-slate-900 border border-slate-700 rounded-lg">
-            <button onclick="changeBomQty('${item.instanceId}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors" title="Decrease Quantity">-</button>
-            <span class="px-2 text-xs font-mono font-bold text-white">${item.qty}</span>
-            <button onclick="changeBomQty('${item.instanceId}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors" title="Increase Quantity">+</button>
-          </div>
-          <button onclick="removeBomItem('${item.instanceId}')" class="text-slate-500 hover:text-rose-400 p-1 transition-colors" title="Remove from BOM">
-            <i data-lucide="trash-2" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- Streamlined Technical & Power Badge Footer -->
-      <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs gap-2">
-        <div class="flex items-center gap-1.5 min-w-0 flex-wrap">
-          <button 
-            type="button" 
-            onclick="jumpToTopologyTarget('node:${item.instanceId}')" 
-            class="text-[10px] text-indigo-300 hover:text-white flex items-center gap-1 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
-            title="Inspect ports, wire speeds, and logical uplinks in Topology"
-          >
-            <i data-lucide="network" class="w-3 h-3 text-indigo-400"></i>
-            <span>Topology</span>
-          </button>
-          <button 
-            type="button" 
-            onclick="openRackViewerFor('${item.closetName || item.rackId}')" 
-            class="text-[10px] text-indigo-300 hover:text-white flex items-center gap-1 bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
-            title="Inspect rack slot and cabinet elevation in Enclosure Visualizer"
-          >
-            <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i>
-            <span>Enclosure</span>
-          </button>
-          <button 
-            type="button" 
-            onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')" 
-            class="text-[10px] text-cyan-300 hover:text-white flex items-center gap-1 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
-            title="View Telecom Space and Field Devices in Facility Manager"
-          >
-            <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i>
-            <span>Space</span>
-          </button>
-          <button 
-            type="button" 
-            onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')" 
-            class="text-[10px] text-amber-300 hover:text-white flex items-center gap-1 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/40 px-2 py-0.5 rounded transition-all shrink-0 cursor-pointer" 
-            title="Inspect blueprint, floor drops, and cable pathways in Physical Layout"
-          >
-            <i data-lucide="map" class="w-3 h-3 text-amber-400"></i>
-            <span>Physical</span>
-          </button>
-          ${item.uplinkTargetId ? `
-            <span class="text-[10px] text-slate-400 font-mono truncate" title="Uplink configured">
-              Linked
-            </span>
-          ` : ''}
-        </div>
-      </div>
-
-      <!-- Switch Stacking Badge & Topology Config Link -->
-      ${(item.canStack || item.role === "Access" || item.role === "Aggregation") ? `
-        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
-          <span class="text-slate-400 flex items-center gap-1.5">
-            <i data-lucide="layers" class="w-3.5 h-3.5 text-indigo-400"></i> Stacking Status:
-          </span>
-          <div class="flex items-center gap-2">
-            <span class="text-[10px] font-mono font-semibold ${item.stackedUnits >= 2 ? 'text-indigo-300 bg-indigo-950/60 border-indigo-500/40' : 'text-slate-400 bg-slate-900 border-slate-800'} px-2 py-0.5 rounded border flex items-center gap-1">
-              <span>${item.stackedUnits >= 2 ? `${item.stackedUnits}-Switch Stack (+${item.stackedUnits} DACs)` : 'Standalone (1 Chassis)'}</span>
-            </span>
-            ${item.stackedUnits >= 2 ? `
-              <button 
-                type="button" 
-                onclick="if (typeof toggleStackPatchPanel === 'function') toggleStackPatchPanel('${item.instanceId}')"
-                class="px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all flex items-center gap-1 border ${item.patchPanelBetween ? 'bg-purple-900/80 text-purple-200 border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'}"
-                title="${item.patchPanelBetween ? 'Remove 24-port patch panel between stacked switches' : 'Place 24-port patch panel in between stacked switches'}"
-              >
-                <i data-lucide="${item.patchPanelBetween ? 'check-square' : 'plus-square'}" class="w-2.5 h-2.5 ${item.patchPanelBetween ? 'text-purple-400' : 'text-slate-400'}"></i>
-                <span>${item.patchPanelBetween ? '24P Patch In-Between' : '+ 24P Patch In-Between'}</span>
-              </button>
-            ` : ''}
-            <button 
-              type="button" 
-              onclick="jumpToTopologyTarget('node:${item.instanceId}')"
-              class="text-[10px] text-indigo-400 hover:text-indigo-200 underline font-mono cursor-pointer"
-              title="Configure stacking members, ring redundancy, and DAC uplinks in Topology"
-            >
-              Configure in Topology &rarr;
-            </button>
-          </div>
-        </div>
-      ` : ''}
-
-      <!-- Edge Device Mounting Info Badge (Compact Quoting View) -->
-      ${(!item.parentInstanceId && item.mountMethod && item.role !== "Core / Spine" && item.role !== "Aggregation" && item.role !== "Access" && item.role !== "Industrial DIN-Rail Switch" && item.role !== "Structured Cabling" && item.role !== "Optics & DAC" && !item.role?.includes("License")) ? `
-        <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between text-[11px]">
-          <span class="text-slate-400 flex items-center gap-1.5">
-            <i data-lucide="anchor" class="w-3.5 h-3.5 text-cyan-400"></i>
-            <span>Mounting:</span>
-            <span class="text-cyan-300 font-mono font-semibold">${formatMountMethodLabel(item.mountMethod)}</span>
-          </span>
-          <button 
-            type="button" 
-            onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
-            class="text-[10px] text-amber-400 hover:text-amber-200 underline font-mono cursor-pointer"
-            title="Adjust physical location, drop coordinates, and mounting in Physical Layout Canvas"
-          >
-            Adjust on Canvas &rarr;
-          </button>
-        </div>
-      ` : ''}
-
-      <!-- Nested Sub-Items (Modular Sleds, Power Supplies, Feature Licenses, Injectors) -->
-      <div class="space-y-1.5">
-        ${projectBOM.filter(ch => ch.parentInstanceId === item.instanceId).map(ch => `
-          <div class="bg-slate-900/70 p-2 rounded-lg border border-slate-800 flex items-center justify-between text-xs">
-            <div>
-              <span class="text-slate-300 font-medium">${escapeHTML(ch.model)}</span>
-              <div class="text-[10px] font-mono text-slate-500">${escapeHTML(ch.role)} &bull; SKU: ${escapeHTML(ch.sku)}</div>
-            </div>
-            <div class="text-right">
-              <span class="font-mono text-emerald-400 font-semibold">$${(ch.msrp * ch.qty).toLocaleString()}</span>
-              <span class="text-[10px] text-slate-400 block">${ch.qty}x @ $${ch.msrp}</span>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
 }
 
 // -----------------------------------------------------------
@@ -2522,7 +3337,8 @@ function compileProjectEngineeringData() {
         let occupiedU = 0;
         let encWatts = 0;
         mounted.forEach(m => {
-          occupiedU += (m.rackUnits || 1) * (m.qty || 1);
+          const mRU = (m.rackUnits !== undefined && m.rackUnits !== null) ? (parseInt(m.rackUnits, 10) || 0) : 1;
+          occupiedU += mRU * (m.qty || 1);
           encWatts += ((m.baseWatts || m.powerWatts || 0) + (m.poeBudget || 0)) * (m.qty || 1);
         });
         const totalU = enc.rackUnits || 42;
@@ -2554,7 +3370,10 @@ function compileProjectEngineeringData() {
         encWatts += ((m.baseWatts || m.powerWatts || 0) + (m.poeBudget || 0)) * (m.qty || 1);
       });
       const encBTU = Math.round(encWatts * 3.412142);
-      const occupiedU = mounted.reduce((acc, m) => acc + (m.rackUnits || 1) * (m.qty || 1), 0);
+      const occupiedU = mounted.reduce((acc, m) => {
+        const mRU = (m.rackUnits !== undefined && m.rackUnits !== null) ? (parseInt(m.rackUnits, 10) || 0) : 1;
+        return acc + (mRU * (m.qty || 1));
+      }, 0);
       rackSchedule.push({
         space: sp.name,
         enclosure: "Standard Floor Enclosure",
@@ -3226,11 +4045,30 @@ function jumpToBomTarget(instanceId) {
     pmModal.classList.add("hidden");
   }
 
-  const drawer = document.getElementById("bomDrawer");
-  if (drawer && drawer.classList.contains("translate-x-full")) {
-    toggleBomDrawer();
+  const modal = document.getElementById("bomModal");
+  if (modal && modal.classList.contains("hidden")) {
+    toggleBomModal();
+  } else {
+    const drawer = document.getElementById("bomDrawer");
+    if (drawer && drawer.classList.contains("translate-x-full")) {
+      toggleBomModal();
+    }
   }
+
   if (instanceId) {
+    const targetItem = projectBOM.find(i => i.instanceId === instanceId);
+    if (targetItem) {
+      if (bomSearchQuery || bomSelectedLocation !== "all" || bomSelectedCategory !== "all") {
+        resetBomFilters();
+      }
+      const rawLoc = targetItem.closetName || targetItem.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+      const locKey = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+      if (bomCollapsedLocations.has(locKey)) {
+        bomCollapsedLocations.delete(locKey);
+        updateBOMView();
+      }
+    }
+
     setTimeout(() => {
       const el = document.getElementById(`bom-item-${instanceId}`) || document.querySelector(`[data-bom-instance="${instanceId}"]`);
       if (el) {
@@ -3281,4 +4119,12 @@ window.setBomViewMode = setBomViewMode;
 window.renderBomFlatSkuItemHtml = renderBomFlatSkuItemHtml;
 window.changeRawSkuQty = changeRawSkuQty;
 window.deleteRawSkuFromBOM = deleteRawSkuFromBOM;
+window.toggleBomModal = toggleBomModal;
+window.setBomSearchQuery = setBomSearchQuery;
+window.clearBomSearch = clearBomSearch;
+window.setBomLocationFilter = setBomLocationFilter;
+window.setBomCategoryFilter = setBomCategoryFilter;
+window.toggleBomLocationCollapse = toggleBomLocationCollapse;
+window.toggleBomExpandAll = toggleBomExpandAll;
+window.resetBomFilters = resetBomFilters;
 

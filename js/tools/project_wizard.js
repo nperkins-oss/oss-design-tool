@@ -3,6 +3,28 @@
 // Multi-Step Technical Standards, Scope Toggles, Metadata, and Focus Mode
 // =========================================================================
 
+const CABLE_COLOR_PALETTE = {
+  Yellow: { name: "Yellow", hex: "#eab308", border: "#ca8a04", dotClass: "bg-yellow-400", textClass: "text-yellow-400" },
+  Blue: { name: "Blue", hex: "#3b82f6", border: "#2563eb", dotClass: "bg-blue-500", textClass: "text-blue-400" },
+  Green: { name: "Green", hex: "#22c55e", border: "#16a34a", dotClass: "bg-emerald-500", textClass: "text-emerald-400" },
+  Orange: { name: "Orange", hex: "#f97316", border: "#ea580c", dotClass: "bg-orange-500", textClass: "text-orange-400" },
+  Purple: { name: "Purple", hex: "#a855f7", border: "#9333ea", dotClass: "bg-purple-500", textClass: "text-purple-400" },
+  White: { name: "White", hex: "#f8fafc", border: "#cbd5e1", dotClass: "bg-white", textClass: "text-slate-200" },
+  Gray: { name: "Gray", hex: "#94a3b8", border: "#64748b", dotClass: "bg-slate-400", textClass: "text-slate-400" },
+  Black: { name: "Black", hex: "#334155", border: "#1e293b", dotClass: "bg-slate-700", textClass: "text-slate-300" },
+  Red: { name: "Red", hex: "#ef4444", border: "#dc2626", dotClass: "bg-rose-500", textClass: "text-rose-400" }
+};
+
+const CABLE_DEVICE_TYPES = [
+  { id: "cameras", label: "IP Cameras & Video Sensors", prefix: "CAM", icon: "video", defaultRun: "Yellow", defaultPatch: "Yellow" },
+  { id: "accessControl", label: "Access Control & Door Controllers", prefix: "ACS", icon: "door-closed", defaultRun: "Yellow", defaultPatch: "Yellow" },
+  { id: "intercom", label: "Audio & Intercom Stations", prefix: "SIP", icon: "phone-call", defaultRun: "Yellow", defaultPatch: "Yellow" },
+  { id: "wireless", label: "Wireless APs & Radios", prefix: "P2P", icon: "wifi", defaultRun: "Yellow", defaultPatch: "Yellow" },
+  { id: "data", label: "Workstations & Office Data", prefix: "CWS", icon: "monitor", defaultRun: "Yellow", defaultPatch: "Yellow" },
+  { id: "servers", label: "Servers, Storage & NVRs", prefix: "SVR", icon: "server", defaultRun: "Yellow", defaultPatch: "Yellow" },
+  { id: "uplinks", label: "Inter-Switch & Network Uplinks", prefix: "SW", icon: "network", defaultRun: "Yellow", defaultPatch: "Yellow" }
+];
+
 const DEFAULT_PROJECT_STANDARDS = {
   metadata: {
     projectName: "New Security Infrastructure Project",
@@ -27,17 +49,147 @@ const DEFAULT_PROJECT_STANDARDS = {
     promptAnalytics: true
   },
   cabling: {
-    horizontalCategories: ["C6A-CMP-1K-BL"],
+    horizontalCategories: ["C6A-CMP-1K-YL", "C6A-CMP-1K-BL"],
     compositeType: "AC-COMP-CMP-500",
     rackTermination: "patch_panels",
     patchCordLength: 0.5,
-    patchCordColors: {
-      security: "Yellow",
-      data: "Blue"
-    },
-    fiberType: "mmf"
+    fiberType: "mmf",
+    standards: {
+      defaultRunColor: "Yellow",
+      defaultRunCategory: "C6A-CMP-1K-YL",
+      defaultPatchColor: "Yellow",
+      defaultPatchLength: 0.5,
+      defaultPatchType: "slim",
+      byDeviceType: {
+        cameras: { label: "IP Cameras & Video Sensors", runColor: "Yellow", runCategory: "C6A-CMP-1K-YL", patchColor: "Yellow", patchLength: 0.5, patchType: "slim" },
+        accessControl: { label: "Access Control & Door Controllers", runColor: "Yellow", runCategory: "C6A-CMP-1K-YL", patchColor: "Yellow", patchLength: 0.5, patchType: "slim" },
+        intercom: { label: "Audio & Intercom Stations", runColor: "Yellow", runCategory: "C6A-CMP-1K-YL", patchColor: "Yellow", patchLength: 0.5, patchType: "slim" },
+        wireless: { label: "Wireless APs & Radios", runColor: "Yellow", runCategory: "C6A-CMP-1K-YL", patchColor: "Yellow", patchLength: 0.5, patchType: "slim" },
+        data: { label: "Workstations & Office Data", runColor: "Yellow", runCategory: "C6A-CMP-1K-BL", patchColor: "Yellow", patchLength: 1.0, patchType: "slim" },
+        servers: { label: "Servers, Storage & NVRs", runColor: "Yellow", runCategory: "C6A-CMP-1K-BL", patchColor: "Yellow", patchLength: 3.0, patchType: "slim" },
+        uplinks: { label: "Inter-Switch & Network Uplinks", runColor: "Yellow", runCategory: "C6A-CMP-1K-BL", patchColor: "Yellow", patchLength: 1.0, patchType: "slim" }
+      }
+    }
   }
 };
+
+/**
+ * Maps any hardware device or taxonomy node to one of the 7 cabling subsystem keys
+ */
+function getDeviceCablingKey(item) {
+  if (!item) return "default";
+
+  let prefix = item.deviceTypePrefix || item.prefix;
+  if (!prefix && typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.getDeviceType === "function") {
+    prefix = DeviceTaxonomy.getDeviceType(item)?.prefix;
+  }
+
+  if (prefix === "CAM" || prefix === "LPR") return "cameras";
+  if (prefix === "DR" || prefix === "ACS" || prefix === "BIO") return "accessControl";
+  if (prefix === "SIP") return "intercom";
+  if (prefix === "P2P" || prefix === "WAP") return "wireless";
+  if (prefix === "CWS") return "data";
+  if (prefix === "SVR") return "servers";
+  if (prefix === "SW" || prefix === "FW") return "uplinks";
+
+  const role = (item.role || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const model = (item.model || "").toLowerCase();
+  const allText = `${role} ${cat} ${model}`;
+
+  if (allText.includes("camera") || allText.includes("surveillance") || allText.includes("cctv") || allText.includes("dome") || allText.includes("bullet") || allText.includes("ptz")) return "cameras";
+  if (allText.includes("access") || allText.includes("door") || allText.includes("reader") || allText.includes("trove") || allText.includes("mercury")) return "accessControl";
+  if (allText.includes("intercom") || allText.includes("sip") || allText.includes("speaker") || allText.includes("audio")) return "intercom";
+  if (allText.includes("wireless") || allText.includes("nanobeam") || allText.includes("wifi") || allText.includes("radio")) return "wireless";
+  if (allText.includes("workstation") || allText.includes("client") || allText.includes("pc")) return "data";
+  if (allText.includes("server") || allText.includes("nvr") || allText.includes("storage")) return "servers";
+  if (allText.includes("switch") || allText.includes("router") || allText.includes("firewall") || allText.includes("uplink")) return "uplinks";
+
+  return "default";
+}
+
+/**
+ * Retrieves the project-wide cabling standard for a given device and mode ('run' or 'patch')
+ */
+function getProjectCablingStandard(item, type = "run") {
+  const defaults = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : (typeof DEFAULT_PROJECT_STANDARDS !== "undefined" ? DEFAULT_PROJECT_STANDARDS : null);
+
+  const cabling = defaults?.cabling || {};
+  const standards = cabling.standards || {};
+  const byDev = standards.byDeviceType || {};
+  const key = getDeviceCablingKey(item);
+  const devConf = byDev[key] || {};
+
+  const defaultRunColor = standards.defaultRunColor || "Yellow";
+  const defaultPatchColor = standards.defaultPatchColor || "Yellow";
+  const defaultRunCategory = standards.defaultRunCategory || "C6A-CMP-1K-YL";
+  const defaultPatchLength = standards.defaultPatchLength ?? 0.5;
+  const defaultPatchType = standards.defaultPatchType || "slim";
+
+  if (type === "run") {
+    const color = devConf.runColor || defaultRunColor;
+    const category = devConf.runCategory || defaultRunCategory;
+    const palette = CABLE_COLOR_PALETTE[color] || CABLE_COLOR_PALETTE.Yellow;
+    return {
+      color,
+      category,
+      hex: palette.hex,
+      border: palette.border,
+      dotClass: palette.dotClass,
+      textClass: palette.textClass
+    };
+  } else {
+    const color = devConf.patchColor || defaultPatchColor;
+    const lengthFt = devConf.patchLength ?? defaultPatchLength;
+    const patchType = devConf.patchType || defaultPatchType;
+    const palette = CABLE_COLOR_PALETTE[color] || CABLE_COLOR_PALETTE.Yellow;
+    return {
+      color,
+      lengthFt,
+      patchType,
+      hex: palette.hex,
+      border: palette.border,
+      dotClass: palette.dotClass,
+      textClass: palette.textClass
+    };
+  }
+}
+
+/**
+ * Quick action to apply a specific color to all device types (both runs and patch cords)
+ */
+function applyDefaultCableColorToAll(color = "Yellow") {
+  const defRunEl = document.getElementById("wizDefaultRunColor");
+  const defPatchEl = document.getElementById("wizDefaultPatchColor");
+  if (defRunEl) defRunEl.value = color;
+  if (defPatchEl) defPatchEl.value = color;
+
+  CABLE_DEVICE_TYPES.forEach(dt => {
+    const runEl = document.getElementById(`wizCableRunColor-${dt.id}`);
+    const patchEl = document.getElementById(`wizCablePatchColor-${dt.id}`);
+    if (runEl) runEl.value = color;
+    if (patchEl) patchEl.value = color;
+    updateCableColorPreviewDot(`wizCableRunDot-${dt.id}`, color);
+    updateCableColorPreviewDot(`wizCablePatchDot-${dt.id}`, color);
+  });
+  updateCableColorPreviewDot("wizDefaultRunDot", color);
+  updateCableColorPreviewDot("wizDefaultPatchDot", color);
+
+  updateWizardStateFromUI();
+  if (typeof showToast === "function") {
+    showToast(`Applied ${color} as default across all cable runs and patch cords.`, "info");
+  }
+}
+
+function updateCableColorPreviewDot(elementId, color) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  const pal = CABLE_COLOR_PALETTE[color] || CABLE_COLOR_PALETTE.Yellow;
+  el.style.backgroundColor = pal.hex;
+  el.title = `${pal.name} (${pal.hex})`;
+}
 
 let currentWizardMode = "create"; // "create" | "edit"
 let currentWizardStep = 1;
@@ -250,24 +402,65 @@ function populateWizardUIFromState(state) {
     if (el) el.checked = vendors.includes(v);
   });
 
-  // Step 3: Cabling & Infrastructure
-  const horiz = Array.isArray(state.cabling?.horizontalCategories) ? state.cabling.horizontalCategories : ["C6A-CMP-1K-BL"];
-  ["C6A-CMP-1K-BL", "C6A-CMR-1K-BL", "C6-CMP-1K-BL", "C6A-OUTDOOR-1K"].forEach(sku => {
-    const el = document.getElementById(`wizHorizCable-${sku}`);
-    if (el) el.checked = horiz.includes(sku);
-  });
+  // Step 3: Cabling & Infrastructure Standards
+  const cabling = state.cabling || {};
+  const stds = cabling.standards || {};
+  const byDev = stds.byDeviceType || {};
+
+  const defRunColor = stds.defaultRunColor || "Yellow";
+  const defPatchColor = stds.defaultPatchColor || "Yellow";
+  const defRunCat = stds.defaultRunCategory || (cabling.horizontalCategories?.[0] || "C6A-CMP-1K-YL");
+  const defPatchLen = stds.defaultPatchLength ?? (cabling.patchCordLength ?? 0.5);
+
+  const defRunEl = document.getElementById("wizDefaultRunColor");
+  if (defRunEl) defRunEl.value = defRunColor;
+  updateCableColorPreviewDot("wizDefaultRunDot", defRunColor);
+
+  const defPatchEl = document.getElementById("wizDefaultPatchColor");
+  if (defPatchEl) defPatchEl.value = defPatchColor;
+  updateCableColorPreviewDot("wizDefaultPatchDot", defPatchColor);
+
+  const defCatEl = document.getElementById("wizDefaultRunCategory");
+  if (defCatEl) defCatEl.value = defRunCat;
 
   const compEl = document.getElementById("wizCompositeCable");
-  if (compEl) compEl.value = state.cabling?.compositeType || "AC-COMP-CMP-500";
+  if (compEl) compEl.value = cabling.compositeType || "AC-COMP-CMP-500";
 
   const termMethodEl = document.getElementById("wizRackTermination");
-  if (termMethodEl) termMethodEl.value = state.cabling?.rackTermination || "patch_panels";
+  if (termMethodEl) termMethodEl.value = cabling.rackTermination || "patch_panels";
 
   const patchLenEl = document.getElementById("wizPatchLength");
-  if (patchLenEl) patchLenEl.value = String(state.cabling?.patchCordLength ?? 0.5);
+  if (patchLenEl) patchLenEl.value = String(defPatchLen);
 
   const fiberEl = document.getElementById("wizFiberType");
-  if (fiberEl) fiberEl.value = state.cabling?.fiberType || "mmf";
+  if (fiberEl) fiberEl.value = cabling.fiberType || "mmf";
+
+  // Per-Device Type Controls
+  CABLE_DEVICE_TYPES.forEach(dt => {
+    const devConf = byDev[dt.id] || {};
+    const runCol = devConf.runColor || defRunColor;
+    const patchCol = devConf.patchColor || defPatchColor;
+    const runCat = devConf.runCategory || defRunCat;
+    const patchLen = devConf.patchLength ?? defPatchLen;
+    const patchType = devConf.patchType || "slim";
+
+    const rColEl = document.getElementById(`wizCableRunColor-${dt.id}`);
+    if (rColEl) rColEl.value = runCol;
+    updateCableColorPreviewDot(`wizCableRunDot-${dt.id}`, runCol);
+
+    const rCatEl = document.getElementById(`wizCableRunCategory-${dt.id}`);
+    if (rCatEl) rCatEl.value = runCat;
+
+    const pColEl = document.getElementById(`wizCablePatchColor-${dt.id}`);
+    if (pColEl) pColEl.value = patchCol;
+    updateCableColorPreviewDot(`wizCablePatchDot-${dt.id}`, patchCol);
+
+    const pLenEl = document.getElementById(`wizCablePatchLength-${dt.id}`);
+    if (pLenEl) pLenEl.value = String(patchLen);
+
+    const pTypeEl = document.getElementById(`wizCablePatchType-${dt.id}`);
+    if (pTypeEl) pTypeEl.value = patchType;
+  });
 }
 
 /**
@@ -322,27 +515,47 @@ function updateWizardStateFromUI() {
     promptAnalytics: vmsAnalytics ? vmsAnalytics.checked : true
   };
 
-  const selectedHoriz = [];
-  ["C6A-CMP-1K-BL", "C6A-CMR-1K-BL", "C6-CMP-1K-BL", "C6A-OUTDOOR-1K"].forEach(sku => {
-    const el = document.getElementById(`wizHorizCable-${sku}`);
-    if (el && el.checked) selectedHoriz.push(sku);
-  });
-
+  // Cabling & Standards
+  const defRunCol = document.getElementById("wizDefaultRunColor")?.value || "Yellow";
+  const defPatchCol = document.getElementById("wizDefaultPatchColor")?.value || "Yellow";
+  const defRunCat = document.getElementById("wizDefaultRunCategory")?.value || "C6A-CMP-1K-YL";
   const compEl = document.getElementById("wizCompositeCable");
   const termMethodEl = document.getElementById("wizRackTermination");
   const patchLenEl = document.getElementById("wizPatchLength");
   const fiberEl = document.getElementById("wizFiberType");
 
+  const byDeviceType = {};
+  CABLE_DEVICE_TYPES.forEach(dt => {
+    const rCol = document.getElementById(`wizCableRunColor-${dt.id}`)?.value || defRunCol;
+    const rCat = document.getElementById(`wizCableRunCategory-${dt.id}`)?.value || defRunCat;
+    const pCol = document.getElementById(`wizCablePatchColor-${dt.id}`)?.value || defPatchCol;
+    const pLen = parseFloat(document.getElementById(`wizCablePatchLength-${dt.id}`)?.value) || 0.5;
+    const pType = document.getElementById(`wizCablePatchType-${dt.id}`)?.value || "slim";
+
+    byDeviceType[dt.id] = {
+      label: dt.label,
+      runColor: rCol,
+      runCategory: rCat,
+      patchColor: pCol,
+      patchLength: pLen,
+      patchType: pType
+    };
+  });
+
   wizardDraftState.cabling = {
-    horizontalCategories: selectedHoriz.length > 0 ? selectedHoriz : ["C6A-CMP-1K-BL"],
+    horizontalCategories: [defRunCat],
     compositeType: compEl ? compEl.value : "AC-COMP-CMP-500",
     rackTermination: termMethodEl ? termMethodEl.value : "patch_panels",
     patchCordLength: patchLenEl ? parseFloat(patchLenEl.value) : 0.5,
-    patchCordColors: {
-      security: "Yellow",
-      data: "Blue"
-    },
-    fiberType: fiberEl ? fiberEl.value : "mmf"
+    fiberType: fiberEl ? fiberEl.value : "mmf",
+    standards: {
+      defaultRunColor: defRunCol,
+      defaultRunCategory: defRunCat,
+      defaultPatchColor: defPatchCol,
+      defaultPatchLength: patchLenEl ? parseFloat(patchLenEl.value) : 0.5,
+      defaultPatchType: "slim",
+      byDeviceType
+    }
   };
 }
 
@@ -444,6 +657,20 @@ function executeWizardSubmission() {
   if (typeof renderProjectDefaultsSummary === "function") {
     renderProjectDefaultsSummary();
   }
+
+  // Live propagate cable standards changes to Physical Layout, Topology, and Port Matrix
+  if (typeof renderCableCanvas === "function") {
+    renderCableCanvas();
+  }
+  if (typeof syncRackInterconnectsAndCabling === "function") {
+    syncRackInterconnectsAndCabling();
+  }
+  if (typeof renderPortMatrixStudioContent === "function" && typeof activePortMatrixSwitchId !== "undefined" && activePortMatrixSwitchId) {
+    renderPortMatrixStudioContent(activePortMatrixSwitchId);
+  }
+  if (typeof renderTopologyLinks === "function") {
+    renderTopologyLinks();
+  }
 }
 
 /**
@@ -526,7 +753,13 @@ function renderProjectDefaultsSummary() {
     ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/30">VMS: ${escapeHTML(vms.platform || "Milestone")} (${vms.retentionDays || 30}D)</span>`
     : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-500 border border-slate-700">VMS: None</span>`;
 
-  const cableBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">Cabling: ${cabling.horizontalCategories?.[0] ? cabling.horizontalCategories[0].slice(0, 10) : 'Cat6A'} (${cabling.rackTermination === 'direct_rj45' ? 'Direct RJ45' : 'Pods'})</span>`;
+  const stds = cabling.standards || {};
+  const defRunCol = stds.defaultRunColor || "Yellow";
+  const defPatchCol = stds.defaultPatchColor || "Yellow";
+  const defPal = CABLE_COLOR_PALETTE[defRunCol] || CABLE_COLOR_PALETTE.Yellow;
+  const patchPal = CABLE_COLOR_PALETTE[defPatchCol] || CABLE_COLOR_PALETTE.Yellow;
+
+  const cableBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-900 text-slate-300 border border-slate-750 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full" style="background-color: ${defPal.hex};"></span><span>Run: ${escapeHTML(defRunCol)}</span><span class="text-slate-500">|</span><span class="w-2 h-2 rounded-full" style="background-color: ${patchPal.hex};"></span><span>Patch: ${escapeHTML(defPatchCol)}</span></span>`;
 
   const fiberBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">Fiber: ${cabling.fiberType === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'}</span>`;
 
@@ -565,7 +798,13 @@ function renderProjectDefaultsSummary() {
 }
 
 // Global exports
+window.CABLE_COLOR_PALETTE = CABLE_COLOR_PALETTE;
+window.CABLE_DEVICE_TYPES = CABLE_DEVICE_TYPES;
 window.DEFAULT_PROJECT_STANDARDS = DEFAULT_PROJECT_STANDARDS;
+window.getDeviceCablingKey = getDeviceCablingKey;
+window.getProjectCablingStandard = getProjectCablingStandard;
+window.applyDefaultCableColorToAll = applyDefaultCableColorToAll;
+window.updateCableColorPreviewDot = updateCableColorPreviewDot;
 window.openProjectWizardModal = openProjectWizardModal;
 window.closeProjectWizardModal = closeProjectWizardModal;
 window.setProjectWizardStep = setProjectWizardStep;

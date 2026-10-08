@@ -461,6 +461,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
               <th class="p-2.5">Status</th>
               <th class="p-2.5">Connected Device</th>
               <th class="p-2.5">Target Location</th>
+              <th class="p-2.5">Cabling & Media</th>
               <th class="p-2.5">PoE Delivery</th>
               <th class="p-2.5 text-right">Actions</th>
             </tr>
@@ -491,8 +492,14 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                   <td class="p-2.5 text-slate-400">
                     ${escapeHTML(loc)} [Rack Stacking Bus]
                   </td>
+                  <td class="p-2.5">
+                    <div class="flex items-center gap-1.5 text-indigo-300">
+                      <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
+                      <span class="text-[11px] font-mono">Stack DAC (0.5m)</span>
+                    </div>
+                  </td>
                   <td class="p-2.5 text-slate-500">
-                    Hardware Stacking Cable
+                    Hardware Bus
                   </td>
                   <td class="p-2.5 text-right">
                     <span class="px-2 py-0.5 rounded bg-indigo-900/60 border border-indigo-700/60 text-indigo-300 text-[10px] font-mono">
@@ -563,6 +570,40 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                     </td>
                     <td class="p-2.5 text-slate-400">
                       ${(hasDev || isStack) ? escapeHTML(targetLoc) : '-'}
+                    </td>
+                    <td class="p-2.5">
+                      ${isStack ? `
+                        <div class="flex items-center gap-1.5 text-indigo-300">
+                          <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
+                          <span class="text-[11px] font-mono">10G SFP+ DAC</span>
+                        </div>
+                      ` : (isOptical ? `
+                        <div class="flex items-center gap-1.5 text-cyan-300">
+                          <span class="w-2 h-2 rounded-full bg-cyan-400 shrink-0"></span>
+                          <span class="text-[11px] font-mono">${escapeHTML(p.connector || 'Optical')} Fiber</span>
+                        </div>
+                      ` : (hasDev ? (() => {
+                        const runStd = (typeof getProjectCablingStandard === "function") 
+                          ? getProjectCablingStandard(targetDev, "run") 
+                          : { color: "Yellow", category: "Cat6A", hex: "#eab308" };
+                        const patchStd = (typeof getProjectCablingStandard === "function") 
+                          ? getProjectCablingStandard(targetDev, "patch") 
+                          : { color: "Yellow", lengthFt: 1, hex: "#eab308" };
+                        return `
+                          <div class="space-y-1">
+                            <div class="flex items-center gap-1.5" title="Cable Run Standard: ${escapeHTML(runStd.category)} (${escapeHTML(runStd.color)})">
+                              <span class="w-2 h-2 rounded-full shrink-0 shadow-sm" style="background-color: ${runStd.hex}; border: 1px solid rgba(255,255,255,0.3);"></span>
+                              <span class="text-[11px] text-slate-200">Run: <span class="font-bold text-white">${escapeHTML(runStd.category || 'Cat6A')}</span> <span class="text-slate-400">(${escapeHTML(runStd.color)})</span></span>
+                            </div>
+                            <div class="flex items-center gap-1.5" title="Patch Cord Standard: ${escapeHTML(String(patchStd.lengthFt || 1))}ft (${escapeHTML(patchStd.color)})">
+                              <span class="w-2 h-2 rounded-full shrink-0 shadow-sm" style="background-color: ${patchStd.hex}; border: 1px solid rgba(255,255,255,0.3);"></span>
+                              <span class="text-[10px] text-slate-400">Patch: <span class="text-slate-300">${patchStd.lengthFt ? `${escapeHTML(String(patchStd.lengthFt))}ft` : '1ft'}</span> (${escapeHTML(patchStd.color)})</span>
+                            </div>
+                          </div>
+                        `;
+                      })() : `
+                        <span class="text-slate-600">-</span>
+                      `))}
                     </td>
                     <td class="p-2.5">
                       ${isPoE ? `
@@ -673,6 +714,7 @@ function disconnectMatrixPort(switchInstanceId, portNumber) {
   if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
   if (typeof renderCableCanvas === "function") renderCableCanvas();
   if (typeof renderInspector === "function") renderInspector();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 
   if (typeof showToast === "function") {
     showToast(`Disconnected Port ${portNumber} on ${sw.friendlyName || sw.model}`);
@@ -721,6 +763,7 @@ function connectDeviceFromMatrix(switchInstanceId, portNumber, deviceInstanceId)
   if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
   if (typeof renderCableCanvas === "function") renderCableCanvas();
   if (typeof renderInspector === "function") renderInspector();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 
   if (typeof showToast === "function") {
     showToast(`Connected ${dev.friendlyName || dev.model} to Port ${portNumber} on ${sw.friendlyName || sw.model}`);

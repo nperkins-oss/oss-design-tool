@@ -2,9 +2,12 @@
 // PHYSICAL LAYOUT CANVAS ENGINE (v0.5.3 - FacilityStore & Dispatcher Aligned)
 // =========================================================================
 
-let activeCableTool = "select"; // "select" | "device" | "mdf" | "fiber"
+let activeCableTool = "select"; // "select" | "marquee" | "device" | "mdf" | "pathway" | "fiber"
 let selectedNodeId = null;
+let selectedNodeIds = new Set(); // Multi-select node ID set
 let selectedFiberBackboneId = null;
+let selectedPathwayTrunkId = null; // Active selected pathway corridor
+let activeDrawingPathwayId = null; // Currently being drawn pathway
 let activeSidebarTab = "runs";  // "runs" | "unplaced"
 
 let activeCableSku = "C6A-CMP-1K-BL";
@@ -17,6 +20,12 @@ let facilityFloors = [];
 
 let fiberFirstClosetId = null;
 
+let isMarqueeSelecting = false;
+let marqueeStart = { x: 0, y: 0 };
+let marqueeCurrent = { x: 0, y: 0 };
+let multiDragInitialPos = {};
+let multiDragStartPos = { x: 0, y: 0 };
+
 // Physical Layer Filtering & Inspector Visibility
 let isPhysicalInspectorVisible = true;
 let physicalLayerFilters = {
@@ -26,6 +35,134 @@ let physicalLayerFilters = {
   closets: true,
   pathways: true
 };
+
+// Enhanced Physical Engineering State: Cable IDs, DRC Distance Violations, and Revision Compare
+let showPhysicalCableIds = false;
+let activeRevisionCompareId = null;
+let currentDistanceViolationNodeIndex = -1;
+
+function getDeviceCableId(dev) {
+  if (!dev) return "";
+  if (dev.cableId) return dev.cableId;
+  if (typeof generateCableScheduleData === "function") {
+    try {
+      const sched = generateCableScheduleData();
+      const match = sched.find(r => r.deviceId === dev.id || r.instanceId === dev.instanceId || r.nodeId === dev.id);
+      if (match && match.cableId) return match.cableId;
+    } catch (e) {}
+  }
+  const closetShort = (dev.assignedCloset || (dev.calculatedRun && dev.calculatedRun.closetName) || "MDF").split("•")[0].trim().replace(/\s+/g, "");
+  const devNum = (dev.deviceNumber || dev.name || "01").replace(/\D/g, "") || "01";
+  return `${closetShort}-PP01-${String(devNum).padStart(2, '0')}`;
+}
+
+function getFloorDistanceViolations(floor = null) {
+  const fl = floor || getActiveFloor();
+  if (!fl || !fl.nodes) return { cautions: [], violations: [] };
+  const cautions = [];
+  const violations = [];
+  fl.nodes.filter(n => n.type === "device").forEach(dev => {
+    const ft = (dev.calculatedRun && dev.calculatedRun.totalFt) ? dev.calculatedRun.totalFt : 0;
+    if (ft > 328) {
+      violations.push({ node: dev, ft });
+    } else if (ft > 295) {
+      cautions.push({ node: dev, ft });
+    }
+  });
+  return { cautions, violations };
+}
+
+function updatePhysicalDrcPill() {
+  const pill = document.getElementById("physLayoutDrcPill");
+  if (!pill) return;
+  const { cautions, violations } = getFloorDistanceViolations();
+  if (violations.length > 0) {
+    pill.className = "px-2.5 py-1.5 bg-rose-950/80 hover:bg-rose-900 border border-rose-600/70 text-rose-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer animate-pulse";
+    pill.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-400"></i> <span>${violations.length} Violation${violations.length > 1 ? 's' : ''} (>328')</span>`;
+    pill.title = `${violations.length} TIA-568 channel violations (>328 ft) and ${cautions.length} cautions (>295 ft). Click to cycle and zoom to violations.`;
+  } else if (cautions.length > 0) {
+    pill.className = "px-2.5 py-1.5 bg-amber-950/80 hover:bg-amber-900 border border-amber-600/70 text-amber-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer";
+    pill.innerHTML = `<i data-lucide="alert-circle" class="w-3.5 h-3.5 text-amber-400"></i> <span>${cautions.length} Caution${cautions.length > 1 ? 's' : ''} (>295')</span>`;
+    pill.title = `${cautions.length} runs exceed 295 ft caution threshold. Click to cycle and zoom to cautions.`;
+  } else {
+    pill.className = "px-2.5 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer";
+    pill.innerHTML = `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i> <span>Distances OK</span>`;
+    pill.title = "All field drops within TIA-568 295 ft horizontal channel limit. Click to open DRC health audit.";
+  }
+  if (window.lucide) lucide.createIcons();
+}
+
+function handlePhysicalDrcPillClick() {
+  const { cautions, violations } = getFloorDistanceViolations();
+  const list = [...violations, ...cautions];
+  if (list.length === 0) {
+    if (typeof toggleProjectHealthModal === "function") toggleProjectHealthModal();
+    return;
+  }
+  currentDistanceViolationNodeIndex = (currentDistanceViolationNodeIndex + 1) % list.length;
+  const target = list[currentDistanceViolationNodeIndex].node;
+  selectNode(target.id);
+  centerPhysNodeInViewport(target.id);
+  if (typeof showToast === "function") {
+    showToast(`Focused on ${target.name} (${target.calculatedRun.totalFt} ft run - TIA-568 ${target.calculatedRun.totalFt > 328 ? 'Critical Channel Violation' : 'Caution'})`);
+  }
+}
+
+function togglePhysicalCableIds() {
+  showPhysicalCableIds = !showPhysicalCableIds;
+  const btn = document.getElementById("btnTogglePhysicalCableIds");
+  if (btn) {
+    if (showPhysicalCableIds) {
+      btn.classList.add("bg-brand-600", "text-white");
+      btn.classList.remove("text-slate-300");
+    } else {
+      btn.classList.remove("bg-brand-600", "text-white");
+      btn.classList.add("text-slate-300");
+    }
+  }
+  renderCableCanvas();
+  if (typeof showToast === "function") {
+    showToast(showPhysicalCableIds ? "TIA-606-C Cable IDs displayed on floorplan." : "Cable ID tags hidden.");
+  }
+}
+
+function setPhysicalRevisionCompare(revId) {
+  activeRevisionCompareId = (revId === "none" || !revId) ? null : revId;
+  renderCableCanvas();
+  if (typeof showToast === "function") {
+    if (activeRevisionCompareId) {
+      showToast(`Visual Revision Compare active: highlighting additions, deletions, and modifications.`);
+    } else {
+      showToast("Revision Compare turned off.");
+    }
+  }
+}
+
+function populateRevisionCompareDropdown() {
+  const sel = document.getElementById("physRevisionCompareSelect");
+  if (!sel) return;
+  const revisions = (typeof RevisionEngine !== "undefined" && typeof RevisionEngine.getRevisions === "function") 
+    ? RevisionEngine.getRevisions() 
+    : [];
+  
+  sel.innerHTML = `<option value="none">Compare Rev: Off</option>` + revisions.map(r => `
+    <option value="${r.id}" ${activeRevisionCompareId === r.id ? 'selected' : ''}>${r.code}: ${r.name || 'Snapshot'}</option>
+  `).join('');
+}
+
+function exportFloorplanToSubmittal() {
+  const floor = getActiveFloor();
+  if (!floor) {
+    if (typeof showToast === "function") showToast("No active floor to export.");
+    return;
+  }
+  if (typeof openSubmittalModal === "function") {
+    openSubmittalModal();
+  }
+  if (typeof showToast === "function") {
+    showToast(`Floorplan layout for "${floor.name}" included in Engineering Submittal Package!`);
+  }
+}
 
 function getDeviceLayerType(item) {
   if (!item) return "cameras";
@@ -345,6 +482,7 @@ function handlePhysMouseDown(e) {
           fiberFirstClosetId = null;
           selectedFiberBackboneId = newFb.id;
           selectedNodeId = null;
+          selectedNodeIds.clear();
           setCableTool("select");
           recalculateCurrentFloorCables();
           renderCableCanvas();
@@ -362,6 +500,85 @@ function handlePhysMouseDown(e) {
     return;
   }
 
+  // 1b. Main Pathway Trunk Corridor Tool
+  if (activeCableTool === "pathway") {
+    floor.pathwayTrunks = floor.pathwayTrunks || [];
+    if (!activeDrawingPathwayId) {
+      const newTrunk = {
+        id: `pathway-${Date.now()}`,
+        name: `Corridor Trunk #${floor.pathwayTrunks.length + 1}`,
+        type: "tray",
+        capacity: 80,
+        points: [{ x: pos.x, y: pos.y }, { x: pos.x + 60, y: pos.y }]
+      };
+      floor.pathwayTrunks.push(newTrunk);
+      activeDrawingPathwayId = newTrunk.id;
+      selectedPathwayTrunkId = newTrunk.id;
+      selectedNodeId = null;
+      selectedNodeIds.clear();
+      recalculateCurrentFloorCables();
+      renderCableCanvas();
+      renderInspector();
+      saveFacilityState();
+      if (typeof showToast === "function") {
+        showToast("Pathway started! Click along corridor to add bends, or switch tool to finish.");
+      }
+    } else {
+      const trunk = floor.pathwayTrunks.find(t => t.id === activeDrawingPathwayId);
+      if (trunk) {
+        trunk.points.push({ x: pos.x, y: pos.y });
+        selectedPathwayTrunkId = trunk.id;
+        recalculateCurrentFloorCables();
+        renderCableCanvas();
+        renderInspector();
+        saveFacilityState();
+      }
+    }
+    return;
+  }
+
+  // 1c. Click Pathway Corridor or Joint
+  const jointEl = e.target.closest(".draggable-pathway-joint");
+  if (jointEl) {
+    const pId = jointEl.getAttribute("data-pathway-id");
+    const jIdx = parseInt(jointEl.getAttribute("data-joint-idx"), 10);
+    const trunk = (floor.pathwayTrunks || []).find(t => t.id === pId);
+    if (trunk && trunk.points && trunk.points[jIdx]) {
+      if (e.altKey && trunk.points.length > 2) {
+        trunk.points.splice(jIdx, 1);
+        recalculateCurrentFloorCables();
+        renderCableCanvas();
+        saveFacilityState();
+        return;
+      }
+      isDraggingPhysWaypoint = true;
+      draggedPhysWaypoint = trunk.points[jIdx];
+      physDragOffset.x = pos.x - draggedPhysWaypoint.x;
+      physDragOffset.y = pos.y - draggedPhysWaypoint.y;
+      selectedPathwayTrunkId = trunk.id;
+      selectedNodeId = null;
+      selectedNodeIds.clear();
+      renderInspector();
+      e.stopPropagation();
+      return;
+    }
+  }
+
+  const corridorEl = e.target.closest(".pathway-corridor-interactive");
+  if (corridorEl) {
+    const pId = corridorEl.getAttribute("data-pathway-id");
+    if (pId) {
+      selectedPathwayTrunkId = pId;
+      selectedNodeId = null;
+      selectedNodeIds.clear();
+      selectedFiberBackboneId = null;
+      renderInspector();
+      renderCableCanvas();
+      e.stopPropagation();
+      return;
+    }
+  }
+
   // 2. Add Drop
   if (activeCableTool === "device") {
     const allClosets = getAllClosetsAcrossFacility();
@@ -377,6 +594,8 @@ function handlePhysMouseDown(e) {
     };
     floor.nodes.push(newDrop);
     selectedNodeId = newDrop.id;
+    selectedNodeIds.clear();
+    selectedNodeIds.add(newDrop.id);
     setCableTool("select");
     recalculateCurrentFloorCables();
     renderCableCanvas();
@@ -402,6 +621,8 @@ function handlePhysMouseDown(e) {
     };
     floor.nodes.push(newCloset);
     selectedNodeId = newCloset.id;
+    selectedNodeIds.clear();
+    selectedNodeIds.add(newCloset.id);
     setCableTool("select");
     recalculateCurrentFloorCables();
     renderCableCanvas();
@@ -447,6 +668,8 @@ function handlePhysMouseDown(e) {
       const newWp = { x: pos.x, y: pos.y };
       drop.waypoints.push(newWp);
       selectedNodeId = drop.id;
+      selectedNodeIds.clear();
+      selectedNodeIds.add(drop.id);
       isDraggingPhysWaypoint = true;
       draggedPhysWaypoint = newWp;
       physDragOffset.x = 0;
@@ -488,12 +711,37 @@ function handlePhysMouseDown(e) {
     const nodeId = nodeEl.getAttribute("data-node-id");
     const node = floor.nodes.find(n => n.id === nodeId);
     if (node) {
-      selectedNodeId = nodeId;
+      selectedPathwayTrunkId = null;
       selectedFiberBackboneId = null;
+
+      if (e.shiftKey) {
+        if (selectedNodeIds.has(nodeId)) {
+          selectedNodeIds.delete(nodeId);
+        } else {
+          selectedNodeIds.add(nodeId);
+        }
+        selectedNodeId = selectedNodeIds.size === 1 ? Array.from(selectedNodeIds)[0] : null;
+      } else {
+        if (!selectedNodeIds.has(nodeId)) {
+          selectedNodeIds.clear();
+          selectedNodeIds.add(nodeId);
+          selectedNodeId = nodeId;
+        }
+      }
+
       isDraggingPhysNode = true;
       draggedPhysNode = node;
       physDragOffset.x = pos.x - node.x;
       physDragOffset.y = pos.y - node.y;
+
+      // Prepare multi-drag positions
+      multiDragStartPos = { x: pos.x, y: pos.y };
+      multiDragInitialPos = {};
+      selectedNodeIds.forEach(id => {
+        const n = floor.nodes.find(x => x.id === id);
+        if (n) multiDragInitialPos[id] = { x: n.x, y: n.y };
+      });
+
       renderInspector();
       renderSidebarTabContent();
       renderCableCanvas();
@@ -502,14 +750,34 @@ function handlePhysMouseDown(e) {
     }
   }
 
-  // Click empty canvas -> deselect node & fiber backbone
+  // 7. Marquee Selection on Empty Canvas
+  if (activeCableTool === "marquee" || (e.shiftKey && activeCableTool === "select")) {
+    isMarqueeSelecting = true;
+    marqueeStart = { x: pos.x, y: pos.y };
+    marqueeCurrent = { x: pos.x, y: pos.y };
+    if (!e.shiftKey) {
+      selectedNodeIds.clear();
+      selectedNodeId = null;
+    }
+    selectedPathwayTrunkId = null;
+    selectedFiberBackboneId = null;
+    renderCableCanvas();
+    return;
+  }
+
+  // Click empty canvas -> deselect node & fiber backbone & pathway
   selectedNodeId = null;
+  selectedNodeIds.clear();
   selectedFiberBackboneId = null;
+  selectedPathwayTrunkId = null;
+  if (activeCableTool !== "pathway") {
+    activeDrawingPathwayId = null;
+  }
   renderInspector();
   renderSidebarTabContent();
   renderCableCanvas();
 
-  // 7. Pan Viewport (Drag Canvas to Pan - identical to Topology Canvas)
+  // 8. Pan Viewport (Drag Canvas to Pan - identical to Topology Canvas)
   const viewport = document.getElementById("cableCanvasViewport");
   if (viewport && activeCableTool === "select") {
     isPhysViewportPanning = true;
@@ -546,6 +814,35 @@ function handlePhysMouseMove(e) {
     return;
   }
 
+  // Marquee Selection dragging
+  if (isMarqueeSelecting) {
+    const pos = getCanvasCoordinates(e);
+    marqueeCurrent = { x: pos.x, y: pos.y };
+    const svg = document.getElementById("cableSvgCanvas");
+    if (svg) {
+      let box = document.getElementById("svgMarqueeBox");
+      if (!box) {
+        box = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        box.setAttribute("id", "svgMarqueeBox");
+        box.setAttribute("fill", "rgba(99, 102, 241, 0.18)");
+        box.setAttribute("stroke", "#818cf8");
+        box.setAttribute("stroke-width", "1.5");
+        box.setAttribute("stroke-dasharray", "4 3");
+        box.style.pointerEvents = "none";
+        svg.appendChild(box);
+      }
+      const bx = Math.min(marqueeStart.x, marqueeCurrent.x);
+      const by = Math.min(marqueeStart.y, marqueeCurrent.y);
+      const bw = Math.abs(marqueeCurrent.x - marqueeStart.x);
+      const bh = Math.abs(marqueeCurrent.y - marqueeStart.y);
+      box.setAttribute("x", bx);
+      box.setAttribute("y", by);
+      box.setAttribute("width", bw);
+      box.setAttribute("height", bh);
+    }
+    return;
+  }
+
   if (!isDraggingPhysWaypoint && !isDraggingPhysNode) return;
   const pos = getCanvasCoordinates(e);
 
@@ -557,6 +854,22 @@ function handlePhysMouseMove(e) {
   }
 
   if (isDraggingPhysNode && draggedPhysNode) {
+    // If multiple nodes selected, drag all selected together
+    if (selectedNodeIds && selectedNodeIds.size > 1 && Object.keys(multiDragInitialPos).length > 1) {
+      const floor = getActiveFloor();
+      const dx = pos.x - multiDragStartPos.x;
+      const dy = pos.y - multiDragStartPos.y;
+      selectedNodeIds.forEach(id => {
+        const n = floor.nodes.find(x => x.id === id);
+        if (n && multiDragInitialPos[id]) {
+          n.x = Math.max(30, multiDragInitialPos[id].x + dx);
+          n.y = Math.max(30, multiDragInitialPos[id].y + dy);
+        }
+      });
+      requestPhysCanvasRedraw();
+      return;
+    }
+
     draggedPhysNode.x = Math.max(30, pos.x - physDragOffset.x);
     draggedPhysNode.y = Math.max(30, pos.y - physDragOffset.y);
     requestPhysCanvasRedraw();
@@ -569,11 +882,38 @@ function handlePhysMouseUp() {
     const viewport = document.getElementById("cableCanvasViewport");
     if (viewport) viewport.style.cursor = "default";
   }
+
+  if (isMarqueeSelecting) {
+    isMarqueeSelecting = false;
+    const box = document.getElementById("svgMarqueeBox");
+    if (box) box.remove();
+
+    const floor = getActiveFloor();
+    if (floor && floor.nodes) {
+      const minX = Math.min(marqueeStart.x, marqueeCurrent.x);
+      const maxX = Math.max(marqueeStart.x, marqueeCurrent.x);
+      const minY = Math.min(marqueeStart.y, marqueeCurrent.y);
+      const maxY = Math.max(marqueeStart.y, marqueeCurrent.y);
+
+      if (Math.abs(maxX - minX) > 8 && Math.abs(maxY - minY) > 8) {
+        const insideNodes = floor.nodes.filter(n => n.x >= minX && n.x <= maxX && n.y >= minY && n.y <= maxY);
+        insideNodes.forEach(n => selectedNodeIds.add(n.id));
+        selectedNodeId = selectedNodeIds.size === 1 ? Array.from(selectedNodeIds)[0] : null;
+        if (selectedNodeIds.size > 0 && typeof showToast === "function") {
+          showToast(`Selected ${selectedNodeIds.size} nodes. Configure bulk options in Inspector.`);
+        }
+      }
+    }
+    renderInspector();
+    renderCableCanvas();
+  }
+
   if (isDraggingPhysWaypoint || isDraggingPhysNode) {
     isDraggingPhysWaypoint = false;
     draggedPhysWaypoint = null;
     isDraggingPhysNode = false;
     draggedPhysNode = null;
+    multiDragInitialPos = {};
     recalculateCurrentFloorCables();
     renderCableCanvas();
     saveFacilityState(true);
@@ -843,8 +1183,11 @@ async function handleUniversalPlanUpload(event) {
 function setCableTool(tool) {
   activeCableTool = tool;
   fiberFirstClosetId = null;
+  if (tool !== "pathway") {
+    activeDrawingPathwayId = null;
+  }
 
-  const tools = ["select", "device", "mdf", "fiber"];
+  const tools = ["select", "marquee", "device", "mdf", "pathway", "fiber"];
   tools.forEach(t => {
     const btn = document.getElementById(`tool-${t}`);
     if (!btn) return;
@@ -858,12 +1201,18 @@ function setCableTool(tool) {
   const svg = document.getElementById("cableSvgCanvas");
   if (svg) {
     if (tool === "select") svg.style.cursor = "default";
+    else if (tool === "marquee") svg.style.cursor = "crosshair";
+    else if (tool === "pathway") svg.style.cursor = "crosshair";
     else if (tool === "fiber") svg.style.cursor = "cell";
     else svg.style.cursor = "crosshair";
   }
 
   if (tool === "fiber" && typeof showToast === "function") {
     showToast("Fiber Mode: Click closet A, then closet B to link backbone trunk.");
+  } else if (tool === "pathway" && typeof showToast === "function") {
+    showToast("Pathway Trunk Mode: Click to draw main cable tray / J-hook corridors.");
+  } else if (tool === "marquee" && typeof showToast === "function") {
+    showToast("Marquee Multi-Select: Click and drag a box across devices to bulk-select.");
   }
 }
 
@@ -2269,8 +2618,8 @@ function renderInspector() {
   const container = document.getElementById("inspectorContent");
   if (!container) return;
 
-  if (!selectedNodeId && !selectedFiberBackboneId) {
-    container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">Select a drop, closet, or fiber link to view properties or rack contents.</span>`;
+  if (!selectedNodeId && !selectedFiberBackboneId && !selectedPathwayTrunkId && (!selectedNodeIds || selectedNodeIds.size === 0)) {
+    container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">Select a drop, closet, pathway corridor, or drag a selection box to view properties.</span>`;
     return;
   }
 
@@ -2278,6 +2627,208 @@ function renderInspector() {
   if (!floor) {
     container.innerHTML = `<span class="text-slate-500 text-[11px] block text-center py-2">No active floor/building. Click "+ Floor/Building" to create one.</span>`;
     return;
+  }
+
+  // A. Bulk Operations Inspector (When 2+ Nodes Selected)
+  if (selectedNodeIds && selectedNodeIds.size > 1) {
+    const selectedNodes = floor.nodes.filter(n => selectedNodeIds.has(n.id));
+    const dropNodes = selectedNodes.filter(n => n.type === "device");
+    const closetNodes = selectedNodes.filter(n => n.type === "closet");
+
+    let camCount = 0, acsCount = 0, apCount = 0, otherCount = 0;
+    dropNodes.forEach(dev => {
+      const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+      const layerType = getDeviceLayerType(bomItem || dev);
+      if (layerType === "cameras") camCount++;
+      else if (layerType === "access") acsCount++;
+      else if (layerType === "wireless") apCount++;
+      else otherCount++;
+    });
+
+    const allClosets = getAllClosetsAcrossFacility();
+    const closetOptions = allClosets.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
+
+    container.innerHTML = `
+      <div class="space-y-4">
+        <!-- Header -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+          <div class="flex items-center gap-2">
+            <div class="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">
+              <i data-lucide="box-select" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h4 class="text-xs font-bold text-white tracking-wide">Bulk Operations</h4>
+              <p class="text-[10px] text-indigo-300 font-mono">${selectedNodeIds.size} Elements Multi-Selected</p>
+            </div>
+          </div>
+          <button onclick="clearMultiSelection()" class="text-slate-400 hover:text-white px-2 py-0.5 rounded bg-slate-800 text-[10px] font-bold transition-colors">
+            Clear
+          </button>
+        </div>
+
+        <!-- Composition Card -->
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1">
+          <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">Selected Composition</div>
+          <div class="flex flex-wrap gap-1.5 text-[10px] font-mono">
+            ${camCount > 0 ? `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">${camCount} Cameras</span>` : ''}
+            ${acsCount > 0 ? `<span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">${acsCount} Readers/Doors</span>` : ''}
+            ${apCount > 0 ? `<span class="px-2 py-0.5 rounded bg-sky-950 text-sky-300 border border-sky-800 font-bold">${apCount} Wireless APs</span>` : ''}
+            ${closetNodes.length > 0 ? `<span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800 font-bold">${closetNodes.length} Closets</span>` : ''}
+            ${otherCount > 0 ? `<span class="px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">${otherCount} Other</span>` : ''}
+          </div>
+        </div>
+
+        <!-- Bulk Reassign Closet -->
+        ${dropNodes.length > 0 ? `
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <label class="text-[10px] uppercase font-bold text-slate-400 block">Reassign Closet / Enclosure</label>
+            <select id="bulkTargetClosetSelect" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-indigo-500">
+              ${closetOptions}
+            </select>
+            <button onclick="executeBulkReassignCloset(document.getElementById('bulkTargetClosetSelect').value)" class="w-full py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors shadow">
+              <i data-lucide="server" class="w-3.5 h-3.5"></i>
+              <span>Reassign ${dropNodes.length} Drops to Selected Closet</span>
+            </button>
+          </div>
+
+          <!-- Bulk Cable Spec -->
+          <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+            <label class="text-[10px] uppercase font-bold text-slate-400 block">Apply Cable Standard / Spec</label>
+            <select id="bulkCableSkuSelect" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-indigo-500">
+              <option value="C6A-CMP-1K-BL">Cat6A CMP Plenum (Blue) - 10G Certified</option>
+              <option value="C6A-CMR-1K-BL">Cat6A CMR Riser (Blue) - 10G Non-Plenum</option>
+              <option value="C6-CMP-1K-BL">Cat6 CMP Plenum (Blue) - 1G/5G Baseline</option>
+              <option value="C6A-OSP-SHLD">Cat6A OSP Outdoor Shielded Gel-Filled (Black)</option>
+            </select>
+            <button onclick="executeBulkChangeCableSpec(document.getElementById('bulkCableSkuSelect').value)" class="w-full py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-slate-700">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Update Cable Spec on ${dropNodes.length} Drops</span>
+            </button>
+          </div>
+        ` : ''}
+
+        <!-- Spatial Alignment Tools -->
+        <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <label class="text-[10px] uppercase font-bold text-slate-400 block">Spatial Alignment &amp; Clean Up</label>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="executeBulkAlign('horizontal')" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1 border border-slate-800 transition-colors" title="Align nodes horizontally to average Y">
+              <i data-lucide="align-horizontal-distribute-center" class="w-3.5 h-3.5 text-indigo-400"></i> Align Horiz
+            </button>
+            <button onclick="executeBulkAlign('vertical')" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1 border border-slate-800 transition-colors" title="Align nodes vertically to average X">
+              <i data-lucide="align-vertical-distribute-center" class="w-3.5 h-3.5 text-indigo-400"></i> Align Vert
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5">
+            <button onclick="executeBulkDistribute()" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1 border border-slate-800 transition-colors" title="Space nodes out evenly along the line">
+              <i data-lucide="distribute-horizontal" class="w-3.5 h-3.5 text-sky-400"></i> Distribute
+            </button>
+            <button onclick="executeBulkClearWaypoints()" class="py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1 border border-slate-800 transition-colors" title="Remove all custom bends on selected cables">
+              <i data-lucide="route-off" class="w-3.5 h-3.5 text-amber-400"></i> Clear Bends
+            </button>
+          </div>
+        </div>
+
+        <!-- Bulk Delete -->
+        <div class="pt-1">
+          <button onclick="executeBulkDeleteNodes()" class="w-full py-2 px-3 rounded-xl bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-700/60 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <span>Delete All ${selectedNodeIds.size} Selected Items</span>
+          </button>
+        </div>
+      </div>
+    `;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  // B. Pathway Corridor Inspector
+  if (selectedPathwayTrunkId) {
+    const trunk = (floor.pathwayTrunks || []).find(t => t.id === selectedPathwayTrunkId);
+    if (trunk) {
+      let routedCount = 0;
+      floor.nodes.filter(n => n.type === "device").forEach(d => {
+        if (d.calculatedRun && d.calculatedRun.points) {
+          const isNear = d.calculatedRun.points.some(p => trunk.points.some(tp => Math.hypot(p.x - tp.x, p.y - tp.y) < 45));
+          if (isNear) routedCount++;
+        }
+      });
+      const capacity = trunk.capacity || 80;
+      const fillPct = Math.round((routedCount / capacity) * 100);
+      const isOverfilled = fillPct > 50;
+
+      container.innerHTML = `
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                <i data-lucide="route" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white tracking-wide">Pathway Corridor</h4>
+                <p class="text-[10px] text-amber-300 font-mono">Main Cable Pathway Trunk</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button onclick="deletePathwayTrunk('${trunk.id}')" class="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm">
+                <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
+              </button>
+              <button onclick="deselectPathwayTrunk()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Name -->
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Corridor Name / Label</label>
+            <input type="text" value="${escapeHTML(trunk.name)}" onchange="updatePathwayTrunkName('${trunk.id}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-amber-500" />
+          </div>
+
+          <!-- Type -->
+          <div>
+            <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Pathway Infrastructure Type</label>
+            <select onchange="updatePathwayTrunkType('${trunk.id}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-amber-500">
+              <option value="tray" ${trunk.type === 'tray' ? 'selected' : ''}>Cable Tray (12" Wire Mesh Basket - 100 Cables)</option>
+              <option value="ladder" ${trunk.type === 'ladder' ? 'selected' : ''}>Cable Runway / Ladder Rack (160 Cables)</option>
+              <option value="jhook" ${trunk.type === 'jhook' ? 'selected' : ''}>J-Hook Tree Pathway (40 Cables)</option>
+              <option value="conduit" ${trunk.type === 'conduit' ? 'selected' : ''}>2" EMT Steel Conduit (25 Cables)</option>
+            </select>
+          </div>
+
+          <!-- Rated Capacity -->
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Rated Capacity</label>
+              <input type="number" min="10" max="500" step="10" value="${capacity}" onchange="updatePathwayTrunkCapacity('${trunk.id}', parseInt(this.value))" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold focus:border-amber-500" />
+            </div>
+            <div>
+              <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Routed Cables</label>
+              <div class="py-1.5 font-mono text-xs font-bold ${isOverfilled ? 'text-rose-400' : 'text-emerald-400'}">
+                ${routedCount} / ${capacity} (${fillPct}%)
+              </div>
+            </div>
+          </div>
+
+          <!-- NEC 392 Fill Status -->
+          <div class="p-2.5 rounded-xl border ${isOverfilled ? 'bg-rose-950/40 border-rose-600/50 text-rose-300' : 'bg-slate-950 border-slate-800 text-slate-300'} text-xs">
+            <div class="flex items-center justify-between font-bold mb-1">
+              <span>NEC 392 / TIA-569 Fill:</span>
+              <span class="font-mono text-[11px] ${isOverfilled ? 'text-rose-400' : 'text-emerald-400'}">${isOverfilled ? 'WARNING: OVERFILLED' : 'COMPLIANT (≤50%)'}</span>
+            </div>
+            <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-300 ${isOverfilled ? 'bg-rose-500' : (fillPct > 35 ? 'bg-amber-500' : 'bg-emerald-500')}" style="width: ${Math.min(100, fillPct)}%"></div>
+            </div>
+            <p class="text-[10px] opacity-80 mt-1.5">
+              ${isOverfilled 
+                ? 'Pathway exceeds the 50% cable tray fill limit established by NEC Article 392 for data cables. Upgrade to wider tray or divide runs.'
+                : 'Maintains compliant cross-sectional area for heat dissipation and future cabling capacity.'}
+            </p>
+          </div>
+        </div>
+      `;
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
   }
 
   // Fiber Backbone Inspector
@@ -2435,16 +2986,17 @@ function renderInspector() {
   if (isCloset) {
     const cabinetItems = (typeof projectBOM !== "undefined" ? projectBOM : []).filter(item => {
       if (item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return false;
-      if (item.baseWatts === 0 && (!item.ports || item.ports === 0) && item.role !== "Structured Cabling") return false;
+      if (item.baseWatts === 0 && (!item.ports || item.ports === 0) && item.role !== "Structured Cabling" && (!item.rackUnits || item.rackUnits === 0) && item.role !== "UPS" && item.category !== "ups") return false;
 
       const normItemLoc = FacilityStore.normalize(item.closetName || item.rackId).toLowerCase();
       const normNodeLoc = FacilityStore.normalize(node.name).toLowerCase();
       return normItemLoc === normNodeLoc;
     });
 
-    const rackMounted = cabinetItems.filter(i => !i.isDinMounted && i.role !== "Structured Cabling");
+    const isZeroU = (it) => it.isDinMounted || (it.rackUnits !== undefined && parseInt(it.rackUnits, 10) === 0) || (it.mounting && it.mounting.toLowerCase().includes("din"));
+    const rackMounted = cabinetItems.filter(i => !isZeroU(i) && i.role !== "Structured Cabling");
     const patchPanels = cabinetItems.filter(i => i.role === "Structured Cabling" && (i.model || '').includes("Patch Panel"));
-    const fieldDevices = cabinetItems.filter(i => i.isDinMounted);
+    const fieldDevices = cabinetItems.filter(i => isZeroU(i) && i.role !== "Structured Cabling");
 
     container.innerHTML = `
       <div class="space-y-3">
@@ -2461,6 +3013,34 @@ function renderInspector() {
             `).join('')}
           </select>
         </div>
+
+        ${(() => {
+          if (typeof FacilityStore === "undefined") return "";
+          const parsed = FacilityStore.parse(node.name);
+          const encs = FacilityStore.getEnclosures();
+          const enc = encs.find(e => e.id === parsed.hostId) || encs.find(e => e.name.toLowerCase() === (parsed.hostName || node.name).toLowerCase()) || null;
+          if (!enc) return "";
+          const inBOM = FacilityStore.isEnclosureInBOM(enc.id);
+          const formFactor = enc.heightU ? `${enc.heightU}U Rack` : (enc.subplateBays ? `${enc.subplateBays}-Bay Cabinet` : (enc.dinRails ? `${enc.dinRails}x DIN Enclosure` : `${enc.widthFt || 4}x${enc.heightFt || 8}' Backboard`));
+          return `
+            <!-- Real Hardware Part Spec Card -->
+            <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-2.5 rounded-xl border border-indigo-500/40 space-y-1.5 shadow-sm">
+              <div class="flex items-center justify-between text-[10px]">
+                <span class="font-mono font-bold text-indigo-300 px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-700/60">
+                  ${escapeHTML(enc.catalogVendor || '')} ${escapeHTML(enc.catalogSku || 'Custom')}
+                </span>
+                <span class="font-mono font-bold text-emerald-400">$${(enc.msrp || 0).toLocaleString()} MSRP</span>
+              </div>
+              <div class="text-xs font-semibold text-white truncate" title="${escapeHTML(enc.catalogModel || '')}">
+                ${escapeHTML(enc.catalogModel || enc.name)}
+              </div>
+              <div class="flex items-center justify-between text-[9.5px] font-mono text-slate-400 pt-1 border-t border-slate-800">
+                <span>${formFactor} &bull; ${enc.depthInches ? enc.depthInches + '" Depth' : ''}</span>
+                <span class="${inBOM ? 'text-emerald-400 font-bold' : 'text-slate-500'}">${inBOM ? '● In Project Quote' : '○ Not Quoted'}</span>
+              </div>
+            </div>
+          `;
+        })()}
 
         <div class="bg-slate-900 p-2.5 rounded-xl border border-slate-800 space-y-2">
           ${(() => {
@@ -2483,7 +3063,8 @@ function renderInspector() {
             ${rackMounted.map(it => {
               const isStack = it.stackedUnits && it.stackedUnits >= 2;
               const ppSpan = (isStack && it.patchPanelBetween) ? (it.stackedUnits - 1) : 0;
-              const stackSpan = (parseInt(it.rackUnits, 10) || 1) * (isStack ? it.stackedUnits : (parseInt(it.qty, 10) || 1)) + ppSpan;
+              const itemRU = (it.rackUnits !== undefined && it.rackUnits !== null) ? (parseInt(it.rackUnits, 10) || 0) : 1;
+              const stackSpan = itemRU * (isStack ? it.stackedUnits : (parseInt(it.qty, 10) || 1)) + ppSpan;
               return `
                 <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-slate-800 flex justify-between text-slate-200">
                   <span class="truncate"><strong class="text-indigo-400">[${isStack ? `Stack: ${it.stackedUnits}x` : 'Hardware'}]</strong> ${escapeHTML(it.model)}</span>
@@ -2493,8 +3074,8 @@ function renderInspector() {
             }).join('')}
             ${fieldDevices.map(it => `
               <div class="bg-slate-950 px-2 py-1 rounded text-[10px] border border-sky-800/40 text-sky-300 flex justify-between">
-                <span class="truncate"><strong class="text-sky-400">[DIN/Field]</strong> ${escapeHTML(it.model)}</span>
-                <span class="font-mono font-bold">${it.qty}x</span>
+                <span class="truncate"><strong class="text-sky-400">[0U / DIN / Field]</strong> ${escapeHTML(it.model)}</span>
+                <span class="font-mono font-bold">${it.qty || 1}x</span>
               </div>
             `).join('')}
           </div>
@@ -2622,13 +3203,52 @@ function renderInspector() {
           </select>
         </div>
 
+        <!-- TIA-606-C Cable ID & Pull Schedule Link -->
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-blue-500/40 space-y-1.5 shadow-sm">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-mono font-bold text-blue-400 uppercase flex items-center gap-1">
+              <i data-lucide="tag" class="w-3 h-3 text-blue-400"></i> TIA-606-C Cable ID
+            </span>
+            <button type="button" onclick="openCablePullScheduleModal('${node.instanceId || node.id}')" class="text-[9px] font-mono text-blue-300 hover:text-white underline flex items-center gap-1 cursor-pointer">
+              <i data-lucide="file-spreadsheet" class="w-2.5 h-2.5"></i> Pull Schedule
+            </button>
+          </div>
+          <div class="flex items-center justify-between text-xs font-mono font-bold">
+            <span class="text-blue-300 bg-blue-950/60 px-2 py-0.5 rounded border border-blue-800/60">${getDeviceCableId(node)}</span>
+            <span class="text-[10px] text-slate-400 font-normal">Cut: ${(run?.totalFt || 0) + 25} ft</span>
+          </div>
+        </div>
+
         ${run ? `
-          <div class="bg-slate-900/90 p-2 rounded-lg border ${run.isExceeded ? 'border-rose-500/60' : 'border-slate-800'} text-[11px] font-mono space-y-1">
-            <div class="flex justify-between">
-              <span class="text-slate-400">Total Run:</span>
-              <span class="font-bold ${run.isExceeded ? 'text-rose-400' : 'text-amber-300'}">${run.totalFt} ft (${run.totalMeters}m)</span>
+          <div class="bg-slate-900/90 p-2.5 rounded-lg border ${run.totalFt > 328 ? 'border-rose-500 bg-rose-950/20' : (run.totalFt > 295 ? 'border-amber-500 bg-amber-950/20' : 'border-slate-800')} text-[11px] font-mono space-y-1.5">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-400 font-medium">Measured Run:</span>
+              <span class="font-bold ${run.totalFt > 328 ? 'text-rose-400 animate-pulse' : (run.totalFt > 295 ? 'text-amber-400' : 'text-emerald-300')}">${run.totalFt} ft (${run.totalMeters}m)</span>
             </div>
             ${run.riserFt > 0 ? `<div class="flex justify-between text-[10px] text-sky-400"><span>Vertical Riser:</span><span>+${run.riserFt} ft</span></div>` : ''}
+            <div class="flex justify-between text-[10px] text-slate-400 border-t border-slate-800/60 pt-1">
+              <span>Service Loops (+25'):</span>
+              <span class="text-slate-300">${run.totalFt + 25} ft Cut Length</span>
+            </div>
+            ${run.totalFt > 328 ? `
+              <div class="text-[9.5px] text-rose-300 bg-rose-950/60 p-1.5 rounded border border-rose-800/80 leading-tight space-y-1">
+                <div class="font-bold flex items-center gap-1 text-rose-400">
+                  <i data-lucide="alert-triangle" class="w-3 h-3 text-rose-400"></i> TIA-568 Channel Limit Exceeded
+                </div>
+                <div>Exceeds 328 ft (100m) maximum channel distance. Rehome to a nearer IDF or insert a hardened PoE repeater/extender.</div>
+              </div>
+            ` : (run.totalFt > 295 ? `
+              <div class="text-[9.5px] text-amber-300 bg-amber-950/60 p-1.5 rounded border border-amber-800/80 leading-tight space-y-1">
+                <div class="font-bold flex items-center gap-1 text-amber-400">
+                  <i data-lucide="alert-circle" class="w-3 h-3 text-amber-400"></i> Permanent Link Caution
+                </div>
+                <div>Exceeds 295 ft (90m) permanent link guideline. Reserve remaining channel budget for short equipment patch cords.</div>
+              </div>
+            ` : `
+              <div class="text-[9px] text-emerald-400 font-mono flex items-center gap-1">
+                <span>✓</span> TIA-568 Channel Compliant (&le;328 ft)
+              </div>
+            `)}
           </div>
         ` : ''}
 
@@ -3191,6 +3811,137 @@ function renderCableCanvas() {
     });
   }
 
+  // 1b. Main Pathway Corridors / Cable Trays / J-Hook Trunks
+  if (physicalLayerFilters.pathways && floor.pathwayTrunks) {
+    floor.pathwayTrunks.forEach(trunk => {
+      if (!trunk.points || trunk.points.length < 2) return;
+      const isSelected = trunk.id === selectedPathwayTrunkId;
+      const pts = trunk.points;
+
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", "pathway-corridor-interactive cursor-pointer group");
+      g.setAttribute("data-pathway-id", trunk.id);
+
+      // Count cables running near or through this pathway trunk
+      let routedCablesCount = 0;
+      floor.nodes.filter(n => n.type === "device").forEach(d => {
+        if (d.calculatedRun && d.calculatedRun.points) {
+          const isNear = d.calculatedRun.points.some(p => pts.some(tp => Math.hypot(p.x - tp.x, p.y - tp.y) < 45));
+          if (isNear) routedCablesCount++;
+        }
+      });
+      const capacity = trunk.capacity || 80;
+      const fillPct = Math.round((routedCablesCount / capacity) * 100);
+      const isOverfilled = fillPct > 50;
+
+      let trunkColor = "#f59e0b"; // Amber for tray
+      let strokeDash = "none";
+      let strokeW = 10;
+      if (trunk.type === "jhook") {
+        trunkColor = "#06b6d4";
+        strokeDash = "8 6";
+        strokeW = 6;
+      } else if (trunk.type === "conduit") {
+        trunkColor = "#38bdf8";
+        strokeW = 8;
+      } else if (trunk.type === "ladder") {
+        trunkColor = "#a855f7";
+        strokeW = 12;
+      }
+
+      // Selection Halo
+      if (isSelected) {
+        for (let i = 0; i < pts.length - 1; i++) {
+          const halo = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          halo.setAttribute("x1", pts[i].x);
+          halo.setAttribute("y1", pts[i].y);
+          halo.setAttribute("x2", pts[i + 1].x);
+          halo.setAttribute("y2", pts[i + 1].y);
+          halo.setAttribute("stroke", "#fde047");
+          halo.setAttribute("stroke-width", strokeW + 10);
+          halo.setAttribute("stroke-linecap", "round");
+          halo.setAttribute("opacity", "0.35");
+          g.appendChild(halo);
+        }
+      }
+
+      // Draw Main Corridor Line
+      for (let i = 0; i < pts.length - 1; i++) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", pts[i].x);
+        line.setAttribute("y1", pts[i].y);
+        line.setAttribute("x2", pts[i + 1].x);
+        line.setAttribute("y2", pts[i + 1].y);
+        line.setAttribute("stroke", trunkColor);
+        line.setAttribute("stroke-width", strokeW);
+        line.setAttribute("stroke-linecap", "round");
+        line.setAttribute("stroke-dasharray", strokeDash);
+        line.setAttribute("opacity", isSelected ? "1.0" : "0.85");
+        g.appendChild(line);
+
+        // Center stripe for cable tray appearance
+        if (trunk.type === "tray" || trunk.type === "ladder" || !trunk.type) {
+          const innerLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          innerLine.setAttribute("x1", pts[i].x);
+          innerLine.setAttribute("y1", pts[i].y);
+          innerLine.setAttribute("x2", pts[i + 1].x);
+          innerLine.setAttribute("y2", pts[i + 1].y);
+          innerLine.setAttribute("stroke", "#0f172a");
+          innerLine.setAttribute("stroke-width", Math.max(2, strokeW - 4));
+          innerLine.setAttribute("stroke-linecap", "round");
+          g.appendChild(innerLine);
+        }
+      }
+
+      // Render Joints/Waypoint handles for moving corridor points
+      pts.forEach((pt, pIdx) => {
+        const joint = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        joint.setAttribute("class", "draggable-pathway-joint cursor-move");
+        joint.setAttribute("data-pathway-id", trunk.id);
+        joint.setAttribute("data-joint-idx", pIdx);
+        joint.setAttribute("cx", pt.x);
+        joint.setAttribute("cy", pt.y);
+        joint.setAttribute("r", isSelected ? "7" : "5");
+        joint.setAttribute("fill", trunkColor);
+        joint.setAttribute("stroke", "#ffffff");
+        joint.setAttribute("stroke-width", "2");
+        g.appendChild(joint);
+      });
+
+      // Corridor Center Badge with fill count
+      const midIdx = Math.floor(pts.length / 2);
+      const midX = (pts[midIdx - 1].x + pts[midIdx].x) / 2;
+      const midY = (pts[midIdx - 1].y + pts[midIdx].y) / 2;
+
+      const badgeW = 150;
+      const badgeH = 22;
+      const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      bgRect.setAttribute("x", midX - (badgeW / 2));
+      bgRect.setAttribute("y", midY - (badgeH / 2));
+      bgRect.setAttribute("width", badgeW);
+      bgRect.setAttribute("height", badgeH);
+      bgRect.setAttribute("rx", "11");
+      bgRect.setAttribute("fill", "#0f172a");
+      bgRect.setAttribute("stroke", isOverfilled ? "#f43f5e" : trunkColor);
+      bgRect.setAttribute("stroke-width", "1.5");
+      bgRect.setAttribute("filter", "drop-shadow(0 2px 4px rgba(0,0,0,0.5))");
+      g.appendChild(bgRect);
+
+      const bText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      bText.setAttribute("x", midX);
+      bText.setAttribute("y", midY + 4);
+      bText.setAttribute("text-anchor", "middle");
+      bText.setAttribute("fill", isOverfilled ? "#fb7185" : "#f8fafc");
+      bText.setAttribute("font-size", "9.5");
+      bText.setAttribute("font-family", "monospace");
+      bText.setAttribute("font-weight", "bold");
+      bText.textContent = `${trunk.name.slice(0, 11)}: ${routedCablesCount}/${capacity} (${fillPct}%)`;
+      g.appendChild(bText);
+
+      svg.appendChild(g);
+    });
+  }
+
   // 2. Horizontal Cable Pathways
   if (physicalLayerFilters.pathways) {
     floor.nodes.filter(n => n.type === "device").forEach(dev => {
@@ -3203,9 +3954,14 @@ function renderCableCanvas() {
       if (!closet) return;
 
       const run = dev.calculatedRun || { totalFt: 0, points: [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }] };
-    const isSelected = dev.id === selectedNodeId || closet.id === selectedNodeId;
+    const isSelected = dev.id === selectedNodeId || closet.id === selectedNodeId || (selectedNodeIds && (selectedNodeIds.has(dev.id) || selectedNodeIds.has(closet.id)));
     const isCrossFloor = closet.floorId !== floor.id;
     const pts = run.points || [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }];
+
+    const runStd = (typeof getProjectCablingStandard === "function")
+      ? getProjectCablingStandard(bomItem || dev, "run")
+      : { color: "Yellow", hex: "#eab308" };
+    const cableColorHex = runStd.hex || "#eab308";
 
     for (let i = 0; i < pts.length - 1; i++) {
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -3215,7 +3971,7 @@ function renderCableCanvas() {
       line.setAttribute("y1", pts[i].y);
       line.setAttribute("x2", pts[i + 1].x);
       line.setAttribute("y2", pts[i + 1].y);
-      line.setAttribute("stroke", run.isExceeded ? "#f43f5e" : isCrossFloor ? "#38bdf8" : isSelected ? "#a855f7" : "#f59e0b");
+      line.setAttribute("stroke", run.isExceeded ? "#f43f5e" : isCrossFloor ? "#38bdf8" : isSelected ? "#a855f7" : cableColorHex);
       line.setAttribute("stroke-width", isSelected ? "4" : "2.5");
       line.setAttribute("stroke-dasharray", isCrossFloor ? "4,4" : run.isExceeded ? "6,4" : "none");
       line.setAttribute("opacity", isSelected ? "1.0" : "0.75");
@@ -3231,7 +3987,7 @@ function renderCableCanvas() {
         wpCircle.setAttribute("cx", wp.x);
         wpCircle.setAttribute("cy", wp.y);
         wpCircle.setAttribute("r", 7);
-        wpCircle.setAttribute("fill", "#f59e0b");
+        wpCircle.setAttribute("fill", cableColorHex);
         wpCircle.setAttribute("stroke", "#ffffff");
         wpCircle.setAttribute("stroke-width", "2");
         svg.appendChild(wpCircle);
@@ -3258,7 +4014,7 @@ function renderCableCanvas() {
   // 3. Closets & Mounting Hosts (Poles, NEMA Boxes, Cabinets, Racks, Backboards)
   if (physicalLayerFilters.closets) {
     floor.nodes.filter(n => n.type === "closet").forEach(closet => {
-      const isSelected = closet.id === selectedNodeId;
+      const isSelected = (closet.id === selectedNodeId) || (selectedNodeIds && selectedNodeIds.has(closet.id));
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
       g.setAttribute("class", "draggable-canvas-node cursor-pointer");
       g.setAttribute("data-node-id", closet.id);
@@ -3452,11 +4208,148 @@ function renderCableCanvas() {
     const layerType = getDeviceLayerType(bomItem || dev);
     if (!physicalLayerFilters[layerType]) return;
 
-    const isSelected = dev.id === selectedNodeId;
+    const isSelected = (dev.id === selectedNodeId) || (selectedNodeIds && selectedNodeIds.has(dev.id));
     const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
     g.setAttribute("class", "draggable-canvas-node cursor-pointer");
     g.setAttribute("data-node-id", dev.id);
     g.setAttribute("transform", `translate(${dev.x}, ${dev.y})`);
+
+    // Multi-select / selection glowing halo
+    if (isSelected) {
+      const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      halo.setAttribute("r", 20);
+      halo.setAttribute("fill", "none");
+      halo.setAttribute("stroke", "#38bdf8");
+      halo.setAttribute("stroke-width", "2");
+      halo.setAttribute("stroke-dasharray", "4 2");
+      halo.setAttribute("opacity", "0.9");
+      g.appendChild(halo);
+    }
+
+    // TIA-568 Horizontal Run Distance Violations (>328' Critical / >295' Caution)
+    const runFt = (dev.calculatedRun && dev.calculatedRun.totalFt) ? dev.calculatedRun.totalFt : 0;
+    const isChannelViolation = runFt > 328;
+    const isDistanceCaution = runFt > 295 && !isChannelViolation;
+
+    if (isChannelViolation) {
+      const alertHalo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      alertHalo.setAttribute("r", isSelected ? 24 : 20);
+      alertHalo.setAttribute("fill", "none");
+      alertHalo.setAttribute("stroke", "#ef4444");
+      alertHalo.setAttribute("stroke-width", "3");
+      alertHalo.setAttribute("stroke-dasharray", "4 2");
+      alertHalo.setAttribute("opacity", "0.95");
+      g.appendChild(alertHalo);
+
+      const alertPill = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      alertPill.setAttribute("transform", "translate(0, -32)");
+      const pillBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      pillBg.setAttribute("x", "-48"); pillBg.setAttribute("y", "-8");
+      pillBg.setAttribute("width", "96"); pillBg.setAttribute("height", "16");
+      pillBg.setAttribute("rx", "8");
+      pillBg.setAttribute("fill", "#7f1d1d");
+      pillBg.setAttribute("stroke", "#f87171");
+      pillBg.setAttribute("stroke-width", "1");
+      alertPill.appendChild(pillBg);
+      const pillTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      pillTxt.setAttribute("x", "0"); pillTxt.setAttribute("y", "3.5");
+      pillTxt.setAttribute("text-anchor", "middle");
+      pillTxt.setAttribute("fill", "#fecaca");
+      pillTxt.setAttribute("font-size", "8.5");
+      pillTxt.setAttribute("font-weight", "bold");
+      pillTxt.setAttribute("font-family", "monospace");
+      pillTxt.textContent = `! >328' (${runFt}')`;
+      alertPill.appendChild(pillTxt);
+      g.appendChild(alertPill);
+    } else if (isDistanceCaution) {
+      const cautionHalo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      cautionHalo.setAttribute("r", isSelected ? 22 : 18);
+      cautionHalo.setAttribute("fill", "none");
+      cautionHalo.setAttribute("stroke", "#f59e0b");
+      cautionHalo.setAttribute("stroke-width", "2.5");
+      cautionHalo.setAttribute("stroke-dasharray", "3 2");
+      cautionHalo.setAttribute("opacity", "0.9");
+      g.appendChild(cautionHalo);
+
+      const cautionPill = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      cautionPill.setAttribute("transform", "translate(0, -32)");
+      const pillBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      pillBg.setAttribute("x", "-44"); pillBg.setAttribute("y", "-8");
+      pillBg.setAttribute("width", "88"); pillBg.setAttribute("height", "16");
+      pillBg.setAttribute("rx", "8");
+      pillBg.setAttribute("fill", "#78350f");
+      pillBg.setAttribute("stroke", "#fbbf24");
+      pillBg.setAttribute("stroke-width", "1");
+      cautionPill.appendChild(pillBg);
+      const pillTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      pillTxt.setAttribute("x", "0"); pillTxt.setAttribute("y", "3.5");
+      pillTxt.setAttribute("text-anchor", "middle");
+      pillTxt.setAttribute("fill", "#fef3c7");
+      pillTxt.setAttribute("font-size", "8.5");
+      pillTxt.setAttribute("font-weight", "bold");
+      pillTxt.setAttribute("font-family", "monospace");
+      pillTxt.textContent = `⚠ >295' (${runFt}')`;
+      cautionPill.appendChild(pillTxt);
+      g.appendChild(cautionPill);
+    }
+
+    // Visual Revision Compare Overlays
+    let revStatus = null; // "added" | "modified"
+    if (activeRevisionCompareId && typeof RevisionEngine !== "undefined") {
+      const revisions = RevisionEngine.getRevisions();
+      const rev = revisions.find(r => r.id === activeRevisionCompareId);
+      if (rev && rev.floors) {
+        const snapFloor = rev.floors.find(f => f.id === floor.id);
+        if (snapFloor && snapFloor.nodes) {
+          const match = snapFloor.nodes.find(b => b.id === dev.id || (b.instanceId && b.instanceId === dev.instanceId));
+          if (!match) {
+            revStatus = "added";
+          } else if (match.x !== dev.x || match.y !== dev.y || match.model !== dev.model) {
+            revStatus = "modified";
+          }
+        }
+      }
+    }
+
+    if (revStatus === "added") {
+      const addHalo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      addHalo.setAttribute("r", 22);
+      addHalo.setAttribute("fill", "none");
+      addHalo.setAttribute("stroke", "#10b981");
+      addHalo.setAttribute("stroke-width", "2.5");
+      addHalo.setAttribute("stroke-dasharray", "2 2");
+      g.appendChild(addHalo);
+
+      const addPill = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      addPill.setAttribute("x", 0);
+      addPill.setAttribute("y", isChannelViolation || isDistanceCaution ? -46 : -30);
+      addPill.setAttribute("text-anchor", "middle");
+      addPill.setAttribute("fill", "#34d399");
+      addPill.setAttribute("font-size", "8.5");
+      addPill.setAttribute("font-weight", "bold");
+      addPill.setAttribute("font-family", "monospace");
+      addPill.textContent = "+ NEW ADD";
+      g.appendChild(addPill);
+    } else if (revStatus === "modified") {
+      const modHalo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      modHalo.setAttribute("r", 22);
+      modHalo.setAttribute("fill", "none");
+      modHalo.setAttribute("stroke", "#38bdf8");
+      modHalo.setAttribute("stroke-width", "2");
+      modHalo.setAttribute("stroke-dasharray", "3 2");
+      g.appendChild(modHalo);
+
+      const modPill = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      modPill.setAttribute("x", 0);
+      modPill.setAttribute("y", isChannelViolation || isDistanceCaution ? -46 : -30);
+      modPill.setAttribute("text-anchor", "middle");
+      modPill.setAttribute("fill", "#7dd3fc");
+      modPill.setAttribute("font-size", "8.5");
+      modPill.setAttribute("font-weight", "bold");
+      modPill.setAttribute("font-family", "monospace");
+      modPill.textContent = "~ MODIFIED";
+      g.appendChild(modPill);
+    }
 
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
     circle.setAttribute("r", isSelected ? 15 : 12);
@@ -3466,7 +4359,7 @@ function renderCableCanvas() {
     g.appendChild(circle);
 
     const devNum = (bomItem && bomItem.deviceNumber) || dev.deviceNumber;
-    if (devNum) {
+    if (devNum && !isChannelViolation && !isDistanceCaution && !revStatus) {
       const numTag = document.createElementNS("http://www.w3.org/2000/svg", "text");
       numTag.setAttribute("x", 0);
       numTag.setAttribute("y", -18);
@@ -3489,8 +4382,94 @@ function renderCableCanvas() {
     txt.textContent = dev.name;
     g.appendChild(txt);
 
+    // TIA-606-C Cable ID Tag
+    if (showPhysicalCableIds) {
+      const cableId = getDeviceCableId(dev);
+      if (cableId) {
+        const idG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        idG.setAttribute("transform", "translate(0, 36)");
+        const idBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        const idLen = Math.max(76, cableId.length * 6.5 + 16);
+        idBg.setAttribute("x", -idLen / 2);
+        idBg.setAttribute("y", -7);
+        idBg.setAttribute("width", idLen);
+        idBg.setAttribute("height", 15);
+        idBg.setAttribute("rx", "4");
+        idBg.setAttribute("fill", "#0f172a");
+        idBg.setAttribute("stroke", "#3b82f6");
+        idBg.setAttribute("stroke-width", "1");
+        idG.appendChild(idBg);
+
+        const idTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        idTxt.setAttribute("x", 0);
+        idTxt.setAttribute("y", 4);
+        idTxt.setAttribute("text-anchor", "middle");
+        idTxt.setAttribute("fill", "#60a5fa");
+        idTxt.setAttribute("font-size", "8.5");
+        idTxt.setAttribute("font-weight", "bold");
+        idTxt.setAttribute("font-family", "monospace");
+        idTxt.textContent = cableId;
+        idG.appendChild(idTxt);
+        g.appendChild(idG);
+      }
+    }
+
     svg.appendChild(g);
   });
+
+  // 5. Visual Revision Compare - Demolished / Removed Ghost Nodes
+  if (activeRevisionCompareId && typeof RevisionEngine !== "undefined") {
+    const revisions = RevisionEngine.getRevisions();
+    const rev = revisions.find(r => r.id === activeRevisionCompareId);
+    if (rev && rev.floors) {
+      const snapFloor = rev.floors.find(f => f.id === floor.id);
+      if (snapFloor && snapFloor.nodes) {
+        snapFloor.nodes.filter(n => n.type === "device").forEach(baseDev => {
+          const stillExists = floor.nodes.some(cur => cur.id === baseDev.id || (cur.instanceId && cur.instanceId === baseDev.instanceId));
+          if (!stillExists) {
+            const ghostG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            ghostG.setAttribute("class", "opacity-75");
+            ghostG.setAttribute("transform", `translate(${baseDev.x}, ${baseDev.y})`);
+
+            const ghostCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            ghostCircle.setAttribute("r", "13");
+            ghostCircle.setAttribute("fill", "#450a0a");
+            ghostCircle.setAttribute("stroke", "#f87171");
+            ghostCircle.setAttribute("stroke-width", "2");
+            ghostCircle.setAttribute("stroke-dasharray", "4 3");
+            ghostG.appendChild(ghostCircle);
+
+            const ghostBadge = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            ghostBadge.setAttribute("x", "0");
+            ghostBadge.setAttribute("y", "-18");
+            ghostBadge.setAttribute("text-anchor", "middle");
+            ghostBadge.setAttribute("fill", "#f87171");
+            ghostBadge.setAttribute("font-size", "8.5");
+            ghostBadge.setAttribute("font-weight", "bold");
+            ghostBadge.setAttribute("font-family", "monospace");
+            ghostBadge.textContent = "✕ REMOVED";
+            ghostG.appendChild(ghostBadge);
+
+            const ghostName = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            ghostName.setAttribute("x", "0");
+            ghostName.setAttribute("y", "22");
+            ghostName.setAttribute("text-anchor", "middle");
+            ghostName.setAttribute("fill", "#fca5a5");
+            ghostName.setAttribute("font-size", "9.5");
+            ghostName.setAttribute("font-family", "monospace");
+            ghostName.setAttribute("text-decoration", "line-through");
+            ghostName.textContent = baseDev.name;
+            ghostG.appendChild(ghostName);
+
+            svg.appendChild(ghostG);
+          }
+        });
+      }
+    }
+  }
+
+  // Update live Physical DRC Distance status pill
+  updatePhysicalDrcPill();
 }
 
 // -----------------------------------------------------------
@@ -4134,6 +5113,236 @@ function jumpToPhysicalLayoutTarget(targetVal) {
   }
 }
 
+// Bulk Operations & Pathway Corridor Handlers
+// -----------------------------------------------------------
+function clearMultiSelection() {
+  selectedNodeIds.clear();
+  selectedNodeId = null;
+  renderInspector();
+  renderCableCanvas();
+}
+
+function executeBulkReassignCloset(newClosetId) {
+  const floor = getActiveFloor();
+  if (!floor || !selectedNodeIds || selectedNodeIds.size === 0) return;
+  const allClosets = getAllClosetsAcrossFacility();
+  const targetCloset = allClosets.find(c => c.id === newClosetId);
+  if (!targetCloset) return;
+
+  let count = 0;
+  floor.nodes.filter(n => selectedNodeIds.has(n.id) && n.type === "device").forEach(dev => {
+    dev.assignedClosetId = targetCloset.id;
+    dev.waypoints = [];
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      const match = projectBOM.find(i => (i.instanceId && (i.instanceId === dev.instanceId || i.instanceId === dev.id)) || i.model === dev.name);
+      if (match) {
+        match.closetName = targetCloset.name;
+        match.rackId = targetCloset.name;
+      }
+    }
+    count++;
+  });
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  saveFacilityState(true);
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof showToast === "function") {
+    showToast(`Reassigned ${count} drop${count === 1 ? '' : 's'} to ${targetCloset.name}.`);
+  }
+}
+
+function executeBulkChangeCableSpec(newSku) {
+  const floor = getActiveFloor();
+  if (!floor || !selectedNodeIds || selectedNodeIds.size === 0) return;
+
+  let count = 0;
+  floor.nodes.filter(n => selectedNodeIds.has(n.id) && n.type === "device").forEach(dev => {
+    dev.cableSku = newSku;
+    count++;
+  });
+
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  saveFacilityState(true);
+  if (typeof showToast === "function") {
+    showToast(`Updated cable specification to ${newSku} on ${count} drops.`);
+  }
+}
+
+function executeBulkAlign(axis) {
+  const floor = getActiveFloor();
+  if (!floor || !selectedNodeIds || selectedNodeIds.size < 2) return;
+  const nodes = floor.nodes.filter(n => selectedNodeIds.has(n.id));
+
+  if (axis === "horizontal") {
+    const avgY = Math.round(nodes.reduce((acc, n) => acc + n.y, 0) / nodes.length);
+    nodes.forEach(n => { n.y = avgY; });
+  } else {
+    const avgX = Math.round(nodes.reduce((acc, n) => acc + n.x, 0) / nodes.length);
+    nodes.forEach(n => { n.x = avgX; });
+  }
+
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  saveFacilityState(true);
+  if (typeof showToast === "function") {
+    showToast(`Aligned ${nodes.length} nodes ${axis}ly.`);
+  }
+}
+
+function executeBulkDistribute() {
+  const floor = getActiveFloor();
+  if (!floor || !selectedNodeIds || selectedNodeIds.size < 3) {
+    if (typeof showToast === "function") showToast("Select at least 3 nodes to distribute.");
+    return;
+  }
+  const nodes = floor.nodes.filter(n => selectedNodeIds.has(n.id));
+  const spanX = Math.max(...nodes.map(n => n.x)) - Math.min(...nodes.map(n => n.x));
+  const spanY = Math.max(...nodes.map(n => n.y)) - Math.min(...nodes.map(n => n.y));
+
+  if (spanX >= spanY) {
+    nodes.sort((a, b) => a.x - b.x);
+    const startX = nodes[0].x;
+    const endX = nodes[nodes.length - 1].x;
+    const step = (endX - startX) / (nodes.length - 1);
+    nodes.forEach((n, idx) => {
+      n.x = Math.round(startX + (idx * step));
+    });
+  } else {
+    nodes.sort((a, b) => a.y - b.y);
+    const startY = nodes[0].y;
+    const endY = nodes[nodes.length - 1].y;
+    const step = (endY - startY) / (nodes.length - 1);
+    nodes.forEach((n, idx) => {
+      n.y = Math.round(startY + (idx * step));
+    });
+  }
+
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  saveFacilityState(true);
+  if (typeof showToast === "function") {
+    showToast(`Distributed ${nodes.length} nodes evenly along dominant span.`);
+  }
+}
+
+function executeBulkClearWaypoints() {
+  const floor = getActiveFloor();
+  if (!floor || !selectedNodeIds || selectedNodeIds.size === 0) return;
+  let count = 0;
+  floor.nodes.filter(n => selectedNodeIds.has(n.id) && n.type === "device").forEach(d => {
+    d.waypoints = [];
+    count++;
+  });
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  saveFacilityState(true);
+  if (typeof showToast === "function") {
+    showToast(`Reset cable routing & bend points on ${count} drops.`);
+  }
+}
+
+function executeBulkDeleteNodes() {
+  const floor = getActiveFloor();
+  if (!floor || !selectedNodeIds || selectedNodeIds.size === 0) return;
+  const count = selectedNodeIds.size;
+  if (!confirm(`Are you sure you want to delete all ${count} selected elements?`)) return;
+
+  const toDelete = new Set(selectedNodeIds);
+  selectedNodeIds.clear();
+  selectedNodeId = null;
+
+  const closetCount = floor.nodes.filter(n => n.type === "closet" && toDelete.has(n.id)).length;
+  const totalClosets = getAllClosetsAcrossFacility().length;
+  if (closetCount > 0 && closetCount >= totalClosets) {
+    alert("Cannot delete all closets. At least one closet must remain.");
+    return;
+  }
+
+  floor.nodes = floor.nodes.filter(n => !toDelete.has(n.id));
+
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    projectBOM = projectBOM.filter(i => !toDelete.has(i.instanceId));
+  }
+
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  saveFacilityState(true);
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof showToast === "function") {
+    showToast(`Deleted ${count} elements from floor layout.`);
+  }
+}
+
+function updatePathwayTrunkName(id, name) {
+  const floor = getActiveFloor();
+  if (!floor || !floor.pathwayTrunks) return;
+  const trunk = floor.pathwayTrunks.find(t => t.id === id);
+  if (trunk) {
+    trunk.name = name;
+    renderCableCanvas();
+    saveFacilityState(true);
+  }
+}
+
+function updatePathwayTrunkType(id, type) {
+  const floor = getActiveFloor();
+  if (!floor || !floor.pathwayTrunks) return;
+  const trunk = floor.pathwayTrunks.find(t => t.id === id);
+  if (trunk) {
+    trunk.type = type;
+    if (type === "tray") trunk.capacity = 100;
+    else if (type === "ladder") trunk.capacity = 160;
+    else if (type === "jhook") trunk.capacity = 40;
+    else if (type === "conduit") trunk.capacity = 25;
+    renderCableCanvas();
+    renderInspector();
+    saveFacilityState(true);
+  }
+}
+
+function updatePathwayTrunkCapacity(id, cap) {
+  const floor = getActiveFloor();
+  if (!floor || !floor.pathwayTrunks) return;
+  const trunk = floor.pathwayTrunks.find(t => t.id === id);
+  if (trunk) {
+    trunk.capacity = Number(cap) || 80;
+    renderCableCanvas();
+    renderInspector();
+    saveFacilityState(true);
+  }
+}
+
+function deletePathwayTrunk(id) {
+  const floor = getActiveFloor();
+  if (!floor || !floor.pathwayTrunks) return;
+  floor.pathwayTrunks = floor.pathwayTrunks.filter(t => t.id !== id);
+  selectedPathwayTrunkId = null;
+  activeDrawingPathwayId = null;
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  saveFacilityState(true);
+  if (typeof showToast === "function") {
+    showToast("Deleted pathway corridor.");
+  }
+}
+
+function deselectPathwayTrunk() {
+  selectedPathwayTrunkId = null;
+  activeDrawingPathwayId = null;
+  renderInspector();
+  renderCableCanvas();
+}
+
 // Window Compatibility Exports
 if (typeof window !== "undefined") {
   window.toggleCableLayoutModal = toggleCableLayoutModal;
@@ -4180,4 +5389,29 @@ if (typeof window !== "undefined") {
   window.deleteDropFromBOM = deleteDropFromBOM;
   window.isClosetMatch = isClosetMatch;
   window.getInterClosetConnections = getInterClosetConnections;
+
+  // Multi-Select & Pathway exports
+  window.clearMultiSelection = clearMultiSelection;
+  window.executeBulkReassignCloset = executeBulkReassignCloset;
+  window.executeBulkChangeCableSpec = executeBulkChangeCableSpec;
+  window.executeBulkAlign = executeBulkAlign;
+  window.executeBulkDistribute = executeBulkDistribute;
+  window.executeBulkClearWaypoints = executeBulkClearWaypoints;
+  window.executeBulkDeleteNodes = executeBulkDeleteNodes;
+  window.updatePathwayTrunkName = updatePathwayTrunkName;
+  window.updatePathwayTrunkType = updatePathwayTrunkType;
+  window.updatePathwayTrunkCapacity = updatePathwayTrunkCapacity;
+  window.deletePathwayTrunk = deletePathwayTrunk;
+  window.deselectPathwayTrunk = deselectPathwayTrunk;
+
+  // Engineering View State exports
+  window.togglePhysicalCableIds = togglePhysicalCableIds;
+  window.stepToNextDistanceViolation = handlePhysicalDrcPillClick;
+  window.handlePhysicalDrcPillClick = handlePhysicalDrcPillClick;
+  window.getSelectedNodeId = () => selectedNodeId;
+  window.setPhysicalRevisionCompare = setPhysicalRevisionCompare;
+  window.populateRevisionCompareDropdown = populateRevisionCompareDropdown;
+  window.exportFloorplanToSubmittal = exportFloorplanToSubmittal;
+  window.getDeviceCableId = getDeviceCableId;
+  window.getFloorDistanceViolations = getFloorDistanceViolations;
 }

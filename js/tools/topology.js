@@ -283,26 +283,66 @@ function findDacItem(speed, preferredVendor, dacLength) {
   return null;
 }
 
-function findPatchCordItem(targetFt, preferredVendor, isEtherlighting) {
+function findPatchCordItem(targetFt, preferredVendor, isEtherlighting, preferredColorOrDevice) {
+  let targetColor = "Yellow";
+  if (typeof preferredColorOrDevice === "string" && preferredColorOrDevice) {
+    targetColor = preferredColorOrDevice;
+  } else if (typeof getProjectCablingStandard === "function") {
+    const std = getProjectCablingStandard(preferredColorOrDevice || null, "patch");
+    if (std && std.color) targetColor = std.color;
+  }
+
   if (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords) {
     const cords = CABLING_CATALOG.patchCords;
     if (isEtherlighting) {
       const el = cords.find(c => c.etherlighting && Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
       if (el) return el;
     }
+    // 1. Preferred vendor + target color + length
     if (preferredVendor) {
-      const match = cords.find(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) && Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      const match = cords.find(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) &&
+        (c.color || '').toLowerCase() === targetColor.toLowerCase() &&
+        Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
       if (match) return match;
     }
+    // 2. Target color + length
+    const colorMatch = cords.find(c => (c.color || '').toLowerCase() === targetColor.toLowerCase() &&
+      Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+    if (colorMatch) return colorMatch;
+
+    // 3. Preferred vendor + length fallback
+    if (preferredVendor) {
+      const match = cords.find(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) &&
+        Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      if (match) return match;
+    }
+    // 4. Any length match
     const match = cords.find(c => Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
     if (match) return match;
   }
+
+  const colorCodeMap = {
+    "Yellow": "YL",
+    "Blue": "BL",
+    "Green": "GN",
+    "Orange": "OR",
+    "Purple": "VT",
+    "White": "WH",
+    "Gray": "GY",
+    "Red": "RD",
+    "Black": "BK"
+  };
+  const cCode = colorCodeMap[targetColor] || "YL";
+  const lenCode = targetFt === 0.5 ? "6IN" : `${targetFt}FT`;
+  const lenName = targetFt === 0.5 ? "6-Inch" : `${targetFt}-Foot`;
+
   return {
-    sku: targetFt === 0.5 ? "C6A-SLIM-6IN-BL" : (targetFt === 1 ? "C6A-SLIM-1FT-BL" : (targetFt === 3 ? "C6A-SLIM-3FT-BL" : (targetFt === 5 ? "C6A-SLIM-5FT-BL" : (targetFt === 7 ? "C6A-SLIM-7FT-BL" : (targetFt === 10 ? "C6A-SLIM-10FT-BL" : "C6A-SLIM-15FT-BL"))))),
-    name: `Cat6A Slim 28AWG Patch Cord (${targetFt === 0.5 ? '6-Inch' : targetFt + '-Foot'}, Blue)`,
-    vendor: "Panduit",
+    sku: `C6A-SLIM-${lenCode}-${cCode}`,
+    name: `Cat6A Slim 28AWG Patch Cord (${lenName}, ${targetColor})`,
+    vendor: preferredVendor || "Panduit",
     msrp: targetFt === 0.5 ? 6.20 : (targetFt === 1 ? 7.50 : (targetFt === 3 ? 8.50 : (targetFt === 5 ? 9.80 : (targetFt === 7 ? 11.00 : (targetFt === 10 ? 13.50 : 16.50))))),
-    lengthFt: targetFt
+    lengthFt: targetFt,
+    color: targetColor
   };
 }
 
@@ -1295,6 +1335,7 @@ function renderTopology() {
           }
 
           // Render Switch Chassis Node Card
+          if (typeof enrichBOMItemFromCatalog === "function") enrichBOMItemFromCatalog(item);
           const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
             (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
           const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
@@ -1302,6 +1343,7 @@ function renderTopology() {
           const totalStackPorts = basePortsPerUnit * stackUnits;
           const totalStackPoE = (item.poeBudget || 0) * stackUnits;
           const totalStackBaseWatts = (item.baseWatts || 0) * stackUnits;
+          const itemRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? item.rackUnits : 1;
 
           return `
             <div 
@@ -1320,7 +1362,7 @@ function renderTopology() {
                   </div>
                   ${item.friendlyName && item.friendlyName !== item.model ? `<span class="text-[10px] text-slate-300 font-medium block truncate">${escapeHTML(item.model)}</span>` : ''}
                   <span class="text-[10px] text-slate-400 font-mono block">
-                    ${escapeHTML(item.vendor || 'Generic')} &bull; ${isStacked ? `<span class="text-indigo-300 font-semibold">${stackUnits}x Member Virtual Chassis &bull; ${item.rackUnits * stackUnits}U</span>` : `SKU: ${escapeHTML(item.sku || 'N/A')}`}
+                    ${escapeHTML(item.vendor || 'Generic')} &bull; ${isStacked ? `<span class="text-indigo-300 font-semibold">${stackUnits}x Member Virtual Chassis &bull; ${itemRU * stackUnits}U</span>` : `${itemRU}U &bull; SKU: ${escapeHTML(item.sku || 'N/A')}`}
                   </span>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
@@ -1353,7 +1395,7 @@ function renderTopology() {
                 </div>
                 <div class="flex items-center justify-end gap-1 text-slate-400">
                   <i data-lucide="layers" class="w-3 h-3 text-sky-400 shrink-0"></i>
-                  <span>${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P)` : ''}</span>
+                  <span title="${escapeHTML(item.uplinksSummary || item.portFormFactorSummary || '')}">${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P)` : ''}${item.uplinksSummary ? ` &bull; ${escapeHTML(item.uplinksSummary.split('+')[0].trim())}` : ''}</span>
                 </div>
               </div>
 
@@ -1830,14 +1872,36 @@ function resolveNegotiatedSpeed(nodeA, nodeB) {
   if (!nodeA || !nodeB) return "10G";
 
   const getSpeeds = (n) => {
+    if (typeof enrichBOMItemFromCatalog === "function") {
+      enrichBOMItemFromCatalog(n);
+    }
+    const supported = [1]; // Standard 1G baseline
+
     const s = `${n.maxBackboneSpeed || ''} ${n.portSpeed || ''} ${n.uplinksSummary || ''} ${n.interfaces || ''} ${n.portFormFactorSummary || ''}`.toUpperCase();
-    const supported = [];
-    if (s.includes("100G") || s.includes("QSFP28")) supported.push(100);
-    if (s.includes("40G") || s.includes("QSFP+")) supported.push(40);
-    if (s.includes("25G") || s.includes("SFP28")) supported.push(25);
-    if (s.includes("10G") || s.includes("SFP+")) supported.push(10);
-    if (s.includes("2.5G") || s.includes("MGIG") || s.includes("2.5GBE")) supported.push(2.5);
-    supported.push(1); // Standard 1G baseline
+    const uplinks = (n.uplinksSummary || '').toUpperCase();
+    const maxBb = (n.maxBackboneSpeed || '').toUpperCase();
+
+    let maxBbNum = 1000;
+    if (maxBb === "1G" || maxBb === "1GBE") maxBbNum = 1;
+    else if (maxBb === "2.5G" || maxBb === "2.5GBE") maxBbNum = 2.5;
+    else if (maxBb === "5G") maxBbNum = 5;
+    else if (maxBb === "10G") maxBbNum = 10;
+    else if (maxBb === "25G") maxBbNum = 25;
+    else if (maxBb === "40G") maxBbNum = 40;
+    else if (maxBb === "100G") maxBbNum = 100;
+
+    const isPureGigabit = (maxBbNum === 1) || 
+      (uplinks.includes("GIGABIT") && !uplinks.includes("10G") && !uplinks.includes("25G") && !uplinks.includes("40G") && !uplinks.includes("100G")) ||
+      (uplinks.includes("1GBE") && !uplinks.includes("10G") && !uplinks.includes("2.5G"));
+
+    if (!isPureGigabit) {
+      if ((s.includes("100G") || s.includes("QSFP28")) && maxBbNum >= 100) supported.push(100);
+      if ((s.includes("40G") || s.includes("QSFP+")) && maxBbNum >= 40) supported.push(40);
+      if ((s.includes("25G") || s.includes("SFP28")) && maxBbNum >= 25) supported.push(25);
+      if ((s.includes("10G") || s.includes("SFP+") || s.includes("10GBE")) && maxBbNum >= 10) supported.push(10);
+      if ((s.includes("5G") || s.includes("5GBE")) && maxBbNum >= 5) supported.push(5);
+      if ((s.includes("2.5G") || s.includes("MGIG") || s.includes("2.5GBE")) && maxBbNum >= 2.5) supported.push(2.5);
+    }
     return supported;
   };
 
@@ -1845,14 +1909,34 @@ function resolveNegotiatedSpeed(nodeA, nodeB) {
   const speedsB = getSpeeds(nodeB);
 
   const mutual = speedsA.filter(sp => speedsB.includes(sp)).sort((a, b) => b - a);
-  const top = mutual[0] || 10;
+  const top = mutual[0] || 1;
 
   if (top === 100) return "100G";
   if (top === 40) return "40G";
   if (top === 25) return "25G";
   if (top === 10) return "10G";
+  if (top === 5) return "5G";
   if (top === 2.5) return "2.5G";
   return "1G";
+}
+
+/**
+ * Checks whether a device physically possesses optical transceiver cages (SFP/QSFP)
+ */
+function deviceHasOpticalCages(node) {
+  if (!node) return false;
+  if (typeof enrichBOMItemFromCatalog === "function") enrichBOMItemFromCatalog(node);
+  const text = `${node.uplinksSummary || ''} ${node.portFormFactorSummary || ''} ${node.interfaces || ''}`.toLowerCase();
+  
+  if (/sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|optical|cage/i.test(text)) return true;
+  if (Array.isArray(node.physicalPorts) && node.physicalPorts.length > 0) {
+    return node.physicalPorts.some(p => p.connector && p.connector !== "RJ-45" && !p.mediaType?.includes("rj45"));
+  }
+  if ((node.maxBackboneSpeed === "10G" || node.maxBackboneSpeed === "25G" || node.maxBackboneSpeed === "40G" || node.maxBackboneSpeed === "100G") && 
+      !text.includes("all copper") && !text.includes("only rj45")) {
+    return true;
+  }
+  return false;
 }
 
 let isSynthesizingInterconnects = false;
@@ -1930,12 +2014,19 @@ function autoSynthesizeInterconnects(silent = false) {
       const vendorB = detectVendor(nodeB);
       const preferredVendor = (vendorA === vendorB) ? vendorA : vendorA;
 
+      const hasOpticsA = deviceHasOpticalCages(nodeA);
+      const hasOpticsB = deviceHasOpticalCages(nodeB);
+      const canUseOpticalOrDac = hasOpticsA && hasOpticsB;
+
       // Determine target medium:
       // 1. Explicit override on link (dac | patch | mmf | smf)
-      // 2. Otherwise: if same rack -> dac, if between racks -> project fiber type default
+      // 2. If either endpoint lacks optical cages -> Cat6A RJ45 patch cord!
+      // 3. Otherwise: if same rack -> dac, if between racks -> project fiber type default
       let chosenMedium = "dac";
       if (override.medium && override.medium !== "auto") {
         chosenMedium = override.medium; // "dac", "patch", "mmf", or "smf"
+      } else if (!canUseOpticalOrDac) {
+        chosenMedium = "patch";
       } else {
         chosenMedium = isSameRack ? "dac" : getProjectFiberType(); // "dac", "mmf", or "smf"
       }
@@ -1991,7 +2082,7 @@ function autoSynthesizeInterconnects(silent = false) {
           ? { lengthFt: parseFloat(override.patchLength), lengthMeters: parseFloat(override.patchLength) * 0.3048, label: `${override.patchLength} ft` }
           : getPatchCordLengthForUDiff(uDiff);
 
-        const matchedCord = findPatchCordItem(cordSpec.lengthFt, preferredVendor);
+        const matchedCord = findPatchCordItem(cordSpec.lengthFt, preferredVendor, false, nodeB || nodeA);
         const cordSku = matchedCord.sku;
         const cordName = matchedCord.name;
         const cordMsrp = matchedCord.msrp;
@@ -2697,11 +2788,12 @@ function renderTopologyInspector() {
     let totalPoEConsumed = 0;
 
     itemsInRack.forEach(item => {
+      if (typeof enrichBOMItemFromCatalog === "function") enrichBOMItemFromCatalog(item);
       const qty = parseInt(item.qty, 10) || 1;
-      const ru = parseInt(item.rackUnits || item.ruHeight || (item.role === "Server" ? 2 : 1), 10) || 0;
+      const ru = (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 0) : (item.role === "Server" ? 2 : 1);
       occupiedRU += ru * qty;
 
-      const baseW = (parseFloat(item.baseWatts || item.powerConsumptionWatts || item.maxPowerWatts || 0)) * qty;
+      const baseW = (parseFloat(item.baseWatts !== undefined ? item.baseWatts : (item.powerConsumptionWatts || item.maxPowerWatts || 0))) * qty;
       totalWatts += baseW;
 
       if (item.poeBudget) {
@@ -2833,7 +2925,7 @@ function renderTopologyInspector() {
                   ${item.rackSlot ? `<span class="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-700/60 text-[9px] font-mono font-bold text-indigo-300">U${item.rackSlot}</span>` : ''}
                   <span class="text-white block font-medium truncate group-hover:text-indigo-200">${escapeHTML(item.model)}</span>
                 </div>
-                <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.vendor || 'Generic')} &bull; ${item.rackUnits || 1}U &bull; ${escapeHTML(item.role)}</span>
+                <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.vendor || 'Generic')} &bull; ${(item.rackUnits !== undefined ? item.rackUnits : 1)}U &bull; ${escapeHTML(item.role)}</span>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <div class="text-right">
@@ -3502,6 +3594,7 @@ function renderTopologyInspector() {
     }
 
     // Default Switch Inspector Card
+    if (typeof enrichBOMItemFromCatalog === "function") enrichBOMItemFromCatalog(item);
     const switchPorts = typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(item) : [];
     const portSummary = typeof PortEngine !== "undefined" ? PortEngine.getPortSummary(item) : null;
     const supportedModes = typeof PortEngine !== "undefined" ? PortEngine.getSupportedPowerModes(item) : ["internal_psu"];
@@ -3514,9 +3607,10 @@ function renderTopologyInspector() {
     const totalStackPorts = basePortsPerUnit * stackUnits;
     const totalStackPoE = (item.poeBudget || 0) * stackUnits;
     const totalStackBaseWatts = (item.baseWatts || 0) * stackUnits;
+    const itemRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? item.rackUnits : 1;
 
-    const copperPorts = switchPorts.filter(p => p.connector === "RJ-45" && !p.isUplink);
-    const opticalCages = switchPorts.filter(p => p.connector !== "RJ-45" || p.isUplink);
+    const copperPorts = switchPorts.filter(p => p.connector === "RJ-45" || p.mediaType?.includes("rj45"));
+    const opticalCages = switchPorts.filter(p => p.connector && p.connector !== "RJ-45" && !p.mediaType?.includes("rj45"));
     const isAllOptical = copperPorts.length === 0 && opticalCages.length > 0;
 
     container.innerHTML = `
@@ -3544,7 +3638,7 @@ function renderTopologyInspector() {
         ${item.friendlyName && item.friendlyName !== item.model ? `<div class="text-[11px] text-slate-300 font-medium">${escapeHTML(item.model)}</div>` : ''}
         <div class="text-[11px] text-slate-400 space-y-1 font-mono">
           <div>Vendor: <strong class="text-slate-200">${escapeHTML(item.vendor || 'Generic')}</strong></div>
-          <div>Architecture: <strong class="${isStacked ? 'text-indigo-300 font-semibold' : 'text-slate-300'}">${isStacked ? `Single Logical Stack (${stackUnits}x Member Units &bull; ${item.rackUnits * stackUnits}U)` : 'Standalone Chassis'}</strong></div>
+          <div>Architecture: <strong class="${isStacked ? 'text-indigo-300 font-semibold' : 'text-slate-300'}">${isStacked ? `Single Logical Stack (${stackUnits}x Member Units &bull; ${itemRU * stackUnits}U)` : (itemRU === 0 ? '0U Compact / DIN / Desktop Chassis' : `${itemRU}U Standalone Chassis`)}</strong></div>
           <div class="pt-1 pb-1">
             <label class="text-[10px] text-slate-400 block mb-1 font-sans">Assigned Rack / Enclosure:</label>
             <select onchange="updateDeviceLocation('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 cursor-pointer">
@@ -3594,7 +3688,8 @@ function renderTopologyInspector() {
               <i data-lucide="trash-2" class="w-3 h-3 text-rose-400"></i> Delete
             </button>
           </div>
-          <div>Interface: <strong class="text-white">${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P Stack)` : ''} (${escapeHTML(item.portSpeed || '1G/10G')})</strong></div>
+          <div>Interface: <strong class="text-white">${totalStackPorts} Ports ${isStacked ? `(${stackUnits}x ${basePortsPerUnit}P Stack)` : ''} &bull; ${escapeHTML(item.portFormFactorSummary || item.portSpeed || '1G')}</strong></div>
+          ${item.uplinksSummary ? `<div class="text-[10px] text-sky-400">Uplinks: <span class="text-slate-300 font-semibold">${escapeHTML(item.uplinksSummary)}</span></div>` : ''}
         </div>
       </div>
 
@@ -3656,6 +3751,18 @@ function renderTopologyInspector() {
             <span>Chassis Base Draw:</span>
             <span class="font-mono text-white">${totalStackBaseWatts} W ${isStacked ? `(${stackUnits}x ${item.baseWatts || 0}W Chassis)` : ''}</span>
           </div>
+          ${item.maxPowerWatts ? `
+            <div class="flex justify-between text-slate-400">
+              <span>Max System Draw:</span>
+              <span class="font-mono text-slate-300">${item.maxPowerWatts * stackUnits} W ${isStacked ? `(${stackUnits}x ${item.maxPowerWatts}W)` : ''}</span>
+            </div>
+          ` : ''}
+          ${item.heatBtuPerHour ? `
+            <div class="flex justify-between text-slate-400">
+              <span>Thermal Dissipation:</span>
+              <span class="font-mono text-amber-300">${item.heatBtuPerHour * stackUnits} BTU/hr</span>
+            </div>
+          ` : ''}
           ${totalStackPoE > 0 ? `
             <div class="flex justify-between text-slate-400">
               <span>Total PoE Budget:</span>
@@ -5095,6 +5202,8 @@ window.selectTopologyNode = selectTopologyNode;
 window.selectTopologyRack = selectTopologyRack;
 window.selectTopologyLink = selectTopologyLink;
 window.deselectTopologyNode = deselectTopologyNode;
+window.getSelectedTopologyNodeId = () => selectedTopologyNodeId;
+window.getSelectedTopologyRackLoc = () => selectedTopologyRackLoc;
 window.updateDeviceLocation = updateDeviceLocation;
 window.populateTopologyQuickJump = populateTopologyQuickJump;
 window.openTopologySearchMenu = openTopologySearchMenu;

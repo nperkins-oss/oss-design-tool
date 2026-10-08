@@ -117,6 +117,10 @@ const PortEngine = {
   initSwitchPorts(item, forceReinit = false) {
     if (!item) return [];
 
+    if (typeof enrichBOMItemFromCatalog === "function") {
+      enrichBOMItemFromCatalog(item);
+    }
+
     const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
       (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
     const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
@@ -288,8 +292,16 @@ const PortEngine = {
       }
     }
 
+    const hasOpticalExplicitly = /sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|optical|cage/i.test(allOpticalText);
+    const isPureCopperSwitch = !hasOpticalExplicitly && (
+      (item.uplinksSummary && /copper|rj45|rj-45|none/i.test(item.uplinksSummary)) ||
+      (item.portFormFactorSummary && !/sfp|qsfp/i.test(item.portFormFactorSummary) && /rj45|rj-45|copper/i.test(item.portFormFactorSummary)) ||
+      (item.maxBackboneSpeed === "1G" && totalPortCount <= 16) ||
+      /flex|ultra|lite-8|lite-16|flex-mini|gs910|fs708/i.test(item.sku || item.model || '')
+    );
+
     let uplinkPortCount = parsedCages.length;
-    if (uplinkPortCount === 0) {
+    if (uplinkPortCount === 0 && !isPureCopperSwitch) {
       if (portDesc.includes("100g") || (item.maxBackboneSpeed === "100G")) {
         uplinkPortCount = 4;
         for (let k = 0; k < 4; k++) parsedCages.push({ speed: "100G", connector: "QSFP28", mediaType: "qsfp28_100g" });
@@ -390,12 +402,17 @@ const PortEngine = {
           mediaType = "rj45_100m";
         }
 
+        const isPoEIngest = (i === 1 && Boolean(
+          (item.uplinksSummary && /ingest|poe-in|poe\s*in/i.test(item.uplinksSummary)) ||
+          item.poePassThrough
+        ));
+
         ports.push({
           portNumber: portNum,
           unitIndex: u,
           unitPortNumber: i,
-          label: stackUnits > 1 ? `Unit ${u} - Port ${i} (${u}/${i})` : `Port ${i}`,
-          shortLabel: stackUnits > 1 ? `${u}/${i}` : `P${i}`,
+          label: isPoEIngest ? (stackUnits > 1 ? `Unit ${u} - Port 1 (PoE Ingest)` : `Port 1 (PoE Ingest)`) : (stackUnits > 1 ? `Unit ${u} - Port ${i} (${u}/${i})` : `Port ${i}`),
+          shortLabel: isPoEIngest ? (stackUnits > 1 ? `${u}/PoE-In` : `PoE-In`) : (stackUnits > 1 ? `${u}/${i}` : `P${i}`),
           mediaType: mediaType,
           connector: "RJ-45",
           speed: portSpeed,
@@ -406,8 +423,9 @@ const PortEngine = {
           connectedDeviceId: conn.connectedDeviceId || null,
           connectedDeviceModel: conn.connectedDeviceModel || null,
           connectedPortNumber: conn.connectedPortNumber || null,
-          role: "access",
-          isUplink: false,
+          role: isPoEIngest ? "uplink" : "access",
+          isUplink: isPoEIngest,
+          isPoEIngest: isPoEIngest,
           linkStatus: conn.linkStatus || (conn.connectedDeviceId ? "up" : "down"),
           adminStatus: "up"
         });

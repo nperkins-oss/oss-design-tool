@@ -1074,7 +1074,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx300.png",
+    "image": "assets/images/products/juniper-srx300.webp",
     "keyFeatures": [
       "Compact fanless branch security gateway with Junos OS",
       "5 Gbps stateful firewall and 300 Mbps next-gen IPS filtering",
@@ -1113,7 +1113,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx320-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx320.png",
+    "image": "assets/images/products/juniper-srx320.webp",
     "keyFeatures": [
       "Modular branch gateway with 2 Mini-PIM slots for wireless LTE/T1 failover",
       "Optional 802.3at PoE+ (120W budget) to power local IP cameras and phones",
@@ -1152,7 +1152,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx340-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx340.png",
+    "image": "assets/images/products/juniper-srx340.webp",
     "keyFeatures": [
       "Mid-sized enterprise branch security gateway in 1U rackmount form factor",
       "16x 1G ports (8 copper + 8 SFP fiber) with 4 MPIM WAN interface slots",
@@ -1191,7 +1191,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx345-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx345.png",
+    "image": "assets/images/products/juniper-srx345.webp",
     "keyFeatures": [
       "High-performance branch gateway with dual hot-swap redundant power supplies",
       "16x 1G ports (8 copper + 8 fiber) and 4 Mini-PIM expansion bays",
@@ -1230,7 +1230,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx380-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx380.png",
+    "image": "assets/images/products/juniper-srx380.webp",
     "keyFeatures": [
       "20 Gbps firewall throughput with 4x 10G SFP+ high-speed optical ports",
       "16x 802.3at PoE+ ports (370W budget) to power local CCTV cameras and access points",
@@ -1269,7 +1269,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx1500-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx1500.png",
+    "image": "assets/images/products/juniper-srx1500.webp",
     "keyFeatures": [
       "Enterprise campus perimeter security gateway with 3 Gbps Next-Gen IPS",
       "16x 1G copper ports and 4x 10G SFP+ high-capacity server/uplink interfaces",
@@ -1308,7 +1308,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx4100-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx4100.png",
+    "image": "assets/images/products/juniper-srx4100.webp",
     "keyFeatures": [
       "38 Gbps stateful firewall and 10 Gbps NG-IPS for enterprise data centers",
       "8x 10G SFP+ wire-speed interfaces in high-density 1U form factor",
@@ -1347,7 +1347,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx4200-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx4200.png",
+    "image": "assets/images/products/juniper-srx4200.webp",
     "keyFeatures": [
       "40 Gbps firewall throughput with 12 Gbps full advanced threat defense",
       "Supports 10,000,000 concurrent sessions for massive campus video aggregations",
@@ -1386,7 +1386,7 @@ const FIREWALL_DATABASE = [
     "isDinMounted": false,
     "category": "firewall",
     "datasheet": "Datasheets/Network/Juniper/srx4600-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-srx4600.png",
+    "image": "assets/images/products/juniper-srx4600.webp",
     "keyFeatures": [
       "Ultra high-performance 100G core firewall delivering 75 Gbps stateful throughput",
       "4x 100G QSFP28 and 8x 10G SFP+ interfaces in compact 1U chassis",

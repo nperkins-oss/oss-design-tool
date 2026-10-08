@@ -276,16 +276,19 @@ function renderSwitchCard(sw) {
             <span class="text-slate-400 font-medium">Downlink Ports:</span>
             <span class="text-white font-semibold font-mono text-[11px]">${escapeHTML(sw.portFormFactorSummary)}</span>
           </div>
-          <div class="flex justify-between items-center">
-            <span class="text-slate-400 font-medium">Uplink Architecture:</span>
+          <div class="flex justify-between items-center gap-2">
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span class="text-slate-400 font-medium">Uplink Architecture:</span>
+              ${hasModularBay ? `<span class="px-1.5 py-0.2 rounded bg-brand-950/90 border border-brand-500/60 text-[9px] font-mono font-bold text-brand-300 tracking-wider shadow-sm uppercase">Modular Bay</span>` : ''}
+            </div>
             ${hasModularBay ? `
-              <select id="sled-${sw.id}" class="bg-slate-900 border border-brand-500/40 text-brand-300 text-[10px] font-mono rounded px-1.5 py-0.5 focus:outline-none">
+              <select id="sled-${sw.id}" class="max-w-[210px] bg-slate-900 border border-brand-500/50 hover:border-brand-400 text-brand-200 text-[10px] font-mono rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-brand-400 truncate cursor-pointer shadow-sm" title="Select Swappable Uplink Expansion Module">
                 ${sw.modularUplink.supportedModules.map(mSku => {
                   const mod = (typeof MODULAR_UPLINK_CATALOG !== "undefined") ? MODULAR_UPLINK_CATALOG[mSku] : null;
                   return `<option value="${escapeHTML(mSku)}" ${mSku === sw.modularUplink.defaultModuleSku ? 'selected' : ''}>${mod ? `${escapeHTML(mod.name)} (+$${mod.msrp})` : escapeHTML(mSku)}</option>`;
                 }).join("")}
               </select>
-            ` : `<span class="text-indigo-300 font-semibold font-mono text-[11px]">${escapeHTML(sw.uplinksSummary)}</span>`}
+            ` : `<span class="text-indigo-300 font-semibold font-mono text-[11px] text-right truncate">${escapeHTML(sw.uplinksSummary)}</span>`}
           </div>
 
           ${hasLicenseOption && typeof FEATURE_LICENSE_CATALOG !== "undefined" ? `
@@ -313,20 +316,33 @@ function renderSwitchCard(sw) {
             const isPMax16 = Boolean(sw.sku && sw.sku.includes("Pro-Max-16"));
             const isFlex = Boolean(sw.sku === "USW-Flex");
             const isUltra = Boolean(sw.sku && sw.sku.includes("Ultra"));
-            const isCompactDesktop = Boolean(sw.rackUnits === 0 || isFlex || isUltra || isPMax16 || (sw.sku && (sw.sku.includes("Lite") || sw.sku.includes("Flex-Mini"))));
+            const isIndustrial = Boolean(sw.sku === "USW-Industrial" || (sw.mounting && /din/i.test(sw.mounting)));
+            const isCompactDesktop = Boolean(sw.rackUnits === 0 || isFlex || isUltra || isPMax16 || isIndustrial || (sw.sku && (sw.sku.includes("Lite") || sw.sku.includes("Flex-Mini") || sw.sku.includes("Flex-2.5G") || sw.sku.includes("Flex-XG"))));
 
             const defLocLower = (defaultLoc || "").toLowerCase();
-            const isDefLocEnclosure = defLocLower.includes("enclosure") || defLocLower.includes("nema") || defLocLower.includes("trove") || defLocLower.includes("box");
+            const isDefLocDin = defLocLower.includes("din");
+            const isDefLocEnclosure = defLocLower.includes("enclosure") || defLocLower.includes("nema") || defLocLower.includes("trove") || defLocLower.includes("box") || isDefLocDin;
             const isDefLocRack = !isDefLocEnclosure && (defLocLower.includes("rack") || defLocLower.includes("cabinet") || defLocLower.includes("mdf") || defLocLower.includes("idf"));
             const isDefLocOutdoor = defLocLower.includes("pole") || defLocLower.includes("outdoor") || defLocLower.includes("exterior") || defLocLower.includes("utility");
 
             let autoSelectedMount = "included";
-            if (isPMax16 && isDefLocRack) autoSelectedMount = "UACC-Pro-Max-16-RM";
-            else if (isFlex && isDefLocEnclosure) autoSelectedMount = "3rd_party_enclosure";
-            else if (isFlex && isDefLocOutdoor) autoSelectedMount = "USW-Flex-Utility";
-            else if (isFlex && isDefLocRack) autoSelectedMount = "UACC-Rack-Shelf-SD";
+            if (isIndustrial) {
+              autoSelectedMount = "included";
+            } else if (isPMax16 && isDefLocRack) {
+              autoSelectedMount = "UACC-Pro-Max-16-RM";
+            } else if (isFlex && isDefLocDin) {
+              autoSelectedMount = "UACC-Flex-DIN";
+            } else if (isFlex && isDefLocEnclosure) {
+              autoSelectedMount = "3rd_party_enclosure";
+            } else if (isFlex && isDefLocOutdoor) {
+              autoSelectedMount = "USW-Flex-Utility";
+            } else if (isFlex && isDefLocRack) {
+              autoSelectedMount = "UACC-Rack-Shelf-SD";
+            } else if ((isUltra || isCompactDesktop) && isDefLocDin) {
+              autoSelectedMount = "UACC-DIN-Rail";
+            }
 
-            const showMountSection = sw.mountSku || isFlex || isPMax16 || isUltra || isCompactDesktop || sw.compatibleAccessories?.some(a => a.includes("RM") || a.includes("Rail") || a.includes("Mount") || a.includes("Utility")) || (sw.depthInches && sw.depthInches >= 14);
+            const showMountSection = sw.mountSku || isFlex || isPMax16 || isUltra || isIndustrial || isCompactDesktop || sw.compatibleAccessories?.some(a => a.includes("RM") || a.includes("Rail") || a.includes("Mount") || a.includes("Utility") || a.includes("DIN")) || (sw.depthInches && sw.depthInches >= 14);
             if (!showMountSection) return '';
 
             return `
@@ -335,8 +351,12 @@ function renderSwitchCard(sw) {
                   <i data-lucide="wrench" class="w-3 h-3 text-slate-500"></i> Mount Hardware:
                 </span>
                 <select id="mountSelect-${sw.id}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[10px] font-mono rounded px-1.5 py-0.5 focus:outline-none focus:border-brand-500 max-w-[205px] truncate">
-                  ${isFlex ? `
+                  ${isIndustrial ? `
+                    <option value="included" selected>Integrated TS-35 DIN-Rail Clips (Included)</option>
+                    <option value="UACC-Rack-Shelf-SD">1U Cantilever Rack Shelf [UACC-Rack-Shelf-SD] (+$49)</option>
+                  ` : isFlex ? `
                     <option value="included" ${autoSelectedMount === 'included' ? 'selected' : ''}>Magnetic / Wall Mount (Included)</option>
+                    <option value="UACC-Flex-DIN" ${autoSelectedMount === 'UACC-Flex-DIN' ? 'selected' : ''}>UniFi DIN Rail Mount Bracket [UACC-Flex-DIN] (+$19)</option>
                     <option value="3rd_party_enclosure" ${autoSelectedMount === '3rd_party_enclosure' ? 'selected' : ''}>Inside 3rd-Party / NEMA Enclosure ($0)</option>
                     <option value="USW-Flex-Utility" ${autoSelectedMount === 'USW-Flex-Utility' ? 'selected' : ''}>Outdoor Utility Enclosure [USW-Flex-Utility] (+$58)</option>
                     <option value="UACC-Rack-Shelf-SD" ${autoSelectedMount === 'UACC-Rack-Shelf-SD' ? 'selected' : ''}>1U Cantilever Rack Shelf [UACC-Rack-Shelf-SD] (+$49)</option>
@@ -344,11 +364,13 @@ function renderSwitchCard(sw) {
                     <option value="included" ${autoSelectedMount === 'included' ? 'selected' : ''}>Desktop / Wall Mount (Included)</option>
                     <option value="UACC-Pro-Max-16-RM" ${autoSelectedMount === 'UACC-Pro-Max-16-RM' ? 'selected' : ''}>1U Rack Mount Kit [UACC-Pro-Max-16-RM] (+$29)</option>
                   ` : isUltra ? `
-                    <option value="included">Desktop / Wall Mount (Included)</option>
+                    <option value="included" ${autoSelectedMount === 'included' ? 'selected' : ''}>Desktop / Wall Mount (Included)</option>
+                    <option value="UACC-DIN-Rail" ${autoSelectedMount === 'UACC-DIN-Rail' ? 'selected' : ''}>UniFi DIN Rail Mount Kit [UACC-DIN-Rail] (+$19)</option>
                     <option value="UACC-UTS">Universal Table Stand [UACC-UTS] (+$19)</option>
                     <option value="UACC-Rack-Shelf-SD">1U Cantilever Rack Shelf [UACC-Rack-Shelf-SD] (+$49)</option>
                   ` : isCompactDesktop ? `
-                    <option value="included">Desktop / Wall Mount (Included)</option>
+                    <option value="included" ${autoSelectedMount === 'included' ? 'selected' : ''}>Desktop / Wall Mount (Included)</option>
+                    <option value="UACC-DIN-Rail" ${autoSelectedMount === 'UACC-DIN-Rail' ? 'selected' : ''}>UniFi DIN Rail Mount Kit [UACC-DIN-Rail] (+$19)</option>
                     <option value="UACC-Rack-Shelf-SD">1U Cantilever Rack Shelf [UACC-Rack-Shelf-SD] (+$49)</option>
                   ` : `
                     <option value="included">Standard 19" Ears / Bracket (Included)</option>
@@ -357,6 +379,14 @@ function renderSwitchCard(sw) {
                     ` : ''}
                     ${(sw.vendor === 'Juniper' && sw.depthInches >= 14) ? `
                       <option value="EX-4PST-RMK">Juniper 4-Post Adjustable Rack Mount Kit [EX-4PST-RMK] (+$95)</option>
+                    ` : ''}
+                    ${((sw.vendor === 'Cisco' || sw.vendor === 'Meraki') && (sw.depthInches >= 14 || sw.mountSku === '4PT-KIT-T1' || sw.mountSku === '4PT-KIT-T2-M')) ? `
+                      <option value="${sw.vendor === 'Meraki' ? '4PT-KIT-T2-M' : '4PT-KIT-T1'}">Cisco 4-Post Equipment Rack Mount Kit [${sw.vendor === 'Meraki' ? '4PT-KIT-T2-M' : '4PT-KIT-T1'}] (+$120)</option>
+                      <option value="19-CMP-KIT-T1">Cisco 19" Recessed Rack Mount Extension Kit [19-CMP-KIT-T1] (+$95)</option>
+                    ` : ''}
+                    ${(sw.vendor === 'Ruckus' && (sw.depthInches >= 14 || sw.mountSku === 'ICX-RMK-4POST-TL')) ? `
+                      <option value="ICX-RMK-4POST-TL">Ruckus Tool-Less 4-Post Rack Mount Kit [ICX-RMK-4POST-TL] (+$110)</option>
+                      <option value="XBR-R000295">Ruckus Universal 4-Post Fixed Rack Mount Kit [XBR-R000295] (+$95)</option>
                     ` : ''}
                   `}
                 </select>
@@ -371,16 +401,6 @@ function renderSwitchCard(sw) {
                 <span class="font-medium text-[11px]">Add 2nd Hot-Swap PSU (${POWER_SUPPLY_CATALOG[sw.psuSku].wattage || 0}W)</span>
               </label>
               <span class="font-mono text-emerald-400 font-semibold">+$${POWER_SUPPLY_CATALOG[sw.psuSku].msrp.toLocaleString()}</span>
-            </div>
-          ` : ''}
-
-          ${(sw.fanSku || (sw.compatibleAccessories && sw.compatibleAccessories.includes('UACC-Fan-4020'))) ? `
-            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-              <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer hover:text-white">
-                <input type="checkbox" id="fanSpare-${sw.id}" class="rounded border-slate-700 bg-slate-950 text-teal-500 cursor-pointer">
-                <span class="font-medium text-[11px]">Add Hot-Swap Fan Module (UACC-Fan-4020)</span>
-              </label>
-              <span class="font-mono text-emerald-400 font-semibold">+$49</span>
             </div>
           ` : ''}
         </div>
@@ -806,11 +826,66 @@ function renderAccessoryCard(acc) {
           </div>
         </div>
 
-        ${(acc.type === 'ups' || acc.category === 'ups') ? `
+        ${(acc.subCategory === 'media_converters' || acc.type === 'media_converter' || acc.category === 'media_converter') ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-teal-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Interface:</span><span class="text-teal-400 font-bold">${acc.ports || '1x SFP + 1x RJ45'} (${acc.speed || 'Gigabit'})</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Hardened Temp:</span><span class="text-slate-200">${acc.tempRange || '-40°C to +75°C Hardened'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Power Delivery:</span><span class="text-amber-300 font-bold">${acc.powerWatts ? `${acc.powerWatts}W PoE Output` : (acc.inputVoltage ? `${acc.inputVoltage}V DC` : '12-56VDC DIN')}</span></div>
+          </div>
+        ` : (acc.subCategory === 'licenses' || acc.type === 'license' || acc.category === 'licenses' || acc.type === 'feature_license' || acc.type === 'cloud_subscription') ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-sky-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">License Tier:</span><span class="text-sky-300 font-bold">${escapeHTML(acc.tier || acc.licenseType || 'Enterprise Dynamic Routing')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Subscription Term:</span><span class="text-emerald-400 font-bold">${escapeHTML(acc.term || 'Perpetual License')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Compatibility:</span><span class="text-slate-200 truncate max-w-[210px]">${escapeHTML(acc.compatibleSwitches || acc.deviceModel || 'Enterprise Hardware')}</span></div>
+          </div>
+        ` : (acc.subCategory === 'modular_uplinks' || acc.type === 'modular_uplink') ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-purple-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Uplink Config:</span><span class="text-purple-300 font-bold">${escapeHTML(acc.ports || acc.model || 'Modular Uplink')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Port Speed:</span><span class="text-teal-400 font-bold">${escapeHTML(acc.speed || '10G / 40G Stacking')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Target Series:</span><span class="text-slate-200 truncate max-w-[210px]">${escapeHTML(acc.compatibleSeries || 'Modular Switch Bay')}</span></div>
+          </div>
+        ` : (acc.subCategory === 'power_supplies' || (acc.type === 'power_supply' && !acc.isPdu)) ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-amber-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Output Capacity:</span><span class="text-amber-400 font-bold">${acc.powerWatts || 250}W (${acc.outputVoltage ? `${acc.outputVoltage}V` : '54VDC / 12VDC'})</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Input AC:</span><span class="text-slate-200">${acc.inputVoltage || '100-240VAC'} (${acc.efficiency || '80+ Gold/Plat'})</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Form Factor:</span><span class="text-emerald-300 font-bold">${acc.mounting ? escapeHTML(acc.mounting) : (acc.rackUnits ? 'Modular Switch Bay' : 'DIN Rail Industrial')}</span></div>
+          </div>
+        ` : (acc.subCategory === 'mounts' || acc.type === 'mounting') ? `
           <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
-            <div class="flex justify-between"><span class="text-slate-500">Power Rating:</span><span class="text-amber-400 font-bold">${acc.powerWatts || 1000}W Output (${acc.rackUnits ? `${acc.rackUnits}U Rack` : 'Rackmount'})</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Topology:</span><span class="text-sky-300 font-bold">${isOnline ? 'Online Double-Conversion (0ms)' : (isSine ? 'Pure Sine Wave Battery Backup' : 'Line-Interactive')}</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Chassis Depth:</span><span class="text-slate-200">${acc.depthInches ? `${acc.depthInches}" Rack Depth` : 'Standard Rack Depth'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Mounting Style:</span><span class="text-indigo-400 font-bold">${escapeHTML(acc.mounting || '19" Rack Ears / Bracket')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Compatible Hardware:</span><span class="text-slate-200 truncate max-w-[210px]">${escapeHTML(acc.compatibleModels || acc.targetDevice || 'Switch / Gateway')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Standard:</span><span class="text-slate-400">EIA-310-D / VESA / DIN</span></div>
+          </div>
+        ` : (acc.subCategory === 'poe_injectors' || acc.type === 'poe_injector' || acc.type === 'poe_splitter') ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-emerald-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">PoE Power:</span><span class="text-emerald-400 font-bold">${acc.powerWatts || 30}W (${escapeHTML(acc.poeStandard || '802.3at / bt')})</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Ethernet Speed:</span><span class="text-sky-300 font-bold">${escapeHTML(acc.speed || '10/100/1000 Mbps Gigabit')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Form / Mounting:</span><span class="text-slate-200">${acc.mounting ? escapeHTML(acc.mounting) : 'In-line / Wall'}</span></div>
+          </div>
+        ` : (acc.type === 'ups' || (acc.category === 'ups' && !acc.isEbp && !acc.isPdu && acc.type !== 'power_cord')) ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Power Rating:</span><span class="text-amber-400 font-bold">${acc.va || 1500}VA / ${acc.powerWatts || 1000}W (${acc.rackUnits ? `${acc.rackUnits}U Rack` : 'Rackmount'})</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Input / Output:</span><span class="text-slate-300 font-bold">${acc.inputVoltage || 120}V (${acc.inputConnector || '5-15P'}) &bull; Out: ${acc.outputVoltage || 120}V</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Battery Runtime:</span><span class="text-emerald-400 font-bold">${acc.internalRuntimeHalfLoad || 18}m @ 50% &bull; ${acc.internalRuntimeFullLoad || 6}m @ 100%</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Receptacles:</span><span class="text-indigo-300 truncate max-w-[210px]">${escapeHTML(acc.receptacles || 'Standard Outlets')}</span></div>
+            ${(acc.ebpModel && acc.ebpModel !== 'None') ? `<div class="flex justify-between"><span class="text-slate-500">Scalable EBP:</span><span class="text-purple-300 font-bold">${escapeHTML(acc.ebpModel)} (${acc.ebpRackHeight || 2}U)</span></div>` : ''}
+          </div>
+        ` : (acc.type === 'ebp' || acc.isEbp) ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-purple-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Bus Voltage:</span><span class="text-purple-300 font-bold">${acc.dcVoltage || 72}V DC Industrial Bus</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Chassis Space:</span><span class="text-slate-200 font-bold">${acc.rackUnits || 2}U Rackmount (${acc.weightLbs || 70} lbs)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Target UPS:</span><span class="text-amber-300 font-bold truncate max-w-[210px]">${(acc.compatibleUps || []).join(', ') || 'Enterprise UPS'}</span></div>
+          </div>
+        ` : (acc.type === 'pdu' || acc.isPdu) ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-sky-900/40 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Capacity & Type:</span><span class="text-sky-300 font-bold">${acc.inputVoltage || 120}V ${acc.inputCircuitAmps || 15}A (${acc.pduType || 'PDU'})</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Input Cord:</span><span class="text-slate-200">${acc.inputConnector || '5-15P'} (${acc.cordLengthFt || 10}ft)</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Outlets:</span><span class="text-emerald-300 font-bold truncate max-w-[210px]">${escapeHTML(acc.receptacles || 'Multiple Outlets')}</span></div>
+          </div>
+        ` : (acc.type === 'power_cord') ? `
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+            <div class="flex justify-between"><span class="text-slate-500">Rating:</span><span class="text-emerald-400 font-bold">${acc.rating || '10A 100-250V'}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Connectors:</span><span class="text-slate-200 font-bold">${acc.inputConnector} &rarr; ${acc.outputConnector}</span></div>
           </div>
         ` : ''}
 
@@ -841,7 +916,7 @@ function renderAccessoryCard(acc) {
         </select>
         <button onclick="handleAddCatalogCardToBOM('accessories', '${safeSku}', '${safeSku}', '${safeModel}', ${acc.msrp || 0}, '${safeVendor}')" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>Add Accessory</span>
+          <span>${(acc.subCategory === 'mounts' || acc.type === 'mounting') ? 'Add Mount' : (acc.subCategory === 'media_converters' || acc.type === 'media_converter') ? 'Add Converter' : (acc.subCategory === 'licenses' || acc.category === 'licenses' || acc.type === 'license') ? 'Add License' : (acc.subCategory === 'modular_uplinks' || acc.type === 'modular_uplink') ? 'Add Module' : (acc.subCategory === 'power_supplies' || acc.type === 'power_supply') ? 'Add PSU' : (acc.subCategory === 'poe_injectors' || acc.type === 'poe_injector') ? 'Add Injector' : (acc.type === 'ups' && !acc.isEbp && !acc.isPdu) ? 'Add UPS' : (acc.type === 'ebp' || acc.isEbp ? 'Add EBP' : (acc.type === 'pdu' || acc.isPdu ? 'Add PDU' : (acc.type === 'power_cord' ? 'Add Cable' : 'Add Accessory')))}</span>
         </button>
       </div>
     </div>
@@ -874,11 +949,22 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
       // Infrastructure & Interconnect Domain Routing
       const catItem = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function") ? CatalogRegistry.get(safeSku || safeId) : null;
       let role = "Infrastructure";
-      if (mode === "racks") role = "Racks & Closets";
+      if (mode === "racks") role = "Equipment Rack";
+      else if (mode === "enclosures") role = "Cabinets & Enclosures";
       else if (mode === "ups") role = "Rack UPS Power";
+      else if (mode === "pdus") role = "Rackmount PDU";
       else if (mode === "cabling") role = "Structured Cabling";
       else if (mode === "pathways") role = "Pathways & J-Hooks";
-      else if (mode === "accessories") role = "Power & Midspans";
+      else if (mode === "accessories") {
+        if (catItem && catItem.role) role = catItem.role;
+        else if (catItem && catItem.subCategory === "mounts") role = "Mounting Kit";
+        else if (catItem && catItem.subCategory === "media_converters") role = "Media Converter";
+        else if (catItem && catItem.subCategory === "licenses") role = "Software License";
+        else if (catItem && catItem.subCategory === "modular_uplinks") role = "Modular Expansion";
+        else if (catItem && catItem.subCategory === "power_supplies") role = "Power Supply";
+        else if (catItem && catItem.subCategory === "poe_injectors") role = "PoE Midspan";
+        else role = "Network Accessory";
+      }
       else if (mode === "optics") role = "Optics / Interconnect";
 
       const instanceId = `infra-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -989,6 +1075,23 @@ function renderCardByDomain(item, mode) {
         <div class="flex justify-between"><span class="text-slate-500">Configuration:</span><span class="text-teal-400 font-bold">${escapeHTML(configDesc)}</span></div>
         <div class="flex justify-between"><span class="text-slate-500">Jacket / Media:</span><span class="text-indigo-300 font-bold">${escapeHTML(ratingDesc)}</span></div>
         <div class="flex justify-between"><span class="text-slate-500">Performance:</span><span class="text-slate-200">${escapeHTML(item.speed || item.standard || 'Enterprise Structured Cabling')}</span></div>
+      </div>
+    `;
+  } else if (mode === "enclosures" || item.category === "enclosures" || item.type === "enclosure" || item.type === "security_cabinet" || item.type === "architectural_backboard") {
+    const encType = item.type === "security_cabinet" ? "Access Control Subplate Cabinet" : (item.type === "architectural_backboard" ? "Fire-Rated Telecom Backboard" : (item.type === "industrial_din" ? "Industrial DIN Rail Cabinet" : "NEMA 4X Outdoor Enclosure"));
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Cabinet Style:</span><span class="text-amber-400 font-bold">${escapeHTML(encType)}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Protection:</span><span class="text-emerald-400 font-bold">${item.nemaRating || item.ipRating || 'NEMA 4X / IP66 Weatherproof'}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Dimensions:</span><span class="text-slate-200">${item.dimensions || (item.mounting ? `${item.mounting} Mount` : 'Standard EIA Space')}</span></div>
+      </div>
+    `;
+  } else if (mode === "pdus" || item.category === "pdus" || item.type === "pdu") {
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Input Circuit:</span><span class="text-sky-300 font-bold">${item.inputVoltage || 120}V ${item.inputCircuitAmps || 15}A (${item.inputConnector || '5-15P'})</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Receptacles:</span><span class="text-emerald-400 font-bold truncate max-w-[210px]">${escapeHTML(item.receptacles || 'Multiple Outlets')}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Form Factor:</span><span class="text-slate-200">${item.rackUnits ? `${item.rackUnits}U Horizontal` : '0U Vertical Toolless'}</span></div>
       </div>
     `;
   } else if (mode === "pathways" || item.category === "pathways" || item.type === "pathway") {

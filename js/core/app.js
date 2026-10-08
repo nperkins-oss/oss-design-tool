@@ -25,7 +25,8 @@ const DOMAIN_DEFINITIONS = {
       { id: "backbone", label: "Core & Agg", icon: "cpu" },
       { id: "firewalls", label: "Gateways & WAN", icon: "shield" },
       { id: "optics", label: "Optics & DACs", icon: "cable" },
-      { id: "wireless", label: "Wireless PtP", icon: "radio" }
+      { id: "wireless", label: "Wireless PtP", icon: "radio" },
+      { id: "accessories", label: "Accessories", icon: "wrench" }
     ]
   },
   physical_security: {
@@ -53,9 +54,10 @@ const DOMAIN_DEFINITIONS = {
     icon: "hammer",
     color: "amber",
     modes: [
-      { id: "accessories", label: "Power & Midspans", icon: "wrench" },
+      { id: "racks", label: "Equipment Racks", icon: "server" },
+      { id: "enclosures", label: "Cabinets & Enclosures", icon: "box" },
       { id: "ups", label: "Rack UPS Power", icon: "zap" },
-      { id: "racks", label: "19\" Equipment Racks", icon: "server" },
+      { id: "pdus", label: "Rackmount PDUs", icon: "power" },
       { id: "cabling", label: "Structured Cabling", icon: "git-commit" },
       { id: "pathways", label: "Pathways & J-Hooks", icon: "route" }
     ]
@@ -125,6 +127,7 @@ let requireLayer3 = false;
 let selectedSwitchLayers = [];
 let requirePoEBt90 = false;
 let requireIndustrialHardened = false;
+let requireModularUplink = false;
 
 // 2. Firewall / Gateway Filters
 let selectedFwCategories = [];
@@ -162,7 +165,8 @@ let selectedWlRangeTier = "all";
 let requireWl60GHz = false;
 let requireWlBackup5G = false;
 
-// 5. Infrastructure Accessories Filters
+// 5. Infrastructure & Networking Accessories Filters
+let selectedAccSubCategory = "all"; // "all" | "mounts" | "media_converters" | "licenses" | "modular_uplinks" | "power_supplies" | "poe_injectors"
 let selectedAccVendors = [];
 let selectedAccCategories = [];
 let selectedAccTypes = [];
@@ -171,6 +175,8 @@ let accMinPowerWatts = 0;
 let requireUpsSineWave = false;
 let requireUpsOnline = false;
 let requireUpsEbm = false;
+let selectedUpsCategory = "all";
+let selectedUpsVoltage = "all";
 let selectedCableRatings = [];
 let selectedPatchCordLength = "all";
 let requireCableShielded = false;
@@ -248,20 +254,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (typeof updateBOMView === "function") updateBOMView();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+  if (typeof updateCompareBadge === "function") updateCompareBadge();
   if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
   if (typeof renderProjectDefaultsSummary === "function") renderProjectDefaultsSummary();
+  if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
   safeCreateIcons();
 });
 
 // -----------------------------------------------------------
 // Master Domain & Sub-Mode Routing
 // -----------------------------------------------------------
-function switchDomain(domainKey) {
+function switchDomain(domainKey, openTabFlag = true) {
   if (!DOMAIN_DEFINITIONS[domainKey]) return;
   activeDomain = domainKey;
   
   // Default to the first mode of this domain
   currentMode = DOMAIN_DEFINITIONS[domainKey].modes[0].id;
+
+  if (openTabFlag && typeof TabManager !== "undefined") {
+    TabManager.openTab("catalog_" + domainKey);
+  }
 
   buildDomainNavigation();
   buildSubModeNavigation();
@@ -300,7 +312,7 @@ function buildDomainNavigation() {
       : "text-slate-400 hover:text-slate-200 border-transparent hover:bg-slate-900/60";
 
     return `
-      <button onclick="switchDomain('${dKey}')" id="domain-tab-${dKey}" class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all ${activeClasses}">
+      <button onclick="switchDomain('${dKey}')" id="domain-tab-${dKey}" class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all ${activeClasses} cursor-pointer shrink-0">
         <i data-lucide="${def.icon}" class="w-3.5 h-3.5 ${isActive ? 'text-brand-400' : 'text-slate-500'}"></i>
         <span>${def.label}</span>
       </button>
@@ -362,6 +374,7 @@ function resetCurrentFilters() {
   selectedSwitchLayers = [];
   requirePoEBt90 = false;
   requireIndustrialHardened = false;
+  requireModularUplink = false;
 
   selectedFwVendors = [];
   selectedFwCategories = [];
@@ -396,6 +409,7 @@ function resetCurrentFilters() {
   requireWl60GHz = false;
   requireWlBackup5G = false;
 
+  selectedAccSubCategory = "all";
   selectedAccVendors = [];
   selectedAccCategories = [];
   selectedAccTypes = [];
@@ -404,6 +418,8 @@ function resetCurrentFilters() {
   requireUpsSineWave = false;
   requireUpsOnline = false;
   requireUpsEbm = false;
+  selectedUpsCategory = "all";
+  selectedUpsVoltage = "all";
   selectedCableRatings = [];
   selectedPatchCordLength = "all";
   requireCableShielded = false;
@@ -812,38 +828,90 @@ function buildCalculatorStrip() {
     `;
   } else if (currentMode === "accessories") {
     container.classList.remove("hidden");
+    const accCats = [
+      { id: "all", label: "All Items", icon: "wrench" },
+      { id: "mounts", label: "Mounts & Brackets", icon: "layers" },
+      { id: "media_converters", label: "Media Converters", icon: "repeat" },
+      { id: "licenses", label: "Licenses & Cloud", icon: "key" },
+      { id: "modular_uplinks", label: "Modular Uplinks", icon: "cpu" },
+      { id: "power_supplies", label: "Power Supplies", icon: "zap" },
+      { id: "poe_injectors", label: "PoE Midspans", icon: "plug" }
+    ];
     container.innerHTML = `
       <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
         <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+          <div class="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shrink-0">
             <i data-lucide="wrench" class="w-5 h-5"></i>
           </div>
           <div>
             <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              Power & Enclosure Infrastructure Sizer
+              Networking Accessories & Modular Hardware
             </h4>
-            <p class="text-[11px] text-slate-400">Directly size industrial DIN-rail power supplies, midspan PoE injectors, and exterior enclosures.</p>
+            <p class="text-[11px] text-slate-400">Filter mounting kits, media converters, expansion uplinks, power supplies, and cloud licenses.</p>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-3 text-xs">
-          <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Output Power:</span>
-            <select onchange="accMinPowerWatts = parseInt(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-amber-400 text-xs focus:outline-none">
-              <option value="0" ${accMinPowerWatts === 0 ? 'selected' : ''}>Any Power</option>
-              <option value="30" ${accMinPowerWatts === 30 ? 'selected' : ''}>30W (PoE+)</option>
-              <option value="60" ${accMinPowerWatts === 60 ? 'selected' : ''}>60W (PoE++ / bt)</option>
-              <option value="120" ${accMinPowerWatts === 120 ? 'selected' : ''}>120W (High-Power DIN)</option>
-              <option value="240" ${accMinPowerWatts === 240 ? 'selected' : ''}>240W (Cabinet DIN)</option>
-              <option value="480" ${accMinPowerWatts === 480 ? 'selected' : ''}>480W (Multi-Switch DIN)</option>
-            </select>
+        <div class="flex flex-wrap items-center gap-1.5">
+          ${accCats.map(cat => {
+            const isActive = (typeof selectedAccSubCategory !== "undefined" ? selectedAccSubCategory : "all") === cat.id;
+            return `
+              <button onclick="setAccSubCategory('${cat.id}')" class="px-2.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${isActive ? '!bg-indigo-600 !border-indigo-400 !text-white shadow-md shadow-indigo-900/40 ring-2 ring-indigo-400/60 font-bold' : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700'}">
+                <i data-lucide="${cat.icon}" class="w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-indigo-400'}"></i>
+                <span>${cat.label}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  } else if (currentMode === "enclosures") {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="box" class="w-5 h-5"></i>
           </div>
-
-          ${accMinPowerWatts > 0 ? `
-            <button onclick="accMinPowerWatts = 0; buildCalculatorStrip(); runActiveFilter();" class="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2">
-              Reset Power
-            </button>
-          ` : ''}
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Enclosures, Cabinets & Security Backboards
+            </h4>
+            <p class="text-[11px] text-slate-400">Exterior NEMA 4X weather-tight boxes, Trove/LSP access control cabinets, DIN boxes, and plywood backboards.</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Environment:</span>
+          <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-amber-400 rounded-xl px-3 py-1.5 font-bold text-xs focus:outline-none focus:border-amber-500">
+            <option value="all" ${selectedAccMounting === 'all' ? 'selected' : ''}>All Enclosure Types</option>
+            <option value="Pole" ${selectedAccMounting === 'Pole' ? 'selected' : ''}>Outdoor Pole Box (NEMA 4X)</option>
+            <option value="Wall" ${selectedAccMounting === 'Wall' ? 'selected' : ''}>Wall / Security Cabinet</option>
+            <option value="DIN" ${selectedAccMounting === 'DIN' ? 'selected' : ''}>DIN Rail Cabinet</option>
+          </select>
+        </div>
+      </div>
+    `;
+  } else if (currentMode === "pdus") {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400 shrink-0">
+            <i data-lucide="power" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Rack Power Distribution Units (PDUs)
+            </h4>
+            <p class="text-[11px] text-slate-400">0U vertical toolless high-density PDUs, 1U horizontal rackmount power, and automatic transfer switches (ATS).</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Input Voltage:</span>
+          <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-sky-400 rounded-xl px-3 py-1.5 font-bold text-xs focus:outline-none focus:border-sky-500">
+            <option value="all" ${selectedUpsVoltage === 'all' ? 'selected' : ''}>All Voltages</option>
+            <option value="120" ${selectedUpsVoltage === '120' ? 'selected' : ''}>120V AC (15A / 20A)</option>
+            <option value="240" ${selectedUpsVoltage === '240' ? 'selected' : ''}>208V / 240V AC (30A)</option>
+          </select>
         </div>
       </div>
     `;
@@ -880,6 +948,15 @@ function setUplinkSpeedFilter(speed) {
   runActiveFilter();
 }
 
+function setAccSubCategory(catId) {
+  selectedAccSubCategory = catId;
+  window.selectedAccSubCategory = catId;
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof buildSidebarFilters === "function") buildSidebarFilters();
+  if (typeof runActiveFilter === "function") runActiveFilter();
+}
+window.setAccSubCategory = setAccSubCategory;
+
 function toggleFilterItem(type, val) {
   if (type === "vendor") {
     selectedVendors = selectedVendors.includes(val) ? selectedVendors.filter(v => v !== val) : [...selectedVendors, val];
@@ -905,6 +982,11 @@ function toggleFilterItem(type, val) {
     selectedWlFrequencies = selectedWlFrequencies.includes(val) ? selectedWlFrequencies.filter(f => f !== val) : [...selectedWlFrequencies, val];
   } else if (type === "formFactor") {
     selectedFormFactors = selectedFormFactors.includes(val) ? selectedFormFactors.filter(f => f !== val) : [...selectedFormFactors, val];
+  } else if (type === "accSubCategory") {
+    selectedAccSubCategory = (selectedAccSubCategory === val) ? "all" : val;
+    window.selectedAccSubCategory = selectedAccSubCategory;
+    if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+    if (typeof buildSidebarFilters === "function") buildSidebarFilters();
   } else if (type === "accVendor") {
     selectedAccVendors = selectedAccVendors.includes(val) ? selectedAccVendors.filter(v => v !== val) : [...selectedAccVendors, val];
   } else if (type === "accType") {
@@ -944,7 +1026,11 @@ function runActiveFilter() {
     } else if (currentMode === "wireless") {
       rawDataset = (typeof WIRELESS_DATABASE !== "undefined") ? WIRELESS_DATABASE : [];
     } else if (currentMode === "accessories") {
-      rawDataset = (typeof ACCESSORY_DATABASE !== "undefined") ? ACCESSORY_DATABASE : [];
+      rawDataset = (typeof NETWORKING_ACCESSORIES !== "undefined") ? NETWORKING_ACCESSORIES : (typeof ACCESSORY_DATABASE !== "undefined" ? ACCESSORY_DATABASE : []);
+    } else if (currentMode === "enclosures") {
+      rawDataset = (typeof ENCLOSURES_DATABASE !== "undefined") ? ENCLOSURES_DATABASE : [];
+    } else if (currentMode === "pdus") {
+      rawDataset = (typeof PDUS_DATABASE !== "undefined") ? PDUS_DATABASE : [];
     }
 
     // Execute pluggable FilterEngine
@@ -965,6 +1051,7 @@ function runActiveFilter() {
           selectedSwitchLayers,
           requirePoEBt90,
           requireIndustrialHardened,
+          requireModularUplink: (typeof requireModularUplink !== "undefined" ? requireModularUplink : window.requireModularUplink),
           selectedFwVendors,
           selectedFwCategories,
           fwTargetThroughputGbps,
@@ -994,10 +1081,13 @@ function runActiveFilter() {
           selectedWlRangeTier,
           requireWl60GHz,
           requireWlBackup5G,
+          selectedAccSubCategory,
           selectedAccVendors,
           selectedAccTypes,
           selectedAccMounting,
           accMinPowerWatts,
+          selectedUpsCategory,
+          selectedUpsVoltage,
           requireUpsSineWave,
           requireUpsOnline,
           requireUpsEbm,
@@ -1189,9 +1279,10 @@ const NavigationHistory = {
       };
     }
 
-    // 5. BOM Drawer
+    // 5. BOM Modal / Drawer
+    const bomModal = document.getElementById("bomModal");
     const bomDrawer = document.getElementById("bomDrawer");
-    if (bomDrawer && !bomDrawer.classList.contains("translate-x-full")) {
+    if ((bomModal && !bomModal.classList.contains("hidden")) || (bomDrawer && !bomDrawer.classList.contains("translate-x-full"))) {
       return { tool: "bom" };
     }
 
@@ -1238,9 +1329,11 @@ const NavigationHistory = {
     }
 
     if (state.tool === "bom") {
+      const modal = document.getElementById("bomModal");
       const drawer = document.getElementById("bomDrawer");
-      if (drawer && drawer.classList.contains("translate-x-full")) {
-        if (typeof toggleBomDrawer === "function") toggleBomDrawer();
+      if ((modal && modal.classList.contains("hidden")) || (drawer && drawer.classList.contains("translate-x-full"))) {
+        if (typeof toggleBomModal === "function") toggleBomModal();
+        else if (typeof toggleBomDrawer === "function") toggleBomDrawer();
       }
       return true;
     }
@@ -1255,26 +1348,106 @@ const NavigationHistory = {
 };
 window.NavigationHistory = NavigationHistory;
 
-// Universal Master ESC Listener with Navigation History & Deselect
+// Universal Master ESC Listener with Overlay Dismiss & Canvas Deselection (Tab-Safe)
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") {
-    // 1. Port Matrix Studio Modal
-    const portStudio = document.getElementById("portMatrixStudioModal");
-    if (portStudio && !portStudio.classList.contains("hidden")) {
+    // 1. Close New Tab dropdown menu if open
+    const newTabDropdown = document.getElementById("newTabMenuDropdown");
+    if (newTabDropdown && !newTabDropdown.classList.contains("hidden")) {
       e.preventDefault();
-      if (typeof closePortMatrixStudio === "function") closePortMatrixStudio();
+      newTabDropdown.classList.add("hidden");
       return;
     }
 
-    // 2. Topology Quick Search popup
+    // 2. Project Level Menu Dropdown
+    const projDropdown = document.getElementById("projectLevelDropdown");
+    if (projDropdown && !projDropdown.classList.contains("hidden")) {
+      e.preventDefault();
+      projDropdown.classList.add("hidden");
+      return;
+    }
+
+    // 3. Global Search Modal (Ctrl+K Command Palette) & Dropdown
+    const globalSearchModal = document.getElementById("globalSearchModal");
+    if (globalSearchModal && !globalSearchModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof GlobalSearchEngine !== "undefined" && typeof GlobalSearchEngine.closeModal === "function") {
+        GlobalSearchEngine.closeModal();
+      } else {
+        globalSearchModal.classList.add("hidden");
+      }
+      return;
+    }
+
+    const globalSearchDropdown = document.getElementById("globalSearchDropdown");
+    if (globalSearchDropdown && !globalSearchDropdown.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof GlobalSearchEngine !== "undefined" && typeof GlobalSearchEngine.closeDropdown === "function") {
+        GlobalSearchEngine.closeDropdown();
+      } else {
+        globalSearchDropdown.classList.add("hidden");
+      }
+      return;
+    }
+
+    // 4. True Floating Overlay Dialogs (Sit on top of tabs - close these first)
+    const dsModal = document.getElementById("datasheetViewerModal");
+    if (dsModal && !dsModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof closeDatasheetModal === "function") closeDatasheetModal();
+      else dsModal.classList.add("hidden");
+      return;
+    }
+
+    const imgModal = document.getElementById("productImageModal");
+    if (imgModal && !imgModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof closeProductImageModal === "function") closeProductImageModal();
+      else imgModal.classList.add("hidden");
+      return;
+    }
+
+    const wizModal = document.getElementById("projectWizardModal");
+    if (wizModal && !wizModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof closeProjectWizardModal === "function") closeProjectWizardModal();
+      else wizModal.classList.add("hidden");
+      return;
+    }
+
+    const compareModal = document.getElementById("compareModal");
+    if (compareModal && !compareModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof toggleCompareModal === "function") toggleCompareModal();
+      else compareModal.classList.add("hidden");
+      return;
+    }
+
+    const projModal = document.getElementById("projectModal");
+    if (projModal && !projModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof toggleProjectModal === "function") toggleProjectModal();
+      else projModal.classList.add("hidden");
+      return;
+    }
+
+    const licModal = document.getElementById("licenseModal");
+    if (licModal && !licModal.classList.contains("hidden")) {
+      e.preventDefault();
+      if (typeof toggleLicenseModal === "function") toggleLicenseModal();
+      else licModal.classList.add("hidden");
+      return;
+    }
+
+    // 5. Canvas Quick Search Popups
     const topoSearchResults = document.getElementById("topologyQuickSearchResults");
     if (topoSearchResults && !topoSearchResults.classList.contains("hidden")) {
       e.preventDefault();
       if (typeof clearTopologySearch === "function") clearTopologySearch();
+      else topoSearchResults.classList.add("hidden");
       return;
     }
 
-    // 3. Physical Layout Quick Search popup
     const physSearchResults = document.getElementById("physQuickSearchResults");
     if (physSearchResults && !physSearchResults.classList.contains("hidden")) {
       e.preventDefault();
@@ -1282,77 +1455,85 @@ document.addEventListener("keydown", (e) => {
       return;
     }
 
-    // 4. Facility Inline Form (Add Space, Add Host, Add Floor)
+    // 6. Facility Inline Form (Add Space, Add Host, Add Floor)
     if (typeof facilityActiveForm !== "undefined" && facilityActiveForm) {
       e.preventDefault();
       if (typeof closeFacilityAddForm === "function") closeFacilityAddForm();
       return;
     }
 
-    // 5. Active selection in Physical Layout -> First ESC deselects node or fiber backbone
+    // 7. Active selection / drawing in Physical Layout -> First ESC cancels drawing or deselects corridor, multi-selection, node, or fiber backbone
     const physModal = document.getElementById("cableLayoutModal");
     if (physModal && !physModal.classList.contains("hidden")) {
+      if (typeof isDrawingCable !== "undefined" && window.isDrawingCable) {
+        e.preventDefault();
+        if (typeof cancelCableDrawing === "function") cancelCableDrawing();
+        return;
+      }
+      if (typeof isDraggingPhysNode !== "undefined" && window.isDraggingPhysNode) {
+        e.preventDefault();
+        window.isDraggingPhysNode = false;
+        window.draggedPhysNode = null;
+        return;
+      }
+      if (typeof selectedPathwayTrunkId !== "undefined" && selectedPathwayTrunkId) {
+        e.preventDefault();
+        if (typeof deselectPathwayTrunk === "function") deselectPathwayTrunk();
+        return;
+      }
+      if (typeof selectedNodeIds !== "undefined" && selectedNodeIds && selectedNodeIds.size > 0) {
+        e.preventDefault();
+        if (typeof clearMultiSelection === "function") clearMultiSelection();
+        return;
+      }
       if (typeof selectedFiberBackboneId !== "undefined" && selectedFiberBackboneId) {
         e.preventDefault();
         if (typeof deselectFiberBackbone === "function") deselectFiberBackbone();
         return;
       }
-      if (typeof selectedNodeId !== "undefined" && selectedNodeId) {
+      const hasSelNode = (typeof window.getSelectedNodeId === "function" && window.getSelectedNodeId()) || 
+                         (typeof selectedNodeId !== "undefined" && selectedNodeId);
+      if (hasSelNode) {
         e.preventDefault();
         if (typeof deselectNode === "function") deselectNode();
         return;
       }
     }
 
-    // 6. Active selection in Topology -> First ESC deselects node
+    // 8. Active selection in Topology -> First ESC deselects node
     const topoModal = document.getElementById("topologyModal");
     if (topoModal && !topoModal.classList.contains("hidden")) {
-      if ((typeof selectedTopologyNodeId !== "undefined" && selectedTopologyNodeId) || 
-          (typeof selectedTopologyRackLoc !== "undefined" && selectedTopologyRackLoc)) {
+      const hasTopoSel = (typeof window.getSelectedTopologyNodeId === "function" && window.getSelectedTopologyNodeId()) || 
+                         (typeof selectedTopologyNodeId !== "undefined" && selectedTopologyNodeId) ||
+                         (typeof window.getSelectedTopologyRackLoc === "function" && window.getSelectedTopologyRackLoc()) ||
+                         (typeof selectedTopologyRackLoc !== "undefined" && selectedTopologyRackLoc);
+      if (hasTopoSel) {
         e.preventDefault();
         if (typeof deselectTopologyNode === "function") deselectTopologyNode();
         return;
       }
     }
 
-    // 7. Navigation History Back-Stack: If user arrived via a cross-tool link, ESC goes BACK!
-    const prevState = NavigationHistory.pop();
-    if (prevState) {
-      e.preventDefault();
-      // Close currently active modal
-      if (physModal && !physModal.classList.contains("hidden")) {
-        if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
-      }
-      if (topoModal && !topoModal.classList.contains("hidden")) {
-        if (typeof toggleTopologyModal === "function") toggleTopologyModal();
-      }
-      const facModal = document.getElementById("facilityModal");
-      if (facModal && !facModal.classList.contains("hidden")) {
-        if (typeof toggleFacilityModal === "function") toggleFacilityModal();
-      }
-      const bomDrawer = document.getElementById("bomDrawer");
-      if (bomDrawer && !bomDrawer.classList.contains("translate-x-full")) {
-        if (typeof toggleBomDrawer === "function") toggleBomDrawer();
-      }
-
-      // Restore previous state!
-      NavigationHistory.restoreState(prevState);
+    // 9. IMPORTANT: When Workspace Tabs are active, NEVER exit out of or close tabs on ESC!
+    // Tabs are persistent workspace environments (like browser or IDE tabs).
+    // They should only close when the user clicks 'x' on the tab or presses Ctrl+W.
+    if (window.TabManager) {
       return;
     }
 
-    // 8. If no navigation history, close the top-most active modal/drawer
-    const modals = [
+    // Legacy Fallback (Only if TabManager is completely absent): close top-most active modal
+    const legacyModals = [
+      { id: "cableScheduleModal", closeFn: () => typeof closeCablePullScheduleModal === "function" && closeCablePullScheduleModal() },
+      { id: "revisionModal", closeFn: () => typeof closeRevisionModal === "function" && closeRevisionModal() },
+      { id: "submittalModal", closeFn: () => typeof closeSubmittalModal === "function" && closeSubmittalModal() },
       { id: "cableLayoutModal", closeFn: () => typeof toggleCableLayoutModal === "function" && toggleCableLayoutModal() },
       { id: "topologyModal", closeFn: () => typeof toggleTopologyModal === "function" && toggleTopologyModal() },
       { id: "facilityModal", closeFn: () => typeof handleFacilityModalCloseOrBack === "function" ? handleFacilityModalCloseOrBack() : (typeof toggleFacilityModal === "function" && toggleFacilityModal()) },
       { id: "projectHealthModal", closeFn: () => typeof toggleProjectHealthModal === "function" && toggleProjectHealthModal() },
-      { id: "compareModal", closeFn: () => typeof toggleCompareModal === "function" && toggleCompareModal() },
-      { id: "projectModal", closeFn: () => typeof toggleProjectModal === "function" && toggleProjectModal() },
-      { id: "licenseModal", closeFn: () => typeof toggleLicenseModal === "function" && toggleLicenseModal() },
-      { id: "bomDrawer", closeFn: () => typeof toggleBomDrawer === "function" && toggleBomDrawer() }
+      { id: "bomModal", closeFn: () => typeof toggleBomModal === "function" ? toggleBomModal() : (typeof toggleBomDrawer === "function" && toggleBomDrawer()) }
     ];
 
-    for (const m of modals) {
+    for (const m of legacyModals) {
       const el = document.getElementById(m.id);
       if (el && !el.classList.contains("hidden") && !el.classList.contains("translate-x-full")) {
         e.preventDefault();
@@ -1395,5 +1576,158 @@ window.setOpticQuickFilter = setOpticQuickFilter;
 window.setUplinkSpeedFilter = setUplinkSpeedFilter;
 window.selectedDacLength = selectedDacLength;
 window.selectedPatchCordLength = selectedPatchCordLength;
+window.selectedAccSubCategory = selectedAccSubCategory;
 window.toggleFilterItem = toggleFilterItem;
 window.showToast = showToast;
+
+function toggleProjectLevelMenu() {
+  const dropdown = document.getElementById("projectLevelDropdown");
+  if (!dropdown) return;
+  dropdown.classList.toggle("hidden");
+  if (!dropdown.classList.contains("hidden") && window.lucide) {
+    lucide.createIcons();
+  }
+}
+window.toggleProjectLevelMenu = toggleProjectLevelMenu;
+
+let isCatalogExpanded = false;
+
+function toggleCatalogExpand(forceState = null) {
+  const container = document.getElementById("domainNavigationContainer");
+  const chevron = document.getElementById("catalogExpandChevron");
+  const btn = document.getElementById("catalogExpandBtn");
+  if (!container) return;
+
+  if (forceState !== null) {
+    isCatalogExpanded = forceState;
+  } else {
+    isCatalogExpanded = !isCatalogExpanded;
+  }
+
+  if (isCatalogExpanded) {
+    container.classList.remove("max-w-0", "opacity-0", "pointer-events-none");
+    container.classList.add("max-w-[900px]", "opacity-100", "pointer-events-auto");
+    if (chevron) chevron.style.transform = "rotate(180deg)";
+    if (btn) {
+      btn.classList.add("bg-brand-600/20", "border-brand-500/40", "text-brand-300");
+    }
+  } else {
+    container.classList.add("max-w-0", "opacity-0", "pointer-events-none");
+    container.classList.remove("max-w-[900px]", "opacity-100", "pointer-events-auto");
+    if (chevron) chevron.style.transform = "";
+    if (btn) {
+      btn.classList.remove("bg-brand-600/20", "border-brand-500/40", "text-brand-300");
+    }
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function handleCatalogNavClick() {
+  if (typeof TabManager !== "undefined") {
+    const activeTab = TabManager.getActiveTabId();
+    if (!activeTab.startsWith("catalog")) {
+      const targetDomain = typeof activeDomain !== "undefined" ? activeDomain : "networking";
+      TabManager.openTab("catalog_" + targetDomain);
+      toggleCatalogExpand(true);
+      toggleFacilityExpand(false);
+      return;
+    }
+  }
+  toggleCatalogExpand();
+}
+
+let isFacilityExpanded = false;
+
+function toggleFacilityExpand(forceState = null) {
+  const container = document.getElementById("facilityNavigationContainer");
+  const chevron = document.getElementById("facilityExpandChevron");
+  const btn = document.getElementById("facilityExpandBtn");
+  if (!container) return;
+
+  if (forceState !== null) {
+    isFacilityExpanded = forceState;
+  } else {
+    isFacilityExpanded = !isFacilityExpanded;
+  }
+
+  if (isFacilityExpanded) {
+    container.classList.remove("max-w-0", "opacity-0", "pointer-events-none");
+    container.classList.add("max-w-[700px]", "opacity-100", "pointer-events-auto");
+    if (chevron) chevron.style.transform = "rotate(180deg)";
+    if (btn) {
+      btn.classList.add("bg-sky-600/20", "border-sky-500/40", "text-sky-300");
+    }
+    updateFacilitySubNavUI();
+  } else {
+    container.classList.add("max-w-0", "opacity-0", "pointer-events-none");
+    container.classList.remove("max-w-[700px]", "opacity-100", "pointer-events-auto");
+    if (chevron) chevron.style.transform = "";
+    if (btn) {
+      btn.classList.remove("bg-sky-600/20", "border-sky-500/40", "text-sky-300");
+    }
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function updateFacilitySubNavUI() {
+  const activeTab = typeof TabManager !== "undefined" ? TabManager.getActiveTabId() : "";
+  const bHierarchy = document.getElementById("facility-nav-hierarchy");
+  const bEnclosures = document.getElementById("facility-nav-enclosures");
+  const bPortMatrix = document.getElementById("facility-nav-portmatrix");
+
+  const activeClasses = "bg-slate-800 text-white font-bold border-sky-500/50 shadow-sm";
+  const inactiveClasses = "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60";
+
+  [bHierarchy, bEnclosures, bPortMatrix].forEach(b => {
+    if (!b) return;
+    b.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${inactiveClasses}`;
+  });
+
+  if (activeTab === "facility" && bHierarchy) {
+    bHierarchy.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeClasses}`;
+  } else if (activeTab === "enclosures" && bEnclosures) {
+    bEnclosures.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeClasses}`;
+  } else if (activeTab === "port_matrix" && bPortMatrix) {
+    bPortMatrix.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeClasses}`;
+  }
+}
+
+function handleFacilityNavClick() {
+  if (typeof TabManager !== "undefined") {
+    const cur = TabManager.getActiveTabId();
+    if (cur !== "facility" && cur !== "enclosures" && cur !== "port_matrix") {
+      TabManager.openTab("facility");
+      toggleFacilityExpand(true);
+      toggleCatalogExpand(false);
+      return;
+    }
+  }
+  toggleFacilityExpand();
+}
+
+window.handleCatalogNavClick = handleCatalogNavClick;
+window.toggleCatalogExpand = toggleCatalogExpand;
+window.isCatalogExpanded = isCatalogExpanded;
+
+window.handleFacilityNavClick = handleFacilityNavClick;
+window.toggleFacilityExpand = toggleFacilityExpand;
+window.updateFacilitySubNavUI = updateFacilitySubNavUI;
+window.isFacilityExpanded = isFacilityExpanded;
+
+// Outside click handler to close projectLevelDropdown
+document.addEventListener("click", (e) => {
+  const wrapper = document.getElementById("projectLevelMenuWrapper");
+  const dropdown = document.getElementById("projectLevelDropdown");
+  if (dropdown && !dropdown.classList.contains("hidden")) {
+    if (wrapper && !wrapper.contains(e.target)) {
+      dropdown.classList.add("hidden");
+    }
+  }
+});
+
