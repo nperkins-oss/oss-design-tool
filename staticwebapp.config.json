@@ -6,7 +6,7 @@
       "/assets/*",
       "/data/*",
       "/js/*",
-      "/*.{css,scss,js,png,gif,ico,jpg,svg,webp,json,pdf}"
+      "*.{css,scss,js,png,gif,ico,jpg,svg,webp,json,pdf}"
     ]
   },
   "globalHeaders": {
@@ -19,17 +19,5 @@
     ".json": "application/json",
     ".svg": "image/svg+xml",
     ".pdf": "application/pdf"
-  },
-  "responseOverrides": {
-    "404": {
-      "rewrite": "/index.html",
-      "statusCode": 200
-    }
   }
-  "routes": [
-  {
-    "route": "/*",
-    "allowedRoles": ["authenticated"]
-  }
-]
 }
