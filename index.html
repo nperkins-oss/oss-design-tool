@@ -431,6 +431,19 @@
           <span>Quote BOM</span>
           <span id="bomCountBadge" class="bg-white/20 text-white font-mono text-[11px] px-1.5 py-0.2 rounded-md">0</span>
         </button>
+
+        <!-- Authenticated Corporate User Profile Pill -->
+        <div id="authUserWrapper" class="hidden items-center gap-2 pl-2 border-l border-slate-800">
+          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700/80 text-xs shadow-inner">
+            <div id="authUserAvatar" class="w-5 h-5 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
+              U
+            </div>
+            <span id="authUserEmail" class="text-slate-300 font-medium hidden md:inline max-w-[150px] truncate" title="Signed in corporate account">User</span>
+            <a href="/.auth/logout?post_logout_redirect_uri=/login.html" class="text-slate-400 hover:text-rose-400 transition-colors ml-1 p-0.5" title="Sign Out">
+              <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+            </a>
+          </div>
+        </div>
       </div>
 
     </div>
@@ -2651,6 +2664,9 @@
   
   <!-- Workspace Tab-Based Navigation Engine -->
   <script src="js/core/tab_manager.js"></script>
+
+  <!-- Azure Static Web Apps Corporate Authentication & Domain Guard -->
+  <script src="js/core/auth.js"></script>
   
   <script>
     // Notify physical canvas when switching projects so blueprints reload
