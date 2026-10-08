@@ -275,6 +275,9 @@ function switchDomain(domainKey, openTabFlag = true) {
     TabManager.openTab("catalog_" + domainKey);
   }
 
+  // Auto-reset search filters and search bar on page change to prevent hidden filter zero-results traps
+  resetCurrentFilters(true);
+
   buildDomainNavigation();
   buildSubModeNavigation();
   buildCalculatorStrip();
@@ -293,6 +296,10 @@ function switchMode(newMode) {
   }
 
   currentMode = newMode;
+
+  // Auto-reset search filters and search bar on mode change to prevent hidden filter zero-results traps
+  resetCurrentFilters(true);
+
   buildDomainNavigation();
   buildSubModeNavigation();
   buildCalculatorStrip();
@@ -351,7 +358,7 @@ function updateSearchFilter(val) {
   debouncedRunActiveFilter();
 }
 
-function resetCurrentFilters() {
+function resetCurrentFilters(silent = false) {
   selectedVendors = [];
   selectedPortCounts = [];
   selectedPoEClasses = [];
@@ -440,7 +447,9 @@ function resetCurrentFilters() {
 
   buildSidebarFilters();
   runActiveFilter();
-  showToast("Filters reset to default.");
+  if (!silent && typeof showToast === "function") {
+    showToast("Filters reset to default.");
+  }
 }
 
 // -----------------------------------------------------------
