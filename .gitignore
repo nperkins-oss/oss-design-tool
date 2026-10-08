@@ -1,5 +1,6 @@
 # Temporary scratch scripts, browser test profiles, and debug dumps
 scratch/
+Datasheets/Infrastructure/
 
 # Operating System Files
 Thumbs.db

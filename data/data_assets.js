@@ -6397,6 +6397,454 @@ const CATALOG_ASSETS = {
   "z4c-hw": {
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
     "image": "assets/images/products/z4c-hw.webp"
+  },
+  "2POSTRMKITHD": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite 2POSTRMKITHD - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_2postrmkithd.webp"
+  },
+  "4POSTRAILKIT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite 4POSTRAILKIT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_4postrailkit.webp"
+  },
+  "5PX1500RTG2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX1500RTG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px1500rtg2.webp"
+  },
+  "5PX1500RTNG2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX1500RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px1500rtng2.webp"
+  },
+  "5PX2000RTNG2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX2000RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px2000rtng2.webp"
+  },
+  "5PX3000RTNG2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX3000RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px3000rtng2.webp"
+  },
+  "5PXEBM48RTG2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PXEBM48RTG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5pxebm48rtg2.webp"
+  },
+  "9PX1500RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX1500RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px1500rt.webp"
+  },
+  "9PX2000RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX2000RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px2000rt.webp"
+  },
+  "9PX3000GRT-L": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX3000GRT-L - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px3000grt_l.webp"
+  },
+  "9PX3000RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX3000RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px3000rt.webp"
+  },
+  "9PXEBM72RT-L": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PXEBM72RT-L - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9pxebm72rt_l.webp"
+  },
+  "BP48V24-2U": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP48V24-2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp48v24_2u.webp"
+  },
+  "BP72VRM2U": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP72VRM2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp72vrm2u.webp"
+  },
+  "E2MT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite E2MT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_e2mt.webp"
+  },
+  "EATS115": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EATS115 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_eats115.webp"
+  },
+  "EATS120": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EATS120 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_eats120.webp"
+  },
+  "EBA001": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EBA001 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_eba001.webp"
+  },
+  "EMA004": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EMA004 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_ema004.webp"
+  },
+  "EMI001": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EMI001 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_emi001.webp"
+  },
+  "EMPDT1H1C2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EMPDT1H1C2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_empdt1h1c2.webp"
+  },
+  "MBP3000": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton MBP3000 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_mbp3000.webp"
+  },
+  "NETWORK-M2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton NETWORK-M2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_network_m2.webp"
+  },
+  "PDU1215": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDU1215 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdu1215.webp"
+  },
+  "PDU1220": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDU1220 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdu1220.webp"
+  },
+  "PDUB15": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUB15 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdub15.webp"
+  },
+  "PDUB20": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUB20 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdub20.webp"
+  },
+  "PDUMH15NET": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMH15NET - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumh15net.webp"
+  },
+  "PDUMH20NET2": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMH20NET2 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumh20net2.webp"
+  },
+  "PDUMH30HVNET": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMH30HVNET - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumh30hvnet.webp"
+  },
+  "PDUMV20HV": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMV20HV - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumv20hv.webp"
+  },
+  "PDUMV20NET": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMV20NET - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumv20net.webp"
+  },
+  "SMART1000RM2UN": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART1000RM2UN - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart1000rm2un.webp"
+  },
+  "SMART1500LCD": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART1500LCD - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart1500lcd.webp"
+  },
+  "SMART2200RM2U": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART2200RM2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart2200rm2u.webp"
+  },
+  "SMART2200RMXL2U": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART2200RMXL2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart2200rmxl2u.webp"
+  },
+  "SMART3000RM2U": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART3000RM2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart3000rm2u.webp"
+  },
+  "SU1500RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU1500RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su1500rt.webp"
+  },
+  "SU2200RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU2200RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su2200rt.webp"
+  },
+  "SU3000LCD2UHV": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU3000LCD2UHV - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su3000lcd2uhv.webp"
+  },
+  "SU3000RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU3000RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su3000rt.webp"
+  },
+  "SU5000RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU5000RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su5000rt.webp"
+  },
+  "SU6000RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU6000RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su6000rt.webp"
+  },
+  "WEBCARDLXE": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite WEBCARDLXE - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_webcardlxe.webp"
+  },
+  "eaton-5px1500rtg2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX1500RTG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px1500rtg2.webp"
+  },
+  "eaton-5px1500rtng2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX1500RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px1500rtng2.webp"
+  },
+  "eaton-5px2000rtng2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX2000RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px2000rtng2.webp"
+  },
+  "eaton-5px3000rtng2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX3000RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5px3000rtng2.webp"
+  },
+  "eaton-5pxebm48rtg2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PXEBM48RTG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5pxebm48rtg2.webp"
+  },
+  "eaton-9px1500rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX1500RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px1500rt.webp"
+  },
+  "eaton-9px2000rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX2000RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px2000rt.webp"
+  },
+  "eaton-9px3000grt-l": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX3000GRT-L - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px3000grt_l.webp"
+  },
+  "eaton-9px3000rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX3000RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9px3000rt.webp"
+  },
+  "eaton-9pxebm72rt-l": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PXEBM72RT-L - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9pxebm72rt_l.webp"
+  },
+  "eaton-eats115": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EATS115 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_eats115.webp"
+  },
+  "eaton-eats120": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EATS120 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_eats120.webp"
+  },
+  "eaton-eba001": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EBA001 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_eba001.webp"
+  },
+  "eaton-ema004": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EMA004 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_ema004.webp"
+  },
+  "eaton-emi001": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EMI001 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_emi001.webp"
+  },
+  "eaton-empdt1h1c2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton EMPDT1H1C2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_empdt1h1c2.webp"
+  },
+  "eaton-mbp3000": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton MBP3000 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_mbp3000.webp"
+  },
+  "eaton-network-m2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton NETWORK-M2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_network_m2.webp"
+  },
+  "tripplite-2postrmkithd": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite 2POSTRMKITHD - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_2postrmkithd.webp"
+  },
+  "tripplite-4postrailkit": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite 4POSTRAILKIT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_4postrailkit.webp"
+  },
+  "tripplite-bp48v24-2u": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP48V24-2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp48v24_2u.webp"
+  },
+  "tripplite-bp72vrm2u": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP72VRM2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp72vrm2u.webp"
+  },
+  "tripplite-e2mt": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite E2MT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_e2mt.webp"
+  },
+  "tripplite-pdu1215": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDU1215 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdu1215.webp"
+  },
+  "tripplite-pdu1220": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDU1220 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdu1220.webp"
+  },
+  "tripplite-pdub15": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUB15 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdub15.webp"
+  },
+  "tripplite-pdub20": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUB20 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdub20.webp"
+  },
+  "tripplite-pdumh15net": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMH15NET - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumh15net.webp"
+  },
+  "tripplite-pdumh20net2": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMH20NET2 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumh20net2.webp"
+  },
+  "tripplite-pdumh30hvnet": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMH30HVNET - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumh30hvnet.webp"
+  },
+  "tripplite-pdumv20hv": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMV20HV - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumv20hv.webp"
+  },
+  "tripplite-pdumv20net": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite PDUMV20NET - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_pdumv20net.webp"
+  },
+  "tripplite-smart1000rm2un": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART1000RM2UN - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart1000rm2un.webp"
+  },
+  "tripplite-smart1500lcd": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART1500LCD - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart1500lcd.webp"
+  },
+  "tripplite-smart2200rm2u": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART2200RM2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart2200rm2u.webp"
+  },
+  "tripplite-smart2200rmxl2u": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART2200RMXL2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart2200rmxl2u.webp"
+  },
+  "tripplite-smart3000rm2u": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SMART3000RM2U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_smart3000rm2u.webp"
+  },
+  "tripplite-su1500rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU1500RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su1500rt.webp"
+  },
+  "tripplite-su2200rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU2200RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su2200rt.webp"
+  },
+  "tripplite-su3000lcd2uhv": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU3000LCD2UHV - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su3000lcd2uhv.webp"
+  },
+  "tripplite-su3000rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU3000RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su3000rt.webp"
+  },
+  "tripplite-su5000rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU5000RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su5000rt.webp"
+  },
+  "tripplite-su6000rt": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU6000RT - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su6000rt.webp"
+  },
+  "tripplite-webcardlxe": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite WEBCARDLXE - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_webcardlxe.webp"
+  },
+  "tripplite-bp192v12-3u": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP192V12-3U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp192v12_3u.webp"
+  },
+  "BP192V12-3U": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP192V12-3U - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp192v12_3u.webp"
+  },
+  "tripplite-bp72v18-2us": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP72V18-2US - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp72v18_2us.webp"
+  },
+  "BP72V18-2US": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite BP72V18-2US - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_bp72v18_2us.webp"
+  },
+  "eaton-rk2pc": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton RK2PC - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_rk2pc.webp"
+  },
+  "RK2PC": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton RK2PC - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_rk2pc.webp"
+  },
+  "eaton-ipm-optimize-1y": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton IPM-OPTIMIZE-1Y - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_ipm_optimize_1y.webp"
+  },
+  "IPM-OPTIMIZE-1Y": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton IPM-OPTIMIZE-1Y - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_ipm_optimize_1y.webp"
+  },
+  "eaton-ipm-manage-1y": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton IPM-MANAGE-1Y - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_ipm_manage_1y.webp"
+  },
+  "IPM-MANAGE-1Y": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton IPM-MANAGE-1Y - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_ipm_manage_1y.webp"
+  },
+  "apc-ap9641": {
+    "datasheetPath": "Datasheets/Infrastructure/APC/APC AP9641 - Tech Specs.pdf",
+    "image": "assets/images/products/apc_ap9641.webp"
+  },
+  "AP9641": {
+    "datasheetPath": "Datasheets/Infrastructure/APC/APC AP9641 - Tech Specs.pdf",
+    "image": "assets/images/products/apc_ap9641.webp"
+  },
+  "apc-ap9335th": {
+    "datasheetPath": "Datasheets/Infrastructure/APC/APC AP9335TH - Tech Specs.pdf",
+    "image": "assets/images/products/apc_ap9335th.webp"
+  },
+  "AP9335TH": {
+    "datasheetPath": "Datasheets/Infrastructure/APC/APC AP9335TH - Tech Specs.pdf",
+    "image": "assets/images/products/apc_ap9335th.webp"
+  },
+  "tripplite-su5000rtf": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU5000RTF - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su5000rtf.webp"
+  },
+  "SU5000RTF": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SU5000RTF - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_su5000rtf.webp"
+  },
+  "tripplite-omnivsx1500": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite OMNIVSX1500 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_omnivsx1500.webp"
+  },
+  "OMNIVSX1500": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite OMNIVSX1500 - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_omnivsx1500.webp"
+  },
+  "tripplite-avrx550ua": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite AVRX550UA - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_avrx550ua.webp"
+  },
+  "AVRX550UA": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite AVRX550UA - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_avrx550ua.webp"
+  },
+  "tripplite-avrx750ua": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite AVRX750UA - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_avrx750ua.webp"
+  },
+  "AVRX750UA": {
+    "datasheetPath": "Datasheets/Infrastructure/Tripp Lite/Tripp Lite AVRX750UA - Tech Specs.pdf",
+    "image": "assets/images/products/tripplite_avrx750ua.webp"
+  },
+  "apc-ap98115": {
+    "datasheetPath": "Datasheets/Infrastructure/APC/APC AP98115 - Tech Specs.pdf",
+    "image": "assets/images/products/apc_ap98115.webp"
+  },
+  "AP98115": {
+    "datasheetPath": "Datasheets/Infrastructure/APC/APC AP98115 - Tech Specs.pdf",
+    "image": "assets/images/products/apc_ap98115.webp"
   }
 };
 

@@ -60,6 +60,42 @@ function closeProductImageModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+/**
+ * Safely formats receptacles / outlet breakdown summary for UPS and PDU devices
+ * Prevents [object Object] artifacts when receptacleBreakdown is an array of objects
+ */
+function formatReceptaclesSummary(item) {
+  if (!item) return 'Standard Outlets';
+  // 1. If human-curated string is present on receptacles
+  if (typeof item.receptacles === 'string' && item.receptacles.trim()) {
+    return item.receptacles.trim();
+  }
+  // 2. If receptacleBreakdown is an array of objects/strings
+  if (Array.isArray(item.receptacleBreakdown) && item.receptacleBreakdown.length > 0) {
+    const formatted = item.receptacleBreakdown.map(r => {
+      if (typeof r === 'string') return r.trim();
+      if (r && typeof r === 'object') {
+        if (r.label) return r.label;
+        if (r.count && r.type) return `${r.count}x ${r.type}`;
+        if (r.type) return r.type;
+      }
+      return '';
+    }).filter(Boolean).join(', ');
+    if (formatted) return formatted;
+  }
+  // 3. If receptacleBreakdown is a string
+  if (typeof item.receptacleBreakdown === 'string' && item.receptacleBreakdown.trim()) {
+    return item.receptacleBreakdown.trim();
+  }
+  // 4. If outlets count is present
+  const count = item.outletsCount || item.portCount || item.outlets;
+  if (count) {
+    return `${count} Outlets`;
+  }
+  return 'Multiple Outlets';
+}
+window.formatReceptaclesSummary = formatReceptaclesSummary;
+
 window.openDatasheetModal = openDatasheetModal;
 window.closeDatasheetModal = closeDatasheetModal;
 window.openProductImageModal = openProductImageModal;
@@ -867,7 +903,7 @@ function renderAccessoryCard(acc) {
             <div class="flex justify-between"><span class="text-slate-500">Power Rating:</span><span class="text-amber-400 font-bold">${acc.va || 1500}VA / ${acc.powerWatts || 1000}W (${acc.rackUnits ? `${acc.rackUnits}U Rack` : 'Rackmount'})</span></div>
             <div class="flex justify-between"><span class="text-slate-500">Input / Output:</span><span class="text-slate-300 font-bold">${acc.inputVoltage || 120}V (${acc.inputConnector || '5-15P'}) &bull; Out: ${acc.outputVoltage || 120}V</span></div>
             <div class="flex justify-between"><span class="text-slate-500">Battery Runtime:</span><span class="text-emerald-400 font-bold">${acc.internalRuntimeHalfLoad || 18}m @ 50% &bull; ${acc.internalRuntimeFullLoad || 6}m @ 100%</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Receptacles:</span><span class="text-indigo-300 truncate max-w-[210px]">${escapeHTML(acc.receptacles || 'Standard Outlets')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Receptacles:</span><span class="text-indigo-300 truncate max-w-[210px]" title="${escapeHTML(formatReceptaclesSummary(acc))}">${escapeHTML(formatReceptaclesSummary(acc))}</span></div>
             ${(acc.ebpModel && acc.ebpModel !== 'None') ? `<div class="flex justify-between"><span class="text-slate-500">Scalable EBP:</span><span class="text-purple-300 font-bold">${escapeHTML(acc.ebpModel)} (${acc.ebpRackHeight || 2}U)</span></div>` : ''}
           </div>
         ` : (acc.type === 'ebp' || acc.isEbp) ? `
@@ -880,7 +916,7 @@ function renderAccessoryCard(acc) {
           <div class="bg-slate-950 p-2.5 rounded-xl border border-sky-900/40 mb-2.5 text-xs font-mono space-y-1">
             <div class="flex justify-between"><span class="text-slate-500">Capacity & Type:</span><span class="text-sky-300 font-bold">${acc.inputVoltage || 120}V ${acc.inputCircuitAmps || 15}A (${acc.pduType || 'PDU'})</span></div>
             <div class="flex justify-between"><span class="text-slate-500">Input Cord:</span><span class="text-slate-200">${acc.inputConnector || '5-15P'} (${acc.cordLengthFt || 10}ft)</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">Outlets:</span><span class="text-emerald-300 font-bold truncate max-w-[210px]">${escapeHTML(acc.receptacles || 'Multiple Outlets')}</span></div>
+            <div class="flex justify-between"><span class="text-slate-500">Outlets:</span><span class="text-emerald-300 font-bold truncate max-w-[210px]" title="${escapeHTML(formatReceptaclesSummary(acc))}">${escapeHTML(formatReceptaclesSummary(acc))}</span></div>
           </div>
         ` : (acc.type === 'power_cord') ? `
           <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
@@ -953,6 +989,7 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
       else if (mode === "enclosures") role = "Cabinets & Enclosures";
       else if (mode === "ups") role = "Rack UPS Power";
       else if (mode === "pdus") role = "Rackmount PDU";
+      else if (mode === "power_cords") role = "Power Jumper Cable";
       else if (mode === "cabling") role = "Structured Cabling";
       else if (mode === "pathways") role = "Pathways & J-Hooks";
       else if (mode === "accessories") {
@@ -1058,15 +1095,29 @@ function renderCardByDomain(item, mode) {
         <div class="flex justify-between"><span class="text-slate-500">Enclosure Type:</span><span class="text-slate-200">${escapeHTML(rackDesc)}</span></div>
       </div>
     `;
-  } else if (mode === "ups" || item.category === "ups" || item.type === "ups") {
-    const topology = item.description?.includes('LiFePO4') ? 'LiFePO4 Online Double-Conversion' : (item.description?.includes('Sine Wave') ? 'Pure Sine Wave Battery Backup' : 'Line-Interactive Sine Wave');
-    specStripHtml = `
-      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
-        <div class="flex justify-between"><span class="text-slate-500">Power Rating:</span><span class="text-amber-400 font-bold">${item.powerWatts || 1350}W Output (${item.rackUnits ? `${item.rackUnits}U Rack` : 'Rackmount'})</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Topology:</span><span class="text-sky-300 font-bold">${escapeHTML(topology)}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Chassis Depth:</span><span class="text-slate-200">${item.depthInches ? `${item.depthInches}" Rack Depth` : 'Standard Rack Depth'}</span></div>
-      </div>
-    `;
+  } else if (mode === "ups" || item.category === "ups" || item.type === "ups" || item.type === "ebp" || item.isEbp) {
+    if (item.type === 'ebp' || item.isEbp) {
+      specStripHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-purple-900/40 mb-2.5 text-xs font-mono space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Bus Voltage:</span><span class="text-purple-300 font-bold">${item.dcVoltage || 72}V DC Industrial Bus</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Form Factor:</span><span class="text-slate-200 font-bold">${item.rackUnits || 2}U Rackmount (${item.weightLbs || 70} lbs)</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Target UPS:</span><span class="text-amber-300 font-bold truncate max-w-[210px]">${(item.compatibleUps || []).join(', ') || 'Enterprise UPS'}</span></div>
+        </div>
+      `;
+    } else {
+      const topology = item.topology || (item.description?.includes('LiFePO4') ? 'LiFePO4 Online Double-Conversion' : (item.description?.includes('Sine Wave') ? 'Pure Sine Wave Battery Backup' : 'Line-Interactive Sine Wave'));
+      const netLabel = item.isNetworked ? `<span class="text-emerald-400 font-bold">Networked (${item.networkType || 'SmartConnect/SNMP'})</span>` : '<span class="text-slate-400">Unmanaged (Add NMC Card)</span>';
+      specStripHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Power Rating:</span><span class="text-amber-400 font-bold">${item.va || 1500}VA / ${item.powerWatts || 1000}W (${item.rackUnits ? `${item.rackUnits}U Rack` : 'Rackmount'})</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Input / Plug:</span><span class="text-slate-300 font-bold">${item.inputVoltage || 120}V Nominal &bull; Plug: ${item.plugType || item.inputConnector || '5-15P'}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Topology / Run:</span><span class="text-sky-300 font-bold">${escapeHTML(topology)}${item.internalRuntimeHalfLoad ? ` (${item.internalRuntimeHalfLoad}m @ 50%)` : ''}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Receptacles:</span><span class="text-indigo-300 truncate max-w-[210px]" title="${escapeHTML(formatReceptaclesSummary(item))}">${escapeHTML(formatReceptaclesSummary(item))}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Network Mgmt:</span>${netLabel}</div>
+          ${(item.ebpModel && item.ebpModel !== 'None') ? `<div class="flex justify-between"><span class="text-slate-500">Scalable EBP:</span><span class="text-purple-300 font-bold">${escapeHTML(item.ebpModel)} (${item.ebpRackHeight || 2}U)</span></div>` : ''}
+        </div>
+      `;
+    }
   } else if (mode === "cabling" || item.category === "cabling" || item.type === "patch_panel" || item.type === "bulk_cable" || item.type === "fiber_trunk" || item.type === "patch_cord") {
     const configDesc = item.ports ? `${item.ports}-Port Keystone Panel` : (item.ftPerBox ? `${item.ftPerBox} ft Spool Box` : (item.strands ? `${item.strands}-Strand Armored LC Trunk` : (item.lengthFt != null ? (item.lengthFt === 0.5 ? '6-Inch (0.5 ft) Patch Cord' : `${item.lengthFt} ft Patch Cord`) : `${item.packQty || 1}-Pack`)));
     const ratingDesc = item.rating || (item.medium ? item.medium.toUpperCase() : null) || item.standard || 'Cat6A TIA-568';
@@ -1087,11 +1138,22 @@ function renderCardByDomain(item, mode) {
       </div>
     `;
   } else if (mode === "pdus" || item.category === "pdus" || item.type === "pdu") {
+    const netLabel = item.isNetworked ? `<span class="text-sky-400 font-bold">Network Managed (${item.networkType || 'Switched'})</span>` : (item.networkType ? `${item.networkType}` : 'Unmanaged Basic');
     specStripHtml = `
-      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
-        <div class="flex justify-between"><span class="text-slate-500">Input Circuit:</span><span class="text-sky-300 font-bold">${item.inputVoltage || 120}V ${item.inputCircuitAmps || 15}A (${item.inputConnector || '5-15P'})</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Receptacles:</span><span class="text-emerald-400 font-bold truncate max-w-[210px]">${escapeHTML(item.receptacles || 'Multiple Outlets')}</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Form Factor:</span><span class="text-slate-200">${item.rackUnits ? `${item.rackUnits}U Horizontal` : '0U Vertical Toolless'}</span></div>
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-sky-900/40 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Input Circuit:</span><span class="text-sky-300 font-bold">${item.inputVoltage || 120}V ${item.inputCircuitAmps || 15}A &bull; Plug: ${item.plugType || item.inputConnector || '5-15P'}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Outlets Breakdown:</span><span class="text-emerald-400 font-bold truncate max-w-[210px]" title="${escapeHTML(formatReceptaclesSummary(item))}">${escapeHTML(formatReceptaclesSummary(item))}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Management:</span><span>${netLabel}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Form Factor:</span><span class="text-slate-200">${item.rackUnits ? `${item.rackUnits}U Horizontal` : '0U Vertical Toolless'}${item.hasDisplay ? ' &bull; Ammeter Display' : ''}</span></div>
+      </div>
+    `;
+  } else if (mode === "power_cords" || item.category === "power_cords" || item.type === "power_cord") {
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-teal-900/40 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Connectors:</span><span class="text-teal-400 font-bold">${escapeHTML(item.plugPairing || `${item.inputConnector} to ${item.outputConnector}`)}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Length & Gauge:</span><span class="text-sky-300 font-bold">${item.lengthFt} ft (${item.lengthMeters ? `${item.lengthMeters}m` : ''}) &bull; ${item.wireGauge || '18 AWG'}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Electrical Rating:</span><span class="text-emerald-400 font-bold">${item.rating || '10A 100-250V'}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Color / Feed:</span><span class="text-slate-200">${escapeHTML(item.color || 'Black')} Jacket${item.feedLabel ? ` (${escapeHTML(item.feedLabel)})` : ''}</span></div>
       </div>
     `;
   } else if (mode === "pathways" || item.category === "pathways" || item.type === "pathway") {
@@ -1105,6 +1167,8 @@ function renderCardByDomain(item, mode) {
   }
 
   const isUps = mode === "ups" || item.category === "ups" || item.type === "ups";
+  const isPdu = mode === "pdus" || item.category === "pdus" || item.type === "pdu";
+  const isCord = mode === "power_cords" || item.category === "power_cords" || item.type === "power_cord";
   const isCabling = mode === "cabling" || item.category === "cabling" || item.type === "bulk_cable" || item.type === "patch_panel" || item.type === "fiber_trunk" || item.type === "patch_cord" || item.type === "connector";
   const isRack = mode === "racks" || item.category === "racks" || item.type === "equipment_rack";
 
@@ -1140,6 +1204,15 @@ function renderCardByDomain(item, mode) {
               ${isUps && isSine ? `<span class="badge-chip border border-teal-500/30 bg-teal-500/10 text-teal-300 font-bold">Pure Sine Wave</span>` : ''}
               ${isUps && isOnline ? `<span class="badge-chip border border-sky-500/30 bg-sky-500/10 text-sky-300 font-bold">Online 0ms</span>` : ''}
               ${isUps && isEbm ? `<span class="badge-chip border border-purple-500/30 bg-purple-500/10 text-purple-300 font-bold">EBM Expandable</span>` : ''}
+              ${isUps && item.isNetworked ? `<span class="badge-chip border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-bold">Networked</span>` : ''}
+              ${isUps && item.plugType ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 font-mono">${escapeHTML(item.plugType)}</span>` : ''}
+              ${isPdu && item.networkType ? `<span class="badge-chip border border-sky-500/30 bg-sky-500/10 text-sky-300 font-bold">${escapeHTML(item.networkType)}</span>` : ''}
+              ${isPdu && item.hasDisplay ? `<span class="badge-chip border border-teal-500/30 bg-teal-500/10 text-teal-300 font-bold">Ammeter Display</span>` : ''}
+              ${isPdu && item.isAts ? `<span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-300 font-bold">ATS Dual-Feed</span>` : ''}
+              ${isPdu && item.plugType ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 font-mono">${escapeHTML(item.plugType)}</span>` : ''}
+              ${isCord && item.color ? `<span class="badge-chip border border-teal-500/30 bg-teal-500/10 text-teal-300 font-bold">${escapeHTML(item.color)}</span>` : ''}
+              ${isCord && item.locking ? `<span class="badge-chip border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 font-bold">Dual-Locking</span>` : ''}
+              ${isCord && item.wireGauge ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 font-mono">${escapeHTML(item.wireGauge)}</span>` : ''}
               ${isCabling && isPlenum ? `<span class="badge-chip border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-bold">Plenum CMP</span>` : ''}
               ${isCabling && isRiser ? `<span class="badge-chip border border-blue-500/30 bg-blue-500/10 text-blue-300 font-bold">Riser CMR</span>` : ''}
               ${isCabling && isOutdoor ? `<span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-300 font-bold">Outdoor OSP</span>` : ''}
@@ -1184,7 +1257,7 @@ function renderCardByDomain(item, mode) {
 
         <button onclick="${addActionCode}" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>Add to Quote</span>
+          <span>${mode === "power_cords" ? "Add Cord" : (mode === "pdus" ? "Add PDU" : (mode === "ups" ? "Add UPS" : (mode === "racks" ? "Add Rack" : "Add to Quote")))}</span>
         </button>
       </div>
     </div>
