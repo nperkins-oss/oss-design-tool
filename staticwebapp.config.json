@@ -1,11 +1,36 @@
 {
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+  "routes": [
+    {
+      "route": "/login.html",
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/.auth/*",
+      "allowedRoles": ["anonymous", "authenticated"]
+    },
+    {
+      "route": "/logout",
+      "redirect": "/.auth/logout"
+    },
+    {
+      "route": "/*",
+      "allowedRoles": ["authenticated"]
+    }
+  ],
+  "responseOverrides": {
+    "401": {
+      "statusCode": 302,
+      "redirect": "/login.html"
+    }
+  },
   "navigationFallback": {
     "rewrite": "/index.html",
     "exclude": [
       "/assets/*",
       "/data/*",
       "/js/*",
+      "/login.html",
       "*.{css,scss,js,png,gif,ico,jpg,svg,webp,json,pdf}"
     ]
   },
