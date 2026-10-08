@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json.schemastore.org/staticwebapp.config.json",
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": [
+      "/assets/*",
+      "/data/*",
+      "/js/*",
+      "*.{css,scss,js,png,gif,ico,jpg,svg,webp,json,pdf}"
+    ]
+  },
+  "globalHeaders": {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Content-Security-Policy": "frame-ancestors 'self' https://*.sharepoint.com https://*.office.com https://*.officeapps.live.com;"
+  },
+  "mimeTypes": {
+    ".webp": "image/webp",
+    ".json": "application/json",
+    ".svg": "image/svg+xml",
+    ".pdf": "application/pdf"
+  }
+}

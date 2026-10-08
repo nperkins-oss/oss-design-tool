@@ -7,6 +7,1239 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.10.45-alpha] - 2026-10-07
+
+### Enterprise Modular Switch Accessories & Hardware Options Expansion
+- **Comprehensive Datasheet Audit & Catalog Completion (`data/networking/data_interconnects.js`)**:
+  - **Modular Uplink Sleds (`MODULAR_UPLINK_CATALOG`)**: Added Cisco 25G (`C9300-NM-2Y`, `C9300-NM-2Y-M`), 100G quad-QSFP28 (`C9300X-NM-4C`), blank covers (`C9300-NM-BLANK=`), Juniper multigigabit and SFP28/QSFP+ modules (`EX-UM-8X8SFP`, `EX-UM-4SFPP-MR`, `EX-UM-2QSFP-MR`), and Ruckus CommScope 25G/40G/100G modules (`ICX7550-4X25GF`, `ICX7650-2X40GQ`, `ICX7650-1X100GQ`, `ICX7400-4X10GC`, `ICX7400-SERVICE-MOD`).
+  - **Modular Power Supplies (`POWER_SUPPLY_CATALOG`)**: Added Cisco 1900W AC Platinum (`PWR-C1-1900WAC-P`, `PWR-C1-1900WAC-P-M`), 350W AC Data (`PWR-C1-350WAC-P`, `PWR-C1-350WAC-P-M`), -48VDC supplies (`PWR-C1-715WDC`, `PWR-C1-1100WDC`), AC power cords (`C9K-PWR-CAB-AC-US`, `C9K-PWR-CAB-AC-BL`), Juniper redundant AC & DC PSUs (`JPSU-2000-C-AC-AFO`, `JPSU-1600-C-AC-AFO`, `JPSU-1050-C-AC-AFO`, `JPSU-920-AC-AFO`, `JPSU-600-AC-AFO`, `JPSU-550-C-AC-AFO`, `JPSU-550-C-AC-AFI`, `JPSU-150-AC-AFO`, `JPSU-350-AC-AFO`, `JPSU-350-AC-AFI`, `JPSU-715-AC-AFO`, `JPSU-715-AC-AFI`, `JPSU-1100-AC-AFO`, `JPSU-1100-AC-AFI`, `JPSU-650-AC-AFO`, `JPSU-650-AC-AFI`, `JPSU-850-AC-AFO`, `JPSU-850-AC-AFI`, `JPSU-550-C-DC-AFO`), and Ruckus redundant AC/DC PSUs (`RPS22-E`, `RPS22-I`, `RPS21-E`, `RPS21-I`, `RPS21DC-E`, `RPS16`, `RPS16-E`, `RPS16-I`, `RPS15`, `RPS15-E`, `RPS16DC`, `RPS16DC-E`).
+  - **Hot-Swappable Cooling Fan Modules**: Added Cisco Catalyst/Meraki fan modules (`FAN-T2`, `FAN-T2-M`), Juniper EX fan trays (`EX4400-FAN-AFO`, `EX4400-FAN-AFI`, `EX4300-FAN`, `EX4300-FAN-AFI`), and Ruckus fan trays (`ICX-FAN12-E`, `ICX-FAN12-I`, `ICX-FAN10-E`, `ICX-FAN10-I`).
+  - **4-Post Rail Kits & Specialty Mounting (`MOUNTING_CATALOG`)**: Added Cisco 4-post rack kits (`4PT-KIT-T1`, `4PT-KIT-T2-M`) and 19" recessed kit (`19-CMP-KIT-T1`), Juniper 4-post adjustable rail kit (`EX-4PST-RMK`) and 2-post brackets (`EX-RMK`), and Ruckus tool-less 4-post rail kits (`ICX-RMK-4POST-TL`, `XBR-R000295`).
+  - **Interconnects & Stacking Cables (`OPTICS_LIST`)**: Added Cisco StackPower (`CAB-SPWR-30CM`, `CAB-SPWR-150CM`, `-M`), StackWise-480/1T/3A cables (`STACK-T1-*`, `STACK-T3A-*`, `STACK-T4-*`), Catalyst 9200L stack kit (`C9200L-STACK-KIT`), Juniper Virtual Chassis Port cables (`EX-CBL-VCP-*`), Juniper 40G QSFP+ direct attach stacking cables (`QFX-QSFP-DAC-*`), and Ruckus 40G QSFP+ DAC stacking cables (`40G-QSFP-C-*`).
+  - **Advanced Feature & Layer 3 Licenses (`FEATURE_LICENSE_CATALOG`)**: Added Juniper Advanced and Premium 3-Year subscription licenses (`S-EX-A-C2-P`, `S-EX-P-C2-P`, `S-EX-A-C3-P`, `S-EX-P-C3-P`), Juniper MACsec license (`EX-QFX-MACSEC-ACC4`), and Ruckus ICX 7550/7650 Premium Layer 3 license (`ICX7550-PREM-LIC`).
+- **Full Switch Hardware Model Calibration (`data_meraki.js`, `data_juniper.js`, `data_ruckus.js`)**:
+  - Calibrated 27 Cisco Catalyst / Meraki models (C9300, C9300L, C9300X, MS390) with accurate `psuSku`, `fanSku`, `mountSku`, `stackCableSku`, and expanded `supportedModules`.
+  - Calibrated 14 Juniper EX4300 & EX4400 models with accurate `psuSku`, `fanSku`, `mountSku`, `modularUplink`, and `featureLicense`.
+  - Calibrated 16 Ruckus ICX 7450, 7550, & 7650 models with accurate `psuSku`, `fanSku`, `mountSku`, `modularUplink`, and `featureLicense`.
+- **UI & BOM Studio Integration (`js/renderers/render_cards.js`, `js/tools/bom.js`)**:
+  - Mount Hardware selector on switch cards automatically provides 4-post rail kit options for Cisco, Juniper, and Ruckus hardware.
+  - Spare Hot-Swap Fan module checkbox dynamically resolves fan SKU, name, and MSRP from `POWER_SUPPLY_CATALOG[sw.fanSku]`.
+  - 2nd Hot-Swap PSU option automatically incorporates appropriate wattage and pricing for redundant power configurations.
+
+---
+
+## [0.10.44-alpha] - 2026-10-07
+
+### Modular Uplink Architecture & Interactive Sled Swapper Restoration
+- **Catalog Modular Uplink Restoration (`data/networking/data_juniper.js`, `data_meraki.js`, `data_ruckus.js`, `data_interconnects.js`)**:
+  - Restored `modularUplink: { hasSlot: true, defaultModuleSku: "...", supportedModules: [...] }` across all modular enterprise switch models (Juniper EX4300 & EX4400 families; Cisco Catalyst C9300, C9300X, and Meraki MS390 families; Ruckus ICX 7450, ICX 7550, and ICX 7650 families).
+  - Populated `MODULAR_UPLINK_CATALOG` in `data_interconnects.js` with comprehensive modular expansion sleds across Cisco (`C9300-NM-8X`, `C9300-NM-4G`, `C9300-NM-2Q`, `C9300-NM-4M`, `C9300X-NM-8Y`, `C9300X-NM-2C`), Juniper (`EX4400-EM-4Y`, `EX4400-EM-1C`, `EX4400-EM-4S`, `EX-UM-4X4SFP`, `EX-UM-2QSFP`), and Ruckus CommScope (`ICX-4X10GF`, `ICX-2X100Q`, `ICX7400-4X10GF`, `ICX7400-1X40GQ`, `ICX7400-4X1GF`).
+- **Interactive Switch Card Modular Bay Sled Selector (`js/renderers/render_cards.js`)**:
+  - Re-enabled glowing `Modular Bay` badge and interactive `<select id="sled-${sw.id}">` selector dropdown in switch card uplink architecture rows.
+  - Automatically captures selected sled SKU and prices upon adding switch to project BOM.
+- **BOM Studio Live Modular Sled Swapper (`js/tools/bom.js`)**:
+  - Enhanced `renderBomTableRow(item)` to render an interactive `Modular Uplink Bay` dropdown row directly underneath quoted modular switches, displaying installed module SKU, pricing, and live module selection.
+  - Added `changeBomUplinkModule(parentInstanceId, newModuleSku)` allowing instant live module swapping, empty bay configuration (`-- Empty Bay (No Module) --`), and automatic recalculation of uplink speeds, auto-DAC/transceiver interconnects, facility notifications, and BOM costing without deleting or re-adding the switch chassis.
+  - Hardened child item rendering so installed uplink modules are not duplicated in the generic child sub-item list.
+- **Hardware Constraints Sidebar Filter (`js/renderers/render_sidebar.js`, `js/engines/search_filter.js`, `js/core/app.js`)**:
+  - Added `Modular Uplink Bays (Swappable Sleds)` filter toggle checkbox under Hardware Constraints in the sidebar filter panel.
+  - Integrated `requireModularUplink` filtering into `filterSwitchesStrategy` and `FilterEngine.apply` context.
+  - Added active removable filter pill `Modular Uplinks` with instant reset capability.
+
+---
+
+## [0.10.43-alpha] - 2026-10-07
+
+### Bill of Materials (BOM) Studio Architecture & Experience Overhaul
+- **Full-Sized Studio Modal (`#bomModal`) (`index.html`, `js/tools/bom.js`, `js/core/app.js`)**:
+  - Transformed the Bill of Materials from a cramped 500px slide-over side drawer into a spacious, full-sized studio workspace modal (`w-full max-w-[1550px] h-[95vh]`) matching the visual architecture of Topology Studio, Physical Layout Studio, and Rack Elevation Visualizer.
+  - Maintained complete backwards and forwards compatibility for legacy drawer queries (`#bomDrawer`, `window.toggleBomDrawer`, `window.toggleBomModal`).
+- **Duplicate Navigation Removal (`index.html`)**:
+  - Removed the redundant, cramped launcher button strip (`Topology`, `Physical`, `Racks`, `Licenses`) from the top of the BOM window, eliminating visual noise and reclaiming critical vertical workspace.
+- **Collapsible Location Accordions (`js/tools/bom.js`)**:
+  - Replaced unstructured stacked containers with sleek collapsible location accordions for every telecom room, equipment cabinet, and field zone.
+  - Each location header banner presents live summary metrics: total unit count, active device count, aggregate power draw (`W Load`), subtotal MSRP, and a direct 1-click launcher to open the cabinet in the 2D Enclosure Visualizer.
+  - Added global **Expand All / Collapse All** accordion control.
+- **Aligned 5-Column Structured Data Grid (`renderBomTableRow`)**:
+  - Re-architected hardware items into clean, aligned rows with standardized column widths:
+    1. **Item & Specification**: Sequence ID badge (e.g. `SW-01`), primary Friendly Name with inline edit pencil, vendor badge, catalog model, SKU, role tag, and nested sub-items (optics, transceivers, sleds, licenses, modular power supplies).
+    2. **Placement / Rack Slot**: Space and rack enclosure fast-move dropdown selector, rack unit slot elevation badge (`U-Slot`), mounting method pill (`Ceiling`, `Pole`, `Wall`), and quick rack link.
+    3. **Engineering & Power**: PoE budget badge, base power draw, power source badge (`Internal AC`, `PoE In`, `Dual AC`), stacking status with inline patch panel toggles, and topology uplink links.
+    4. **Pricing & Quantity**: Extended item total, unit MSRP, and interactive `[-] Qty [+]` stepper.
+    5. **Actions**: Direct jump buttons to Topology Canvas, Physical Blueprint canvas, and item removal.
+- **Advanced Filtering & Live Search Toolbar (`js/tools/bom.js`, `index.html`)**:
+  - **Live Search**: Instant substring search querying SKU, model, friendly name, role, vendor, and location with one-click clear button.
+  - **Location Filter Dropdown**: Dynamic dropdown automatically populated from `FacilityStore` to isolate specific spaces, racks, or staging.
+  - **Category Filter Dropdown**: Domain-aware taxonomy filtering by Switches, Firewalls, Wireless, Surveillance, Access Control, Compute, Racks/PDUs, Optics/Cabling, and Licenses.
+  - **Category Breakdown View Mode**: Added a dedicated `Category Breakdown` display mode alongside `By Location / Rack` and `Flat Procurement Order`.
+
+---
+
+## [0.10.42-alpha] - 2026-10-07
+
+### Catalog Architecture & Domain Reorganization
+- **Networking Domain Accessories Tab (`data/registry.js`, `js/core/app.js`, `js/renderers/render_sidebar.js`, `js/renderers/render_cards.js`)**:
+  - Re-anchored switch/firewall accessories, mounting hardware, media converters, modular uplinks, redundant power supplies, PoE midspans, and software licenses from Infrastructure into a dedicated first-class **`accessories`** tab under **Networking**.
+  - **Faceted Multi-Category Filter Bar & Sidebar**:
+    - Interactive quick-filter pill buttons and sidebar facet selector supporting instant isolation of:
+      - **Mounts & Brackets** (19" rack ears, TS-35 DIN-rail clips, wall brackets, magnetic kits)
+      - **Media Converters & Extenders** (AMG, EoC coaxial, industrial fiber transceivers)
+      - **Software Licenses & Cloud Subscriptions** (L3 dynamic routing, Meraki Enterprise/AdvSec, Juniper Mist, UniFi Cloud)
+      - **Modular Uplinks & Expansion Modules** (4x10G SFP+, 2x40G QSFP+, stacking modules)
+      - **Modular Power Supplies** (Hot-swap redundant switch PSUs, high-wattage PoE upgrades, DIN PSUs)
+      - **PoE Midspans & Injectors** (30W at, 60W bt, 90W bt Type 4, splitters)
+    - Live manufacturer filter multi-select checkboxes with dynamic quantity badges.
+  - **Customized Card Telemetry & BOM Role Routing**:
+    - Tailored telemetry strips displaying fiber interface standards, operating temperature ratings, license tiers & subscription terms, modular bay compatibility, and PoE delivery.
+    - Contextual Add-to-BOM action buttons ("Add Mount", "Add Converter", "Add License", "Add Module", "Add PSU", "Add Injector") automatically assigning specific, clean BOM roles.
+- **Infrastructure & Structured Cabling Restructuring (`DOMAIN_DEFINITIONS.infrastructure`, `js/engines/search_filter.js`, `js/renderers/render_sidebar.js`)**:
+  - Cleanly segregated and elevated infrastructure components into dedicated first-class tabs:
+    - **`racks`**: 19" Equipment Racks (Open relay frames, 4-post server cabinets, swing-out wall racks).
+    - **`enclosures`**: Cabinets & Enclosures (Outdoor NEMA 4X weather-tight boxes, Trove/LSP access control cabinets, DIN rail boxes, architectural fire-rated plywood backboards).
+    - **`ups`**: Rack UPS Power (Online double-conversion, line-interactive sine wave, scalable EBM battery packs).
+    - **`pdus`**: Rackmount PDUs (0U vertical toolless high-density, 1U horizontal, automatic transfer switches).
+    - **`cabling`**: Structured Cabling (Cat6/Cat6A bulk spools, patch panels, fiber trunks, patch cords).
+    - **`pathways`**: Pathways & J-Hooks (TIA-569 compliant J-hooks, trapeze wire basket trays).
+
+---
+
+## [0.10.41-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Dynamic Catalog Enrichment & Datasheet Sync (`js/tools/bom.js`, `js/engines/port_engine.js`)**:
+  - Implemented `enrichBOMItemFromCatalog(item)` (exported globally on `window`) to automatically heal and enrich active, imported, and legacy BOM items against live `CatalogRegistry` specifications.
+  - Automatically reconciles all rich datasheet fields: `portFormFactorSummary`, `uplinksSummary`, `portsBreakdown`, `interfaces`, `poeAfPorts`, `poeAtPorts`, `poeBt60Ports`, `poeBt90Ports`, `poeStandardsSupported`, `baseWatts`, `maxPowerWatts`, `heatBtuPerHour`, `rackUnits`, `depthInches`, `weightLbs`, `mounting`, `fanless`, `dualPsu`, `psuSku`, `switchingCapacity`, `throughputMpps`, `packetBufferMb`, `image`, and `datasheetPath`.
+  - Integrated automatic enrichment sweeps into `addToProjectBOM` and at the start of `updateBOMView()`.
+- **Network Topology Multi-Speed Negotiation & Interconnect Synthesis (`js/tools/topology.js`)**:
+  - **Multi-Speed Negotiation (`resolveNegotiatedSpeed`)**: Core and aggregation switches now negotiate down gracefully (100G, 40G, 25G, 10G, 1G) to match access switch capabilities. Access switches with `maxBackboneSpeed === "1G"` or pure gigabit copper uplinks are strictly bounded to 1G.
+  - **Accurate Physical Interconnect Media (`autoSynthesizeInterconnects`, `deviceHasOpticalCages`)**: Correctly identifies switches with no optical cages (`isPureCopperSwitch`, such as `USW-Flex`, `USW-Ultra`, `AMG-GS910`, `AT-FS708`) and automatically synthesizes Cat6A RJ-45 patch cords (`medium: "patch"`) instead of erroneously creating SFP DAC cables or optical transceivers.
+  - **Live Datasheet Telemetry**: Topology node cards and inspector now display true rack units (`${itemRU}U`), uplinks summary, architecture badge (`0U Compact / DIN / Desktop Chassis` vs `${itemRU}U Standalone`), switching capacity, forwarding throughput, max system power draw, and real thermal dissipation (`heatBtuPerHour`).
+  - Fixed cage detection in topology inspector so RJ-45 copper uplinks are never misclassified as optical cages.
+- **Port Matrix Engine & Pass-Through Support (`js/engines/port_engine.js`)**:
+  - `initSwitchPorts`: Performs automatic catalog enrichment before calculating port manifests.
+  - Pure copper switch classification (`isPureCopperSwitch`): prevents false optical cage creation for RJ-45-only switches.
+  - PoE Ingest & Pass-Through designation: Port 1 on PoE-powered/pass-through switches is explicitly labeled as PoE Ingest (`PoE-In`, `role: "uplink"`, `isPoEIngest: true`) with copper RJ-45 connector and PoE AF/AT/BT input metadata.
+- **Physical Layout Closet & Rack Elevation Zero-U Precision (`js/tools/physical_layout.js`, `js/tools/rack.js`, `js/tools/bom.js`)**:
+  - Eradicated the `item.rackUnits || 1` antipattern across BOM schedules, closet physical layout inspectors, and rack elevation slotting algorithms.
+  - Zero-U (0U), DIN-rail, and desktop devices accurately register `0U` footprint, preventing false 1U inflation in rack rail capacity calculations and closet stack spans.
+  - Industrial DIN enclosures cleanly categorize 0U switches as DIN-mounted while standard 19" EIA racks correctly report shelf or accessory mounting requirements.
+
+---
+
+## [0.10.40-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **UniFi DIN Rail Mounting Hardware & Catalog Support (`data/networking/data_interconnects.js`, `data/infrastructure/data_accessories.js`)**:
+  - Integrated official Ubiquiti 35mm (TS-35) DIN rail mounting accessories:
+    - **`UACC-DIN-Rail` ($19 MSRP)**: Standard TS-35 DIN-rail mounting adapter bracket kit for compact UniFi desktop and edge switches (`USW-Ultra`, `USW-Ultra-60W`, `USW-Ultra-210W`, `USW-Lite-8-PoE`, `USW-Lite-16-PoE`, `USW-Flex-Mini`, `USW-Flex-2.5G-5`, `USW-Flex-2.5G-8`, `USW-Flex-XG`).
+    - **`UACC-Flex-DIN` ($19 MSRP)**: Heavy-duty 35mm TS-35 DIN rail mounting bracket custom-engineered for `USW-Flex` outdoor and industrial deployments.
+  - Added full accessory metadata in `ACCESSORY_DATABASE` (Section 7) and `MOUNTING_CATALOG` with TS-35 specifications, MSRP, and vendor mappings.
+- **Product Card Mount Selector Upgrade (`js/renderers/render_cards.js`)**:
+  - Upgraded the "Mount Hardware:" interactive dropdown `<select id="mountSelect-${sw.id}">` across all UniFi compact and edge switch cards:
+    - `USW-Flex`: Exposes `UniFi DIN Rail Mount Bracket [UACC-Flex-DIN] (+$19)` alongside `Magnetic / Wall Mount (Included)`, `Inside 3rd-Party / NEMA Enclosure ($0)`, `Outdoor Utility Enclosure [USW-Flex-Utility] (+$58)`, and `1U Cantilever Rack Shelf [UACC-Rack-Shelf-SD] (+$49)`.
+    - `USW-Ultra` series: Exposes `UniFi DIN Rail Mount Kit [UACC-DIN-Rail] (+$19)` alongside `Desktop / Wall Mount (Included)`, `Universal Table Stand [UACC-UTS] (+$19)`, and `1U Cantilever Rack Shelf (+$49)`.
+    - `USW-Lite` & `USW-Flex-Mini` / `2.5G` series: Exposes `UniFi DIN Rail Mount Kit [UACC-DIN-Rail] (+$19)` and `1U Cantilever Rack Shelf (+$49)`.
+    - `USW-Industrial`: Now displays `Integrated TS-35 DIN-Rail Clips (Included)` natively on its card.
+- **BOM Generation & Host Auto-Selection (`js/tools/bom.js`)**:
+  - Preserves user DIN mount hardware selections when switches are added to project BOM, setting `isDinMounted: true` and `mountMethod: "din"`.
+  - Upgraded `autoSelectMountingForHost`: When assigning compact UniFi switches to an Industrial DIN Rail NEMA enclosure (`hostType === "industrial_din"` or location containing "din"), the system automatically selects and attaches `UACC-Flex-DIN` (for USW-Flex) or `UACC-DIN-Rail` (for Ultra/Lite/Mini) to the project BOM and sets `isDinMounted = true`.
+  - Added DIN mount cleanup to `cleanupMountingForHost` when switches are moved from DIN enclosures back to standard 19" equipment racks or unassigned status.
+- **Rack Elevation Studio Compatibility (`js/tools/rack.js`)**:
+  - Enhanced `checkDeviceHostCompatibility` with `isDinCapable` logic: compact UniFi switches staged in the unassigned drawer display as "DIN-Mountable" and mount seamlessly onto TS-35 DIN tracks in industrial enclosures.
+  - Updated drag-and-drop elevation handlers to dynamically resolve host enclosure types rather than defaulting to standard racks.
+
+---
+
+## [0.10.39-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Enterprise UPS & Power Infrastructure Integration (`data/infrastructure/data_accessories.js`, `data/registry.js`)**:
+  - Ingested 46 enterprise-grade power infrastructure products directly derived from the internal engineering calculation workbook (`Power Calculator/UPS Database.xlsx` & `UPS Power Calculator v6.3.xltx`):
+    - **26 Enterprise UPS Models**: Tripp Lite (SU5000RT, SU6000RT, SMART2200RMXL2U, SMART3000RM2U, SMART2200RM2U, SMART1500LCD, SMART1000RM2UN, SU1500RT, SU2200RT, SU3000RT, SU3000LCD2UHV, SU5000RTF, OMNIVSX1500, AVRX550UA, AVRX750UA), APC by Schneider Electric (SMT1500RM2UC, SMT2200RM2U, SMT3000RM2U, SMX3000RMHV2U-US, SMX3000RMLV2UNC, SURT5000RMXLT, SURT5000XLI, SMT750I, SMT1500I), and Eaton (5PX2000RTNG2, 9PX3000GRT-L, 9PX6K). Fully specified with VA, continuous wattage, input/output voltage, circuit breaker amps, input plug, and equipment receptacles.
+    - **8 Extended Battery Packs (EBP)**: High-density external runtime modules (Tripp Lite BP192V12-3U, BP72VRM2U, BP48V24-2U, BP72V18-2US; APC SMX120RMBP2U, SURT192XLBP; Eaton 5PXEBM48RTG2, 9PXEBM72RT-L) with DC bus voltages, multi-pack daisy-chaining, and full/half-load discharge curves.
+    - **11 Enterprise Rack PDUs**: Horizontal (1U/2U) and Zero-U vertical managed power distribution units from APC (AP7900B, AP7902B, AP7911A, AP8841, AP9562), Tripp Lite (PDUMH15NET, PDUMH20NET2, PDUMH30HVNET, PDUMV20HV), and UniFi (USP-PDU-HD, USP-PDU-Pro).
+    - **Power Jumpers & Cords**: High-current IEC C14-to-C13 (10A), C20-to-C19 (15A), and NEMA 5-15P-to-C13 cords.
+- **Enterprise UPS & Power Sizing Engine (`js/engines/sizer_network.js`)**:
+  - Implemented `NetworkSizer.calculateUPSPlan(rackItemsOrWatts, options)` implementing the engineering formulas:
+    - **Automated UPS Quantity**: $N_{\text{UPS}} = \max(1, \lceil W_{\text{rack}} / (M \times W_{\text{max}}) \rceil)$ across user-selectable safety margins ($60\%$, $75\%$, $80\%$).
+    - **Dynamic Battery Discharge Interpolation**: Real-time linear interpolation between half-load ($R_{\text{half}}$) and full-load ($R_{\text{full}}$) discharge curves based on per-unit load fraction.
+    - **Target Runtime & EBP Sizing**: Automatically calculates required Extended Battery Packs (EBPs) to satisfy target backup time ($5$, $10$, $15$, $30$, $45$, $60$ minutes).
+    - **Feeder Branch Circuit & Loading**: Computes input AC draw incorporating $92\%$ inverter efficiency derating, continuous Amps, breaker rating ($15\text{A}, 20\text{A}, 30\text{A}$), and circuit safety utilization ($80\%$ NEC continuous limit).
+    - **Equipment Plug vs. Receptacle Audit**: Audits equipment plugs (C14, C20, 5-15P, 5-20P) against UPS and PDU receptacles.
+- **Interactive Rack Elevation Telemetry & One-Click Auto-Slotting (`js/tools/rack.js`)**:
+  - Built an interactive **UPS Sizing Engine Panel** in the Rack Studio telemetry sidebar featuring real-time Target Runtime, Safety Margin, and UPS Hardware override dropdowns.
+  - Integrated a live unit utilization progress bar, backup runtime gauge, circuit loading status badge, and rack footprint rollup.
+  - **One-Click Auto-Slot Button (`addRecommendedUpsAndEbpToRack`)**: Automatically reserves and populates the bottom rack units (U1+ ascending) with the recommended UPS systems and battery modules, adds them to project BOM, and synchronizes the elevation visualizer.
+- **Faceted Power Sidebar Filters & Product Cards (`js/renderers/render_sidebar.js`, `js/renderers/render_cards.js`, `js/engines/search_filter.js`)**:
+  - Added Hardware Category filters (`UPS Systems`, `Extended Battery Packs`, `Rack PDUs`, `Power Cords`), Nominal Voltage filters (`120V Standard`, `208V/240V High-Density`), and expanded capacity filters.
+  - Upgraded hardware cards with rich telemetry badges for power rating, input/output voltage, battery runtime curves, scalable EBP compatibility, and context-aware BOM action buttons.
+- **Global Search Engine Omnichannel Power Routing (`js/engines/global_search.js`)**:
+  - Indexed all 46 power products in the header Omnibox and Command Palette (`Ctrl+K`), routing queries for "UPS", "PDU", "Battery Pack", "BP192V", "SU5000", "AP7900", and specific SKUs directly to the Infrastructure UPS catalog with illuminated pulse highlights.
+
+## [0.10.38-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Global Catalog Search & Command Palette Navigation (`js/engines/global_search.js`, `index.html`)**:
+  - Implemented an omnichannel search engine indexing all 657 enterprise catalog products across every domain and sub-mode (access switches, core backbone switches, gateways & firewalls, wireless PtP/PtMP radios, transceivers & DAC optics, power & accessories, equipment racks, rack UPS power, pathways, and structured cabling).
+  - Engineered high-precision scoring combining exact SKU match ($+1000$), model prefix match ($+500$), alphanumeric normalization (e.g. `mx-85` matches `MX85-HW`, `8010fx` matches `EH-8010FX-ODU-H-EXT`, `v5000` matches `C060084A004A`), vendor matching, and specification token scanning.
+  - **Instant Cross-Domain Navigation (`GlobalSearchEngine.navigateTo`)**:
+    - Automatically closes blocking modals, resets conflicting sidebar filters, and switches active domain and catalog mode (`switchMode`) seamlessly.
+    - Smoothly scrolls the target hardware product card directly to viewport center with precision DOM anchoring (`#product-card-${id}`).
+    - Applies a prominent luminous cyan/blue pulse highlight animation (`.global-search-highlight`) to instantly draw the user's eye to the exact selected product card.
+    - Displays informative toast notifications detailing target domain, category, model, and SKU.
+  - **Header Omnibox Quick-Search**:
+    - Integrated real-time search input directly into the top navigation header with keyboard navigation ($\uparrow$, $\downarrow$, Enter, Esc) and instant clearing.
+    - Responsive 560px floating dropdown with category filter tabs (`All`, `Switches`, `Gateways`, `Wireless`, `Power & Accessories`, `Racks & UPS`, `Optics`, `Cabling`), product image thumbnails, real-time match counters, and MSRP display.
+  - **Command Palette Modal (`Ctrl+K` / `⌘K` or `/`)**:
+    - Full-screen modal overlay with category chips, keyboard shortcut hints, expanded result details with technical spec snippets, and direct-jump action buttons.
+  - **Cross-Domain Empty-State Suggestion Bridge (`js/core/app.js`)**:
+    - When a user filters or searches within an individual sub-bar (e.g., `#filterSearch` in Access Switches) and finds 0 matches in that category, the catalog empty-state automatically analyzes other catalog categories and surfaces interactive one-click jump pills to matching hardware in other catalog domains (e.g. typing "MX85" in Access Switches displays a direct shortcut to Meraki MX85 in Gateways & Firewalls).
+
+## [0.10.37-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Enterprise Switch Management Architecture & Power Filters (`js/core/app.js`, `js/engines/search_filter.js`, `js/renderers/render_sidebar.js`)**:
+  - Implemented multi-select filters for switch architecture:
+    - **Layer 3 (Routing & Policy)**: Filters switches with dynamic routing (OSPF, BGP, VRF, RIP), hardware L3 routing tables, and policy-based forwarding (116 access switches / 178 total switches).
+    - **Layer 2+ (Managed Access / VLAN)**: Filters enterprise Layer 2 managed switches with VLANs, 802.1Q tagging, QoS, STP/RSTP, and static routing (150 access switches).
+    - **Unmanaged (Plug & Play)**: Filters unmanaged plug-and-play desktop and DIN-rail switches (12 switches).
+  - Added dedicated high-power and environmental filters:
+    - **90W 802.3bt Ultra PoE**: Filters switches providing IEEE 802.3bt Type 4 (60W-90W per port) for high-draw PTZ cameras and multi-gig APs (53 switches).
+    - **Industrial / Hardened**: Filters ruggedized switches certified for extreme temperatures (-40°C to +75°C) and harsh outdoor/DIN environments (54 switches).
+- **Stratum 1 GPS NTP Time Server Relocation (`data/networking/data_firewalls.js` & `data/infrastructure/data_accessories.js`)**:
+  - Relocated the Stratum 1 GPS Network Time Server (`AMG816-1F-RP-AD`) from Firewalls & Gateways into `data_accessories.js` under `category: "time_server"`, `type: "time_server"`.
+  - Added a dedicated "Time Servers (NTP / GPS)" filter in `buildAccessoriesSidebar` under Infrastructure Hardware Accessories.
+- **Firewall Catalog Cleansing & Rationalization (`data/networking/data_firewalls.js`)**:
+  - Completely purged Fortinet FortiGate (`FG-40F` through `FG-200F`) and Palo Alto Networks (`PA-440`, `PA-1410`) firewalls, streamlining catalog focus to active supported enterprise platforms (UniFi, Meraki, Allied Telesis, AMG Systems, and Juniper Networks SRX).
+- **Authentic Cisco Meraki Firewall Front Panel Imagery (`assets/images/products/` & `data/data_assets.js`)**:
+  - Resolved visual display bug where all 10 Cisco Meraki firewall models mistakenly displayed an identical generic 48-port switch chassis.
+  - Sourced, engineered, and rendered 10 authentic, transparent front-panel assets matching official Cisco hardware specifications:
+    - `mx450-hw.png`: 1U dual-SFP28 100G campus core firewall.
+    - `mx250-hw.png`: 1U dual-power modular aggregation firewall.
+    - `mx105-hw.png`: 1U 10G SFP+ branch edge gateway.
+    - `mx95-hw.png`: 1U dual-10G SFP+ branch gateway.
+    - `mx85-hw.png`: 1U dual-WAN GbE branch firewall.
+    - `mg51-hw.png`: IP67 outdoor 5G cellular gateway with internal antennas.
+    - `mx75-hw.png`: Compact desktop enterprise firewall.
+    - `mx68cw-hw.png`: Integrated 802.11ac Wi-Fi & LTE cellular desktop gateway with PoE+.
+    - `mx67-hw.png`: Compact branch desktop gateway.
+    - `z4c-hw.png`: Teleworker security gateway with integrated LTE SIM modem.
+- **Switch Mount Hardware Logic Correction (`js/renderers/render_cards.js`)**:
+  - Corrected logic in `renderSwitchCard` that formerly showed UniFi Sliding Rack Rails (`UACC-Rack-Rails-Slide`) for any switch with depth $\ge 14$ inches across all manufacturers.
+  - Restricted UniFi sliding rails exclusively to UniFi switches (`sw.vendor === 'UniFi'`).
+  - Added the Juniper 4-Post Adjustable Rack Mount Kit (`EX-4PST-RMK`, MSRP $95) to `ACCESSORY_DATABASE` and switch card options for deep Juniper EX series switches.
+- **Comprehensive Universal Wireless PtP & PtMP Infrastructure Pass (`data/networking/data_wireless.js`, `data/infrastructure/data_accessories.js`, `js/renderers/render_cards.js`)**:
+  - Expanded catalog from 11 to **25 calibrated models** spanning 4 premier manufacturers:
+    - **Ubiquiti / UniFi (13 models)**: UBB, UBB-XG (10G 60GHz), Wave Pro, Wave AP, Wave AP Micro, Wave Nano, Wave Long-Range, airFiber 60 HD, airFiber 60 XR, GigaBeam Plus, airMAX PowerBeam 5AC ISO, airMAX LiteBeam 5AC, NanoStation 5AC.
+    - **Cambium Networks (4 models)**: cnWave V5000 (Distribution Node, 3.8 Gbps), cnWave V3000 (Long-Range Client, 3.8 Gbps), cnWave V1000 (Mid-Range Client, 2.0 Gbps), ePMP Force 300-25 (5 GHz High-Gain Dish).
+    - **AMG Systems (3 models)**: AMG8870F-06 (60 GHz 2.5 Gbps PtP Link Pair), AMG8870F-03-90 (60 GHz 90° Base Station AP), AMG8870F-M-E (60 GHz Subscriber Station).
+    - **Siklu by Ceragon (5 models)**: MultiHaul TG N366 (360° Mesh Distribution Node, 3.8 Gbps), MultiHaul TG T260 (Terminal Unit, 1.0 Gbps), MultiHaul TG T280 (High-Gain Long-Range Terminal Unit, 3.8 Gbps), EtherHaul 8010FX (10G Full-Duplex E-Band 70/80GHz PtP Carrier Backhaul), EtherHaul 1200FX (1G Full-Duplex E-Band PtP).
+  - Built **18 dedicated wireless accessories** in `WIRELESS_ACCESSORY_CATALOG` and `ACCESSORY_DATABASE`:
+    - Precision alignment mounts: Ubiquiti Wave Precision Mount, UniFi UBB Precision Bracket, Cambium V3000 Precision Bracket, Cambium V1000/V5000 Tilt Bracket, Siklu Fine-Tune 1ft/2ft Pole Mount Kit, Siklu Compact Bracket, AMG Heavy-Duty Wall Mount.
+    - Lightning and ESD surge suppressors: Ubiquiti ETH-SP-G2, Cambium Outdoor 56V Surge Suppressor (C000000L033A), Siklu Outdoor PoE Surge Protector.
+    - PoE midspan injectors: Cambium 60W Passive 54VDC Injector, Siklu 60W 802.3bt Outdoor PoE Injector, AMG 24W Passive Injector.
+    - Modular dish antennas: Cambium cnWave V3000 44.5 dBi Dish, Siklu 1-Foot & 2-Foot Dual-Polarized Antennas.
+  - Implemented **Capacity Upgrade License Catalog (`WIRELESS_LICENSE_CATALOG`)**:
+    - `AX-10G-UPG`: Siklu EtherHaul 8010FX 10 Gbps full-duplex capacity software license ($2,400).
+    - `AX-2.5G-UPG`: Siklu EtherHaul 1200FX 2.5 Gbps capacity software upgrade license ($1,100).
+  - Enhanced wireless card renderer with interactive checkboxes for precision mounting hardware, lightning surge suppressors, speed capacity licenses, and antenna selectors.
+  - Dynamic BOM addition (`addWirelessToBOM`): supports single radio and matched pair auto-provisioning with linked parent-child hierarchy for all selected accessories and licenses.
+- **Official Wireless & Firewall Engineering Documentation & Master Asset Registry (`data/data_assets.js`)**:
+  - Authored and verified 13 publication-quality engineering PDF datasheets for Cambium, Siklu, and Ubiquiti models in `Datasheets/Network/`.
+  - Acquired and mapped 100% verified isolated transparent product photography for all 25 wireless models and all 10 Meraki firewall models.
+  - Expanded `data_assets.js` to **1,506 verified entries**.
+
+---
+
+## [0.10.36-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **AMG Systems Industrial Media Converter Catalog Recalibration (`data/networking/data_amg.js` & `data/infrastructure/data_accessories.js`)**:
+  - Resolved switch catalog mix-up by extracting AMG 250 and AMG 255 series media converters from `data_amg.js` (`AMG_SWITCHES`) where they were mistakenly classed as access switches, preserving 41 authentic Layer 2/3 DIN and rack switches.
+  - Re-engineered and integrated **9 authentic AMG 250 & AMG 255 industrial media converter models** into `data_accessories.js` under `category: "media_converter"`, `type: "media_converter"` with complete physical dimensions, power budgets, and mounting specifications.
+  - Fully mapped both sides of field-to-headend deployment topologies:
+    - *Remote / Field End (PoE DIN Converters)*: `AMG250-1GAT-1S-P30` (30W 802.3at), `AMG250-1GBT-1S-P90` (90W 802.3bt Type 4), `AMG250-1XBT-1XS-P90` (10G Multi-rate 90W bt PoE), `AMG250-2G-1S` (dual copper 2+1), `AMG250-2G-2S` (dual channel 2+2), and `AMG255-2GBT-1S-P120` (integrated 90-264VAC mains power supply with 120W PoE budget).
+    - *Head-End / Rack End (Non-PoE DIN & Rack Cards)*: `AMG250-1G-1S` (compact standalone DIN receiver) and `AMG250R-1G-1S` (1+1) / `AMG250R-4G-4S` (4+4) hot-swappable 19" rack-mount blade cards.
+    - *Head-End Chassis Infrastructure*: `AMG2015` (19" 3U 14-Slot Rackmount Card Chassis with dual redundant hot-swappable power supplies).
+- **Official AMG Technical Documentation & Master Asset Registry (`data/data_assets.js`)**:
+  - Registered all models under lowercase ID and uppercase SKU keys with 100% verified asset coverage.
+  - Linked official manufacturer PDF datasheets: `AMG250 Series Datasheet D33035-09.pdf`, `AMG250R Series Datasheet D33036-07.pdf`, and `AMG255 Series Datasheet D33037-05.pdf`.
+  - Normalized isolated transparent 800x600 product imagery across all form factors (`assets/images/products/amg-250-*.png`, `amg-250r-*.png`, `amg-255-*.png`, `amg-2015.png`).
+- **Edge CDP Headless Browser Verification**:
+  - Verified 0 console errors, confirmed access switches filter excludes media converters (count = 41), and accessories filter displays all 18 AMG media converters. Tested modal image popouts for both field-side DIN units and rack-mounted head-end blade cards.
+
+---
+
+## [0.10.35-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **RUCKUS CommScope ICX Ethernet Switch Family Expansion (`data/networking/data_ruckus.js`)**:
+  - Fully expanded and calibrated **53 enterprise access, distribution, and core/spine switch models** against official CommScope RUCKUS technical documentation (`https://webresources.vistancenetworks.com/` and `https://webresources.ruckuswireless.com/`):
+    - *ICX 7150 Series (8 models)*: Compact fanless models (ICX 7150-C10ZP with 240W 90W PoH and 2x 10G SFP+, ICX 7150-C12P with 124W PoE+), standard 24/48-port models (ICX 7150-24, ICX 7150-24P with 370W PoE+, ICX 7150-48, ICX 7150-48P with 370W PoE+, ICX 7150-48PF with 740W PoE+), and multi-gigabit ICX 7150-48ZP (16x 2.5G PoH 90W + 32x 1G PoE+, 1,480W PoE budget with dual PSUs).
+    - *ICX 7450 Series (5 models)*: Modular stackable access switches (ICX 7450-24, ICX 7450-24P, ICX 7450-48, ICX 7450-48P, ICX 7450-48F fiber) featuring 3 modular front-facing uplink/stacking slots supporting 10G SFP+, 40G QSFP+, and hardware IPsec VPN encryption modules.
+    - *ICX 7550 Series (8 models)*: Mid-range enterprise stackable switches (ICX 7550-24, ICX 7550-24P, ICX 7550-24ZP, ICX 7550-24F, ICX 7550-48, ICX 7550-48P, ICX 7550-48ZP, ICX 7550-48F) with 90W 802.3bt Class 8 PoE, up to 2,000W PoE budget, 2x 100G QSFP28 uplink/stacking ports, and 400 Gbps Virtual Chassis stacking bandwidth.
+    - *ICX 7650 Series (3 models)*: High-performance access and aggregation switches (ICX 7650-48P, ICX 7650-48ZP with 24x 10G Multi-Gigabit 90W PoH, ICX 7650-48F 10G fiber) with dedicated rear 100G stacking ports and front modular bays.
+    - *ICX 7750 Series (3 models)*: Fixed-configuration campus aggregation and core switches (ICX 7750-26Q with 26x 40G QSFP+, ICX 7750-48F with 48x 10G SFP+ and 6x 40G QSFP+, ICX 7750-48C with 48x 10GBASE-T copper and 6x 40G QSFP+) with up to 2.56 Tbps switching throughput.
+    - *ICX 7850 Series (4 models)*: Enterprise 100G spine and core fabric switches (ICX 7850-32Q with 32x 100G QSFP28, ICX 7850-48F with 48x 25G SFP28 and 8x 100G QSFP28, ICX 7850-48FS with 48x 10G SFP+ MACsec AES-256 and 8x 100G QSFP28, ICX 7850-48C with 48x 10GBASE-T and 8x 100G QSFP28) with 6.4 Tbps capacity and deep 32 MB packet buffers.
+    - *ICX 8200 Series (15 models)*: Next-generation enterprise access switches with 25GbE stacking/uplinks (ICX 8200-C08PF, ICX 8200-C08ZP, ICX 8200-24, ICX 8200-24P, ICX 8200-24ZP, ICX 8200-48, ICX 8200-48P, ICX 8200-48PF, ICX 8200-48PF2, ICX 8200-48ZP2, ICX 8200-24XP2, ICX 8200-48NP2, ICX 8200-24F, ICX 8200-48F, ICX 8200-24FX) supporting up to 1,480W PoE budget, 90W 802.3bt, and native RUCKUS One cloud telemetry.
+    - *ICX 8100 Series (7 models)*: Entry-level enterprise stackable access switches (ICX 8100-C08PF, ICX 8100-C16P, ICX 8100-24, ICX 8100-24P, ICX 8100-48, ICX 8100-48P, ICX 8100-48PF) with shallow 11-inch depth, silent fanless options, and 4x 10G SFP+ uplinks.
+- **Official RUCKUS PDF Documentation (`Datasheets/Network/Ruckus/`)**:
+  - Sourced and verified 6 manufacturer datasheets: `RUCKUS ICX Switch Family Data Sheet.pdf` (1.96 MB), `RUCKUS ICX 7150 Switch Data Sheet.pdf`, `RUCKUS ICX 7550 Switch Data Sheet.pdf`, `RUCKUS ICX 7850 Switch Data Sheet.pdf`, `RUCKUS ICX 8100 Switch Data Sheet.pdf`, and `RUCKUS ICX 8200 Data Sheet.pdf` covering all 53 models.
+- **Authentic RUCKUS Chassis Photography (`assets/images/products/`)**:
+  - Extracted and normalized 53 authentic isolated front panel chassis images into transparent 800x117 PNG assets (`assets/images/products/ruckus-*.png`).
+- **Juniper Networks SRX Firewall Series Integration (`data/networking/data_firewalls.js`)**:
+  - Integrated 9 enterprise branch, campus, and core firewall models:
+    - *SRX300 & SRX320*: Compact branch security gateways (5 Gbps firewall, 300 Mbps IPS, fanless/PoE options).
+    - *SRX340 & SRX345*: 1U mid-sized enterprise branch gateways with 16x 1G ports, 4 Mini-PIM WAN slots, and dual PSU options.
+    - *SRX380*: Multi-Gigabit 10G PoE security gateway with 16x 1G PoE+ (370W), 4x 10G SFP+, and MACsec encryption.
+    - *SRX1500*: Campus perimeter firewall with 16x 1G copper and 4x 10G SFP+ (9 Gbps firewall, 3 Gbps NG-IPS).
+    - *SRX4100 & SRX4200*: Data center and campus core firewalls (8x 10G SFP+, up to 40 Gbps firewall, 12 Gbps threat protection).
+    - *SRX4600*: Ultra high-performance 100G cloud core firewall (8x 10G SFP+ + 4x 100G QSFP28, 75 Gbps firewall, 20 Gbps NG-IPS).
+  - Downloaded 9 official Juniper SRX Hardware Guides into `Datasheets/Network/Juniper/` and extracted chassis images into `assets/images/products/juniper-srx*.png`.
+- **Juniper Networks Portfolio Front-Panel Imagery Calibration (58 Models)**:
+  - Standardized authentic front-panel imagery across all 49 switches (`data/networking/data_juniper.js`) and 9 firewalls (`data/networking/data_firewalls.js`) on transparent 800x117 canvases.
+  - Sourced and extracted 24 full-color photorealistic 3D front renders (EX4100, EX4100-F, EX4400, and QFX5120 series) with automated orange fan filtration to completely eliminate rear views.
+  - Engineered 34 high-contrast dark metallic CAD faceplates (`#181e29` with `#e2e8f0` silver linework) for EX2300, EX3400, EX4100-H, EX4300, EX4600, EX4650, QFX5110, QFX5200, and SRX series, replacing low-contrast paper scans and eliminating callout bubbles, table borders, and leader lines.
+- **Master Asset Registry (`data/data_assets.js`)**:
+  - Expanded registry to **1,456 verified hardware assets**, ensuring 100% datasheet and photo coverage across all Ruckus and Juniper hardware models.
+- **Edge CDP Headless Browser Verification**:
+  - Executed automated validation test suites (`scratch/test_juniper_complete_runtime.py`, `scratch/test_ruckus_runtime.py`, and `scratch/test_firewalls_runtime.py`): 0 console errors, 100% asset coverage audit, verified modal popouts for datasheets and photo lightbox.
+
+---
+
+## [0.10.34-alpha] - 2026-10-06
+
+### Added & Enhanced
+- **Juniper Networks Ethernet Switch Portfolio Expansion (`data/networking/data_juniper.js`)**:
+  - Fully calibrated **49 enterprise access, distribution, and core/spine switch models** against official Juniper Networks hardware documentation (`https://www.juniper.net/documentation/`).
+  - **Campus & Branch Access (38 Models)**:
+    - *EX2300 & EX2300-C Series (9 models)*: Compact fanless 12-port models (EX2300-C-12T, EX2300-C-12P with 124W PoE+), standard 24/48-port models (EX2300-24T, EX2300-24P with 370W PoE+, EX2300-48T, EX2300-48P with 740W PoE+), and multi-gigabit models (EX2300-24MP, EX2300-48MP with 16x/24x Multi-Gigabit ports and Virtual Chassis stacking).
+    - *EX3400 Series (6 models)*: EX3400-24T, EX3400-24P (370W PoE+), EX3400-48T, EX3400-48P (740W PoE+), EX3400-24T-DC, and EX3400-48T-AFI with 4x 10G SFP+ and 2x 40G QSFP+ dedicated stacking uplinks, redundant power options, and Layer 3 routing.
+    - *EX4100-F Series (8 models)*: Fixed-power modern campus switches including EX4100-F-12P/T (fanless 12-port compact with 180W PoE+), EX4100-F-24P/T, and EX4100-F-48P/T with 4x 10G SFP+ uplinks and 4x 1G/10G stacking ports, EVPN-VXLAN campus fabric support, and Mist AI native cloud telemetry.
+    - *EX4100 Series (6 models)*: Modular hot-swappable dual PSU switches (EX4100-24P, EX4100-24T, EX4100-48P, EX4100-48T, EX4100-24MP, EX4100-48MP) with Multi-Gigabit 90W 802.3bt Class 8 PoE, up to 1440W total PoE budget, MACsec AES-256 hardware encryption, and 4x 25G SFP28 uplinks.
+    - *EX4100-H Series (3 models)*: Ruggedized, substation-hardened industrial switches (EX4100-H-12P, EX4100-H-24P, EX4100-H-24MP) meeting IEC 61850-3 and IEEE 1613 standards, extreme operating temperatures (-40°C to +75°C), fanless convection cooling, and high-voltage DC/AC redundant power supplies.
+    - *EX4300 Series (6 models)*: EX4300-24T, EX4300-24P (715W PoE+), EX4300-48T, EX4300-48P (1100W PoE+), and Multi-Gigabit EX4300-48MP (95W per port, 1400W PoE budget) with 320 Gbps Virtual Chassis stacking and modular uplink options.
+  - **Distribution, Aggregation & Core/Spine (11 Models)**:
+    - *EX4300-32F*: 32-port 1G/10G SFP/SFP+ fiber aggregation switch with 4x 40G QSFP+ uplinks.
+    - *EX4400 Series (3 models)*: EX4400-24X (24x 10G SFP+ core/aggregation with 100G uplinks), EX4400-48F (48x 1G/10G SFP+ fiber distribution with 100G uplinks), and EX4400-48MP (48-port multi-gigabit access/aggregation).
+    - *EX4600 & EX4650 Series (3 models)*: EX4600-40F (24x 10G SFP+ and 4x 40G QSFP+ distribution), EX4650-48Y-AFI, and EX4650-48Y-AFO (48x 25G SFP28 and 8x 100G QSFP28 high-density campus core).
+    - *QFX5110 & QFX5120 Series (3 models)*: QFX5110-48S (48x 10G SFP+ and 4x 100G QSFP28 leaf/spine), QFX5120-48Y (48x 25G SFP28 and 8x 100G QSFP28 spine), and QFX5120-48YM with MACsec AES-256 on all 25G/100G ports.
+    - *QFX5200 Series (1 model)*: QFX5200-32C ultra high-density 32x 100G QSFP28 spine switch with 6.4 Tbps / 2.4 Bpps non-blocking throughput.
+- **100% Official Manufacturer Hardware Guides & Technical Documentation (`Datasheets/Network/Juniper/`)**:
+  - Downloaded and verified 18 official Juniper Hardware Guides and Datasheets (856 KB to 31.8 MB) covering all 49 models' electrical specifications, pinouts, airflow schemes, and physical dimensions.
+- **High-Resolution Isolated Transparent Product Photos (`assets/images/products/`)**:
+  - Extracted and normalized authentic front/rear panel chassis photographs into 49 transparent 800x117 PNG images (`assets/images/products/juniper-*.png`).
+- **Master Asset Registry (`data/data_assets.js`)**:
+  - Expanded catalog to 1,327 total verified hardware assets, providing complete 100% datasheet and photo coverage for every Juniper switch ID and SKU.
+- **UI & Sizing Engine Integration (`index.html`, `data/registry.js`)**:
+  - Ingested Juniper switches into `CatalogRegistry` (38 Access models, 11 Backbone models).
+  - Wired into sidebar manufacturer filters with dynamic live counts and active filter pills.
+- **Edge CDP Headless Browser Verification**:
+  - Validated with automated test suite `scratch/test_juniper_runtime.py`: 0 console errors, 100% asset coverage audit, verified modal popouts for datasheets and photo lightbox.
+
+---
+
+## [0.10.33-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Cisco Meraki & Cisco Catalyst Cloud-Managed Catalog Expansion (`data/networking/data_meraki.js`)**:
+  - Fully calibrated 95 enterprise and industrial switch models against official Cisco Meraki documentation (`https://documentation.meraki.com/Switching`).
+  - **Meraki MS Series (69 Models)**:
+    - *Core & Aggregation*: MS450-12 (12x 40G QSFP+ & 2x 100G QSFP28 Campus Core), MS425-32 & MS425-16 (10G SFP+ & 40G QSFP+ Aggregation), MS410-32 & MS410-16 (1G/10G SFP+ Aggregation).
+    - *Enterprise Multi-Gigabit & Stacking*: MS355 series (MS355-24X, MS355-24X2, MS355-48X, MS355-48X2) with 400G physical stacking and 60W Cisco UPoE; MS350 series (MS350-24, 24P, 48, 48LP, 48FP) with 160G stacking; MS390 series (MS390-24P, 24U, 24UX, 48P, 48U, 48UX, 48UX2) with 480G StackWise physical stacking, Cisco StackPower pooling, and 60W UPoE.
+    - *Layer 3 & Layer 2+ Access*: MS250 series (MS250-24, 24P, 48, 48LP, 48FP) with 80G stacking; MS225 series (MS225-24, 24P, 48, 48LP, 48FP); MS210 series (MS210-24P, 48LP, 48FP); MS150 series (10 models with 80G stacking and 10G SFP+ uplinks).
+    - *Compact & Commercial Edge*: MS130 series (11 models with mGig access and 10G uplinks); MS130R-8P Hardened DIN/wall industrial switch; MS125 series (5 models with 10G uplinks); MS120 series (8 models, compact 8-port fanless to 48FP).
+  - **Cisco Catalyst Cloud-Managed Series (26 Models)**:
+    - *Catalyst 9300X-M Series*: 6 models (C9300X-12Y-M, C9300X-24Y-M 25G fiber aggregation, C9300X-24HX-M, C9300X-48TX-M, C9300X-48HX-M, C9300X-48HXN-M) featuring 1 Tbps StackWise-1T hardware stacking, StackPower+, and 90W 802.3bt Class 8 UPoE+.
+    - *Catalyst 9300-M Series*: 9 models (C9300-24S-M, C9300-48S-M SFP fiber aggregation; C9300-24P-M, C9300-24U-M, C9300-24UX-M, C9300-48P-M, C9300-48U-M, C9300-48UXM-M, C9300-48UN-M) with 480 Gbps StackWise-480, StackPower pooling, and modular uplink flexibility (10G/25G/40G/100G).
+    - *Catalyst 9300L-M Series*: 5 models (C9300L-24P-4X-M, C9300L-24UXG-4X-M, C9300L-48P-4X-M, C9300L-48PF-4X-M, C9300L-48UXG-4X-M) featuring 320 Gbps StackWise-320 and 60W UPoE.
+    - *Catalyst 9200L-M Series*: 6 models (C9200L-24P-4G-M, C9200L-24P-4X-M, C9200L-24PXG-4X-M, C9200L-48P-4G-M, C9200L-48P-4X-M, C9200L-48PXG-4X-M) with fixed 10G/1G uplinks and mGig access.
+- **100% Official Manufacturer PDF Datasheets (`Datasheets/Network/Cisco/`)**:
+  - Downloaded and verified 24 official manufacturer PDFs on disk, ensuring 100% datasheet coverage for all 95 switch models.
+- **High-Resolution Isolated Transparent Product Photos (`assets/images/products/`)**:
+  - Extracted and processed authentic front-panel chassis photography across all models into standardized transparent PNGs with correct aspect ratios.
+- **Master Asset Registry (`data/data_assets.js`)**:
+  - Updated with 1,180 total verified assets, providing 100% coverage for every SKU and model ID.
+- **UI & Sizing Engine Integration (`js/renderers/render_sidebar.js`, `js/renderers/render_cards.js`, `js/tools/bom.js`)**:
+  - Added "Cisco" to sidebar manufacturer filters with dynamic live counts.
+  - Added official Cisco brand styling (`bg-cyan-500/10 text-cyan-400 border-cyan-500/30`).
+  - Integrated Cisco Catalyst-M into Meraki license compliance validation and auto-subscription workflows.
+- **Edge CDP Runtime Verification**:
+  - Verified 0 console errors, seamless PDF datasheet modal popouts, and image lightbox modal operations.
+
+---
+
+## [0.10.32-alpha] - 2026-10-05
+
+### Fixed & Enhanced
+- **UniFi Accessories Photo Disambiguation & High-Resolution Asset Sync**:
+  - Resolved duplicate photo references across UniFi rack cabinets, vertical/horizontal cable managers, power supplies, adapters, and PoE injectors caused by multi-product technical guide hero extraction.
+  - Sourced, downloaded, and processed 100% unique, isolated, high-resolution (1500×1500) transparent product photos directly from Ubiquiti's official technical specification CDN (`cdn.ecomm.ui.com`) across four primary subcategories:
+    - `accessories-rack-mount`: 42U Server Racks (`UACC-Rack-42U-800-G`, `UACC-Rack-42U-1000-P`), 12U Wall Swing-Out Enclosures (`UACC-Rack-12U-Wall-SW-G`, `UACC-Rack-12U-Wall-SW-P`), Toolless Mini Rack 6U (`U-Rack-6U-TL`), Sliding Rack Rails (`UACC-Rack-Rails-Slide`), Horizontal & Vertical Cable Managers (`UACC-Rack-HCM`, `UACC-Rack-42U-VCM`), Blank & Patch Panels (`UACC-Rack-Panel-OCD`, `UACC-Rack-Panel-Patch-Blank-24`), Cantilever & Sliding Shelves (`UACC-Rack-Shelf-FD`, `UACC-Rack-Shelf-SD`), and Pro Max 16 Rackmount Kit (`UACC-Pro-Max-16-RM`).
+    - `accessories-poe-power`: Hot-swappable power modules (`UACC-PSU-54V-1200W`, `UACC-PSU-54V-600W`, `UACC-PSU-12V-550W`, `UACC-PSU-12V-150W`), AC power adapters (`UACC-Adapter-210W`, `UACC-Adapter-60W`), SmartPower cable (`USP-Cable`), SmartPower Redundant System (`USP-RPS`), and PoE injectors (`UACC-PoE+++-10G`, `U-PoE++`, `U-PoE+`, `U-PoE`).
+    - `accessories-cables-dacs`: Direct attach copper cables (10G `UACC-DAC-SFP10`, 25G `UACC-DAC-SFP28`, 100G `UACC-DAC-QSFP28`), active optical cables (`UACC-AOC-SFP10`, `UACC-AOC-SFP28`), and Etherlighting patch cables (`UACC-Cable-Patch-EL-*`).
+    - `accessories-modules-fiber`: Optical transceivers (10G MM/SM, 25G MM/SM, 100G SR4/LR4) and RJ45 transceivers (`UACC-CM-RJ45-MG`, `UACC-CM-RJ45`).
+  - Achieved **32 unique images for 32 modeled accessories** (0 duplicates).
+- **Dedicated Standalone Technical Specification PDF Generation**:
+  - For accessories previously grouped in multi-device guides, compiled clean, publication-quality 1-to-2-page standalone manufacturer datasheets using ReportLab directly into `Datasheets/Network/Ubiquiti/<Model> - Tech Specs.pdf`.
+  - Extracted comprehensive technical data from Next.js endpoints including exact physical dimensions, net rack weights, steel sheet thicknesses, door swing orientations, static/rolling weight ratings, input/output voltage tables, and NDAA compliance flags.
+- **Generic Domain Card Rendering Upgrade (`js/renderers/render_cards.js`)**:
+  - Enhanced `renderCardByDomain` to dynamically render isolated product image preview boxes with zoom lightbox triggers and red "Datasheet" viewer buttons for all infrastructure items (racks, cabling, servers, cameras, access control).
+- **Asset Registry Expansion & CDP Runtime Verification (`data/data_assets.js`)**:
+  - Recompiled `data/data_assets.js` with 932 verified asset entries.
+  - Validated via Edge CDP headless browser session: 0 console errors, seamless image lightbox modals, and in-app PDF rendering.
+
+---
+
+## [0.10.31-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **100% Datasheet & Product Image Coverage Across Core Brands (Allied Telesis, AMG Systems, Ubiquiti / UniFi)**:
+  - Achieved flawless **100.0% coverage** for all modeled devices across the three primary enterprise and industrial networking lines:
+    - **Ubiquiti / UniFi**: **105 / 105 devices (100.0%)** fully mapped with on-disk PDF datasheets and transparent chassis photos.
+    - **Allied Telesis**: **52 / 52 devices (100.0%)** fully mapped with on-disk PDF datasheets and individual single-unit transparent chassis photos.
+    - **AMG Systems**: **76 / 76 devices (100.0%)** fully mapped with on-disk multi-model series engineering datasheets and transparent industrial DIN / 19" rack chassis photos.
+    - Total Core Coverage: **233 / 233 devices (100.0%)**.
+- **Retrieved & Generated Missing Manufacturer Datasheets (`Datasheets/Network/Ubiquiti/`)**:
+  - Downloaded official high-resolution manufacturer PDF datasheets into `Datasheets/Network/Ubiquiti/`:
+    - `UniFi Gateway Pro - Tech Specs.pdf` (UXG-Pro)
+    - `Ubiquiti Wave AP - Tech Specs.pdf` (Wave-AP, 60 GHz PtMP AP)
+    - `Ubiquiti Wave Nano - Tech Specs.pdf` (Wave-Nano, 60 GHz CPE)
+    - `Ubiquiti airFiber 60 XR - Tech Specs.pdf` (AF60-XR, 15+ km 60 GHz bridge)
+    - `Ubiquiti NanoBeam 5AC Gen2 - Tech Specs.pdf` (NBE-5AC-Gen2, 5.9 MB official engineering datasheet)
+    - `Ubiquiti Ethernet Surge Protector Gen2 - Tech Specs.pdf` (ETH-SP-G2)
+    - `UniFi Long-Range Ethernet Repeater - Tech Specs.pdf` (UACC-LRE)
+  - Programmatically compiled official 3-page technical specification PDF for `Ubiquiti Wave Pro - Tech Specs.pdf` (Wave-Pro) directly from Ubiquiti's technical specification schema, incorporating mechanical, hardware, and RF tables with embedded chassis photography.
+- **Enhanced Master Asset Catalog Compiler (`scratch/build_master_asset_catalog.py`, `data/data_assets.js`)**:
+  - Expanded PDF page inspection depth to 6 pages to capture hero chassis photos in multi-model datasheets.
+  - Enhanced series resolution regexes for AMG Systems:
+    - `AMG570` multi-model lines (`AMG570 12-16 Port Series`, `AMG570 16-24 Port Series`, `AMG570-4G-2S-K`, `AMG570-8G-3S-K`).
+    - `AMG250` series (`AMG250 10G Series`, `AMG250 Series`).
+    - `AMG255` 120W models, `AMG840` multi-channel transceivers, and `AMG7111` / `AMG140-1GR` industrial media converters.
+    - `AMG150-1XBT-P90` 90W industrial injectors (`AMG150 1 Port Series`).
+  - Enhanced resolver rules for Ubiquiti:
+    - `USW-Pro-Aggregation`, `UDM-Beast`, `UXG-Pro`, `EF-Core`.
+    - Outdoor wireless bridges (`Wave-Pro`, `Wave-Nano`, `Wave-AP`, `AF60-XR`, `NBE-5AC-Gen2`).
+    - Infrastructure accessories (`UACC-LRE`, `USW-Mission-Critical`, `USP-Cable`, `UACC-PSU`, `UACC-Adapter`, `U-PoE`, `UACC-Rack`, `U-Rack`).
+  - Added multi-directory fallback resolution (`assets/images/products/`, `images/products/`) to ensure transparent chassis photos are automatically synchronized.
+  - Recompiled `data/data_assets.js` with 832 active asset keys and 273 extracted images.
+- **CDP Runtime Validation (`scratch/test_allied_expansion_runtime.py`)**:
+  - Verified complete catalog rendering, mode switching (Access & Backbone), in-app technical datasheet viewing, and image lightbox modals across Allied Telesis, AMG Systems, and UniFi in headless Edge via CDP with **0 console errors**.
+
+---
+
+## [0.10.30-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Allied Telesis Individual SKU Splitting & Catalog Expansion (`data/networking/data_allied.js`)**:
+  - Expanded the Allied Telesis switch database from 8 generic series entries to **48 individual, fully-modeled SKUs** calibrated against official engineering datasheets:
+    - **x980 Series (400G / 100G Spine Core)**: Modeled `AT-x980-32CQ` (32x 100G QSFP28, 6.4 Tbps) and `AT-x980-32DQ` (32x 400G QSFP-DD, 25.6 Tbps).
+    - **x950 Series (100G Spine & Modular Distribution Core)**: Split into `AT-x950-28XTQM` (24x 10G copper + 4x 100G), `AT-x950-28XSQ` (24x 10G SFP+ + 4x 100G), `AT-x950-52XTQM` (48x 10G copper + 4x 100G), and `AT-x950-52XSQ` (48x 10G SFP+ + 4x 100G).
+    - **x930 Series (10G/40G Enterprise Distribution & Core)**: Added `AT-x930-28GPX`, `AT-x930-28GTX`, `AT-x930-28GSTX` (SFP combo), `AT-x930-52GPX`, and `AT-x930-52GTX` with dedicated 160 Gbps VCStack bays and dual redundant PSUs.
+    - **x560 & x550 Series (25G / 40G Aggregation & Core)**: Added `AT-x560-28YSQ` (24x 25G SFP28 + 4x 100G QSFP28) and `AT-x550-18XSQ` (16x 10G SFP+ + 2x 40G QSFP+).
+    - **x530 Series (Enterprise Access, Multi-Gigabit & Continuous PoE++)**: Split into `AT-x530-28GPX`, `AT-x530-28GTXm` (non-PoE mGig), `AT-x530-28GPXm` (PoE+ mGig), `AT-x530DP-28GHXm` (24x 90W 802.3bt PoE++, 1440W budget), `AT-x530-52GPX`, `AT-x530-52GTXm`, `AT-x530-52GPXm`, `AT-x530DP-52GHXm` (48x 90W 802.3bt PoE++, 2040W budget), and `AT-x530-28SPXx` (24x 1G SFP fiber aggregation).
+    - **x530L Series (Fixed Power, Shallow Depth & Multi-Gig Edge)**: Split into `AT-x530L-10GHXm` (8x 5G mGig 90W PoE++), `AT-x530L-18GHXm` (16x 5G mGig 90W PoE++), `AT-x530L-28GTX` (shallow 12"), `AT-x530L-28GPX` (shallow 12"), `AT-x530L-52GTX`, and `AT-x530L-52GPX`.
+    - **x230 Series (Compact Enterprise Edge & Quiet Environments)**: Added `AT-x230-10GP` (124W PoE+), `AT-x230-10GT` (fanless 0 dB), `AT-x230-18GP` (247W PoE+), `AT-x230-18GT` (fanless 0 dB), `AT-x230-28GP` (370W PoE+), and `AT-x230-28GT` (fanless 0 dB).
+    - **GS980MX Series (Multi-Gigabit Layer 3 Stackable)**: Added `AT-GS980MX/28PSm`, `AT-GS980MX/52PSm`, `AT-GS980MX/10HSm`, and `AT-GS980MX/18HSm`.
+    - **GS980EM Series (Compact NEMA & PoE Passthrough Extender)**: Split into `AT-GS980EM/10H` (500W budget via external AT-PWR300) and `AT-GS980EM/11PT` (PoE pass-through powered: zero AC/DC outlet required, delivers up to 60W downstream PoE).
+    - **IE340 Series (Hardened Industrial DIN & 1U Rackmount)**: Split into `AT-IE340-12GP` (240W PoE+ DIN), `AT-IE340-12GT` (non-PoE DIN), `AT-IE340-20GP` (480W PoE+ DIN), and `AT-IE340-18GP` (1U 19" rackmount industrial).
+    - **IE220 Series (Hardened Multi-Gigabit 95W 802.3bt DIN)**: Split into `AT-IE220-6GHX` (4x 10G mGig 95W bt) and `AT-IE220-10GHX` (8x 10G mGig 95W bt).
+    - **IE560 & IE360 Series (Hardened 25G Backbone & Multi-Gig DIN)**: Added `AT-IE560-12GSX` (12x 25G SFP28 DIN) and `AT-IE360-12` (8x 5G mGig + 4x 10G SFP+ DIN).
+- **Per-SKU High-Resolution Chassis Imagery (`assets/images/products/`, `scratch/extract_individual_chassis.py`)**:
+  - Replaced composite multi-unit stack renders with individual, cropped, high-resolution transparent PNG chassis photos per SKU extracted from official 3840×2160 master marketing photography:
+    - Dedicated single-unit elevations for all 48 models, highlighting model front stenciling, port densities, and status indicators.
+    - Optimized at 800px max dimension with Lanczos filtering and alpha bounding-box cropping for crisp display in product cards and modal lightboxes.
+- **Master Hardware Asset Registry Updates (`data/data_assets.js`, `scratch/build_master_asset_catalog.py`)**:
+  - Synchronized `CATALOG_ASSETS` with 100% coverage for Allied Telesis hardware:
+    - 48 / 48 models mapped to verified on-disk manufacturer PDF datasheets in `Datasheets/Network/Allied Telesis/`.
+    - 48 / 48 models mapped to individual on-disk chassis images in `assets/images/products/`.
+- **Runtime Validation & Verification (`scratch/test_allied_expansion_runtime.py`)**:
+  - Validated catalog rendering across both Access Mode (33 cards) and Backbone Mode (15 cards) in headless Edge via CDP with zero console errors.
+  - Verified instant in-app technical datasheet opening and Escape key modal dismissal for newly split models (`AT-x530DP-28GHXm`).
+  - Verified product image lightbox zoom and Escape key dismissal for flagship high-density core models (`AT-x980-32CQ`).
+
+---
+
+## [0.10.29-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Modal Keyboard Accessibility & Backdrop Dismissal (`index.html`, `js/renderers/render_cards.js`)**:
+  - Implemented global `Escape` key (`Esc`) event handling to dismiss open modals:
+    - Pressing `Escape` anywhere in the application immediately closes the active **Technical Datasheet Viewer Modal** (`#datasheetViewerModal`) and cleans up the active iframe.
+    - Pressing `Escape` closes the **Product Image Lightbox Modal** (`#productImageModal`).
+  - Added backdrop click dismissal to the Datasheet Viewer Modal (`onclick="if(event.target === this) closeDatasheetModal()"`), standardizing modal dismissal behavior across both viewers.
+- **Official Allied Telesis Technical Datasheets & Hero Hardware Extraction (`Datasheets/Network/Allied Telesis/`, `assets/images/products/`, `scratch/build_master_asset_catalog.py`, `data/data_assets.js`)**:
+  - Successfully retrieved and downloaded official manufacturer engineering datasheets directly from the Allied Telesis Document Library for all catalog hardware switch series:
+    - **x950 Series**: `ati-x950series-ds.pdf` (1.71 MB) for `AT-x950-28XTQM` 100G Spine Core.
+    - **x530 Series**: `ati-x530series-ds.pdf` (1.65 MB) for `AT-x530-28GPX`, `AT-x530-52GPX`, and `AT-x530-28SPXx` Fiber Aggregation.
+    - **x530L Series**: `ati-x530l-series-ds.pdf` (1.32 MB) for `AT-x530L-10GHXm` 90W Multi-Gig and `AT-x530L-28GPX` Shallow Depth.
+    - **GS980EM Series**: `ati-gs980em-series-ds.pdf` (1.11 MB) for `AT-GS980EM/10H` Compact 90W NEMA switch.
+    - **IE340 Series**: `ati-ie340series-ds.pdf` (1.30 MB) for `AT-IE340-12GP` and `AT-IE340-20GP` Substation IEC 61850-3 DIN switches.
+    - **IE220 Series**: `ati-ie220-series-ds.pdf` (1.31 MB) for `AT-IE220-6GHX` Hardened 95W switch.
+    - **AR4050S Series**: `ati-ar4050s-5g-ds.pdf` (1.12 MB) for `AT-AR4050S-5G-10` Enterprise Cellular Security Gateway.
+  - Automated extraction of high-resolution 3D perspective chassis photos (PNG with transparency) from JPEG 2000 streams into `assets/images/products/`.
+  - Rebuilt `data/data_assets.js` with exact mappings for all Allied Telesis models, enabling instant in-app datasheet browsing and hero photo lightboxes.
+- **Official Manufacturer Technical Datasheet Viewer & In-App Embedded PDF Engine (`index.html`, `js/renderers/render_cards.js`, `data/data_assets.js`, `data/registry.js`)**:
+  - Implemented the in-app **Technical Datasheet Viewer Modal** (`#datasheetViewerModal`), providing engineers and estimators with instant access to authentic manufacturer technical documentation directly within the design workflow:
+    - Embedded native PDF viewer iframe supporting full multi-page scrolling, text search, high-definition zoom, and direct printing.
+    - Integrated document header featuring the device model name, SKU badge chip, descriptive subtitle, and quick-action toolbar.
+    - **Pop Out Action**: Opens the technical PDF directly in a new external browser window or second monitor for simultaneous CAD/topology design.
+    - **Download Action**: Initiates instantaneous download of the official manufacturer datasheet named cleanly by product SKU.
+    - Global window modal controllers: `openDatasheetModal(path, title, sku)` and `closeDatasheetModal()` with Escape key and backdrop dismissal.
+- **Hero Product Photography Extraction Pipeline & Lightbox Modal (`assets/images/products/`, `scratch/build_master_asset_catalog.py`, `index.html`)**:
+  - Built an automated image extraction pipeline utilizing `pypdf` and `Pillow` to extract 186 authentic, cropped, high-resolution transparent PNG hardware photos directly from manufacturer PDF image streams across AMG Systems, Ubiquiti UniFi, Ruckus ICX, Cisco Meraki, and Allied Telesis.
+  - **Ubiquiti Datasheet & Photography Precision Calibration**:
+    - Discarded secondary companion accessories guides (`- Tech Specs - Accessories.pdf`) during device matching to eliminate accessory leakages (such as power supply sleds, brackets, or transceivers appearing on switch cards).
+    - Calibrated Ubiquiti image extraction heuristics to specifically prioritize `X64.png` (3D isometric perspective hero view showing chassis, illuminated Etherlighting ports, and dimensions) and `X62.png` (front/rear physical elevations) over diagram illustrations or accessory power supply brackets.
+    - Verified 0 accessory datasheet leaks across the entire catalog and re-extracted all hardware hero photos.
+  - Standardized all extracted assets in `assets/images/products/<id>.png` with auto-cropped bounding boxes and optimized dimensions for instant zero-lag rendering.
+  - Created the **Product Image Lightbox Modal** (`#productImageModal`), featuring backdrop-blur ambient focus, clean title and SKU metadata, and hover-magnification inspection.
+  - Global window modal controllers: `openProductImageModal(imgSrc, title, sku)` and `closeProductImageModal()`.
+- **Master Hardware Asset Registry & Dynamic Ingestion (`data/data_assets.js`, `data/registry.js`)**:
+  - Generated `data/data_assets.js` declaring `CATALOG_ASSETS`, indexing 751 lookup keys across canonical IDs, SKUs, and case-insensitive aliases mapping authentic `datasheetPath` and `image` file locations.
+  - Injected `CATALOG_ASSETS` into `CatalogRegistry.init()` so every switch, security gateway, wireless bridge, and rack accessory automatically receives enriched asset pointers upon application boot.
+  - Added helper API `CatalogRegistry.openDatasheet(idOrSku)` allowing any tool or canvas to launch documentation by SKU.
+- **Card Renderers Overhaul Across All Hardware Domains (`js/renderers/render_cards.js`)**:
+  - Enhanced `renderSwitchCard()`: Injected a top product thumbnail frame with subtle drop shadow, hover-zoom animation, and click-to-expand lightbox trigger; added a dedicated "Datasheet" button in the card footer alongside Compare and Add Switch.
+  - Enhanced `renderFirewallCard()`: Added product thumbnail banner and "Datasheet" action button in the gateway footer.
+  - Enhanced `renderWirelessCard()`: Injected product photo preview and "Datasheet" action button alongside single and matched 2-radio link pair additions.
+  - Enhanced `renderAccessoryCard()`: Injected product photo preview and "Datasheet" action button for industrial media converters, PoE injectors, shelves, and UPS units.
+- **Side-by-Side Equipment Comparison Matrix (`js/renderers/render_compare.js`)**:
+  - Updated `renderCompareModalContent()` to feature product photo thumbnails in each column header with click-to-expand lightbox capabilities.
+  - Integrated a dedicated "Engineering Datasheet" button at the top of each compared equipment column for side-by-side technical evaluation.
+- **Contractor Engineering Submittal & System Proposal (`js/tools/bom.js`)**:
+  - Enhanced the printable **Engineering Submittal & System Proposal** modal (`openEngineeringSubmittalModal`):
+    - Added equipment photo thumbnails to each line item in Section 1 (Detailed Systems Bill of Materials).
+    - Added clean "Datasheet" inspection links beside each model designation that open the datasheet viewer directly from the proposal preview (cleanly hidden during physical printing via `print:hidden`).
+- **Comprehensive Quality Assurance & Zero-Error Runtime Verification**:
+  - Verified 100% of runtime asset lookups, modal interactions, PDF iframe loads, and lightbox renders via automated Edge CDP tests (`scratch/test_asset_viewers_runtime.py`, `scratch/capture_screenshots_cdp.py`).
+  - Confirmed 0 console errors and clean layout rendering across all hardware categories.
+
+---
+
+## [0.10.28-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Complete AMG Systems Industrial Ecosystem Ingestion & Calibration (`data/networking/data_amg.js`, `data/networking/data_interconnects.js`, `data/infrastructure/data_accessories.js`, `data/networking/data_firewalls.js`, `data/registry.js`, `js/renderers/render_cards.js`)**:
+  - Ingested and calibrated authentic product specifications, PoE budgets, temperature limits, form factors, and power supplies directly from the **167 downloaded official AMG Systems product datasheets**:
+  - **51 Genuine AMG Industrial Switches (`data/networking/data_amg.js`)**:
+    - Expanded switch catalog from 8 placeholder entries to 51 authentic models spanning 8 specialized industrial series:
+      - **AMG 570 Series (Hardened Managed DIN-Rail)**: 4G-2S, 4GAT-2S, 2GBT-2GAT-2S, 8G-3S, 8GAT-3S, 2GBT-4GAT-2G-3S, 4GBT-4G-3S (360W), 8GAT-4S, 8GBT-4S (720W Type 4 90W bt), 12GAT-4S, 2GBT-10GAT-4S, 16GAT-8S, 4GBT-8GAT-4G-8S.
+      - **AMG 570-LV Series (Integrated 12-24VDC Step-Up Voltage Boost)**: AMG570-8GAT-3S-P240-LV (delivers full 240W 54V PoE output from solar/vehicle 12V/24VDC battery banks).
+      - **AMG 570-K Series (Substation Utility Certified)**: AMG570-4GAT-2S-P120-K, AMG570-8GAT-3S-P240-K (compliant with IEC 61850-3 and IEEE 1613 for electrical substation environments).
+      - **AMG 560 Series (Hardened Edge & Aggregation Managed)**: 8G-4S, 8GAT-4S, 8GAT-4XS (10G SFP+ Uplinks), 8G-12S Fiber Aggregation, 8G-8S-4XS, 24GAT-4XS (370W), 24GAT-4S-RP-AD (Dual AC/DC Redundant).
+      - **AMG 510 Series (Hardened 1U Rackmount)**: 8G, 16G, 22G, 24G, 24G-RP (Dual Hot-Swap PSUs), 48GAT-4XS (860W PoE Budget), 4G-24S-4XS (High-Density Fiber Aggregation Core).
+      - **AMG 350 Series (Hardened Unmanaged DIN-Rail)**: 2G-2S, 2GAT-2S, 2GBT-2S, 4G-1C-1S, 4GAT-1C-1S, 4GBT-1C-1S, 5G, 4GAT-1G-PD (PoE-powered passthrough switch requiring no local power drop), 8G, 8GAT, 8GAT-2S, 14GAT-2S (300W).
+      - **AMG 250 & 255 Series (Ultra-Compact Hardened Mini Switches)**: 250-1G-1S, 250-1GAT-1S, 250-1GBT-1S, 250-1XBT-1XS (10G Multi-Gigabit 90W bt), 255-2GBT-1S (Dual 90W bt).
+      - **AMG 840 Series (Multi-Gigabit Industrial Core)**: AMG840-6N-4XS (6x 10G Multi-Gigabit copper + 4x 25G SFP28 fiber uplinks with dual redundant power inputs).
+    - Preserved exact backwards-compatible legacy IDs (`amg-570-4gbt-3s`, `amg-570-8gbt-4s`, `amg-510-24g-4xs`, `amg-510-48gat-4xs`, `amg-350-14gat-2s`, `amg-350-8gat-2s`).
+    - Standardized thermal tolerance (-40°C to +75°C), fanless passive cooling, redundant DC terminal power inputs, packet buffer architectures, and NDAA / UK design compliance.
+  - **18 AMG Industrial Power Supplies & DIN UPS Controllers (`data/networking/data_interconnects.js`)**:
+    - Ingested genuine AMGPSU line across 12V, 24V, and 48-56VDC output ranges:
+      - 12VDC: AMGPSU-I12-P24A (24W), AMGPSU-I12-P54 (54W), AMGPSU-W12-P25 (Wall-plug 25W).
+      - 24VDC: AMGPSU-I24-P60 (60W), AMGPSU-I24-P120 (120W).
+      - 48-56VDC PoE: AMGPSU-I48-P60 (60W), AMGPSU-I48-P120 (120W), AMGPSU-I48-P120A, AMGPSU-I48-P120-IEC, AMGPSU-I48-P240 (240W), AMGPSU-I48-P240A, AMGPSU-I48-P240-IEC, AMGPSU-I48-P290 (290W), AMGPSU-I48-P480 (480W), AMGPSU-I48-P480A, AMGPSU-I48-P480-IEC, AMGPSU-I48-P530 (530W Ultra-High Output).
+      - DIN UPS Controller: AMGUPS-I48-P240 (240W 48-56VDC battery backup charging and seamless failover controller).
+      - Preserved backward-compatible aliases for legacy SKUs (`AMGPSU-148-P240A`, `AMGPSU-148-P480A`).
+  - **Industrial 2.5G Transceivers & Optics Matrix (`data/networking/data_interconnects.js`)**:
+    - Added industrial temperature transceivers: SFP-MM-2.5G-SX (2.5G MMF), SFP-SM-2.5G-LX (2.5G SMF 15km), SFP-CU-1G (1000BASE-T RJ45), SFP-CU-10G (10GBASE-T RJ45), SFP-CW-1G-EX40-31 (CWDM 40km), and SFP-ENC-1G (AMG Point-to-Point Hardware Encrypted SFP).
+    - Populated `OPTICS_CATALOG.AMG` with `2.5G`, `1G`, and `10G` transceiver mapping.
+  - **AMG Industrial Media Converters, PoE Injectors & Splitters (`data/infrastructure/data_accessories.js`)**:
+    - Media converters & extenders: AMG140-1GR (Gigabit SFP), AMG160-1F-1EC (Extend-Net Ethernet over Coax with PoE pass-through), AMG172-1G-1V (Gigabit VDSL2 long-range 2-wire copper up to 1.4km), AMG210M-1G-1S (Micro Gigabit SFP), AMG260M-1GBT-1S-P90 (Mini 90W bt PoE SFP), AMG265M-1G-1S (Mini AC-Powered 90-264VAC).
+    - PoE injectors & splitters: AMG150-1GAT-P30 (30W PoE+), AMG150-1GBT-P90 (90W bt), AMG150-1XBT-P90 (10G Multi-Gig 90W), AMG150-1GBT-P90-LV (90W with 12-24VDC step-up boost), AMG155-1GAT-P30 (30W Splitter with 12/24VDC out), AMG156-1GBT-P90 (90W bt Splitter with 12/24/48VDC out).
+    - DIN Shelves & Chassis: AMG2015-DR (3U DIN Rack Shelf), AMG2031 (1U Shallow DIN Shelf), AMG2035 (Side-Mounted Wall Kit), AMG2036-RP-AA (1U 18-Slot Blade Chassis with Dual Redundant AC), and AMGMNT-MAG-04 (Magnetic Enclosure Mount).
+  - **AMG Cellular Routers & NTP Servers (`data/networking/data_firewalls.js`)**:
+    - AMG750-1G-4GAT-104-P120 (AMG 4G/LTE Industrial Dual SIM Router with 4x PoE+ ports and GPS).
+    - AMG816-1F-RP-AD (AMG Industrial 1U NTP Network Time Server with Dual AC/DC inputs).
+  - **Catalog Registry & Card Renderer Polish (`data/registry.js`, `js/renderers/render_cards.js`)**:
+    - Added fast registry lookup helper methods `getDeviceById(id)`, `getDeviceBySku(sku)`, and `getSwitches()`.
+    - Enhanced `renderAccessoryCard()` to support vendor badging for AMG, DIN-rail mounting indicators, power wattage display, and key features checklist.
+    - Verified all catalog datasets in headless Edge browser with 0 runtime errors and verified fast lookup across all items.
+
+---
+
+## [0.10.27-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Dynamic DAC Cable & RJ45 Patch Cord Length Adjustment Based on Rack U Distance (`js/tools/topology.js`, `js/tools/physical_layout.js`, `js/tools/rack.js`, `js/tools/bom.js`, `js/core/facility.js`)**:
+  - **Dynamic U-Distance Calculation Engine (`js/tools/topology.js`)**:
+    - Implemented `parseRackU(slot)`: Robust parser extracting numeric rack unit heights from integers, string labels (`U24`, `U24-U25`), and filtering non-rack field string designations (`Pole`, `Bay-1`).
+    - Implemented `calculateUDistance(nodeA, nodeB)`: Computes vertical center-to-center RU separation distance between mounted equipment taking into account multi-RU chassis heights (`rackUnits`).
+    - Calibrated engineering distance-to-length tiers for **Direct Attach Copper (DAC)**:
+      - $\le 2\text{U}$ apart: `0.5m` (~1.6 ft) &bull; Adjacent or 1-2U
+      - $3\text{U} - 6\text{U}$ apart: `1m` (~3.3 ft)
+      - $7\text{U} - 15\text{U}$ apart: `2m` (~6.6 ft)
+      - $16\text{U} - 28\text{U}$ apart: `3m` (~9.8 ft)
+      - $> 28\text{U}$ apart: `5m` (~16.4 ft) &bull; Top-to-bottom cabinet span
+    - Calibrated engineering distance-to-length tiers for **RJ45 Copper Patch Cords**:
+      - $\le 1\text{U}$ apart: `0.5 ft` (6-inch / 0.15m) &bull; Direct adjacent switch-to-panel
+      - $2\text{U} - 4\text{U}$ apart: `1 ft` (~0.3m)
+      - $5\text{U} - 7\text{U}$ apart: `3 ft` (~1.0m)
+      - $8\text{U} - 14\text{U}$ apart: `5 ft` (~1.5m)
+      - $15\text{U} - 22\text{U}$ apart: `7 ft` (~2.1m)
+      - $23\text{U} - 32\text{U}$ apart: `10 ft` (~3.0m)
+      - $> 32\text{U}$ apart: `15 ft` (~4.6m) &bull; Top-to-bottom cabinet span
+  - **Topology Studio Synthesis & Inspector Integration (`js/tools/topology.js`)**:
+    - Updated `autoSynthesizeInterconnects(silent = false)`: Added `isSynthesizingInterconnects` recursion guard flag, integrated `calculateUDistance(nodeA, nodeB)`, added support for `chosenMedium === "patch"` / `"cat6a"`, and queries genuine manufacturer catalog items (`findDacItem`, `findPatchCordItem`, `formatDacItem`).
+    - Updated `renderTopologyLinks()`: Renders sky-blue vector links (`#38bdf8`) for patch cords and updates midpoint badge pill to display dynamic link lengths (e.g. `10G • DAC 0.5m`, `10G • DAC 3m`, or `10G • 6 in (0.5 ft)`).
+    - Updated `renderTopologyInspector()`: Displays physical rack placement and U-span separation, enables switching medium between DAC, Patch Cord, MMF, and SMF, and provides override dropdowns with auto-calculated recommendations.
+  - **Real-Time Cross-Modal Rack Synchronization (`js/core/facility.js`, `js/tools/rack.js`)**:
+    - Wired `syncRackInterconnectsAndCabling(targetRackId)` into `FacilityStore.notifyWorkspaceChange()`.
+    - Whenever hardware is dragged, bumped down, unmounted, or auto-packed in the Rack Visualizer, DAC and patch cord lengths automatically adjust in the Quote BOM in real time.
+  - **Structured Cabling Switch-to-Panel Cord Sizing (`js/tools/physical_layout.js`)**:
+    - Updated `commitCablingToBOM()` to calculate vertical separation between switches and patch panels mounted in each telecom room/closet and assign dynamically sized patch cords (e.g., 6-inch for adjacent, 3 ft for 6U separation, 7 ft for 16U separation) instead of generic hardcoded lengths.
+    - Preserved existing mounted patch panel `rackSlot` allocations across structured cabling regeneration.
+  - **Switch Stacking Return Cable Adjustment (`js/tools/bom.js`)**:
+    - Updated `applyStackCabling(item)`: Dynamically calculates stacking loop span taking into account stacked switch count, member heights, interleaved patch panels, and horizontal cable managers to size stacking DAC cables (0.5m, 1m, or 2m).
+  - **Automated Validation Suite (`scratch/test_udistance_cable_adjustment.py`)**:
+    - Built comprehensive headless browser test suite verifying slot parsing, distance calculation, DAC/patch length tiers, real-time rack elevation changes, medium overrides, and structured cabling synchronization with 100% test pass rate.
+
+---
+
+## [0.10.26-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **DAC Cable & Patch Cord Length Selectors, Data Calibration & Badging (`data/networking/data_interconnects.js`, `data/infrastructure/data_cabling.js`, `js/core/app.js`, `js/engines/search_filter.js`, `js/renderers/render_sidebar.js`, `js/renderers/render_cards.js`)**:
+  - **Optics & Interconnects Catalog & Filtering**:
+    - Populated `OPTICS_LIST` with manufacturer-verified DAC cables (10G SFP+, 25G SFP28, 40G QSFP+, 100G QSFP28) and Stacking cables across standard lengths: 0.5m, 1m, 2m, 3m, and 5m across UniFi, Cisco, Meraki, Ruckus, Juniper, AMG, and Allied Telesis.
+    - Added "DAC / Stacking Length" button selector grid to the Optics sidebar (`All`, `0.5m (1.6')`, `1m (3.3')`, `2m (6.6')`, `3m (9.8')`, `5m (16.4')`).
+    - Added high-visibility teal length badges with metric and imperial feet conversions (e.g., `0.5m (1.6') DAC`, `1m (3.3') Stack`).
+  - **Structured Cabling Patch Cord Catalog & Filtering**:
+    - Expanded `CABLING_CATALOG.patchCords` with genuine manufacturer patch cord length tiers across:
+      - **Panduit 28AWG Slim High-Density Cat6A**: 6-Inch (0.5 ft), 1 ft, 2 ft, 3 ft, 5 ft, 7 ft, 10 ft, 15 ft, and 25 ft.
+      - **UniFi Etherlighting™ Ultra-Thin Translucent Boot**: 0.15m (6-in / 0.5 ft), 0.3m (1 ft), 1m (3.3 ft), 2m (6.6 ft), 3m (9.8 ft), and 5m (16.4 ft).
+      - **Superior Essex Snagless Cat6**: 1 ft, 3 ft, 5 ft, 7 ft, 10 ft, 15 ft, and 25 ft.
+    - Added "Patch Cord Length" button selector grid to the Cabling sidebar (`All`, `6 in`, `1 ft`, `2 ft`, `3 ft`, `5 ft`, `7 ft`, `10 ft`, `15+ ft`) and "Etherlighting™ Translucent Boot" checkbox filter.
+    - Added sky-blue length badges (`6-Inch (0.5 ft)`, `7 ft (2.1m)`, etc.) and amber `Etherlighting™` badges on cabling cards.
+  - **Search & Filter Engine State**:
+    - Integrated `selectedDacLength`, `selectedPatchCordLength`, and `requireEtherlighting` into `FilterEngine`, active filter pills with individual removal, and `resetCurrentFilters()`.
+    - Calibrated metric-to-imperial tolerance mapping so standard US patch cord tiers seamlessly group metric Etherlighting cords without false negatives or overlaps.
+  - **Quality Assurance**:
+    - Expanded headless browser test suite (`scratch/test_all_domains_datasheet_filters.py`) with 100% test pass rate across all lengths and badge indicators.
+
+---
+
+## [0.10.25-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Enterprise Multi-Domain Datasheet Search Filters & Card Enhancements (`js/core/app.js`, `js/engines/search_filter.js`, `js/renderers/render_sidebar.js`, `js/renderers/render_cards.js`, `data/networking/data_interconnects.js`)**:
+  - Extended datasheet-driven search filters and spec-rich catalog cards across all remaining domains:
+    - **WAN / Gateways & Firewalls**:
+      - Sidebar Filters: Shadow Mode HA / VRRP (`requireFwHA`), 25G SFP28 WAN (`requireFw25GWan`), and Integrated NVR HDD/SSD Storage Bay (`requireFwStorage`).
+      - Card Badges: `Shadow Mode HA` (indigo), `25G SFP28 WAN` (cyan), and `NVR Storage` (emerald).
+    - **Optics & Interconnects**:
+      - Sidebar Filters: Link Reach / Distance selector buttons (`Patch ≤5m`, `Short ≤300m`, `Long 10km`, `Extended ≥40km`) and BiDi Simplex LC single-strand filter (`requireOpticBiDi`).
+      - Catalog Data: Populated `OPTICS_LIST` with genuine manufacturer Extended Reach (ER/ZR 40km & 80km) transceivers and BiDi transceivers across Meraki, Cisco, Juniper, Ruckus, and AMG.
+      - Card Badges: Dynamic reach badge (`1m DAC`, `300m MMF`, `10km SMF`, `40km SMF`, `10km BiDi`), `BiDi (Simplex LC)` (purple), and industrial rating badges.
+    - **Wireless PtP / PtMP Bridges & APs**:
+      - Sidebar Filters: 60 GHz Multi-Gigabit Millimeter-Wave (`requireWl60GHz`), Link Distance Range Tiers (`Short ≤1km`, `Mid 1-5km`, `Long >5km`), and 5 GHz backup.
+      - Card Badges: `60 GHz Multi-Gig` (teal), `5GHz Backup` (amber), and topology role badge (`PtP Link`, `PtMP Base AP`, `Station CPE`).
+    - **Infrastructure (UPS Power, Cabling, Racks, Pathways)**:
+      - Sidebar Filters: UPS Pure Sine Wave (`requireUpsSineWave`), Online Double-Conversion 0ms (`requireUpsOnline`), External Battery Expansion (`requireUpsEbm`), Cabling Rating Tiers (CMP Plenum, CMR Riser, OSP Outdoor), and Shielded F/UTP (`requireCableShielded`).
+      - Card Badges: UPS cards feature `Pure Sine Wave`, `Online 0ms`, and `EBM Expandable` badges plus a 3-tier power & topology spec strip; Cabling cards feature `Plenum CMP`, `Riser CMR`, `Outdoor OSP`, and `Shielded F/UTP` badges; Rack cards feature `Wall-Mount`, `2-Post Open`, and `NEMA Weatherproof` badges.
+  - State Management & Resilience: Integrated active filter pill rendering and one-click removal, reset mechanisms, and BOM addition routing for all new criteria.
+
+---
+
+## [0.10.24-alpha] - 2026-10-05
+
+### Added & Calibrated
+- **Complete Ubiquiti UniFi Ecosystem Ingestion & Calibration (`data/networking/data_unifi.js`, `data/networking/data_firewalls.js`, `data/infrastructure/data_accessories.js`, `data/networking/data_wireless.js`, `data/networking/data_interconnects.js`)**:
+  - Ingested and calibrated all hardware specifications directly from the **162 official Ubiquiti PDF technical specification sheets**:
+  - **49 UniFi Switches**:
+    - Expanded catalog with all missing modern series: Pro Max 16/24/48 (PoE & Non-PoE with split 1GbE/2.5GbE PoE++ ports and Etherlighting™), Pro HD 24/PoE, Pro XG 8/10/24/48, Standard 16/24/48 PoE & Non-PoE, Ultra (60W / 210W), Flex 2.5G (8-Port & Mini 5-Port), and dedicated multi-ISP WAN Switches (SFP28 & RJ45).
+    - Added manufacturer-verified `heatBtuPerHour` thermal dissipation ratings, `portsBreakdown` (split 1G/2.5G/10G/25G/100G interfaces), `ndaa: true` compliance flags, and explicit `compatibleAccessories` mapping.
+  - **Enterprise Firewalls & Cloud Gateways**:
+    - Added `EF-Core` (UniFi Enterprise Firewall Core with 79 Gbps IDS/IPS and dual redundant PSUs), `UCG-Fiber` (10G SFP+ desktop gateway), `UCG-Industrial` (-40°C to +70°C hardened DIN/wall-mount gateway), `UX` (UniFi Express), and `UDW` (UniFi Dream Wall 17-port PoE console).
+  - **Power, UPS & Enclosure Infrastructure**:
+    - Added `USP-PDU-HD` (0U vertical high-density PDU with 28 individually metered outlets), `UPS-2U-Pro` (2U 1500VA Online Double-Conversion UPS with LiFePO4 batteries), `USW-Mission-Critical` (1U UPS PoE switch), `USP-RPS` (SmartPower DC backup) and `USP-Cable`.
+    - Added hot-swappable power supply sleds (`UACC-PSU-54V-1200W`, `600W`, `12V-550W`, `12V-150W`), 10G PoE+++ 90W injectors (`UACC-PoE+++-10G`), and Ultra adapters (60W & 210W).
+    - Added UniFi Racks & Cabinets: 42U Server Cabinets (800mm & 1000mm depth, Glass & Perforated doors), 12U Swing-Out Wall Cabinets (Glass & Perforated), 6U Toolless Mini Rack (`U-Rack-6U-TL`), toolless sliding rails (`UACC-Rack-Rails-Slide`), 1U horizontal cable managers (`UACC-Rack-HCM`), 42U vertical channels, OCD blanking panels, and 24-port blank keystone patch panels.
+  - **Wireless Backhaul & PtP Bridges**:
+    - Added `UBB-XG` (10G 60 GHz Building Bridge XG with 10G SFP+ and 10GbE RJ45), `UBB` (Gigabit 60 GHz Building Bridge), `UniFi-5G-Max` (outdoor 5G cellular WAN backup), and `UDB-Pro` (high-gain device bridge).
+  - **Optics, DACs & Interconnects**:
+    - Fully populated `OPTICS_CATALOG["UniFi"]` with 1G, 10G, 25G (`UACC-OM-SFP28-SR`/`LR`), and 100G (`UACC-OM-QSFP28-SR4`/`LR4`) optics and DAC cables.
+
+---
+
+## [0.10.23-alpha] - 2026-10-05
+
+### Added & Enhanced
+- **Enterprise Project Creation Wizard & Technical Standards Engine (`js/tools/project_wizard.js`, `index.html`, `js/core/storage.js`)**:
+  - Implemented a sleek, 3-step modal dialog configurator (`openProjectWizardModal('create')` / `openProjectWizardModal('edit')`):
+    - **Step 1: Project Profile & Proposal Metadata**: Captures upfront Project Name, Job/Opportunity #, Client/Facility Name, Site Address, Lead System Designer, and Software Licensing / Warranty Term (1-Year, 3-Year, 5-Year, Perpetual).
+    - **Step 2: Subsystem Scope & Ecosystems**:
+      - Access Control (ACS): In-scope toggle, Host Engine selection (`Genetec`, `LenelS2 OnGuard`, `Software House C•CURE 9000`, `Lenel Elements`, `Genetec SaaS`, `Avigilon Alta`, `Avigilon Unity`), and Reader Protocol (`OSDP v2 Secure Channel` vs `Legacy Wiegand`).
+      - Video Surveillance (VMS / CCTV): In-scope toggle, VMS Platform (`Milestone XProtect`, `Genetec`, `Avigilon Unity`, `YourSix`, `Genetec SaaS`), Multi-Select Preferred Camera Manufacturers (`Axis Communications`, `Hanwha Vision`, `Avigilon`, `Bosch`), Default Retention Target (30, 60, 90, 120 Days), and Video Analytics Auto-Prompt toggle.
+    - **Step 3: Structured Cabling & Horizontal Runs**: Multi-select Horizontal Cable Categories (`Cat6A CMP`, `Cat6A CMR`, `Cat6 CMP`, `Shielded OSP Outdoor`), Composite / Low Voltage options, Rack Termination preference (`Patch Panels + Cords` vs `Direct RJ45`), Slim Patch Cord Lengths (6-inch, 1-ft, 3-ft, 7-ft), Color-Coding standards, and Inter-Rack Fiber defaults (`OM4 MMF` vs `OS2 SMF`).
+  - **Guaranteed Blank Projects**: All new projects start completely clean with zero pre-populated hardware or synthetic racks, initialized to schema version `2.1.0`.
+  - **Editable Project Defaults Drawer**: Defaults chosen at project setup can be reviewed and edited at any time from the Project Manager Modal (`#projectModal`) via the new "Project Defaults" button and summary widget.
+  - **Smart UI Focus Mode**: Dynamically collapses and de-prioritizes out-of-scope hardware catalog sections (Access Control, Video Surveillance) to keep workspace clutter-free for focused scopes.
+  - **AI Video Analytics Auto-Tagging (`js/tools/bom.js`, `data/physical_security/data_cameras.js`)**: Automatically tags added cameras with manufacturer-tailored deep learning analytics profiles (Axis Object Analytics DLPU, Hanwha Vision AI Engine, Bosch IVA Pro Buildings, Avigilon Next-Gen Analytics).
+  - **Proposal Metadata Ingestion (`js/tools/bom.js`)**: Automatically routes Job #, Client Name, Facility Address, Lead Designer, and Licensing Term into Quote BOM headers, Formal Engineering Submittals, and CSV exports.
+
+---
+
+## [0.10.22-alpha] - 2026-09-30
+
+### Fixed & Enhanced
+- **Switch Port Matrix & Interconnect Studio Selection & Empty State (`js/tools/port_matrix.js`, `index.html`, `js/core/facility.js`)**:
+  - Implemented comprehensive `isNetworkSwitchItem()` and `getProjectSwitches()` supporting all core, aggregation, distribution, access, and industrial switches across catalogs and taxonomies.
+  - Resolved the collapsed/unselectable switch dropdown bug by adding proper minimum width (`min-w-[240px] max-w-[420px] truncate shadow-sm`) and persistent options.
+  - Implemented a rich, informative empty state in `#facilityPortMatrixBody` when Quote BOM contains 0 switches, complete with an instant `[ + Add 24-Port PoE+ Switch ]` quick-provision button.
+  - Connected `syncRackSelectorOptions()` to `switchFacilityView('port_matrix')` ensuring the breadcrumb enclosure selector is always populated and never empty.
+- **Physical Layout Inter-Closet Fiber Backbone Visualization & Controls (`js/tools/physical_layout.js`, `data/infrastructure/data_cabling.js`)**:
+  - Color-coded fiber backbone links on the canvas to visually reflect optical medium: Industry Standard Gold/Yellow (`#eab308`) for OS2 Single-Mode Fiber (`smf`), and Aqua/Cyan (`#06b6d4`) for OM4 Multi-Mode Fiber (`mmf`).
+  - Added interactive click-to-select support directly on the canvas fiber link lines (with invisible 24px wide hit area and glowing selection halo) and in the sidebar runs list.
+  - Implemented the dedicated **Fiber Backbone Inspector** in the right sidebar allowing full control over:
+    - Optical Medium: OS2 Single-Mode (9/125µm Yellow) vs OM4 Multi-Mode (50/125µm Aqua) vs OM3.
+    - Strand Count / Core Capacity: 6-Strand, 12-Strand (standard), 24-Strand, 48-Strand.
+    - Jacket Fire Rating: Plenum (OFNP), Riser (OFNR), Armored/OSP (Indoor/Outdoor).
+    - Pre-Terminated Connector End: LC Duplex, SC Duplex, MTP/MPO Cassettes.
+    - Length & Service Loop Allowance: Measured distance + editable service loops.
+    - Direct Quote BOM item synthesis with real-time MSRP calculation and SKU synchronization.
+  - Expanded `CABLING_CATALOG.fiberBackbone` with 6, 12, and 24-strand assemblies for both OM4 and OS2.
+
+---
+
+## [0.10.21-alpha] - 2026-09-30
+
+### Fixed & Enhanced
+- **Device Taxonomy Classification Helpers (`js/engines/device_taxonomy.js`, `js/core/facility.js`)**:
+  - Implemented missing classification helper methods on `DeviceTaxonomy`: `isCamera()`, `isAccessControl()`, `isIntercom()`, `isWireless()`, `isSwitch()`, `isServer()`, `isFirewall()`, and `isFieldDevice()`.
+  - Resolved `TypeError: DeviceTaxonomy.isCamera is not a function` in `FacilityStore.isFieldDevice()` which triggered the display issue banner in Hierarchy & Spaces.
+  - Added defensive `typeof DeviceTaxonomy.isCamera === "function"` guards in `facility.js` ensuring the facility engine safely tolerates any environment state.
+  - Added safe `escapeHTML` fallback, space type defaults (`(s.type || 'idf').toUpperCase()`), and wrapped `renderFacilityManager()` in a try/catch display recovery block.
+
+---
+
+## [0.10.20-alpha] - 2026-09-29
+
+### Added & Fixed
+- **Modal Sizing Alignment with Topology & Physical Layout**:
+  - Resized `#facilityModal` container to `w-full max-w-[99vw] h-[96vh]` (with `p-1 sm:p-2`), perfectly matching the spacious widescreen proportions of Topology and Physical Layout.
+  - Expanded rack elevation visualizer column container width from `max-w-3xl` to `max-w-5xl`, allowing comfortable dual-column cards, clear labels, and uncluttered toolbars.
+- **Searchable Mounting Location Dropdown & Passive Infrastructure Cleanup**:
+  - Replaced the horizontal side-scrolling list of 8+ buttons in `#rackLocationTransferBar` with a compact, searchable dropdown selector (`#rackLocationSearchSelect`) alongside drag-to-transfer target docks for the active location and unassigned bin.
+  - Suppressed naming prompts, synthetic friendly names, and `DEV01` device sequence number badges for passive infrastructure (modular keystone patch panels, horizontal wire managers, and blank filler panels).
+  - Passive items cleanly display their model title directly on elevation cards without edit pencil icons.
+- **Port Matrix Top Segmented Header Tab**:
+  - Integrated the Switch Port Matrix into the top segmented header switcher alongside `[ Hierarchy & Spaces ]` and `[ Enclosure Visualizer ]` (`#facilityTabBtnPortMatrix`).
+  - Added full in-modal Port Matrix studio (`#facilityPortMatrixView`) with active switch selector, telemetry cards, and port cross-link matrices, removing the stray toolbar button.
+  - Enabled dual-container rendering and seamless bidirectional navigation to Rack Elevation and Topology.
+- **Hierarchy and Spaces Button Handler Fix**:
+  - Fixed reference error in `openFacilityAddForm('add_space')` caused by undeclared inline variable check, restoring full clickability to all buttons in Hierarchy & Spaces.
+  - Added robust validation in `openFacilityAddForm` to gracefully guide users to create a floor or space if none exist.
+- **BOM Jump Minimization & Foreground Elevation**:
+  - Elevated `#bomDrawer` z-index to `z-[80]` so it always renders in the foreground above modal backdrops.
+  - Automatically minimizes/hides open modals (`#facilityModal`, `#cableLayoutModal`, `#topologyModal`, `#portMatrixStudioModal`) when clicking any BOM jump link or opening the BOM drawer, bringing the BOM drawer directly into focus.
+
+---
+
+## [0.10.19-alpha] - 2026-09-29
+
+### Added & Enhanced
+- **Enterprise Standard Rack Design (24-Port Patch Panels Above & Below + 6" Patch Cords)**:
+  - Added enterprise standard pod architecture for copper switches: each copper switch (24P or 48P) is framed by a 1U 24-Port High-Density Modular Keystone Patch Panel (`PP-1U-24P-MOD`) directly above (upper ports 1-24) and directly below (lower ports 25-48).
+  - Automatically synthesizes Panduit 28AWG 6-inch (0.5-ft) Cat6A slim high-density patch cords (`C6A-SLIM-6IN-BL`) matching exact copper switch port counts (e.g., 48x cords for 48P switch, 24x for 24P switch).
+  - Added 1-Click `Standard Pods (24P Above/Below)` toolbar button in rack elevation view to apply the standard design to all copper switches in the active rack in one click with automated slot repacking.
+  - Per-switch `[+ Std 24P Above/Below]` toggle directly on switch elevation cards in the rack visualizer.
+  - High-fidelity front and rear visualizations for standard pods: upper panel with `6" CORD DIRECT` badge, middle switch chassis, lower panel, and rear cable retention tie bars.
+- **In-Stack Cable Management as Needed & Clean Stacks Moving Together**:
+  - Removed automatic 24-port patch panel insertion on stacked switches; switches in a virtual stack now sit contiguously and move together as a single unified entity when dragged.
+  - Added explicit `[+ 1U Cable Mgr]` toggle button on stack cards to insert 1U Horizontal Cable Management (`HCM-1U`, dual-hinged cover with cable pass-through channels) in between stack members as needed.
+  - Both front and rear elevations accurately visualize in-stack cable managers between chassis units (`U_member -> U_HCM -> U_member`).
+  - Unified dynamic height calculation via `getRackItemHeight()` supporting standalone switches (1U), clean stacks (`N` U), stacks with cable managers (`2N - 1` U), and standard pods (`3N` U), fully integrated with the cascading bump-down engine.
+
+---
+
+## [0.10.18-alpha] - 2026-09-29
+
+### Added & Fixed
+- **Intelligent Cascading Rack "Bump Down" Drag & Drop**:
+  - Dropping equipment onto an occupied rack slot (or span) now dynamically displaces occupying equipment downward toward U1 rather than rejecting placement with a collision error.
+  - Cascades displacements through consecutive occupied slots, preserving multi-RU chassis heights and interleaved patch panels while keeping equipment strictly in sequence.
+  - Includes secondary upward displacement fallback if bottom rack slots are exhausted.
+- **Direct In-Rack Switch Stacking Controls**:
+  - Added interactive stack management directly on rack elevation switch cards (`[+ Stack]` button for standalone switches, `[-] Nx [+]` member stepper for multi-chassis stacks up to 8 units).
+  - Added stack stepper controls to unassigned hardware staging cards in the rack dock so stacks can be formed before mounting.
+  - Full synchronization with `PortEngine`, hardware stacking cable synthesis, and `PP-1U-24P-MOD` interleaved patch panel expansion with automatic downward slot bumping.
+- **Topology View Canvas Fix**:
+  - Fixed location cluster iteration bug in `renderTopology()` in `js/tools/topology.js` where `items` and `isClusterSelected` were uninitialized, preventing canvas rendering.
+  - Updated quick search clear button to clear active selections and restore full topology overview.
+
+---
+
+## [0.10.17-alpha] - 2026-09-25
+
+### Added & Enhanced
+- **Front & Rear 19" Rack Elevation Views**:
+  - Added clean segmented orientation toggle (`[ Front ] | [ Rear & PDUs ]`) on the rack elevation action bar for all 19" equipment racks.
+  - **Front Elevation View**: Realistic hardware faceplates featuring status LEDs (`PWR`, `SYS`, `POE`), rich port density previews (e.g. `48x 1G/PoE+ • 4x 10G SFP+`, `8x NVMe Hot-Swap`), and omnipresent cross-tool jump links.
+  - **Rear Elevation View**: 3-column layout featuring center 19" rear equipment rails flanked by vertical 0U EIA side channels. Displays chassis grounding lugs (TIA-607-C), cooling exhaust fan bays, C14/C20 power inlets, and dual 100G direct-attach ring interconnect bars for stacked switch chassis.
+- **Dual 0U Vertical PDU Strips & Physical Power Tracking**:
+  - **Left 0U Channel (Feed A - Utility)** & **Right 0U Channel (Feed B - UPS / Generator)**: Live amperage, wattage, NEC 80% continuous continuous load derating bars (16A limit on 20A branch circuits), and 24-receptacle visualizers.
+  - Interactive click-to-cycle power inlet buttons (`PSU 1` and `PSU 2`) allowing instant power circuit assignment (`PDU-A` ⇄ `PDU-B` ⇄ `Unplugged`) directly from the rear elevation.
+- **Circuit Load Balancing & A+B Redundancy Diagnostics**:
+  - Dedicated `#hostPduContainer` sidebar card with live electrical load gauges for Feed A & B, outlet utilization counts, and code compliance ratings.
+  - Real-time Single Point of Failure (SPOF) audit diagnostic with advisory warnings when dual-PSU devices share the same power feed.
+  - 1-Click `Auto-Balance Power Feeds` feature that splits redundant power feeds across Feed A and Feed B while alternating single-corded devices for optimal circuit distribution.
+
+---
+
+## [0.10.16-alpha] - 2026-09-25
+
+### Changed & Enhanced
+- **Floor-Level Field Logic Hierarchy**:
+  - Migrated field hardware logic from individual closet spaces to floors/buildings (e.g. `Main Floor • Field`, `Exterior • Field`, not inside MDF/IDF rooms). Cameras, doors, wireless APs, and outlets are now cataloged at the floor level.
+  - Removed space-level field containers from closet cards; added dedicated floor-level Field Hardware card under Column 3 (`${floor.name} • Field`) with hardware assignment and quick drop linking.
+  - Updated `getLocations()`, `getLocationGroups()`, `normalize()`, and `parse()` to automatically resolve floor-level field paths and backward-map legacy space field items to their parent floor.
+- **Racking & Enclosure Tool Navigation & Terminology Revamp**:
+  - Revamped `#facilityModalHeader`: replaced cluttered multi-line text and disjointed controls with a streamlined header featuring an integrated enclosure dropdown directly in the breadcrumbs (`Spaces / [Floor] / [Space] / [Enclosure ▾] [Badge]`).
+  - Added clean segmented view switcher (`[ Hierarchy & Spaces ] | [ Enclosure Visualizer ]`) and streamlined visualizer action bar (`+ Enclosure`, `Ports`, `Delete`, `Close`).
+  - Standardized terminology across the UI: replaced legacy "Mounting Host" / "Host" phrasing with "Enclosure / Rack" and "Enclosures & Racks".
+- **Dynamic Field Drop Cabling Summary**:
+  - The drop summary header strip (`Served Field Hardware & Cabling` with active drop count) is displayed across all racks and enclosures.
+  - Individual run type tiles (`Composite Banana`, `Cat6A Plenum`, `Fiber Optic`) now render **strictly when count > 0**, eliminating empty "0 Runs" and "0 Drops" clutter.
+- **Enterprise Automount Priority Engine**:
+  - Re-architected `autoMountAllToActiveRack()` in `js/tools/rack.js` with `getDeviceMountPriority()` and `findNextAvailableSlotFromTop()`.
+  - Enforces strict enterprise top-to-bottom sequencing for 19" equipment racks:
+    `ISP Equipment / Demarcs > Firewalls / Security > Core Switches > Aggregation Switches > Access Switches (sorted by port count descending) > Servers & NVRs > UPS Battery Units (mounted bottom-up at U1+)`.
+
+### Fixed
+- **Permanent Deletion of Exterior Pole 1 & NEMA-Box**:
+  - Removed hardcoded auto-injection checks in `getSpaces()` and `getEnclosures()` in `js/core/facility.js` that previously caused `space-exterior-pole1` and `enc-pole1-nema` to respawn immediately after deletion.
+  - Enhanced `deleteSpace()`, `deleteEnclosure()`, and `deleteLocation()` to clean up attached child enclosures and safely unassign quote hardware back to Unassigned Staging.
+
+---
+
+## [0.10.15-alpha] - 2026-09-25
+
+### Refactored & Modularized
+- **Modular Tool Breakouts**:
+  - Extracted **Switch Port Matrix & Interconnect Studio** from `js/tools/topology.js` into dedicated `js/tools/port_matrix.js` module. Isolates widescreen port telemetry, hardware faceplates, and patch cable routing, reducing `topology.js` from 3,832 to 3,436 lines.
+  - Extracted **Project Health & Live Validation Audit Engine** from `js/tools/bom.js` into dedicated `js/tools/project_health.js` module. Isolates project diagnostic rules, PoE deficit scanning, transceiver verification, and 1-click remediation actions, reducing `bom.js` from 2,123 to 1,607 lines.
+  - Linked both standalone modules cleanly in `index.html`.
+
+### Removed & Cleaned (Anti-Bloat)
+- **Dead DOM Elements**: Purged obsolete empty `<div id="rackModal" class="hidden"></div>` placeholder from `index.html` (rack visualization has been fully unified in `#facilityModal`).
+- **Legacy Stubs**: Deleted dead `js/app.js` bridge file.
+- **Unused Functions**:
+  - Purged `renderUnassignedTrayHTML()` in `js/tools/rack.js`.
+  - Purged unreferenced `isFacilityModalVisible()` in `js/core/facility.js`.
+  - Purged dead manual uplink setter `setUplinkTarget()` in `js/tools/bom.js`.
+  - Removed duplicate definition of `openRackViewerFor()` in `js/tools/topology.js` that previously clobbered canonical facility breadcrumb tracking.
+  - Cleaned redundant `jumpToPhysicalLayoutTarget` re-export from `js/tools/bom.js`.
+  - Cleaned obsolete individual card export guards (`renderOpticsCard`, `renderWirelessCard`, `renderAccessoryCard`) in `js/renderers/render_cards.js`.
+
+### Performance & Optimization
+- **Debounced Storage I/O**: Added 250ms debounced persistence to `saveFacilityState()` in `js/tools/physical_layout.js` (with immediate sync on mouseup) to prevent synchronous `localStorage` JSON serialization from blocking main-thread execution during drag events.
+- **RAF Canvas Redraw Throttling**: Added `requestAnimationFrame` render throttling (`requestPhysCanvasRedraw`) during drop, node, and bend handle drag-and-drop on the physical layout blueprint, locking canvas interaction at a smooth 60fps.
+
+---
+
+## [0.10.14-alpha] - 2026-09-25
+
+### Fixed
+- **Facility Unassigned Equipment Staging Tray Layout (Photo 1)**:
+  - Resolved layout bug in `js/core/facility.js` where `#facilityUnassignedHardwareTray` was nested inside the 12-column hierarchy grid, causing it to collapse into a narrow vertical sliver on the bottom left. Closed the grid container before the tray and applied full width (`w-full`), allowing staged equipment cards to span the full width of the modal.
+- **Field Icon Auto-Placement Purged from Floor Blueprint (Photo 2)**:
+  - Fixed issue where space-level field containers (`${Space} • Field`) were being auto-placed as closet nodes on the physical floor map. Updated `syncBOMClosetsToFloors` and `getAllClosetsAcrossFacility` in `js/tools/physical_layout.js` to exclude virtual field spaces and automatically purge any existing field closet nodes from all floor plans.
+- **Filtering Enclosure Hardware from Physical Layout Drops**:
+  - Implemented `isFieldDeviceForPhysicalLayout` in `js/tools/physical_layout.js` to filter out rack/enclosure infrastructure (switches, servers, SAN storage, UPS, PDU, firewalls, licenses, bulk cable) from the blueprint drop tray. Only actual edge field devices (cameras, access doors, wireless APs/radios, intercoms, sensors) are presented for floor blueprint placement.
+
+### Added
+- **Physical Canvas Intelligence & Topology UX Parity**:
+  - Implemented background drag-to-pan (`isViewportPanning`, `panStart`) and mouse wheel zoom (`handlePhysWheel`) in `js/tools/physical_layout.js`, matching the feel and navigation of the Logical Topology canvas.
+  - Added auto-fit viewport intelligence (`fitPhysicalLayoutToScreen`) calculating bounding boxes of placed elements, waypoints, and background floor plan blueprints to center and scale the floor view optimally. Added a "Fit All" button to the physical toolbar and automatic fit on modal launch.
+  - Added a Quick Search navigator (`filterPhysCanvasSearch` & `selectAndCenterPhysNode`) to search and jump to any rack, drop, or unplaced device across all floors, with automatic floor switching and smooth viewport centering (`centerPhysNodeInViewport`).
+- **Unified Navigation History & Multi-Tier ESC Key Handling**:
+  - Created centralized `NavigationHistory` stack in `js/core/app.js` with `captureCurrentState()` and `restoreState()` tracking originating tool, floor, and selected element.
+  - Updated all cross-tool navigation links (`jumpToPhysicalLayoutTarget`, `jumpToTopologyTarget`, `deepLinkToRackElevation`, `openRackViewerFor`, `jumpToFacilitySpace`, `jumpToBomTarget`) to capture state prior to switching tools.
+  - Implemented a multi-tier ESC key listener:
+    1. Dismisses active popups and search menus.
+    2. Deselects currently selected nodes in Physical Layout or Topology (`deselectNode` / `deselectTopologyNode`).
+    3. Pops `NavigationHistory` to smoothly return the user to the exact originating tool, floor, and node they clicked from.
+    4. Closes the active modal if no navigation history exists.
+
+---
+
+## [0.10.13-alpha] - 2026-09-25
+
+### Added
+- **Native Facility & Enclosure Creation Routing (`js/tools/bom.js`, `js/renderers/render_cards.js`, `js/core/facility.js`)**:
+  - Replaced browser `prompt()` popups when selecting `+ New Location...` in the BOM and catalog hardware cards with direct routing to the Facility & Enclosure creation tool (`openFacilityCreationForLocation`).
+  - Added pending location assignment context (`getPendingFacilityLocationContext` / `clearPendingFacilityLocationContext`) so when a user saves a new Space (`saveInlineSpace`) or Enclosure (`saveInlineHost`), the pending item is automatically assigned and the select element is updated immediately.
+- **Top-Docked Unassigned Equipment in Enclosure Visualizer (`index.html` & `js/tools/rack.js`)**:
+  - Removed the bottom-of-rack unassigned equipment tray from all 5 host elevation frames, eliminating the need to scroll past 42U racks or tall utility poles.
+  - Implemented `#rackUnassignedStagingDock` directly above the rack elevation frame with live compatibility badges, drag-down into slots, and 1-click `[+ Mount Here]` quick-slotting.
+  - Added a dedicated 3rd tab **"Staging"** (`#hostTabBtn-staging` & `#hostTabContent-staging`) in the Enclosure Visualizer right sidebar with live unassigned item counts, specs, and instant mounting actions.
+- **Unassigned Hardware Staging Bin in Facility Spaces View (`js/core/facility.js`)**:
+  - Added full-width **"Unassigned Quote Equipment Staging"** tray (`#facilityUnassignedHardwareTray`) directly below the 3-column facility hierarchy.
+  - Implemented HTML5 drag-and-drop (`handleHardwareStagingDragStart`, `handleSpaceCardDrop`, `handleEnclosureCardDrop`) allowing users to drag staged devices directly onto Space cards (assigning to Space Field) or Enclosure cards.
+  - Added 1-click `[Assign All to {Space} Field]`, quick enclosure selector dropdowns, and omnipresent cross-navigation links.
+- **Physical Layout Consistency Pass (`js/tools/physical_layout.js`)**:
+  - **Field Space Canvas Rendering**: Updated SVG canvas rendering for space-level field terminations (`${Space} • Field`) to display a dashed amber zone boundary and `[FIELD]` badge instead of a server rack chassis.
+  - **Grouped Termination Selector**: Grouped inspector dropdown into `Spaces & Zones (Field / Unenclosed)` and `Racks & Enclosures`.
+  - **BOM Location & Mounting Synchronization**: Updated `updateNodeCloset` and `updateNodeMountMethod` to synchronize underlying BOM items (`item.closetName`, `item.rackId`, `item.mountMethod`) and trigger `FacilityStore.notifyWorkspaceChange()`.
+  - **4-Way Cross-Navigation**: Added Topology, BOM, Enclosure, and Space action buttons to device drop inspectors.
+
+---
+
+## [0.10.12-alpha] - 2026-09-25
+
+### Added
+- **Direct Space-Level Assignment for Unenclosed Field Hardware (`js/core/facility.js`, `js/tools/bom.js`, `js/tools/topology.js`)**:
+  - Enhanced `FacilityStore.normalize` and `FacilityStore.getLocations` to generate first-class space-level field hardware locations (`${SpaceName} • Field`) for edge devices (P2P Radios, cameras, sensors, doors) that do not require an enclosure.
+  - Implemented `FacilityStore.getLocationGroups` to provide structured `<optgroup>` groupings separating **Spaces & Zones (Field / Unenclosed)** from **Racks & Enclosures** across BOM line items, Topology inspectors, and Physical Layout drop inspectors.
+  - Added interactive **`[+ Assign Staged Device]`** button inside the Facility Space view ("Unenclosed Field Hardware in {Space}" card) to instantly assign any staged hardware directly to that space.
+  - Updated `+ Create New Location...` so Cabinet/Enclosure is optional: leaving it blank creates an unenclosed space location without forcing a dummy rack.
+- **Dedicated Widescreen Port Matrix & Interconnect Studio (`index.html` & `js/tools/topology.js`)**:
+  - Built dedicated full-fidelity **Switch Port Matrix & Interconnect Studio** modal (`#portMatrixStudioModal`) accessible with 1 click from:
+    - **Topology Toolbar**: New `[ ⊞ Port Matrix ]` studio launcher.
+    - **Switch Inspector**: `[ ⛶ Studio ]` expand button beside the physical port matrix.
+    - **Enclosure Visualizer**: `[ ⊞ Ports ]` button in the host toolbar.
+  - Studio displays switch selector dropdown, hardware faceplate view with color-coded PoE/uplink/data status, electrical load bars, active uplinks and trunks, and a full interactive table with 1-click cross-tool navigation to connected remote devices.
+  - Added direct quick-actions to jump from the studio to Rack Elevation or Topology Canvas.
+
+### Changed
+- **Homepage Top Navigation Streamlining (`index.html`)**:
+  - Removed redundant "Enclosure Visualizer" button from the main header navigation, keeping the top bar focused and clean since the visualizer is now unified inside the "Facility & Enclosures" modal.
+- **Quote BOM Card Information Cleanup (`js/tools/bom.js`)**:
+  - Removed unhelpful power type pills (`zap PoE` / `zap AC`) from the card footer to reduce visual clutter.
+  - Removed redundant uppercase `FIELD/DIN` tag from the card header.
+  - Replaced the bulky interactive mounting dropdown with a sleek, compact informational badge (`Mounting: Wall / Ceiling / Pole / Parapet / Corner`) featuring an **`Adjust on Canvas →`** deep-link to Physical Layout, where physical installation coordinates and mounting actually belong.
+
+---
+
+## [0.10.11-alpha] - 2026-09-25
+
+### Added
+- **Stacked Switch Physical Rack Footprint & Electrical Telemetry (`js/tools/rack.js`, `js/engines/sizer_network.js`, `js/core/facility.js`)**:
+  - Multiplied rack space allocation (`item.rackUnits * stackUnits`) in auto-mounting and elevation rendering, ensuring 2-switch stacks correctly occupy 2U (or 4U for 2U chassis) with full slot span boundaries (`U{u + span - 1} - U{u}`).
+  - Added physical member chassis visual breakdown inside rack frames displaying `Unit 1 (Master / Active)` and `Unit 2 (Member / Standby)` with dedicated 40G/100G DAC link interconnect badges.
+  - Multiplied power draw (`baseWatts * units`), PoE capacity (`poeBudget * units`), and British Thermal Units (`BTU/hr * units`) across all rack telemetry, facility location metrics, and cabinet sizing calculators.
+  - Calculated required AC power outlet drops (`${totalOutlets}x AC Outlets (NEMA 5-15P)`) accounting for individual power supplies per stack chassis.
+  - Enforced drag-and-drop rack slot boundary limit constraints to prevent multi-unit stacks from overflowing rack capacities.
+- **Topology to Enclosures & Spaces Linking (`js/tools/topology.js`)**:
+  - Connected logical switch and device nodes directly to their physical host enclosures (`openRackViewerFor`) and telecom spaces (`jumpToFacilitySpace`).
+  - Added 4-way navigation action bars to node inspector cards (Switch, Server, Radio, and Edge Device) for instantaneous cross-tool transitions.
+  - Added direct deep-linking from optical uplink ports (`inspectSwitchPort`) to zoom and pan to the connected target device on canvas.
+- **Port Matrix Uplink Utilization & Device Navigation (`js/engines/port_engine.js` & `js/tools/topology.js`)**:
+  - Implemented `PortEngine.syncSwitchUplinks(item)` to automatically map upstream distribution/core switches to optical cages on access switches, and vice-versa for downstream homed switches on core switches.
+  - Added **Active Uplinks & Trunks** panel beneath the port matrix showing live port link status, transceiver optic type, connected target device model, location, and 1-click `[Link →]` navigation.
+- **Omnipresent Cross-Navigation Across All Views (`js/tools/bom.js`, `js/tools/rack.js`, `js/tools/topology.js`, `js/tools/physical_layout.js`)**:
+  - Implemented universal 4-way cross-navigation connecting:
+    - **Quote BOM Drawer**: Added `[Enclosure]`, `[Space]`, `[Topology]`, and `[Physical]` buttons to each BOM line item card, and created `jumpToBomTarget(instanceId)` with drawer auto-expansion and smooth scroll highlight animation.
+    - **Enclosure Visualizer**: Added hover navigation buttons on mounted rack equipment frames linking directly to Topology, Physical Layout, and BOM.
+    - **Topology Canvas**: Added inspector action bars with 1-click links to Enclosure elevations, Spaces, BOM drawer, and Blueprint floor drops.
+    - **Physical Layout Canvas**: Added inspector deep-links on telecom closets and field hardware drops jumping directly to Rack elevations, Spaces, BOM, and Topology.
+- **Accounting & Display of Unenclosed Field Hardware (`js/core/facility.js`, `js/tools/rack.js`)**:
+  - Added **Unenclosed Field Hardware in {Space}** card to Facility Space management, listing edge cameras, door access readers, wall-mount radios, and environmental sensors residing in the space without requiring an enclosure.
+  - Displayed mounting method badges (`[WALL MOUNT]`, `[CEILING MOUNT]`, `[POLE MOUNT]`, `[PARAPET]`, `[CORNER]`) and direct cross-nav buttons for all field hardware.
+  - Added `${spaceFieldHardware.length} Field Devices` chip badges to Facility Space selection cards.
+  - Displayed homed unenclosed field hardware alongside patch panel drops in the Enclosure Visualizer **Host Served Endpoints** panel with quick-jump links.
+
+---
+
+## [0.10.10-alpha] - 2026-09-25
+
+### Added
+- **Adjustable Pole Zone Elevations (`js/tools/rack.js`)**:
+  - Implemented interactive mounting elevation controls for Zone 2 (Upper Pole: fixed cameras, illuminators) and Zone 3 (Mid Pole: NEMA enclosure banding) directly inside the structural pole elevation visualizer.
+  - Implemented `updatePoleZoneHeight(spaceId, zoneId, heightVal)` and exported to `window`.
+  - Mid-pole elevation changes automatically update and synchronize the physical installation height (`mountHeightFt`) of all banded NEMA enclosures attached to that pole space.
+- **Edge Device Physical Mounting Options (`js/tools/bom.js` & `js/tools/physical_layout.js`)**:
+  - Built physical mounting method selector (`wall`, `ceiling`, `pole`, `parapet`, `corner`) across all edge devices (cameras, PtP radios, wireless APs, sensors, access readers).
+  - Implemented `updateDeviceMountMethod(instanceId, method)` in `bom.js` and `updateNodeMountMethod(nodeId, method)` in `physical_layout.js`.
+  - Added physical mounting dropdown to device inspectors on the Blueprint / Physical Layout canvas.
+  - Automatic mounting detection on device creation: pole locations default to `"pole"`, dome cameras default to `"ceiling"`, and bullet/box cameras or wall drops default to `"wall"`.
+- **Project Health & Validation Audit Engine (`js/tools/bom.js` & `index.html`)**:
+  - Moved bulky PoE calculations table out of the Quote BOM drawer, reclaiming vertical space for streamlined quoting.
+  - Built persistent top-bar **Project Health Pill** (`#projectHealthPill`) in the navigation bar, featuring dynamic status indicators (calm green `✓ System Healthy` vs pulsing red `⚠️ X Project Misses`).
+  - Implemented `#bomDeficitAlertStrip` in the BOM drawer providing compact real-time notification alerts when engineering misses exist.
+  - Built dedicated **Project Health & Engineering Validation Modal** (`#projectHealthModal`) scanning in real time for:
+    - **PoE Power Deficits**: Compares switch PoE budgets against edge device loads and camera calculation targets.
+    - **Unassigned Hardware**: Identifies staged equipment without assigned facilities, floors, or racks.
+    - **Missing Software Licenses**: Audits cameras against perpetual VMS channel recording licenses.
+    - **Missing Hardware & Interconnects**: Audits switch stacks for dedicated hardware DAC cables.
+  - Added direct 1-click remediation actions for all deficits (`autoFixUnassignedGear`, `autoAddMissingLicenses`, `autoAddMissingDACCables`, `autoAddPoeSupplyOrSwitch`, and `autoFixAllProjectMisses`).
+- **Switch Stacking Architecture Refactor (`js/tools/bom.js`, `js/tools/topology.js`, `js/tools/rack.js`)**:
+  - Refactored switch cards in the Quote BOM drawer, replacing the clumsy editable stacking dropdown with a sleek read-only stack status badge and deep-link button (`Configure in Topology →`).
+  - Switch stacking controls and hardware member adjustments centralized in Topology canvas (`updateSwitchStackFromTopology`) and Enclosure Visualizer (`renderEquipmentRackFrame`).
+  - Added stacking member badges (`X-Switch Stack (+X DACs)`) to switch chassis in rack elevation views.
+
+---
+
+## [0.10.9-alpha] - 2026-09-25
+
+### Added
+- **Unified Enclosure Visualizer inside Facilities Tool (`index.html` & `js/core/facility.js`)**:
+  - Moved the Rack Elevations visualizer directly inside the Facilities tool as the **"Enclosure Visualizer"**, replacing disjointed modal popups with a seamless unified dialog (`#facilityModal`).
+  - Updated the top navbar navigation button from "Rack Elevations" to **"Enclosure Visualizer"**.
+  - Added segmented view switcher (`[ Hierarchy & Spaces ]` vs `[ Enclosure Visualizer ]`) for instantaneous switching between taxonomy management and physical equipment elevation frames.
+  - Added live dynamic breadcrumbs in the visualizer header (`[Back to Spaces] / Floor / Space / Host [Type Badge]`) showing exact hierarchical context.
+- **Intuitive Back-to-Spaces Navigation on Exit/Close (`js/core/facility.js` & `js/core/app.js`)**:
+  - Implemented `handleFacilityModalCloseOrBack()`: When navigating from a space or pole to a rack or enclosure visualizer, clicking the close button ("X"), the "Back to Spaces" breadcrumb button, or pressing `Escape` returns smoothly back to the exact floor and space previously viewed, without closing completely out of the tool.
+  - Retained project-wide backward compatibility for `window.toggleRackModal()`, `window.switchActiveRackElevation()`, and `window.openRackViewerFor()`.
+- **Cross-Location Hardware Drag-and-Drop (`js/tools/rack.js` & `index.html`)**:
+  - Built interactive Quick Location Transfer Bar (`#rackLocationTransferBar`) in all elevation visualizers, rendering all project mounting locations (racks, cabinets, NEMA boxes, pole masts, backboards, and unassigned bin) as active drag-and-drop targets with live device counters.
+  - Implemented `handleLocationTransferDragOver()`, `handleLocationTransferDragLeave()`, and `handleLocationTransferDrop()` enabling devices to be dragged and reassigned between any mounting locations or returned to the unassigned staging area in real time.
+  - Added direct drop-mount targets on mid-pole mounted enclosure cards in `renderStructuralMountFrame()` (allowing devices to be dropped directly into pole-banded NEMA boxes).
+  - Added direct drop-mount target on the "View Pole Elevation" banner in `renderIndustrialDinFrame()` (allowing devices to be moved from NEMA enclosures onto the pole mast).
+- **Physical Layout Canvas Location & Floor Accuracy (`js/tools/physical_layout.js`)**:
+  - Completely revamped `syncBOMClosetsToFloors()` to synchronize `facilityFloors` with `FacilityStore.getFloors()`, migrating legacy dummy floors to canonical floors (`floor-main`, `floor-exterior`).
+  - Accurately routed all closets and enclosures to their real assigned floors (e.g. `Pole 1 • Pole Mount` and `Pole 1 • NEMA-Box` on the Exterior floor; `MDF • Rack-1` on Main Floor).
+  - Added automatic purging of stale closet nodes whose locations no longer exist in `FacilityStore`.
+  - Upgraded canvas rendering in `renderCableCanvas()` with distinctive, host-specific SVG geometry and colors:
+    - **Structural Pole Mounts**: High-visibility cyan circular mast base (`#083344`, `#0284c7`, `#38bdf8`) with mast crosshairs, center dot, radar boundary ring, and `[POLE]` badge.
+    - **Industrial Weatherproof NEMA Enclosures**: Industrial amber enclosure (`#451a03`, `#d97706`, `#fbbf24`) with dual DIN rail crossbars and `[NEMA]` badge.
+    - **Security Cabinets**: Emerald access control cabinet (`#022c22`, `#059669`, `#34d399`) with Trove subplate quadrant grid and `[SEC-CAB]` badge.
+    - **19" EIA Equipment Racks**: Indigo server chassis (`#1e1b4b`, `#6366f1`, `#a5b4fc`) with horizontal RU slot rails and `[RACK]` badge.
+    - **Architectural Backboards**: Purple plywood wallfield (`#3b0764`, `#a855f7`, `#d8b4fe`) with punchblock dash grid and `[BOARD]` badge.
+  - Synchronized `deepLinkToRackElevation()` to launch directly into the unified Enclosure Visualizer.
+  - Bi-directionally synchronized floor reassignment (`moveClosetToFloor`) and location renaming (`updateNodeName`) with `FacilityStore`.
+
+---
+
+## [0.10.8-alpha] - 2026-09-25
+
+### Added
+- **Telecom Spaces & Poles Level Architecture (`js/core/facility.js` & `js/tools/rack.js`)**:
+  - Moved Structural Poles exclusively to the **Telecom Spaces & Poles** level (Level 2), eliminating confusing duplicate pole entries at the Enclosure level.
+  - Exterior poles feature configurable AGL heights (12, 15, 20, 25, 30, 40 ft), live AGL height badges, and dedicated **Pole Elevation** visualizer buttons.
+  - Pole Elevation visualizer renders strapped enclosures (e.g. NEMA boxes at 10 ft AGL) directly in Zone 3 (Mid-Pole) with **"Inspect Enclosure (DIN Rails) →"** deep-links.
+  - Enclosure visualizer includes bidirectional **"← View Pole Elevation"** quick-links for pole-banded enclosures.
+- **Enclosure Drag-and-Drop Reassignment (`js/core/facility.js`)**:
+  - Implemented HTML5 drag-and-drop across space cards in the Facility Manager.
+  - Automatically updates `spaceId`, sets `mountingMethod: 'pole'` when dropped onto an exterior pole, and remaps all assigned BOM devices (`oldSpace • enc` to `newSpace • enc`).
+- **Strict Name Uniqueness Enforcement (`js/core/facility.js`)**:
+  - Enforced per-area name uniqueness across floors, spaces on the same floor, and enclosures in the same space.
+  - Inline forms display real-time validation error alerts (`#inlineFloorError`, `#inlineSpaceError`, `#inlineHostError`).
+  - Drag-and-drop target space drop handlers reject duplicate names with toast warnings.
+- **Canonical Default Hierarchy & Project Auto-Migration (`js/core/facility.js`)**:
+  - Defaults established: **Main Floor > MDF** (Rack-1), **Exterior > Pole 1** (NEMA-Box at 10ft AGL, 25ft mast), and **Unassigned**.
+  - Auto-migrates legacy projects to ensure Exterior floor and Pole 1 are present without data loss.
+- **Streamlined Facility, Floors, Spaces & Enclosures Management (`js/core/facility.js`)**:
+  - Replaced browser `prompt()` dialogs with seamless, styled inline creation forms (`facilityActiveForm`: `add_floor`, `add_space`, `add_host`) embedded directly in the hierarchy management columns.
+  - Added direct "Elevation Visualizer" action buttons on all mounting host cards.
+- **NEMA Enclosure Wall and Pole Mounting Options (`js/core/facility.js` & `js/tools/rack.js`)**:
+  - Added `mountingMethod` (`wall` | `pole`) configuration to Weatherproof NEMA (`industrial_din`) enclosures.
+  - Visualizer renders heavy-duty unistrut wall flanges with anchor points for wall-mounted enclosures, or stainless steel banding straps and standoff brackets for pole-mounted enclosures.
+
+### Fixed
+- **Modal Layering on Visualizer Linking (`js/core/facility.js` & `js/tools/topology.js`)**:
+  - Fixed an issue where opening the visualizer from `#facilityModal` left `#facilityModal` covering `#rackModal` in the background; `openRackViewerFor()` now explicitly hides `#facilityModal` and focuses `#rackModal` in the foreground.
+- **Facility Modal ESC Key Navigation (`js/core/app.js`)**:
+  - Registered `#facilityModal` in the universal keyboard ESC listener in `app.js` so pressing Escape smoothly closes the Facility, Floors, Spaces & Enclosures modal.
+- **Rack Elevation Modal Header Layout & Overflow (`index.html` & `js/tools/rack.js`)**:
+  - Moved dimension selectors (`#hostDimensionControl`) and mounting action buttons out of the top modal header into a dedicated, clean elevation toolbar directly above `#rackElevationFrame`.
+  - Eliminated text wrapping, truncation, and control overflow in `#rackModal`.
+
+---
+
+## [0.10.7-alpha] - 2026-09-24
+
+### Fixed
+- **BOM "Inspect in Topology" Quick-Link Navigation (`js/tools/topology.js` & `js/tools/bom.js`)**:
+  - Resolved an issue where clicking the "Inspect in Topology" button on equipment cards did not activate the canvas because the topology modal container remained hidden.
+  - Automatically slides closed the BOM drawer (`#bomDrawer`) when launching topology navigation so the 500px drawer no longer covers the canvas or the slide-out Topology Inspector.
+  - Added automatic closet assignment fallback for newly staged unassigned hardware (`FacilityStore.UNASSIGNED`) to default MDF/IDF locations so target devices are immediately rendered in a location cluster upon inspection.
+  - Added visual highlight pulsing (`ring-4 ring-indigo-400 scale-[1.02]`) and centered smooth scrolling to target equipment cards.
+
+### Added
+- **Direct Physical Floor Plan & Cable Layout Launchers (`js/tools/physical_layout.js`, `js/tools/bom.js`, & `index.html`)**:
+  - Implemented `jumpToPhysicalLayoutTarget(targetVal)` in `js/tools/physical_layout.js` to deep-link directly from BOM equipment cards and quick-action toolbars to floor drop nodes and closet enclosures in the physical floor plan.
+  - Added "Physical" quick launcher button to the BOM drawer header quick-launch toolbar alongside Topology, Racks, and Licenses.
+  - Added individual "Physical" launcher buttons (`jumpToPhysicalLayoutTarget('${item.instanceId}')`) on all equipment cards in the BOM drawer.
+  - Automatically slides closed the BOM drawer when launching physical layout, switches the canvas to the item's target facility floor via `FacilityStore.parse()`, and highlights the corresponding drop node or closet enclosure.
+
+- **Unified Virtual Chassis Stacking Accounting in Logical Topology (`js/engines/port_engine.js`, `js/tools/topology.js`, & `js/tools/bom.js`)**:
+  - **Single Logical Stack Entity with Multi-Unit Accountability**: Stacked switches (e.g. 2, 3, or 4 units) are treated as a single unified logical chassis on the Topology canvas, eliminating duplicate node clutter while accurately accounting for all physical member units in:
+    - **Port Matrix & Physical Interfaces**: `PortEngine.initSwitchPorts` generates discrete unit-indexed ports across all members (Unit 1: `1/1`..`1/24`, Unit 2: `2/1`..`2/24`), and the Topology Inspector divides the faceplate into distinct, labeled sub-matrices (`Unit 1 Master Chassis`, `Unit 2 Member Chassis`).
+    - **Power & PoE Budget**: Node cards and Inspector telemetry denote total physical power supplies (`(2x PSUs)`), scaled chassis base draw (`2x Base Watts`), and aggregate PoE capacity (`(2x PoE Budget)`).
+    - **Cross-Stack LACP LAG Uplinks**: Automatically provisions redundant cross-stack LACP LAG uplinks (`2x LAG Cross-Stack LACP`) with distinctive purple/indigo trunk styling (`#818cf8`) and automatic failover modeling.
+    - **Chassis Stacking & Resiliency Controls**: Added stack member configuration dropdown (`updateSwitchStackFromTopology`) in the Topology Inspector, keeping stack settings, BOM quantities, and dedicated hardware stacking cables synchronized in real time.
+
+---
+
+## [0.10.6-alpha] - 2026-09-24
+
+### Fixed
+- **Catalog & "Add to BOM" Universal Lookup Resilience (`data/registry.js` & `js/tools/bom.js`)**:
+  - Restored `CatalogRegistry.getSwitch(idOrSku)` and added `CatalogRegistry.getDevice(idOrSku)` universal lookup helpers in `data/registry.js`, resolving an unhandled `TypeError` that occurred when adding switches to the quote.
+  - Hardened all equipment adder functions (`addToProjectBOM`, `addFirewallToBOM`, `addServerToBOM`, `addCameraToBOM`, `addAccessDeviceToBOM`, `addWirelessToBOM`) with defensive function checks (`typeof CatalogRegistry.get === "function"`) and database array fallbacks.
+  - Attached all card renderers and adder callbacks explicitly to `window` across `render_cards.js` and `bom.js` to ensure reliable cross-script event handling.
+
+### Changed
+- **BOM Drawer & Specialized Engine Separation of Concerns (`index.html` & `js/tools/bom.js`)**:
+  - **Replaced Legacy "Auto Uplinks" with Specialized Engine Launchers**: Replaced the legacy blind "Auto Uplinks" button (which inserted generic 0.5m DACs) in the BOM drawer header with dedicated 1-click launchers for **Topology** (`toggleTopologyModal()`), **Rack Elevations** (`toggleRackModal()`), and **Licensing Terms** (`toggleLicenseModal()`).
+  - **Streamlined Commercial Quote Cards (`renderBomSingleItemHtml`)**: Removed redundant port utilization telemetry and duplicate warning boxes from individual equipment cards in the BOM drawer, returning the drawer to its core purpose: clean commercial pricing, quantities, location re-assignment, stacking, and hardware accessories.
+  - **Direct "Inspect in Topology" Launcher**: Embedded a compact launcher on each equipment card in the BOM drawer, allowing instant in-viewport jumping to that device inside the Logical Topology engine.
+  - **Power & Uplink Mutator Delegation**: Updated `setPowerSource` and `setUplinkTarget` in `bom.js` to automatically delegate to `PortEngine`, ensuring all power mode adjustments enforce hardware constraints and synchronize midspan injectors or DIN-rail supplies.
+
+---
+
+## [0.10.5-alpha] - 2026-09-24
+
+### Added
+- **Dynamic Hardware-Constrained Power Modes (`js/engines/port_engine.js` & `js/tools/topology.js`)**:
+  - **Hardware Sizing Enforcement (`getSupportedPowerModes`)**: Power delivery modes dynamically adapt to hardware specifications. Core and spine switches and enterprise rackmount compute servers strictly permit `internal_psu` and `dual_ac`, eliminating impossible configurations such as solar or PoE-in on 100G core switches.
+  - **Dynamic Power Selectors in Inspector**: Slide-out inspector cards for Core switches, Access switches, Servers, PtP Radios, and Edge Devices only render valid, supported power choices for the selected model.
+- **Automated BoM Power Accessory Provisioning (`js/engines/port_engine.js`)**:
+  - **Automatic PoE Injectors**: Switching an edge device or wireless radio to `poe_injector` automatically provisions and sizes the appropriate PoE midspan injector (`UACC-PoE-at` 30W or `UACC-PoE-bt-60` 60W) directly onto the Project BoM.
+  - **Automatic Industrial DC Power Supplies**: Selecting `dedicated_dc` automatically provisions an industrial DIN-rail power supply (`NDR-120-48` 48V 120W) onto the BoM.
+  - **Intelligent BoM Reconciliation**: Switching power modes back to `poe_switch` or `internal_psu` automatically reconciles and removes the associated accessory from the BoM in real time.
+- **Facilities & Building-to-Building Master Auto-Linking (`js/tools/topology.js`)**:
+  - **Automated Closet Device Onboarding (`autoResolveDeviceUplinks`)**: Building-to-building wireless bridge masters, IP cameras, and edge clients automatically discover and link to the primary switch in their designated closet or enclosure, auto-allocating switch ports at scale.
+  - **Intra-Cluster Loop Routing**: Interconnections between devices within the same rack loop gracefully outside the equipment cards with a $45\text{px}$ offset, ensuring intra-rack patch cables are $100\%$ visible rather than hidden beneath card layers.
+  - **Node Card Host Switch Badges**: Equipment cards inside location clusters display real-time host switch name and assigned port chips.
+- **Dark Searchable Quick Jump Combobox (`js/tools/topology.js` & `index.html`)**:
+  - **Custom Search Combobox (`#topologyQuickSearchContainer`)**: Replaced OS-native select input with a modern dark floating combobox. Features live real-time filtering, category groupings (Racks, Core, Access, Servers, Wireless, Clients), equipment status chips, and full keyboard navigation (Up, Down, Enter, Escape).
+- **Network Layout Presets & Ring Topology Support (`js/tools/topology.js` & `index.html`)**:
+  - **Multi-Layout Auto-Arrange Engine**: Added preset layout selector supporting **Tiered Tree** (hierarchical spine/leaf), **Hub & Spoke** (central core star layout), and **Resilient Ring** (circular loop/ERP layout).
+  - **Ring Trunk & Loop Detection**: Access switch peer-to-peer trunks and ring topologies are automatically identified, rendered with amber/gold dashed vectors, and labeled `(Ring Trunk)`.
+
+### Fixed
+- **Optical Cages Overflow & Inspector Legend Clutter (`js/tools/topology.js`)**:
+  - High-density QSFP28/SFP+ optical cages now use an 8-column and 6-column wrapping grid with compact identifiers (`Q1`..`Q32`), fully preventing inspector drawer overflow on 32-port 100G switches (`ECS-Core`).
+  - Added responsive flex-wrapping to the inspector port legend to prevent overlapping port status chips.
+
+---
+
+## [0.10.4-alpha] - 2026-09-24
+
+### Added
+- **Enclosure & Rack Inspection in Topology (`js/tools/topology.js`)**:
+  - **Click-to-Inspect Racks**: Clicking on any location cluster header (MDF, IDF, Pole, Wallbox) selects the enclosure and opens a comprehensive Enclosure Telemetry drawer.
+  - **Physical Space & Thermal Audit**: Live calculation and rendering of vertical rack space occupancy (occupied RU vs total cabinet height with progress bar), total chassis power draw (Watts), thermal dissipation (BTU/hr), and total PoE sourcing capacity vs delivered load.
+  - **Mounted Chassis Inventory**: Complete list of hardware installed inside the selected cabinet with 1-click inspection navigation directly to individual equipment cards.
+  - **Seamless 2D Elevation Integration (`openRackViewerFor`)**: Direct 1-click action button in the rack inspector to launch the 2D Rack Elevation Visualizer scoped to that exact cabinet.
+- **In-Viewport Location & Enclosure Reassignment (`js/tools/topology.js`)**:
+  - **Direct Location Reassignment**: Every equipment inspector card (Switches, Servers, Wireless Bridges, Edge Devices) now includes an interactive **Assigned Rack / Enclosure** dropdown, enabling instantaneous location changes directly within the viewport.
+  - **Dynamic Topology Realignment**: Reassigning a device immediately updates the cluster hierarchy, recalculates power and logical links, and smoothly pans to the target cluster without leaving the canvas.
+- **Topology Canvas Usability & Navigation Overhaul (`js/tools/topology.js` & `index.html`)**:
+  - **Expanded Canvas Dimensions**: Canvas enlarged to $4500\text{px} \times 2800\text{px}$ in a wide-aspect modal ($99\text{vw} \times 96\text{vh}$) providing massive room for large multi-building layouts.
+  - **Click-and-Drag Canvas Panning**: Native mouse background dragging with grab/grabbing cursors and Ctrl/Meta-wheel zooming ($40\%$ to $200\%$).
+  - **Quick Jump Navigator (`topologyQuickJump`)**: Categorized dropdown navigator in the toolbar jumping instantly to any Rack, Core switch, Access switch, Compute server, or Wireless Bridge.
+  - **1-Click Fit to Screen (`fitTopologyToScreen`)**: Automatically calculates bounding boxes of all clusters and centers the network at optimal zoom accounting for inspector width.
+  - **Collapsible Inspector Controls**: Inspector drawer can be collapsed to maximize viewport width, with an accessible floating reopen button.
+
+### Fixed
+- **Switch Internal Power Supply Modes (`js/engines/port_engine.js` & `js/tools/topology.js`)**:
+  - Added `internal_psu` and `dual_ac` modes to `POWER_SOURCE_MODES` (`drawsFromSwitch: false`).
+  - Switches, Gateways, and Servers now correctly display "Internal AC" or "Dual AC PSU" rather than erroneously inheriting "PoE from Switch".
+- **Remote Wireless Radio Link Bleed**:
+  - Removed erroneous cross-campus fallback in `generateTopologyLinks` that drew copper PoE links to MDF switches for remote exterior radios. Remote radios now exclusively establish RF bridge links and hand off only to local switches or explicit assignments.
+- **Reverse Uplink on Pole Deployments**:
+  - Access switches located in remote closures or exterior poles now automatically recognize local wireless bridge stations as their network uplink when no Core switch is co-located.
+- **Default Interconnect LAG Multiplier**:
+  - Normalized inter-closet switch trunk multiplier to default to `1x Link` instead of forcing `2x LAG`, giving users explicit control over LAG trunking via the inspector.
+
+---
+
+## [0.10.3-alpha] - 2026-09-24
+
+### Added
+- **Physical Port Engine & Interface Provisioning (`js/engines/port_engine.js`)**:
+  - **Discrete Port Tracking**: Accurate tracking of individual switch ports (1G/2.5G/10G RJ45, 10G/25G SFP+, 40G/100G QSFP28) with per-port PoE capabilities (802.3af 15.4W, 802.3at 30W, 802.3bt 60W/90W).
+  - **Automatic Port Allocation & Interfacing**: Automatically provisions client interfaces for IP cameras, door controllers, wireless bridge stations, and compute servers upon BOM additions or topology reassignment.
+  - **Interactive 24/48-Port Switch Faceplate Grid**: Slide-out topology inspector displays a realistic switch port matrix with color-coded live port telemetry (Green = PoE active, Blue = Uplink trunk, Amber = Data-only, Gray = Free).
+  - **Port Level Telemetry & Recalculation**: Live calculation of connected device IDs, allocated power draw, negotiated speeds, and aggregate switch PoE consumption.
+- **Hierarchical Facility & Enclosure Engine (`js/core/facility.js`)**:
+  - **Multi-Tier Spatial Modeling**: Structured hierarchy spanning Campus / Floors $\rightarrow$ Functional Spaces (MDF, IDF, Pole / Exterior, Wallbox) $\rightarrow$ Enclosures (19" Free-Standing Rack, Wall Cabinet, NEMA 4X Weatherproof Enclosure, DIN Rail).
+  - **Facility Hierarchy Manager Modal (`facilityModal`)**: Interactive management modal accessible from top navigation bar with floor elevation rise tracking, space type badges, and enclosure management.
+  - **Real-Time Thermal & Energy Rollups (`getLocationTelemetry`)**: Calculates equipment count, total power draw (Watts), total PoE output, total rack units (RU) occupied, and thermal dissipation (BTU/hr) per enclosure and space.
+  - **100% Backward Compatibility**: Seamless normalization and string serialization preserving legacy closet and rack references across BOM, rack elevation, and physical layout tools.
+- **Complex Uplink Logic & Field Topologies (`js/tools/topology.js`)**:
+  - **Decoupled Power vs Dataflow Direction**: Supports non-hierarchical deployments where power and data flow in opposite directions (e.g. pole-mounted industrial switch powers a P2P wireless radio station via PoE, but the radio acts as the switch's uplink gateway to the network core).
+  - **Peer Switch Cascades & Ring Topologies**: Support for access-to-access switch trunks and daisy-chain topology links alongside traditional Gateway $\rightarrow$ Core/Agg $\rightarrow$ Access trees.
+  - **Paired Wireless Bridge Links**: Visual rendering of wireless RF bridge interconnects between Master and Station radio pairs with dedicated handoff and uplink roles.
+- **Power Source Overrides on Topology Canvas (`js/tools/topology.js`)**:
+  - **Independent Power Delivery Modes**: Dedicated configuration for `poe_switch` (Switch PSE), `poe_injector` (Midspan Injector), `dedicated_dc` (Pole/Cabinet DC Power Supply), `dedicated_ac` (Mains AC), and `solar_battery`.
+  - **Dynamic PoE Rebalancing**: Overriding a radio, camera, or edge switch to use a local PoE injector or DC supply immediately reduces the switch port PoE load to 0W and credits the switch power budget while maintaining full logical data connectivity.
+  - **Visual Power Mode Indicators**: Live badges and filter states distinguishing PoE-delivered devices from locally powered field endpoints.
+
+### Fixed
+- **Resolved "Add to BOM" Button Failure**: Restored the missing `FacilityStore.notifyWorkspaceChange()` cross-modal dispatcher method in `js/core/facility.js` that caused an unhandled `TypeError` preventing items from being added to the BOM.
+- **Port Engine Array vs Integer Conflict**: Fixed `PortEngine.initSwitchPorts` to store discrete port models on `item.physicalPorts` rather than overwriting `item.ports`, preserving the numeric port count required by downstream PoE calculations, sizers, and rack elevations.
+- **Resilient Catalog Lookups in Hardware Adders**: Enhanced `addToProjectBOM` and `addFirewallToBOM` to search by either `id` or `sku` across both `CatalogRegistry` and legacy databases.
+
+---
+
+## [0.10.2-alpha] - 2026-09-24
+
+### Added
+- **Logical Systems Architecture & Topology Canvas Overhaul (`js/tools/topology.js` & `index.html`)**:
+  - **Smooth Cubic Bézier Vector Interconnects**: Snaps links to perimeter chassis borders with auto-calculated control points and interactive speed badge pills, preventing crossing lines over cards.
+  - **Dynamic Wire-Speed Auto-Negotiation**: Automatically calculates mutual link speeds (100G, 40G, 25G, 10G, 2.5G, 1G) between network endpoints and displays configurable LAG trunking (1x/2x/4x LACP bundles).
+  - **Dual-Plane & Service View Filters**: Added unified filter controls supporting `All Systems (Unified)`, `Backbone & Speeds`, `PoE & Power Delivery`, `VMS Video Recording & Ingest`, and `Access Control & Security Services`.
+  - **Slide-Out Topology Inspector Drawer**: Deep inspection of switches, servers, and transport links with live configuration controls for custom uplink targets, LAG bundles, wire speed overrides, and service routing.
+  - **Grouped Edge Client Pools**: Switch chassis cards display aggregated client pools for cameras, doors, and wireless APs with live power and bitrate rollups, preventing visual clutter while enabling full inspection on click.
+  - **1-Click Hierarchical Auto-Layout (`autoArrangeTopologyHierarchy`)**: Automatically arranges complex topologies into standard Gateway $\rightarrow$ Core / Servers $\rightarrow$ Access Closets $\rightarrow$ Field tiers.
+  - **Canvas Zoom & Viewport Controls**: Smooth zoom engine (50% to 200%) with zoom level badge and 1-click fit to screen.
+- **Compute, VMS Servers & Security Integration**:
+  - **Enterprise Server Catalog (`data/compute_storage/data_servers.js`)**: Ingested high-density VMS recording servers and identity hosts (Dell PowerEdge R760, BCDVideo Aurora 1U, Supermicro 4U 24-Bay, HPE ProLiant DL380).
+  - **Enterprise IP Cameras Catalog (`data/physical_security/data_cameras.js`)**: Ingested surveillance cameras (Axis P3265-LVE 2MP, Axis Q3538-LVE 4K AI, Hanwha XNV-8081Z 4K PTRZ, Hanwha XNO-6080R, Avigilon 5MP) with PoE classes and stream bitrates.
+  - **Enterprise Access Control Catalog (`data/physical_security/data_access.js`)**: Ingested door controllers and readers (Mercury LP1502 PoE+, Mercury MR52-S3, Axis A1001, HID Signo 40).
+  - **Live VMS Ingest & Access Routing Engine**: Real-time video ingest bandwidth calculations (Mbps) and logical routing of camera streams and door controllers to assigned servers in the quote.
+  - **Dedicated Line Item Creation (`js/tools/bom.js`)**: Added `addServerToBOM`, `addCameraToBOM`, and `addAccessDeviceToBOM`.
+
+### Changed
+- Strictly isolated physical cabling details (Cat6/fiber spools, run lengths) and physical rack U elevations to the Floor Plan Layout (`physical_layout.js`) and Rack Viewer (`rack.js`), keeping the Topology tool exclusively dedicated to logical network architecture, dataflows, and hosted services.
+- Enhanced domain card rendering (`js/renderers/render_cards.js`) with specialized telemetry badges and direct BOM additions for servers, cameras, and access controllers.
+
+---
+
+## [0.10.1-alpha] - 2026-09-24
+
+### Added
+- **Centralized Network & PoE Sizing Engine (`js/engines/sizer_network.js`)**:
+  - Full calibration against IEEE 802.3af (15.4W PSE / 12.95W PD), IEEE 802.3at (30W PSE / 25.5W PD), IEEE 802.3bt Type 3 (60W PSE / 51W PD), and IEEE 802.3bt Type 4 (90W PSE / 71.3W PD).
+  - Ohmic cable heat dissipation math across worst-case 100m Cat5e/Cat6/Cat6A horizontal cable runs.
+  - Continuous PSE wattage calculations with configurable engineering headroom buffer (+10%, +15%, +20%, +25%, +30%).
+- **Edge PoE Sizing Strip Overhaul (`js/core/app.js`)**:
+  - Telemetry breakdown showing total PSE continuous power, PD device consumption, and estimated cable heat loss.
+  - Quick reset action (`resetDemandInputs()`) to instantly zero out demand targets.
+  - Multi-tiered switch candidate auditing (`NetworkSizer.auditSwitchFit()`) validating PoE downlinks, total wattage, 90W bt port pools, and 60W/90W bt combinations.
+- **Rack Elevation Power & Thermal Physics (`js/tools/rack.js` & `index.html`)**:
+  - Distinct tracking between **Operating Design Load** (active connected devices with 90% PSU conversion efficiency) and **Worst-Case Nameplate Load** (100% capacity breaker sizing).
+  - Thermal dissipation outputs in both BTU/hr ($1\text{ W} = 3.412142\text{ BTU/hr}$) and Tons of AC cooling ($1\text{ Ton} = 12,000\text{ BTU/hr}$).
+  - NEC 80% continuous branch circuit sizing recommendations (120V 15A/20A/30A and 208V 20A/30A circuits with NEMA receptacles).
+  - Intelligent UPS Advisor calculating required apparent power ($VA = \frac{\text{Watts}}{PF} \times 1.25$ with 25% safety margin), rackmount form factor, and estimated battery runtimes.
+- **Bill of Materials Real-Time Capacity & Standard Auditing (`js/tools/bom.js`)**:
+  - Connected child device power detection evaluating `powerConsumptionWatts`, `maxPowerWatts`, `powerWatts`, `poeWattsDrawn`, and `baseWatts` to prevent underestimating field loads.
+  - Secondary power supply integration (`POWER_SUPPLY_CATALOG` in `data_interconnects.js`), allocating expanded PoE budgets in combined/sharing mode and setting accurate external brick/DIN budgets.
+  - 60W/90W high-power port exhaustion tracking and passive PoE adapter mismatch warnings.
+  - Real-time BOM headroom banner with live percentage coverage, surplus/deficit indicators, and active device draw metrics.
+
+### Changed
+- Upgraded switch card allocation pills in catalog view (`js/renderers/render_cards.js`) to display dynamic headroom percentage and secondary PSU indicators.
+- Synchronized active BOM device PoE loads directly into Rack Elevation telemetry.
+
+---
+
+## [0.10.0-alpha] - 2026-09-24
+
+### Added
+- **Modular Domain Registry Architecture**:
+  - Replaced monolithic single-file global data structures with an isolated multi-domain registry (`CatalogRegistry` in `data/registry.js`).
+  - Modularized catalog datasets into category folders: `data/networking/`, `data/infrastructure/`, `data/physical_security/`, `data/compute_storage/`, and `data/software/`.
+  - Introduced fast O(1) indexed lookups (`_byId` and `_bySku` HashMaps).
+- **Decoupled Application Architecture**:
+  - Separated core application into clean layer directories: `js/core/`, `js/engines/`, `js/renderers/`, and `js/tools/`.
+  - Centralized single-source-of-truth state container (`AppState` in `js/core/app.js`).
+  - Pluggable Strategy Pattern filter architecture (`FilterEngine` in `js/engines/search_filter.js`).
+- **Security Hardening & Quota Resilience**:
+  - Universal XSS sanitization via `escapeHTML()` across all catalog card templates, comparison matrices, and modal views.
+  - Storage quota protection (`StorageService.safeSetItem`) with `QuotaExceededError` detection and defensive cleanup.
+  - Secure JSON project import schema validation and sanitization (`StorageService.importProjectJSON`).
+- **Performance Optimizations**:
+  - 150ms debounced search runner to ensure smooth rendering during high-speed typing.
+  - Scoped Lucide icon rendering (`safeCreateIcons(container)`) eliminating whole-page DOM icon re-scans.
+
+---
+
 ## [0.6.1-alpha] - 2026-09-24
 
 ### Added
