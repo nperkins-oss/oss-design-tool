@@ -61,7 +61,7 @@ const BOM_CATEGORIES = {
   surveillance: { id: "surveillance", label: "Video Surveillance & Cameras", icon: "video", color: "amber" },
   access_control: { id: "access_control", label: "Access Control (PACS)", icon: "key-round", color: "orange" },
   servers: { id: "servers", label: "Servers & Compute Systems", icon: "hard-drive", color: "blue" },
-  racks_power: { id: "racks_power", label: "Racks, Enclosures & PDUs", icon: "server", color: "purple" },
+  racks_power: { id: "racks_power", label: "Racks, Power & PDUs", icon: "server", color: "purple" },
   optics_cabling: { id: "optics_cabling", label: "Transceivers, DACs & Structured Cabling", icon: "cable", color: "emerald" },
   licensing: { id: "licensing", label: "Software Licenses & Subscriptions", icon: "key", color: "fuchsia" },
   other: { id: "other", label: "Accessories & Supporting Hardware", icon: "box", color: "slate" }
@@ -90,7 +90,7 @@ function getBomItemCategoryKey(item) {
   if (cat === "servers" || cat === "server" || role.includes("server") || item.deviceTypePrefix === "SRV") {
     return "servers";
   }
-  if (cat === "racks" || cat === "rack" || cat === "pdu" || cat === "ups" || role.includes("rack") || role.includes("pdu") || role.includes("ups") || role.includes("enclosure")) {
+  if (cat === "racks" || cat === "rack" || cat === "pdu" || cat === "pdus" || cat === "ups" || cat === "power_cords" || cat === "power_cord" || role.includes("rack") || role.includes("pdu") || role.includes("ups") || role.includes("enclosure") || role.includes("cord") || role.includes("jumper")) {
     return "racks_power";
   }
   if (cat === "optics" || cat === "cabling" || cat === "transceivers" || role.includes("optic") || role.includes("dac") || role.includes("patch") || role.includes("cabling")) {

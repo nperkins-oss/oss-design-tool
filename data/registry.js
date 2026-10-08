@@ -34,6 +34,7 @@ const CatalogRegistry = {
     enclosures: [],
     ups: [],
     pdus: [],
+    powerCords: [],
     cabling: {},
     pathways: [],
     accessories: []
@@ -69,6 +70,7 @@ const CatalogRegistry = {
     if (mode === "enclosures") return this.infrastructure.enclosures || [];
     if (mode === "ups") return this.infrastructure.ups || [];
     if (mode === "pdus") return this.infrastructure.pdus || [];
+    if (mode === "power_cords" || mode === "power_cord") return this.infrastructure.powerCords || [];
     if (mode === "cabling") {
       if (Array.isArray(this.infrastructure.cabling)) return this.infrastructure.cabling;
       if (this.infrastructure.cabling && typeof this.infrastructure.cabling === "object") {
@@ -130,10 +132,13 @@ const CatalogRegistry = {
 
     const netFromAccDb = this.infrastructure.accessories.filter(a =>
       a.category === "media_converter" || a.type === "media_converter" ||
-      a.category === "mounting" || a.type === "mounting" ||
+      a.category === "mounting" || a.type === "mounting" || a.type === "rack_kit" ||
       a.category === "power_injector" || a.type === "poe_injector" || a.type === "poe_splitter" ||
       (a.category === "power_supply" && !a.isPdu) ||
-      a.type === "time_server"
+      a.type === "time_server" ||
+      a.category === "network_card" || a.type === "network_card" ||
+      a.category === "environmental_sensor" || a.type === "environmental_probe" ||
+      a.category === "licenses" || a.type === "license"
     );
 
     const rawNetAccessories = [
@@ -141,9 +146,11 @@ const CatalogRegistry = {
         ...item,
         domain: "networking",
         subCategory: item.type === "media_converter" || item.category === "media_converter" ? "media_converters" :
-                     (item.type === "mounting" || item.category === "mounting" ? "mounts" :
+                     (item.type === "mounting" || item.category === "mounting" || item.type === "rack_kit" ? "mounts" :
+                     (item.type === "license" || item.category === "licenses" ? "licenses" :
+                     (item.type === "network_card" || item.category === "network_card" ? "modular_uplinks" :
                      (item.type === "poe_injector" || item.category === "power_injector" || item.type === "poe_splitter" ? "poe_injectors" :
-                     (item.type === "power_supply" || item.category === "power_supply" ? "power_supplies" : "other")))
+                     (item.type === "power_supply" || item.category === "power_supply" ? "power_supplies" : "other")))))
       })),
       ...netMounts.map(item => ({
         ...item,
@@ -207,16 +214,42 @@ const CatalogRegistry = {
       a.type === "architectural_backboard" || a.category === "architectural_backboard"
     );
 
-    // 3. UPS & Battery Backup
+    // 3. UPS & Battery Backup (strictly UPS & EBPs, excluding PDUs and power cords)
     this.infrastructure.ups = this.infrastructure.accessories.filter(a =>
-      a.category === "ups" || a.type === "ups" || a.type === "ebp" || a.isEbp
-    );
+      (a.category === "ups" || a.type === "ups" || a.type === "ebp" || a.isEbp) &&
+      !a.isPdu && a.type !== "pdu" && a.category !== "pdus" && a.type !== "power_cord" && a.category !== "power_cords"
+    ).map(u => {
+      if (u.portCount === undefined && u.outletsCount !== undefined) u.portCount = u.outletsCount;
+      if (u.outletsCount === undefined && u.portCount !== undefined) u.outletsCount = u.portCount;
+      if (!u.receptacles && Array.isArray(u.receptacleBreakdown)) {
+        u.receptacles = u.receptacleBreakdown.map(r => r.label || (r.count && r.type ? `${r.count}x ${r.type}` : r.type || '')).filter(Boolean).join(', ');
+      }
+      return u;
+    });
 
-    // 4. Rackmount PDUs & Power Distribution
+    // 4. Rackmount PDUs & Power Distribution (strictly PDUs, excluding UPS and power cords)
     this.infrastructure.pdus = this.infrastructure.accessories.filter(a =>
-      (a.type === "pdu" || a.isPdu || a.category === "pdu" || (a.category === "power_distribution" && !a.type?.includes("poe") && !a.model?.toLowerCase().includes("poe"))) &&
+      (a.type === "pdu" || a.isPdu || a.category === "pdus" || a.category === "pdu" || (a.category === "power_distribution" && !a.type?.includes("poe") && !a.model?.toLowerCase().includes("poe"))) &&
+      a.type !== "ups" && a.type !== "ebp" && !a.isEbp && a.type !== "power_cord" && a.category !== "power_cords" &&
       a.type !== "poe_injector" && a.type !== "poe_splitter" && a.category !== "power_injector" && a.category !== "media_converter" && a.type !== "media_converter"
-    );
+    ).map(p => {
+      if (p.portCount === undefined && p.outletsCount !== undefined) p.portCount = p.outletsCount;
+      if (p.outletsCount === undefined && p.portCount !== undefined) p.outletsCount = p.portCount;
+      if (!p.receptacles && Array.isArray(p.receptacleBreakdown)) {
+        p.receptacles = p.receptacleBreakdown.map(r => r.label || (r.count && r.type ? `${r.count}x ${r.type}` : r.type || '')).filter(Boolean).join(', ');
+      }
+      return p;
+    });
+
+    // 4B. Power Cords & Infrastructure Jumpers (dedicated catalog for power cords)
+    this.infrastructure.powerCords = this.infrastructure.accessories.filter(a =>
+      a.type === "power_cord" || a.category === "power_cords" || a.category === "power_cable"
+    ).map(c => {
+      if (!c.plugPairing && c.plugType) c.plugPairing = c.plugType;
+      if (!c.wireGauge && c.gauge) c.wireGauge = c.gauge;
+      if (c.locking === undefined && c.isLocking !== undefined) c.locking = c.isLocking;
+      return c;
+    });
 
     this.infrastructure.ebps = this.infrastructure.accessories.filter(a =>
       a.type === "ebp" || a.isEbp || a.category === "ebp"
@@ -313,6 +346,7 @@ const CatalogRegistry = {
     window.ENCLOSURES_DATABASE = this.infrastructure.enclosures;
     window.UPS_DATABASE = this.infrastructure.ups;
     window.PDUS_DATABASE = this.infrastructure.pdus;
+    window.POWER_CORDS_DATABASE = this.infrastructure.powerCords;
     window.PATHWAYS_DATABASE = this.infrastructure.pathways;
     window.NETWORKING_ACCESSORIES = this.networking.accessories;
     window.CAMERAS_DATABASE = this.physical_security.cameras;

@@ -31,6 +31,10 @@ function getCurrentDataset() {
     return (typeof ENCLOSURES_DATABASE !== "undefined") ? ENCLOSURES_DATABASE : [];
   } else if (currentMode === "pdus") {
     return (typeof PDUS_DATABASE !== "undefined") ? PDUS_DATABASE : [];
+  } else if (currentMode === "ups") {
+    return (typeof UPS_DATABASE !== "undefined") ? UPS_DATABASE : [];
+  } else if (currentMode === "power_cords") {
+    return (typeof POWER_CORDS_DATABASE !== "undefined") ? POWER_CORDS_DATABASE : [];
   }
   return [];
 }
@@ -63,6 +67,8 @@ function buildSidebarFilters() {
     buildUpsSidebar(container, baseSet);
   } else if (currentMode === "pdus") {
     buildPdusSidebar(container, baseSet);
+  } else if (currentMode === "power_cords") {
+    buildPowerCordsSidebar(container, baseSet);
   } else if (currentMode === "cabling") {
     buildCablingSidebar(container, baseSet);
   } else if (currentMode === "pathways") {
@@ -667,7 +673,8 @@ function buildAccessoriesSidebar(container, baseSet) {
     { id: "licenses", label: "Licenses & Subscriptions" },
     { id: "modular_uplinks", label: "Modular Uplinks & Expansion" },
     { id: "power_supplies", label: "Modular Power Supplies" },
-    { id: "poe_injectors", label: "PoE Midspans & Injectors" }
+    { id: "poe_injectors", label: "PoE Midspans & Injectors" },
+    { id: "environmental", label: "Environmental Probes & Sensors" }
   ];
 
   const currentSubCat = typeof selectedAccSubCategory !== "undefined" ? selectedAccSubCategory : "all";
@@ -692,12 +699,13 @@ function buildAccessoriesSidebar(container, baseSet) {
             } else {
               count = baseSet.filter(a => {
                 if (a.subCategory === sc.id) return true;
-                if (sc.id === "mounts" && (a.type === "mounting" || a.category === "mounting" || a.type === "rack_kit" || a.type === "wall_bracket" || (a.role && a.role.toLowerCase().includes("mount")))) return true;
+                if (sc.id === "mounts" && (a.type === "mounting" || a.category === "mounting" || a.type === "rack_kit" || a.type === "wall_bracket" || (a.role && (a.role.toLowerCase().includes("mount") || a.role.toLowerCase().includes("rail"))))) return true;
                 if (sc.id === "media_converters" && (a.type === "media_converter" || a.category === "media_converter")) return true;
                 if (sc.id === "licenses" && (a.type === "license" || a.category === "licenses" || a.type === "feature_license" || a.type === "cloud_subscription" || (a.role && a.role.toLowerCase().includes("license")))) return true;
-                if (sc.id === "modular_uplinks" && (a.type === "modular_uplink" || a.category === "modular_uplinks" || (a.role && a.role.toLowerCase().includes("modular")))) return true;
+                if (sc.id === "modular_uplinks" && (a.type === "modular_uplink" || a.category === "modular_uplinks" || a.type === "network_card" || a.category === "network_card" || (a.role && (a.role.toLowerCase().includes("modular") || a.role.toLowerCase().includes("expansion") || a.role.toLowerCase().includes("network card"))))) return true;
                 if (sc.id === "power_supplies" && (a.type === "power_supply" || a.category === "power_supplies" || (a.role && a.role.toLowerCase().includes("power supply")))) return true;
                 if (sc.id === "poe_injectors" && (a.type === "poe_injector" || a.type === "poe_splitter" || a.category === "power_injector" || (a.role && a.role.toLowerCase().includes("injector")))) return true;
+                if (sc.id === "environmental" && (a.type === "environmental_probe" || a.category === "environmental_sensor" || (a.role && (a.role.toLowerCase().includes("environmental") || a.role.toLowerCase().includes("sensor"))))) return true;
                 return false;
               }).length;
             }
@@ -863,8 +871,6 @@ function buildUpsSidebar(container, baseSet) {
           <option value="all" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'all') ? 'selected' : ''}>All Power Infrastructure</option>
           <option value="ups" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'ups') ? 'selected' : ''}>UPS Systems (Battery Backup)</option>
           <option value="ebp" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'ebp') ? 'selected' : ''}>Extended Battery Packs (EBP)</option>
-          <option value="pdu" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'pdu') ? 'selected' : ''}>Rack Power Distribution (PDUs)</option>
-          <option value="power_cord" ${(typeof selectedUpsCategory !== "undefined" && selectedUpsCategory === 'power_cord') ? 'selected' : ''}>Power Cords & Jumpers</option>
         </select>
       </div>
 
@@ -872,8 +878,22 @@ function buildUpsSidebar(container, baseSet) {
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Nominal Voltage</span>
         <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
           <option value="all" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === 'all') ? 'selected' : ''}>All Voltages</option>
-          <option value="120" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '120') ? 'selected' : ''}>120V AC (Standard)</option>
+          <option value="120" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '120') ? 'selected' : ''}>120V AC (Standard Utility)</option>
           <option value="240" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '240') ? 'selected' : ''}>208V / 240V AC (High-Density)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Input Plug Type</span>
+        <select onchange="selectedUpsInputPlug = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-amber-500">
+          <option value="all" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === 'all') ? 'selected' : ''}>All Plug Types</option>
+          <option value="5-15P" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === '5-15P') ? 'selected' : ''}>NEMA 5-15P (15A 120V Straight)</option>
+          <option value="5-20P" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === '5-20P') ? 'selected' : ''}>NEMA 5-20P / L5-20P (20A 120V)</option>
+          <option value="L5-30P" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === 'L5-30P') ? 'selected' : ''}>NEMA L5-30P (30A 120V Twist-Lock)</option>
+          <option value="L6-20P" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === 'L6-20P') ? 'selected' : ''}>NEMA L6-20P (20A 208V Twist-Lock)</option>
+          <option value="L6-30P" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === 'L6-30P') ? 'selected' : ''}>NEMA L6-30P (30A 208V Twist-Lock)</option>
+          <option value="C14" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === 'C14') ? 'selected' : ''}>IEC C14 (10A 230V)</option>
+          <option value="C20" ${(typeof selectedUpsInputPlug !== "undefined" && selectedUpsInputPlug === 'C20') ? 'selected' : ''}>IEC C20 (16A 230V)</option>
         </select>
       </div>
 
@@ -905,7 +925,13 @@ function buildUpsSidebar(container, baseSet) {
         <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
           <div class="flex items-center gap-2">
             <input type="checkbox" onchange="requireUpsEbm = this.checked; runActiveFilter();" ${(typeof requireUpsEbm !== "undefined" && requireUpsEbm) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-0">
-            <span>Extended Battery (EBM) Support</span>
+            <span>Extended Battery (EBM) Capable</span>
+          </div>
+        </label>
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireUpsNetworked = this.checked; runActiveFilter();" ${(typeof requireUpsNetworked !== "undefined" && requireUpsNetworked) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+            <span>Networked / Smart Monitoring</span>
           </div>
         </label>
       </div>
@@ -938,11 +964,36 @@ function buildPdusSidebar(container, baseSet) {
       </div>
 
       <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Management & Function</span>
+        <select onchange="selectedPduNetworkType = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="all" ${(typeof selectedPduNetworkType !== "undefined" && selectedPduNetworkType === 'all') ? 'selected' : ''}>All PDU Types</option>
+          <option value="switched" ${(typeof selectedPduNetworkType !== "undefined" && selectedPduNetworkType === 'switched') ? 'selected' : ''}>Switched (Individual Outlet Reboot)</option>
+          <option value="metered" ${(typeof selectedPduNetworkType !== "undefined" && selectedPduNetworkType === 'metered') ? 'selected' : ''}>Metered (Load Ammeter & Alarms)</option>
+          <option value="basic" ${(typeof selectedPduNetworkType !== "undefined" && selectedPduNetworkType === 'basic') ? 'selected' : ''}>Basic Power Distribution (Unmanaged)</option>
+          <option value="ats" ${(typeof selectedPduNetworkType !== "undefined" && selectedPduNetworkType === 'ats') ? 'selected' : ''}>Automatic Transfer Switch (ATS Dual-Feed)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Input Voltage</span>
         <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
           <option value="all" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === 'all') ? 'selected' : ''}>All Voltages</option>
-          <option value="120" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '120') ? 'selected' : ''}>120V AC (15A / 20A)</option>
-          <option value="240" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '240') ? 'selected' : ''}>208V / 240V AC (30A L6-30P)</option>
+          <option value="120" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '120') ? 'selected' : ''}>120V AC (15A / 20A / 30A)</option>
+          <option value="240" ${(typeof selectedUpsVoltage !== "undefined" && selectedUpsVoltage === '240') ? 'selected' : ''}>208V / 240V AC (20A / 30A Locking)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Input Plug Type</span>
+        <select onchange="selectedPduPlugType = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="all" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === 'all') ? 'selected' : ''}>All Plug Types</option>
+          <option value="5-15P" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === '5-15P') ? 'selected' : ''}>NEMA 5-15P (15A 120V Straight)</option>
+          <option value="5-20P" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === '5-20P') ? 'selected' : ''}>NEMA 5-20P (20A 120V Straight)</option>
+          <option value="L5-20P" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === 'L5-20P') ? 'selected' : ''}>NEMA L5-20P (20A 120V Twist-Lock)</option>
+          <option value="L5-30P" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === 'L5-30P') ? 'selected' : ''}>NEMA L5-30P (30A 120V Twist-Lock)</option>
+          <option value="L6-20P" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === 'L6-20P') ? 'selected' : ''}>NEMA L6-20P (20A 208V Twist-Lock)</option>
+          <option value="L6-30P" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === 'L6-30P') ? 'selected' : ''}>NEMA L6-30P (30A 208V Twist-Lock)</option>
+          <option value="dual" ${(typeof selectedPduPlugType !== "undefined" && selectedPduPlugType === 'dual') ? 'selected' : ''}>Dual Utility Inputs (ATS)</option>
         </select>
       </div>
 
@@ -950,9 +1001,174 @@ function buildPdusSidebar(container, baseSet) {
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Form Factor</span>
         <select onchange="selectedAccMounting = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
           <option value="all" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'all') ? 'selected' : ''}>All Form Factors</option>
-          <option value="0U" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === '0U') ? 'selected' : ''}>0U Vertical High-Density</option>
-          <option value="Rack" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === 'Rack') ? 'selected' : ''}>1U/2U Horizontal Rackmount</option>
+          <option value="0U" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === '0U') ? 'selected' : ''}>0U Vertical High-Density (Zero EIA Space)</option>
+          <option value="1U" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === '1U') ? 'selected' : ''}>1U Horizontal Rackmount</option>
+          <option value="2U" ${(typeof selectedAccMounting !== "undefined" && selectedAccMounting === '2U') ? 'selected' : ''}>2U Horizontal Rackmount</option>
         </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Receptacle Types</span>
+        <select onchange="selectedPduReceptacleType = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="all" ${(typeof selectedPduReceptacleType !== "undefined" && selectedPduReceptacleType === 'all') ? 'selected' : ''}>All Receptacle Types</option>
+          <option value="5-15" ${(typeof selectedPduReceptacleType !== "undefined" && selectedPduReceptacleType === '5-15') ? 'selected' : ''}>NEMA 5-15R (Standard 15A)</option>
+          <option value="5-20" ${(typeof selectedPduReceptacleType !== "undefined" && selectedPduReceptacleType === '5-20') ? 'selected' : ''}>NEMA 5-20R (T-Slot 20A)</option>
+          <option value="c13" ${(typeof selectedPduReceptacleType !== "undefined" && selectedPduReceptacleType === 'c13') ? 'selected' : ''}>IEC C13 (Computer / Switch)</option>
+          <option value="c19" ${(typeof selectedPduReceptacleType !== "undefined" && selectedPduReceptacleType === 'c19') ? 'selected' : ''}>IEC C19 (High-Draw Blade / SAN)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Minimum Outlet Count</span>
+        <select onchange="selectedPduMinOutlets = Number(this.value); runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-sky-500">
+          <option value="0" ${(typeof selectedPduMinOutlets !== "undefined" && selectedPduMinOutlets === 0) ? 'selected' : ''}>Any Outlet Count</option>
+          <option value="8" ${(typeof selectedPduMinOutlets !== "undefined" && selectedPduMinOutlets === 8) ? 'selected' : ''}>&ge; 8 Outlets</option>
+          <option value="12" ${(typeof selectedPduMinOutlets !== "undefined" && selectedPduMinOutlets === 12) ? 'selected' : ''}>&ge; 12 Outlets</option>
+          <option value="16" ${(typeof selectedPduMinOutlets !== "undefined" && selectedPduMinOutlets === 16) ? 'selected' : ''}>&ge; 16 Outlets</option>
+          <option value="24" ${(typeof selectedPduMinOutlets !== "undefined" && selectedPduMinOutlets === 24) ? 'selected' : ''}>&ge; 24 Outlets</option>
+          <option value="36" ${(typeof selectedPduMinOutlets !== "undefined" && selectedPduMinOutlets === 36) ? 'selected' : ''}>&ge; 36 Outlets (Ultra-Dense)</option>
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requirePduManaged = this.checked; runActiveFilter();" ${(typeof requirePduManaged !== "undefined" && requirePduManaged) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+            <span>Network Managed / Switched</span>
+          </div>
+        </label>
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requirePduDisplay = this.checked; runActiveFilter();" ${(typeof requirePduDisplay !== "undefined" && requirePduDisplay) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-teal-500 focus:ring-0">
+            <span>Digital Current Ammeter Display</span>
+          </div>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function buildPowerCordsSidebar(container, baseSet) {
+  const vendors = [...new Set(baseSet.map(a => (a.vendor || '').trim()).filter(Boolean))].sort();
+
+  const plugTypes = [
+    { id: "all", label: "All Connector Types" },
+    { id: "C14 to C13", label: "IEC C14 to C13 (Standard Jumper)" },
+    { id: "C20 to C19", label: "IEC C20 to C19 (High-Current)" },
+    { id: "C14 to C15 High-Temp", label: "IEC C14 to C15 (PoE High-Temp)" },
+    { id: "C20 to C13", label: "IEC C20 to C13 (Adapter Cord)" },
+    { id: "NEMA 5-15P to C13", label: "NEMA 5-15P to C13 (Straight-Blade)" },
+    { id: "NEMA 5-20P to C19", label: "NEMA 5-20P to C19 (20A Straight)" },
+    { id: "Locking", label: "Dual-Locking Retention (IEC-Lock)" }
+  ];
+
+  const lengths = [
+    { id: "all", label: "All" },
+    { id: "1", label: "1 ft" },
+    { id: "2", label: "2 ft" },
+    { id: "3", label: "3 ft" },
+    { id: "6", label: "6 ft" },
+    { id: "10", label: "10 ft" },
+    { id: "15", label: "15 ft" }
+  ];
+
+  const colors = [
+    { id: "all", label: "All Colors", dot: "bg-slate-500" },
+    { id: "Black", label: "Black", dot: "bg-slate-950 border border-slate-600" },
+    { id: "Blue", label: "Blue (A-Feed)", dot: "bg-blue-600" },
+    { id: "Red", label: "Red (B-Feed)", dot: "bg-red-600" },
+    { id: "Yellow", label: "Yellow (UPS)", dot: "bg-yellow-500" },
+    { id: "Green", label: "Green (Ground)", dot: "bg-emerald-600" },
+    { id: "White", label: "White", dot: "bg-slate-100" },
+    { id: "Orange", label: "Orange (ATS)", dot: "bg-orange-600" }
+  ];
+
+  const gauges = [
+    { id: "all", label: "All Gauges" },
+    { id: "18 AWG", label: "18 AWG (10A Continuous)" },
+    { id: "17 AWG", label: "17 AWG (Locking Jumper)" },
+    { id: "14 AWG", label: "14 AWG (15A Heavy-Duty)" },
+    { id: "12 AWG", label: "12 AWG (20A High-Draw)" },
+    { id: "10 AWG", label: "10 AWG (30A Feeder)" }
+  ];
+
+  container.innerHTML = `
+    <div class="space-y-4 text-xs">
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Manufacturer</span>
+        <div class="space-y-1">
+          ${vendors.map(v => {
+            const isChecked = (typeof selectedAccVendors !== "undefined" && selectedAccVendors.includes(v));
+            const count = baseSet.filter(a => (a.vendor || '').trim() === v).length;
+            return `
+              <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('accVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-teal-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Plug & Receptacle Pairing</span>
+        <select onchange="selectedCordPlugType = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-500">
+          ${plugTypes.map(p => `
+            <option value="${p.id}" ${(typeof selectedCordPlugType !== "undefined" && selectedCordPlugType === p.id) ? 'selected' : ''}>${p.label}</option>
+          `).join('')}
+        </select>
+      </div>
+
+      <!-- Length Selector -->
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Cord Length</span>
+        <div class="grid grid-cols-4 gap-1 text-[11px] font-mono">
+          ${lengths.map(len => `
+            <button onclick="selectedCordLength = '${len.id}'; buildCalculatorStrip(); runActiveFilter();" class="py-1 px-1 rounded-lg border text-center transition-all ${(typeof selectedCordLength !== "undefined" && selectedCordLength === len.id) ? 'bg-teal-600 border-teal-500 text-white font-bold shadow-sm' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}">
+              ${len.label}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+
+      <!-- Color Filter -->
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Jacket Color / Feed</span>
+        <div class="space-y-1">
+          ${colors.map(col => {
+            const isSelected = (typeof selectedCordColor !== "undefined" && selectedCordColor === col.id);
+            return `
+              <button onclick="selectedCordColor = '${col.id}'; buildCalculatorStrip(); runActiveFilter();" class="w-full flex items-center justify-between px-2 py-1 rounded-lg text-left transition-all ${isSelected ? 'bg-teal-950/70 border border-teal-500/50 text-white font-bold' : 'hover:bg-slate-900 text-slate-300'}">
+                <div class="flex items-center gap-2">
+                  <span class="w-3 h-3 rounded-full ${col.dot}"></span>
+                  <span>${col.label}</span>
+                </div>
+                ${isSelected ? '<i data-lucide="check" class="w-3 h-3 text-teal-400"></i>' : ''}
+              </button>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Wire Gauge & Current</span>
+        <select onchange="selectedCordGauge = this.value; runActiveFilter();" class="w-full bg-slate-950 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-teal-500">
+          ${gauges.map(g => `
+            <option value="${g.id}" ${(typeof selectedCordGauge !== "undefined" && selectedCordGauge === g.id) ? 'selected' : ''}>${g.label}</option>
+          `).join('')}
+        </select>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 space-y-1.5">
+        <label class="flex items-center justify-between text-slate-300 hover:text-white cursor-pointer py-0.5 select-none">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="requireCordLocking = this.checked; runActiveFilter();" ${(typeof requireCordLocking !== "undefined" && requireCordLocking) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-teal-500 focus:ring-0">
+            <span>Dual-Locking Retention Cords Only</span>
+          </div>
+        </label>
       </div>
     </div>
   `;

@@ -58,6 +58,7 @@ const DOMAIN_DEFINITIONS = {
       { id: "enclosures", label: "Cabinets & Enclosures", icon: "box" },
       { id: "ups", label: "Rack UPS Power", icon: "zap" },
       { id: "pdus", label: "Rackmount PDUs", icon: "power" },
+      { id: "power_cords", label: "Power Cords & Jumpers", icon: "plug" },
       { id: "cabling", label: "Structured Cabling", icon: "git-commit" },
       { id: "pathways", label: "Pathways & J-Hooks", icon: "route" }
     ]
@@ -181,6 +182,21 @@ let selectedCableRatings = [];
 let selectedPatchCordLength = "all";
 let requireCableShielded = false;
 let requireEtherlighting = false;
+
+// Power Infrastructure Filters (UPS, PDU, Power Cords)
+let selectedUpsInputPlug = "all";
+let requireUpsNetworked = false;
+let selectedPduNetworkType = "all";
+let selectedPduPlugType = "all";
+let selectedPduReceptacleType = "all";
+let selectedPduMinOutlets = 0;
+let requirePduManaged = false;
+let requirePduDisplay = false;
+let selectedCordPlugType = "all";
+let selectedCordLength = "all";
+let selectedCordColor = "all";
+let selectedCordGauge = "all";
+let requireCordLocking = false;
 
 // 6. Camera Filters
 let selectedCameraVendors = [];
@@ -431,6 +447,28 @@ function resetCurrentFilters(silent = false) {
   selectedPatchCordLength = "all";
   requireCableShielded = false;
   requireEtherlighting = false;
+
+  // Power Infrastructure Filter Resets
+  selectedUpsCategory = "all";
+  selectedUpsVoltage = "all";
+  selectedUpsInputPlug = "all";
+  requireUpsSineWave = false;
+  requireUpsOnline = false;
+  requireUpsEbm = false;
+  requireUpsNetworked = false;
+
+  selectedPduNetworkType = "all";
+  selectedPduPlugType = "all";
+  selectedPduReceptacleType = "all";
+  selectedPduMinOutlets = 0;
+  requirePduManaged = false;
+  requirePduDisplay = false;
+
+  selectedCordPlugType = "all";
+  selectedCordLength = "all";
+  selectedCordColor = "all";
+  selectedCordGauge = "all";
+  requireCordLocking = false;
 
   selectedCameraVendors = [];
   selectedCameraFormFactors = [];
@@ -899,8 +937,47 @@ function buildCalculatorStrip() {
         </div>
       </div>
     `;
+  } else if (currentMode === "ups") {
+    container.classList.remove("hidden");
+    const vVal = typeof selectedUpsVoltage !== "undefined" ? selectedUpsVoltage : "all";
+    const cVal = typeof selectedUpsCategory !== "undefined" ? selectedUpsCategory : "all";
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Uninterruptible Power Supply (UPS) Systems & Battery Modules
+            </h4>
+            <p class="text-[11px] text-slate-400">Online double-conversion pure sine wave battery backups, external battery modules (EBPs), and SmartConnect cloud monitoring.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Class:</span>
+            <select onchange="selectedUpsCategory = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-amber-400 rounded-xl px-2.5 py-1.5 font-bold text-xs focus:outline-none focus:border-amber-500">
+              <option value="all" ${cVal === 'all' ? 'selected' : ''}>All Power Hardware</option>
+              <option value="ups" ${cVal === 'ups' ? 'selected' : ''}>UPS Units Only</option>
+              <option value="ebp" ${cVal === 'ebp' ? 'selected' : ''}>Battery Packs (EBP)</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Voltage:</span>
+            <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-amber-400 rounded-xl px-2.5 py-1.5 font-bold text-xs focus:outline-none focus:border-amber-500">
+              <option value="all" ${vVal === 'all' ? 'selected' : ''}>All Voltages</option>
+              <option value="120" ${vVal === '120' ? 'selected' : ''}>120V AC Standard</option>
+              <option value="240" ${vVal === '240' ? 'selected' : ''}>208V / 240V AC</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `;
   } else if (currentMode === "pdus") {
     container.classList.remove("hidden");
+    const pduNet = typeof selectedPduNetworkType !== "undefined" ? selectedPduNetworkType : "all";
+    const pduVolt = typeof selectedUpsVoltage !== "undefined" ? selectedUpsVoltage : "all";
     container.innerHTML = `
       <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
         <div class="flex items-center gap-3">
@@ -911,16 +988,78 @@ function buildCalculatorStrip() {
             <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
               Rack Power Distribution Units (PDUs)
             </h4>
-            <p class="text-[11px] text-slate-400">0U vertical toolless high-density PDUs, 1U horizontal rackmount power, and automatic transfer switches (ATS).</p>
+            <p class="text-[11px] text-slate-400">0U vertical toolless high-density strips, 1U horizontal rack power, and automatic transfer switches (ATS) with per-outlet rebooting.</p>
           </div>
         </div>
-        <div class="flex items-center gap-2 text-xs">
-          <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Input Voltage:</span>
-          <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-sky-400 rounded-xl px-3 py-1.5 font-bold text-xs focus:outline-none focus:border-sky-500">
-            <option value="all" ${selectedUpsVoltage === 'all' ? 'selected' : ''}>All Voltages</option>
-            <option value="120" ${selectedUpsVoltage === '120' ? 'selected' : ''}>120V AC (15A / 20A)</option>
-            <option value="240" ${selectedUpsVoltage === '240' ? 'selected' : ''}>208V / 240V AC (30A)</option>
-          </select>
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Management:</span>
+            <select onchange="selectedPduNetworkType = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-sky-400 rounded-xl px-2.5 py-1.5 font-bold text-xs focus:outline-none focus:border-sky-500">
+              <option value="all" ${pduNet === 'all' ? 'selected' : ''}>All Management Types</option>
+              <option value="switched" ${pduNet === 'switched' ? 'selected' : ''}>Switched (Remote Reboot)</option>
+              <option value="metered" ${pduNet === 'metered' ? 'selected' : ''}>Metered (Load Display)</option>
+              <option value="basic" ${pduNet === 'basic' ? 'selected' : ''}>Basic (Unmanaged)</option>
+              <option value="ats" ${pduNet === 'ats' ? 'selected' : ''}>Automatic Transfer (ATS)</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Voltage:</span>
+            <select onchange="selectedUpsVoltage = this.value; runActiveFilter();" class="bg-slate-950 border border-slate-800 text-sky-400 rounded-xl px-2.5 py-1.5 font-bold text-xs focus:outline-none focus:border-sky-500">
+              <option value="all" ${pduVolt === 'all' ? 'selected' : ''}>All Voltages</option>
+              <option value="120" ${pduVolt === '120' ? 'selected' : ''}>120V AC (15A / 20A / 30A)</option>
+              <option value="240" ${pduVolt === '240' ? 'selected' : ''}>208V / 240V AC (L6-30P)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    `;
+  } else if (currentMode === "power_cords") {
+    container.classList.remove("hidden");
+    const cordLen = typeof selectedCordLength !== "undefined" ? selectedCordLength : "all";
+    const cordColor = typeof selectedCordColor !== "undefined" ? selectedCordColor : "all";
+    const colorSwatches = [
+      { id: "all", label: "All Colors", bg: "bg-slate-700" },
+      { id: "Black", label: "Black", bg: "bg-slate-900 border border-slate-700" },
+      { id: "Blue", label: "Blue (A-Feed)", bg: "bg-blue-600" },
+      { id: "Red", label: "Red (B-Feed)", bg: "bg-red-600" },
+      { id: "Yellow", label: "Yellow", bg: "bg-yellow-500" },
+      { id: "Green", label: "Green", bg: "bg-emerald-600" },
+      { id: "White", label: "White", bg: "bg-slate-100 text-slate-900" },
+      { id: "Orange", label: "Orange", bg: "bg-orange-600" }
+    ];
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-teal-500/10 border border-teal-500/30 text-teal-400 shrink-0">
+            <i data-lucide="plug" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              Power Cords, Equipment Jumpers & Dual-Locking Cables
+            </h4>
+            <p class="text-[11px] text-slate-400">IEC C13/C14, C19/C20, C15 High-Temp, locking retention cords, and color-coded jackets for A/B redundant feed isolation.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <!-- Color Quick Selector -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase px-1.5">Color:</span>
+            ${colorSwatches.map(c => `
+              <button onclick="selectedCordColor = '${c.id}'; buildCalculatorStrip(); runActiveFilter();" title="${c.label}" class="w-5 h-5 rounded-lg flex items-center justify-center transition-all ${c.bg} ${cordColor === c.id ? 'ring-2 ring-teal-400 scale-110 shadow-sm' : 'opacity-70 hover:opacity-100'}">
+                ${cordColor === c.id ? '<div class="w-1.5 h-1.5 rounded-full bg-white"></div>' : ''}
+              </button>
+            `).join('')}
+          </div>
+
+          <!-- Quick Length Selector -->
+          <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase px-1.5">Length:</span>
+            ${["all", "1", "2", "3", "6", "10", "15"].map(len => `
+              <button onclick="selectedCordLength = '${len}'; buildCalculatorStrip(); runActiveFilter();" class="px-2 py-0.5 rounded-lg text-[11px] font-mono font-semibold transition-all ${cordLen === len ? 'bg-teal-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}">
+                ${len === 'all' ? 'All' : `${len}ft`}
+              </button>
+            `).join('')}
+          </div>
         </div>
       </div>
     `;
@@ -1040,6 +1179,10 @@ function runActiveFilter() {
       rawDataset = (typeof ENCLOSURES_DATABASE !== "undefined") ? ENCLOSURES_DATABASE : [];
     } else if (currentMode === "pdus") {
       rawDataset = (typeof PDUS_DATABASE !== "undefined") ? PDUS_DATABASE : [];
+    } else if (currentMode === "ups") {
+      rawDataset = (typeof UPS_DATABASE !== "undefined") ? UPS_DATABASE : [];
+    } else if (currentMode === "power_cords") {
+      rawDataset = (typeof POWER_CORDS_DATABASE !== "undefined") ? POWER_CORDS_DATABASE : [];
     }
 
     // Execute pluggable FilterEngine
@@ -1097,9 +1240,22 @@ function runActiveFilter() {
           accMinPowerWatts,
           selectedUpsCategory,
           selectedUpsVoltage,
+          selectedUpsInputPlug,
           requireUpsSineWave,
           requireUpsOnline,
           requireUpsEbm,
+          requireUpsNetworked,
+          selectedPduNetworkType,
+          selectedPduPlugType,
+          selectedPduReceptacleType,
+          selectedPduMinOutlets,
+          requirePduManaged,
+          requirePduDisplay,
+          selectedCordPlugType,
+          selectedCordLength,
+          selectedCordColor,
+          selectedCordGauge,
+          requireCordLocking,
           selectedCableRatings,
           requireCableShielded,
           selectedDacLength,

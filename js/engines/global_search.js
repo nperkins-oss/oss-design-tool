@@ -89,15 +89,41 @@ const GlobalSearchEngine = {
       };
     }
 
-    // 4. UPS Power Systems, EBPs & PDUs
-    if (sourceMode === "ups" || cat === "ups" || type === "ups" || type === "ebp" || item.isEbp || type === "pdu" || item.isPdu || type === "power_cord" || cat === "pdu") {
-      const modeLabel = (type === "pdu" || item.isPdu) ? "Rack PDU" : ((type === "ebp" || item.isEbp) ? "Extended Battery Pack (EBP)" : (type === "power_cord" ? "Power Jumper Cable" : "Rack UPS Power"));
+    // 4. Power Cords & Jumpers
+    if (sourceMode === "power_cords" || cat === "power_cords" || type === "power_cord") {
+      return {
+        domain: "infrastructure",
+        mode: "power_cords",
+        domainLabel: "Infrastructure",
+        modeLabel: "Power Cords & Jumpers",
+        icon: "plug",
+        badgeColor: "border-teal-500/40 bg-teal-500/10 text-teal-300",
+        searchCategory: "accessories"
+      };
+    }
+
+    // 4b. Rackmount PDUs
+    if (sourceMode === "pdus" || cat === "pdus" || cat === "pdu" || type === "pdu" || item.isPdu) {
+      return {
+        domain: "infrastructure",
+        mode: "pdus",
+        domainLabel: "Infrastructure",
+        modeLabel: "Rackmount PDU",
+        icon: "zap",
+        badgeColor: "border-sky-500/40 bg-sky-500/10 text-sky-300",
+        searchCategory: "accessories"
+      };
+    }
+
+    // 4c. UPS Power Systems & EBPs
+    if (sourceMode === "ups" || cat === "ups" || type === "ups" || type === "ebp" || item.isEbp) {
+      const modeLabel = (type === "ebp" || item.isEbp) ? "Extended Battery Pack (EBP)" : "Rack UPS Power";
       return {
         domain: "infrastructure",
         mode: "ups",
         domainLabel: "Infrastructure",
         modeLabel: modeLabel,
-        icon: "zap",
+        icon: "battery-charging",
         badgeColor: "border-amber-500/40 bg-amber-500/10 text-amber-300",
         searchCategory: "racks_ups"
       };
@@ -209,13 +235,40 @@ const GlobalSearchEngine = {
     if (item.speed && item.medium) parts.push(`${item.speed} ${item.medium.toUpperCase()}`);
     if (item.reach) parts.push(item.reach);
 
+    // PDU specs
+    if (item.type === "pdu" || item.category === "pdus" || item.isPdu) {
+      parts.push(`${item.inputVoltage || 120}V ${item.inputCircuitAmps || 15}A PDU`);
+      const rec = (typeof formatReceptaclesSummary === "function") ? formatReceptaclesSummary(item) : (item.receptacles || '');
+      if (rec) parts.push(rec);
+      else if (item.outletsCount || item.portCount) parts.push(`${item.outletsCount || item.portCount} Outlets`);
+      if (item.networkType) parts.push(item.networkType);
+      if (item.plugType) parts.push(item.plugType);
+    }
+
+    // Power Cord specs
+    if (item.type === "power_cord" || item.category === "power_cords") {
+      if (item.plugPairing) parts.push(item.plugPairing);
+      if (item.lengthFt) parts.push(`${item.lengthFt} ft`);
+      if (item.color) parts.push(item.color);
+      if (item.wireGauge) parts.push(item.wireGauge);
+    }
+
+    // UPS specs
+    if ((item.type === "ups" || item.category === "ups") && !item.isEbp && !item.isPdu && item.type !== "power_cord") {
+      parts.push(`${item.va ? `${item.va}VA / ` : ''}${item.powerWatts || 1000}W UPS`);
+      if (item.plugType) parts.push(item.plugType);
+      const rec = (typeof formatReceptaclesSummary === "function") ? formatReceptaclesSummary(item) : (item.receptacles || '');
+      if (rec) parts.push(rec);
+      if (item.isNetworked) parts.push("Networked");
+    }
+
     // Accessory specs
-    if (item.powerWatts) parts.push(`${item.powerWatts}W Output`);
+    if (item.powerWatts && item.type !== "pdu" && item.type !== "ups" && !item.isPdu) parts.push(`${item.powerWatts}W Output`);
     if (item.rackUnits && item.rackUnits > 0) parts.push(`${item.rackUnits}U`);
     if (item.category === "time_server") parts.push("Stratum 1 GPS NTP");
 
     // Cabling specs
-    if (item.lengthFt) parts.push(`${item.lengthFt} ft`);
+    if (item.lengthFt && item.type !== "power_cord") parts.push(`${item.lengthFt} ft`);
     if (item.rating) parts.push(item.rating);
     if (item.standard) parts.push(item.standard);
 
@@ -243,6 +296,9 @@ const GlobalSearchEngine = {
       const image = item.image || "";
       const specs = this.generateSpecSnippet(item);
 
+      const recepStr = (typeof item.receptacles === "string" ? item.receptacles : "") + " " +
+        (Array.isArray(item.receptacleBreakdown) ? item.receptacleBreakdown.map(r => `${r.count || ''} ${r.type || ''} ${r.label || ''}`).join(" ") : "");
+
       // Create normalized searchable string
       const rawText = [
         sku,
@@ -255,6 +311,7 @@ const GlobalSearchEngine = {
         item.category,
         item.type,
         specs,
+        recepStr,
         item.description,
         ...(item.keyFeatures || [])
       ].filter(Boolean).join(" ").toLowerCase();
@@ -295,16 +352,30 @@ const GlobalSearchEngine = {
     const optics = (typeof OPTICS_LIST !== "undefined" ? OPTICS_LIST : []);
     optics.forEach(i => addEntry(i, "optics"));
 
-    // 5. Gather accessories, racks, ups, pathways
+    // 5. Gather accessories, racks, ups, pathways, pdus, power cords
     const accessories = (typeof ACCESSORY_DATABASE !== "undefined" ? ACCESSORY_DATABASE : []);
     accessories.forEach(i => {
       const cat = (i.category || "").toLowerCase();
+      const type = (i.type || "").toLowerCase();
       let mode = "accessories";
-      if (cat === "ups") mode = "ups";
+      if (cat === "power_cords" || type === "power_cord") mode = "power_cords";
+      else if (cat === "pdus" || cat === "pdu" || type === "pdu" || i.isPdu) mode = "pdus";
+      else if (cat === "ups" || type === "ups" || type === "ebp" || i.isEbp) mode = "ups";
       else if (cat === "racks" || cat === "rack" || cat === "enclosure") mode = "racks";
       else if (cat === "pathways" || cat === "cable_management") mode = "pathways";
       addEntry(i, mode);
     });
+
+    // 5b. Gather standalone PDUs, Power Cords, and UPS datasets if available
+    if (typeof PDUS_DATABASE !== "undefined" && Array.isArray(PDUS_DATABASE)) {
+      PDUS_DATABASE.forEach(i => addEntry(i, "pdus"));
+    }
+    if (typeof POWER_CORDS_DATABASE !== "undefined" && Array.isArray(POWER_CORDS_DATABASE)) {
+      POWER_CORDS_DATABASE.forEach(i => addEntry(i, "power_cords"));
+    }
+    if (typeof UPS_DATABASE !== "undefined" && Array.isArray(UPS_DATABASE)) {
+      UPS_DATABASE.forEach(i => addEntry(i, "ups"));
+    }
 
     // 6. Gather cabling
     let cabling = [];
