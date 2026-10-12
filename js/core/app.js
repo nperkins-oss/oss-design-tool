@@ -1767,6 +1767,7 @@ function toggleProjectLevelMenu() {
 window.toggleProjectLevelMenu = toggleProjectLevelMenu;
 
 let isCatalogExpanded = false;
+let catalogHoverTimeout = null;
 
 function toggleCatalogExpand(forceState = null) {
   const container = document.getElementById("domainNavigationContainer");
@@ -1781,12 +1782,20 @@ function toggleCatalogExpand(forceState = null) {
   }
 
   if (isCatalogExpanded) {
+    if (catalogHoverTimeout) {
+      clearTimeout(catalogHoverTimeout);
+      catalogHoverTimeout = null;
+    }
     container.classList.remove("hidden");
     if (chevron) chevron.style.transform = "rotate(180deg)";
     if (btn) {
       btn.classList.add("bg-brand-600/20", "border-brand-500/40", "text-brand-300");
     }
   } else {
+    if (catalogHoverTimeout) {
+      clearTimeout(catalogHoverTimeout);
+      catalogHoverTimeout = null;
+    }
     container.classList.add("hidden");
     if (chevron) chevron.style.transform = "";
     if (btn) {
@@ -1800,11 +1809,16 @@ function toggleCatalogExpand(forceState = null) {
 }
 
 function handleCatalogNavClick() {
+  if (catalogHoverTimeout) {
+    clearTimeout(catalogHoverTimeout);
+    catalogHoverTimeout = null;
+  }
   if (typeof TabManager !== "undefined") {
     const activeTab = TabManager.getActiveTabId();
     if (!activeTab.startsWith("catalog")) {
       const targetDomain = typeof activeDomain !== "undefined" ? activeDomain : "networking";
       TabManager.openTab("catalog_" + targetDomain);
+      toggleCatalogExpand(false);
       return;
     }
   }
@@ -1812,6 +1826,7 @@ function handleCatalogNavClick() {
 }
 
 let isFacilityExpanded = false;
+let facilityHoverTimeout = null;
 
 function toggleFacilityExpand(forceState = null) {
   const container = document.getElementById("facilityNavigationContainer");
@@ -1826,6 +1841,10 @@ function toggleFacilityExpand(forceState = null) {
   }
 
   if (isFacilityExpanded) {
+    if (facilityHoverTimeout) {
+      clearTimeout(facilityHoverTimeout);
+      facilityHoverTimeout = null;
+    }
     container.classList.remove("hidden");
     if (chevron) chevron.style.transform = "rotate(180deg)";
     if (btn) {
@@ -1833,6 +1852,10 @@ function toggleFacilityExpand(forceState = null) {
     }
     updateFacilitySubNavUI();
   } else {
+    if (facilityHoverTimeout) {
+      clearTimeout(facilityHoverTimeout);
+      facilityHoverTimeout = null;
+    }
     container.classList.add("hidden");
     if (chevron) chevron.style.transform = "";
     if (btn) {
@@ -1869,14 +1892,70 @@ function updateFacilitySubNavUI() {
 }
 
 function handleFacilityNavClick() {
+  if (facilityHoverTimeout) {
+    clearTimeout(facilityHoverTimeout);
+    facilityHoverTimeout = null;
+  }
   if (typeof TabManager !== "undefined") {
     const cur = TabManager.getActiveTabId();
     if (cur !== "facility" && cur !== "enclosures" && cur !== "port_matrix") {
       TabManager.openTab("facility");
+      toggleFacilityExpand(false);
       return;
     }
   }
   toggleFacilityExpand();
+}
+
+/**
+ * Attaches hover (mouseenter/mouseleave) listeners with debounce timeout to Catalog and Facility dropdown wrappers
+ */
+function setupNavDropdownHoverListeners() {
+  const catWrapper = document.getElementById("catalogDomainWrapper");
+  if (catWrapper && !catWrapper._hoverInitialized) {
+    catWrapper._hoverInitialized = true;
+    catWrapper.addEventListener("mouseenter", () => {
+      if (catalogHoverTimeout) {
+        clearTimeout(catalogHoverTimeout);
+        catalogHoverTimeout = null;
+      }
+      if (facilityHoverTimeout) {
+        clearTimeout(facilityHoverTimeout);
+        facilityHoverTimeout = null;
+      }
+      toggleFacilityExpand(false);
+      toggleCatalogExpand(true);
+    });
+
+    catWrapper.addEventListener("mouseleave", () => {
+      catalogHoverTimeout = setTimeout(() => {
+        toggleCatalogExpand(false);
+      }, 250);
+    });
+  }
+
+  const facWrapper = document.getElementById("facilityDomainWrapper");
+  if (facWrapper && !facWrapper._hoverInitialized) {
+    facWrapper._hoverInitialized = true;
+    facWrapper.addEventListener("mouseenter", () => {
+      if (facilityHoverTimeout) {
+        clearTimeout(facilityHoverTimeout);
+        facilityHoverTimeout = null;
+      }
+      if (catalogHoverTimeout) {
+        clearTimeout(catalogHoverTimeout);
+        catalogHoverTimeout = null;
+      }
+      toggleCatalogExpand(false);
+      toggleFacilityExpand(true);
+    });
+
+    facWrapper.addEventListener("mouseleave", () => {
+      facilityHoverTimeout = setTimeout(() => {
+        toggleFacilityExpand(false);
+      }, 250);
+    });
+  }
 }
 
 window.handleCatalogNavClick = handleCatalogNavClick;
@@ -1887,6 +1966,14 @@ window.handleFacilityNavClick = handleFacilityNavClick;
 window.toggleFacilityExpand = toggleFacilityExpand;
 window.updateFacilitySubNavUI = updateFacilitySubNavUI;
 window.isFacilityExpanded = isFacilityExpanded;
+window.setupNavDropdownHoverListeners = setupNavDropdownHoverListeners;
+
+// Initialize hover listeners when DOM is ready
+if (document.readyState === "complete" || document.readyState === "interactive") {
+  setupNavDropdownHoverListeners();
+} else {
+  document.addEventListener("DOMContentLoaded", setupNavDropdownHoverListeners);
+}
 
 // Click-outside listener for Catalog and Facility popovers
 document.addEventListener("click", (e) => {
@@ -1899,7 +1986,6 @@ document.addEventListener("click", (e) => {
     toggleFacilityExpand(false);
   }
 });
-
 
 // Outside click handler to close projectLevelDropdown
 document.addEventListener("click", (e) => {
