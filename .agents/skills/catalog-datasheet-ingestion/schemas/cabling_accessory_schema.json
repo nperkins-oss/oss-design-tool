@@ -1,0 +1,90 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CablingAndAccessoryCatalogEntry",
+  "description": "Standardized schema for structured cabling, surge suppressors, building entrance terminals, and mounting hardware in NetSelect Enterprise",
+  "type": "object",
+  "required": [
+    "id",
+    "vendor",
+    "model",
+    "sku",
+    "role",
+    "category",
+    "msrp"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique slug identifier (e.g. 'c6a-outdoor-1k', 'surge-poe-bt90', 'circ-bet-24p')"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Manufacturer (e.g. 'Superior Essex', 'Belden', 'DITEK', 'Circa Telecom', 'Axis Communications')"
+    },
+    "model": {
+      "type": "string",
+      "description": "Full commercial model name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Manufacturer orderable part number"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["Structured Cabling", "Surge Protection", "Mounting Kit", "Hardware Accessory"],
+      "default": "Structured Cabling"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["cabling", "accessories"],
+      "default": "cabling"
+    },
+    "standard": {
+      "type": "string",
+      "enum": ["Cat6", "Cat6A", "Single-Mode OS2", "Multi-Mode OM4", "Composite / Bundled", "NEC 800.100 Building Entrance Terminal"],
+      "description": "Cabling medium standard (DRC Rule 13 prohibits Cat6 for 10GBASE-T; mandates Cat6A)"
+    },
+    "rating": {
+      "type": "string",
+      "enum": ["CMP", "CMR", "CMX-Outdoor", "OSP", "Direct Burial (Gel-Filled)"],
+      "description": "Jacket fire and environmental rating (DRC Rule 9 strictly prohibits CMP/CMR in underground or wet exterior conduit)"
+    },
+    "jacketType": {
+      "type": "string"
+    },
+    "spoolFeet": {
+      "type": "integer",
+      "default": 1000
+    },
+    "poeStandard": {
+      "type": "string",
+      "enum": ["802.3af", "802.3at", "802.3bt"],
+      "description": "If surge protector: Highest certified PoE standard. DRC Rule 12 mandates 802.3bt-certified suppressors for high-power PTZ/outdoor cameras."
+    },
+    "poeWattsMax": {
+      "type": "number",
+      "description": "Maximum continuous PoE wattage pass-through without clamping (e.g. 30W, 60W, 90W)"
+    },
+    "groundWire": {
+      "type": "string",
+      "description": "Ground bonding conductor size (TOW Cabling p. 5 and Life Safety Power p. 2 mandate #10 AWG stranded green copper to TGB)"
+    },
+    "matingHardware": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Compatible camera models or mounting host IDs"
+    },
+    "msrp": {
+      "type": "number",
+      "description": "MSRP in USD"
+    },
+    "taa": {
+      "type": "boolean",
+      "description": "NDAA / TAA compliant"
+    },
+    "keyFeatures": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
