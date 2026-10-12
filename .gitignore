@@ -12,6 +12,7 @@ Desktop.ini
 *.log
 *.tmp
 *.temp
+*.lnk
 
 # IDE / Editor configuration
 .vscode/

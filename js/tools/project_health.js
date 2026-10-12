@@ -57,6 +57,8 @@ function auditProjectHealth() {
             id: `distance_exceeded_${dev.id}`,
             category: "distance",
             severity: isChannelExceeded ? "critical" : "warning",
+            priority: 1,
+            standardsReference: isChannelExceeded ? "TIA-568-C/D (100m / 328ft Channel Max)" : "TIA-568-C/D (90m / 295ft Permanent Link)",
             title: isChannelExceeded
               ? `Ethernet Channel Limit Exceeded (${totalFt} ft)`
               : `Horizontal Run Exceeds Permanent Link Standard (${totalFt} ft)`,
@@ -645,14 +647,350 @@ function auditProjectHealth() {
     }
   });
 
+  // =========================================================================
+  // RULE 9: OUTDOOR & UNDERGROUND CABLE JACKET COMPLIANCE (NEC 300.9 / TOW)
+  // Priority 1: NEC 300.5(B), 300.9 & Priority 2: TOW Structured Cabling Standards p. 1, 5
+  // Prohibits indoor Plenum (CMP) or Riser (CMR) in outdoor or underground conduit
+  // Highlights Conflict: Industry shortcut of using CMP everywhere vs National Code & Orion Standards
+  // =========================================================================
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(fl => {
+      if (!fl.nodes || !Array.isArray(fl.nodes)) return;
+      const flLower = (fl.name || "").toLowerCase();
+      const isOutdoorFloor = flLower.includes("outdoor") || flLower.includes("exterior") || flLower.includes("perimeter") || flLower.includes("yard") || flLower.includes("roof") || flLower.includes("pole") || flLower.includes("parking");
+
+      fl.nodes.filter(n => n.type === "device").forEach(dev => {
+        const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId)
+          ? projectBOM.find(i => i.instanceId === dev.instanceId)
+          : null;
+        const targetDev = bomItem || dev || {};
+        const devName = bomItem ? (bomItem.friendlyName || bomItem.model) : (dev.label || dev.name || "Field Device");
+        const devLocLower = ((dev.spaceName || "") + " " + (dev.label || "") + " " + (dev.name || "") + " " + (targetDev.model || "")).toLowerCase();
+
+        const isOutdoor = isOutdoorFloor ||
+                          targetDev.outdoor === true ||
+                          targetDev.isOutdoor === true ||
+                          devLocLower.includes("outdoor") ||
+                          devLocLower.includes("pole") ||
+                          devLocLower.includes("exterior") ||
+                          devLocLower.includes("perimeter") ||
+                          devLocLower.includes("parking") ||
+                          devLocLower.includes("gate") ||
+                          devLocLower.includes("roof") ||
+                          devLocLower.includes("yard");
+
+        if (isOutdoor) {
+          const cableSku = dev.cableSku || targetDev.cableSku || "";
+          const cableRating = (dev.cableRating || targetDev.cableRating || "").toUpperCase();
+          const runCat = dev.runCategory || targetDev.runCategory || "";
+          const isExplicitOutdoor = cableSku.includes("OUTDOOR") || cableSku.includes("OSP") || cableRating === "OSP" || cableRating === "CMX" || runCat.includes("OSP") || runCat.includes("Outdoor");
+
+          if (!isExplicitOutdoor && (cableSku.includes("CMP") || cableSku.includes("CMR") || runCat.includes("CMP") || runCat.includes("Plenum") || runCat.includes("CMR") || !cableSku)) {
+            issues.push({
+              id: `outdoor_jacket_violation_${dev.id || (bomItem && bomItem.instanceId)}`,
+              category: "cabling",
+              severity: "critical",
+              priority: 1,
+              isConflict: true,
+              conflictType: "INDUSTRY_NORM_CONFLICT",
+              conflictBadge: "CODE & ORION CONFLICT",
+              standardsReference: "NEC 300.9 & TOW Cabling p. 1, 5",
+              title: `Code Violation: Indoor Cable in Outdoor / Wet Pathway (${devName})`,
+              summary: `${devName} on ${fl.name || 'Site'} is assigned indoor Plenum (CMP) cable in an outdoor environment`,
+              details: `Underground conduits and outdoor pathways are classified as wet locations under NEC 300.9. TOW Structured Cabling Standards (p. 1) explicitly state: 'At no time should plenum cable be used in outdoor locations exposed to the environment. Plenum cable should never be used in buried conduit. Moisture will penetrate the jacket and short the conductors.' Convert drop to CMX-Outdoor or Direct-Burial Gel-Filled PE jacket (C6A-OUTDOOR-1K).`,
+              conflictDetails: `Industry Norm Shortcut: Installers commonly pull indoor Plenum (CMP) cable through underground PVC conduit or along building exteriors to avoid dedicated outdoor spools. However, underground conduit is defined by NEC 300.9 as a wet location. TOW Cabling Standards strictly prohibit CMP in buried conduit or outdoor locations due to moisture wicking.`,
+              actionLabel: `Quick-Convert to Cat6A OSP Outdoor Cable`,
+              actionFn: `quickConvertToOutdoorCable('${dev.id || (bomItem && bomItem.instanceId)}')`,
+              badgeText: "WET CONDUIT / CMP HAZARD"
+            });
+          }
+        }
+      });
+    });
+  }
+
+  // =========================================================================
+  // RULE 10: BUILDING ENTRY 50-FOOT OSP TRANSITION LIMIT (NEC 800.100)
+  // Priority 1: NEC 800.48 / 800.100 & Priority 2: TOW Structured Cabling Standards p. 2, 8
+  // Outside cabling must terminate within 50' of building entry or transition to indoor fire-rated cable
+  // =========================================================================
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(fl => {
+      if (!fl.nodes || !Array.isArray(fl.nodes)) return;
+      const outdoorDrops = fl.nodes.filter(n => {
+        if (n.type !== "device") return false;
+        const locLower = ((fl.name || '') + ' ' + (n.spaceName || '') + ' ' + (n.label || '')).toLowerCase();
+        return locLower.includes("outdoor") || locLower.includes("exterior") || locLower.includes("pole") || locLower.includes("perimeter");
+      });
+
+      outdoorDrops.forEach(dev => {
+        const runFt = (dev.calculatedRun && dev.calculatedRun.totalFt) ? Math.round(dev.calculatedRun.totalFt) : 0;
+        if (runFt > 100) {
+          const hasBet = projectBOM.some(i => (i.sku || '').includes("BET") || (i.model || '').toLowerCase().includes("entrance terminal") || (i.name || '').toLowerCase().includes("entrance terminal"));
+          if (!hasBet) {
+            issues.push({
+              id: `osp_50ft_building_entry_limit_${dev.id}`,
+              category: "cabling",
+              severity: "warning",
+              priority: 1,
+              isConflict: true,
+              conflictType: "CODE_VIOLATION",
+              conflictBadge: "NEC 800.100 CODE VIOLATION",
+              standardsReference: "NEC 800.100(B) / TOW Structured Cabling p. 8",
+              title: `NEC 800.100: Outside Cable Exceeds 50' Transition Limit (${dev.label || dev.name || 'Drop'})`,
+              summary: `Outdoor cable run (${runFt} ft) penetrates deep into building interior without listed building entrance transition`,
+              details: `NEC Article 800.48 and TOW Structured Cabling Standards (p. 2, 8) mandate: 'Outside cabling must terminate within 50 ft of building entry; transition to interior-rated at listed entrance protector.' Unlisted outside plant PE cable produces toxic smoke and violates fire codes if run uncontained through building interiors. Add a Building Entrance Terminal (BET) or transition box near the point of entry.`,
+              conflictDetails: `Industry Shortcut: Installers frequently run outdoor gel-filled PE cable hundreds of feet indoors directly to telecom racks to eliminate a transition splice. This directly violates NEC 800.48 fire spread codes.`,
+              actionLabel: `+ Add Building Entrance Terminal (BET)`,
+              actionFn: "quickAddBuildingEntranceTerminal()",
+              badgeText: "NEC 50-FT RULE"
+            });
+          }
+        }
+      });
+    });
+  }
+
+  // =========================================================================
+  // RULE 11: LIFE SAFETY & SECURITY LEVEL EGRESS AUDIT (MAGLOCKS ON LEVEL 3)
+  // Priority 1: NFPA 101 Life Safety Code 7.2.1.6 & Priority 2: TOW Fire Alarm Connections and Egress p. 2-3
+  // Maglocks are strictly prohibited on Level 3 (Restricted Access & Egress) openings
+  // =========================================================================
+  projectBOM.forEach(item => {
+    if (item.parentInstanceId) return;
+    const modelLower = (item.model || '').toLowerCase();
+    const descLower = (item.description || '').toLowerCase();
+    const isMaglock = modelLower.includes("maglock") || modelLower.includes("magnetic lock") || modelLower.includes("m62") || modelLower.includes("m32") || descLower.includes("electromagnetic lock");
+
+    const isLevel3 = item.securityLevel === 3 ||
+                     item.level === 3 ||
+                     modelLower.includes("level 3") ||
+                     descLower.includes("level 3") ||
+                     modelLower.includes("vault") ||
+                     descLower.includes("vault") ||
+                     modelLower.includes("scif") ||
+                     descLower.includes("scif") ||
+                     modelLower.includes("evidence") ||
+                     descLower.includes("evidence") ||
+                     modelLower.includes("cash room") ||
+                     descLower.includes("cash room");
+
+    if (isMaglock && isLevel3) {
+      issues.push({
+        id: `level3_maglock_violation_${item.instanceId}`,
+        category: "egress",
+        severity: "critical",
+        priority: 1,
+        isConflict: true,
+        conflictType: "MANUFACTURER_CONFLICT",
+        conflictBadge: "LIFE SAFETY & ORION CONFLICT",
+        standardsReference: "NFPA 101 / TOW Fire Alarm Connections & Egress p. 2-3",
+        title: `Life Safety & Security Conflict: Maglock on Level 3 Opening (${item.model})`,
+        summary: `Magnetic lock specified for Security Level 3 restricted opening (vault / SCIF / evidence space)`,
+        details: `TOW Fire Alarm Connections and Egress Standards (p. 2-3) strictly state: 'Hardware: Fail-secure strikes, bolts, or mortise only. Maglocks prohibited on Level 3 — they cannot fail secure.' Maglocks are inherently fail-safe and drop unlocked during power loss or fire alarm activation. High-security Level 3 openings must remain locked (fail-secure) through power outage and fire alarm. Replace with heavy-duty fail-secure electric strike or mortise lock with key override.`,
+        conflictDetails: `Manufacturer Catalog Conflict: Hardware vendors frequently market electromagnetic locks as high-holding-force locks suitable for perimeter and security doors. However, per NFPA 101 and TOW Standards, maglocks cannot fail secure. Installing a maglock on a Level 3 opening compromises perimeter integrity during utility failure or alarm drop.`,
+        actionLabel: `Switch to Fail-Secure Mortise Lock / Strike`,
+        actionFn: `quickSwitchToFailSecureLock('${item.instanceId}')`,
+        badgeText: "PROHIBITED ON LEVEL 3"
+      });
+    }
+  });
+
+  // Check floorplan nodes for Level 3 maglock doors
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(fl => {
+      if (!fl.nodes || !Array.isArray(fl.nodes)) return;
+      fl.nodes.filter(n => n.type === "device").forEach(dev => {
+        const labelLower = ((dev.label || '') + ' ' + (dev.name || '') + ' ' + (dev.spaceName || '')).toLowerCase();
+        const isL3Dev = dev.securityLevel === 3 || labelLower.includes("vault") || labelLower.includes("scif") || labelLower.includes("evidence") || labelLower.includes("level 3");
+        const isMag = dev.lockType === "maglock" || (dev.lockModel || '').toLowerCase().includes("maglock") || labelLower.includes("maglock");
+
+        if (isL3Dev && isMag) {
+          issues.push({
+            id: `level3_maglock_violation_${dev.id}`,
+            category: "egress",
+            severity: "critical",
+            priority: 1,
+            isConflict: true,
+            conflictType: "MANUFACTURER_CONFLICT",
+            conflictBadge: "LIFE SAFETY & ORION CONFLICT",
+            standardsReference: "NFPA 101 / TOW Fire Alarm Connections & Egress p. 2-3",
+            title: `Life Safety & Security Conflict: Maglock on Level 3 Door (${dev.label || dev.name})`,
+            summary: `Security Level 3 opening (${dev.label || dev.name} on ${fl.name || 'Floor'}) has a magnetic lock configured`,
+            details: `Maglocks are strictly prohibited on Level 3 openings per TOW Fire Alarm Standards (p. 2-3) because maglocks drop open when power is lost. Level 3 openings must remain fail-secure through power outage. Replace with a heavy-duty fail-secure strike or mortise lock with key override.`,
+            conflictDetails: `Manufacturer / Industry Norm Conflict: Lock catalogs promote maglocks for perimeter doors, but maglocks cannot fail secure on FAI drop or power loss.`,
+            actionLabel: `Switch to Fail-Secure Mortise Lock`,
+            actionFn: `quickSwitchToFailSecureLock('${dev.id}')`,
+            badgeText: "PROHIBITED ON LEVEL 3"
+          });
+        }
+      });
+    });
+  }
+
+  // =========================================================================
+  // RULE 12: OUTDOOR POE++ 802.3bt SURGE PROTECTOR POWER COMPATIBILITY
+  // Priority 2: TOW Camera Installation Standards p. 7 & TOW Structured Cabling Standards p. 5
+  // Outdoor high-power cameras (>30W, 802.3bt) require 802.3bt-certified surge protection
+  // =========================================================================
+  const outdoorBtCameras = [];
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(fl => {
+      if (!fl.nodes || !Array.isArray(fl.nodes)) return;
+      const flLower = (fl.name || '').toLowerCase();
+      const isOutdoorFloor = flLower.includes("outdoor") || flLower.includes("exterior") || flLower.includes("perimeter") || flLower.includes("roof") || flLower.includes("pole");
+
+      fl.nodes.filter(n => n.type === "device").forEach(dev => {
+        const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId)
+          ? projectBOM.find(i => i.instanceId === dev.instanceId)
+          : null;
+        const target = bomItem || dev || {};
+        const locLower = ((dev.spaceName || '') + ' ' + (dev.label || '') + ' ' + (target.model || '')).toLowerCase();
+        const isOutdoor = isOutdoorFloor || target.outdoor || target.isOutdoor || locLower.includes("outdoor") || locLower.includes("pole") || locLower.includes("exterior");
+
+        const watts = target.poeWattsDrawn || target.powerConsumptionWatts || target.baseWatts || 15;
+        const isBt = watts > 30 || target.poeStandard === "bt" || (target.model || '').toLowerCase().includes("ptz") || (target.model || '').toLowerCase().includes("multi-sensor") || (target.model || '').toLowerCase().includes("bt-90w");
+
+        if (isOutdoor && isBt) {
+          outdoorBtCameras.push({ dev, bomItem, watts });
+        }
+      });
+    });
+  }
+
+  // Also check BOM items for outdoor bt cameras
+  projectBOM.forEach(item => {
+    if (item.parentInstanceId) return;
+    const modelLower = (item.model || '').toLowerCase();
+    const isCam = item.category === "cameras" || item.role === "Camera" || modelLower.includes("camera") || modelLower.includes("ptz");
+    const isOutdoor = item.outdoor === true || (item.closetName || '').toLowerCase().includes("pole") || (item.closetName || '').toLowerCase().includes("outdoor") || modelLower.includes("outdoor") || modelLower.includes("ptz");
+    const watts = item.poeWattsDrawn || item.powerConsumptionWatts || item.baseWatts || 15;
+    const isBt = watts > 30 || item.poeStandard === "bt" || modelLower.includes("ptz") || modelLower.includes("multi-sensor");
+
+    if (isCam && isOutdoor && isBt) {
+      if (!outdoorBtCameras.some(c => c.bomItem && c.bomItem.instanceId === item.instanceId)) {
+        outdoorBtCameras.push({ dev: null, bomItem: item, watts });
+      }
+    }
+  });
+
+  if (outdoorBtCameras.length > 0) {
+    const hasBtSurge = projectBOM.some(i =>
+      (i.sku || '').includes("SURGE-POE-BT") ||
+      (i.role === "Surge Protection" && (i.poeStandard === "bt" || i.poeWattsMax >= 60)) ||
+      ((i.model || '').toLowerCase().includes("surge") && ((i.model || '').toLowerCase().includes("bt") || (i.model || '').toLowerCase().includes("90w")))
+    );
+
+    if (!hasBtSurge) {
+      const topDev = outdoorBtCameras[0];
+      const devName = topDev.bomItem ? (topDev.bomItem.friendlyName || topDev.bomItem.model) : (topDev.dev ? (topDev.dev.label || topDev.dev.name) : "Outdoor PTZ Camera");
+      issues.push({
+        id: `outdoor_surge_bt_mismatch_${topDev.dev ? topDev.dev.id : (topDev.bomItem ? topDev.bomItem.instanceId : 'bt')}`,
+        category: "poe",
+        severity: "critical",
+        priority: 2,
+        isConflict: true,
+        conflictType: "EQUIPMENT_COMPATIBILITY_CONFLICT",
+        conflictBadge: "EQUIPMENT COMPATIBILITY CONFLICT",
+        standardsReference: "TOW Camera Standards p. 7 / TOW Cabling p. 5",
+        title: `Surge Compatibility Conflict: 802.3bt High-Power Outdoor Camera (${devName})`,
+        summary: `${outdoorBtCameras.length} outdoor 802.3bt device(s) drawing >30W require certified 802.3bt (up to 90W) surge suppressors`,
+        details: `Per TOW Camera Installation Standards (p. 7) and TOW Structured Cabling Standards (p. 5), all external copper communication cables entering or leaving a building must pass through surge protection bonded to #10 AWG copper ground. For high-power PTZ and multi-sensor cameras drawing 60W-90W (802.3bt 4-pair), surge suppressors must be certified for 802.3bt power delivery. Standard 15W/30W suppressors falsely clamp voltages under 4-pair 54V-57V load, burning out suppressor diodes and causing cameras to power-cycle during PTZ motor or IR heater activation.`,
+        conflictDetails: `Industry Norm Shortcut: Installers routinely deploy standard 30W PoE surge protectors on all outdoor drops. On 802.3bt high-power cameras, standard protectors clamp prematurely, causing intermittent reboot cycles or thermal burnout. Deploy an 802.3bt-certified surge suppressor (DITEK SURGE-POE-BT90).`,
+        actionLabel: `+ Add 802.3bt 90W Outdoor Surge Protector`,
+        actionFn: `quickAdd8023btSurgeProtector('${topDev.dev ? topDev.dev.id : (topDev.bomItem ? topDev.bomItem.instanceId : '')}')`,
+        badgeText: "802.3bt SURGE REQ"
+      });
+    }
+  }
+
+  // =========================================================================
+  // RULE 13: 10GBASE-T HIGH-SPEED CABLING COMPLIANCE (CAT6A MANDATORY)
+  // Priority 2: TOW Switch Install & Configuration Guide p. 5 & TOW Structured Cabling Standards p. 5
+  // Cat6 and Cat5e are strictly prohibited on 10GBASE-T links
+  // =========================================================================
+  projectBOM.forEach(item => {
+    if (item.parentInstanceId) return;
+    const is10G = item.uplinkSpeed === "10G" ||
+                  (item.model || '').toLowerCase().includes("10g") ||
+                  (item.name || '').toLowerCase().includes("10gbase-t") ||
+                  (item.ports || '').toString().includes("10G");
+
+    const isCat6 = item.standard === "Cat6" || (item.model || '').includes("Cat6 U/UTP") || (item.sku || '').startsWith("C6-");
+    const isCat5 = item.standard === "Cat5e" || (item.model || '').includes("Cat5e");
+
+    if (is10G && (isCat6 || isCat5)) {
+      issues.push({
+        id: `10g_cat6_violation_${item.instanceId}`,
+        category: "cabling",
+        severity: "warning",
+        priority: 2,
+        isConflict: true,
+        conflictType: "ORION_STANDARD_CONFLICT",
+        conflictBadge: "ORION STANDARD CONFLICT",
+        standardsReference: "TOW Switch Guide p. 5 / TOW Cabling p. 5",
+        title: `Orion Standard Conflict: Cat6 Specified on 10GBASE-T Link (${item.model})`,
+        summary: `10G link is configured using standard Cat6 or Cat5e cabling instead of Cat6A`,
+        details: `TOW Switch Install and Configuration Guide (p. 5) and TOW Structured Cabling Standards (p. 5) explicitly state: 'Category: Cat6 minimum. Cat6A for 10GBASE-T. Cat5e not permitted on new installs.' While standard Cat6 may run short distances in unbundled tests, real-world security conduit bundles induce heavy alien crosstalk (ANEXT), causing packet drops and CRC errors on high-bandwidth switch uplinks and VMS server streams. Upgrade to Cat6A F/UTP or 10G SFP+ DAC.`,
+        conflictDetails: `Industry Norm Conflict: While commercial TIA standards allow short unbundled Cat6 runs (up to 37-55m) for 10Gbps, Orion Standards strictly prohibit Cat6 for 10G links because bundled cables in real-world security installations suffer catastrophic packet drops. Cat6A is mandatory.`,
+        actionLabel: `Upgrade Link to Cat6A (10G Certified)`,
+        actionFn: `quickUpgradeToCat6A('${item.instanceId}')`,
+        badgeText: "CAT6A MANDATORY ON 10G"
+      });
+    }
+  });
+
+  // =========================================================================
+  // RULE 14: SWITCH DUAL POWER SUPPLY A/B FEED REDUNDANCY
+  // Priority 2: TOW Switch Install & Configuration Guide p. 2
+  // Dual power supply switches must connect to separate independent power sources
+  // =========================================================================
+  closetsToAudit.forEach(normLoc => {
+    const closetItems = projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === normLoc);
+    const dualPsuSwitches = closetItems.filter(i => {
+      const isSw = (i.role === "Access" || i.role === "Aggregation" || i.role === "Core / Spine" || (i.model || '').includes("Switch"));
+      return isSw && (i.dualPowerSupply || i.dualPsu || (i.model || '').toLowerCase().includes("redundant"));
+    });
+
+    if (dualPsuSwitches.length > 0) {
+      const pduCount = closetItems.filter(i => (i.role || '').toLowerCase().includes("pdu") || (i.category || '').toLowerCase().includes("pdu") || (i.model || '').toLowerCase().includes("pdu")).reduce((acc, p) => acc + (p.qty || 1), 0);
+      if (pduCount < 2) {
+        issues.push({
+          id: `switch_dual_psu_single_feed_${normLoc.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          category: "power",
+          severity: "warning",
+          priority: 2,
+          isConflict: true,
+          conflictType: "ORION_REDUNDANCY_WARNING",
+          conflictBadge: "ORION REDUNDANCY WARNING",
+          standardsReference: "TOW Switch Guide p. 2",
+          closetName: normLoc,
+          title: `Redundant Power Warning: Dual-PSU Switches on Single Circuit (${normLoc})`,
+          summary: `${dualPsuSwitches.length} dual-power-supply switch(es) in ${normLoc} are fed by only a single PDU/circuit`,
+          details: `TOW - OSS Switch Install and Configuration Guide (p. 2) mandates: 'Equipped with optional redundant power supplies (dual AC or DC inputs). OSS Technical Standards: Connect each power supply to a separate, independent power source when available (Circuit A / UPS A and Circuit B / UPS B).' Connecting both power supplies to the same single PDU defeats hardware redundancy and creates a single point of failure.`,
+          conflictDetails: `Industry Shortcut: Installers routinely plug both power cords of redundant-supply switches into the same PDU strip. Adding a secondary PDU (Circuit B / UPS B) guarantees uninterrupted operation during branch circuit trips or PDU maintenance.`,
+          actionLabel: `+ Add Secondary PDU (Circuit B) to ${normLoc}`,
+          actionFn: `quickAddSecondaryPdu('${escapeHTML(normLoc)}')`,
+          badgeText: "A/B POWER REQ"
+        });
+      }
+    }
+  });
+
   const criticalCount = issues.filter(i => i.severity === "critical").length;
   const warningCount = issues.filter(i => i.severity === "warning").length;
+  const conflictCount = issues.filter(i => i.isConflict).length;
+  const codeCount = issues.filter(i => i.priority === 1).length;
+  const orionCount = issues.filter(i => i.priority === 2).length;
 
   return {
     isHealthy: issues.length === 0,
     issueCount: issues.length,
     criticalCount,
     warningCount,
+    conflictCount,
+    codeCount,
+    orionCount,
     issues,
     stats
   };
@@ -813,6 +1151,7 @@ function renderProjectHealthModal() {
   let filteredIssues = audit.issues;
   if (drcActiveFilter === "critical") filteredIssues = audit.issues.filter(i => i.severity === "critical");
   else if (drcActiveFilter === "warning") filteredIssues = audit.issues.filter(i => i.severity === "warning");
+  else if (drcActiveFilter === "conflicts") filteredIssues = audit.issues.filter(i => i.isConflict);
   else if (drcActiveFilter !== "all") filteredIssues = audit.issues.filter(i => i.category === drcActiveFilter);
 
   const distCount = audit.issues.filter(i => i.category === "distance").length;
@@ -820,6 +1159,9 @@ function renderProjectHealthModal() {
   const capCount = audit.issues.filter(i => i.category === "capacity").length;
   const hwCount = audit.issues.filter(i => i.category === "hardware").length;
   const scopeCount = audit.issues.filter(i => i.category === "scope").length;
+  const cableCount = audit.issues.filter(i => i.category === "cabling").length;
+  const egressCount = audit.issues.filter(i => i.category === "egress").length;
+  const conflictCount = audit.issues.filter(i => i.isConflict).length;
 
   content.innerHTML = `
     <!-- DRC Telemetry KPI Dashboard -->
@@ -850,16 +1192,16 @@ function renderProjectHealthModal() {
         </div>
       </div>
 
-      <!-- Closet Capacity KPI -->
-      <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1">
+      <!-- Code & Orion Conflicts KPI -->
+      <div class="p-3 rounded-xl bg-slate-950 border ${conflictCount > 0 ? 'border-amber-600/80 bg-amber-950/20' : 'border-slate-800'} space-y-1">
         <span class="text-slate-500 text-[10px] uppercase font-mono block flex items-center justify-between">
-          <span>Port Termination</span>
-          <i data-lucide="network" class="w-3.5 h-3.5 ${capCount > 0 ? 'text-rose-400' : 'text-sky-400'}"></i>
+          <span>Standards Conflicts</span>
+          <i data-lucide="alert-triangle" class="w-3.5 h-3.5 ${conflictCount > 0 ? 'text-amber-400' : 'text-emerald-400'}"></i>
         </span>
-        <div class="font-bold ${capCount > 0 ? 'text-rose-400' : 'text-sky-400'} text-sm font-mono">
-          ${audit.stats.totalQuotedDrops} Drops / ${audit.stats.totalSwitchCopperPorts} Ports
+        <div class="font-bold ${conflictCount > 0 ? 'text-amber-400' : 'text-emerald-400'} text-sm font-mono">
+          ${conflictCount === 0 ? 'Fully Compliant' : `${conflictCount} Discrepanc${conflictCount === 1 ? 'y' : 'ies'}`}
         </div>
-        <div class="text-[10px] text-slate-400 font-mono">${audit.stats.totalPatchPanelPorts} Panel Ports Quoted</div>
+        <div class="text-[10px] text-slate-400 font-mono">${conflictCount > 0 ? 'Industry / OEM Conflict' : 'National Code & TOW'}</div>
       </div>
 
       <!-- Scope & Licensing KPI -->
@@ -877,11 +1219,18 @@ function renderProjectHealthModal() {
       </div>
     </div>
 
-    <!-- Filter Category Chips -->
+    <!-- Filter Category Chips with Dedicated Conflict Filter -->
     <div class="flex items-center gap-1.5 overflow-x-auto py-1 text-xs">
       <button onclick="setDrcActiveFilter('all')" class="px-2.5 py-1 rounded-lg font-semibold transition-all ${drcActiveFilter === 'all' ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-white'}">
         All (${audit.issueCount})
       </button>
+
+      <!-- Code & Orion Conflicts Filter (Primary Priority Filter) -->
+      <button onclick="setDrcActiveFilter('conflicts')" class="px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1.5 ${drcActiveFilter === 'conflicts' ? 'bg-amber-600 text-white shadow-md' : (conflictCount > 0 ? 'bg-amber-950/60 text-amber-300 hover:text-white border border-amber-600/80' : 'bg-slate-800 text-slate-400 hover:text-white')}">
+        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 ${conflictCount > 0 ? 'text-amber-400' : 'text-slate-400'}"></i>
+        <span>Code &amp; Standards Conflicts (${conflictCount})</span>
+      </button>
+
       <button onclick="setDrcActiveFilter('critical')" class="px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${drcActiveFilter === 'critical' ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-rose-300'}">
         <span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
         Critical (${audit.criticalCount})
@@ -889,6 +1238,12 @@ function renderProjectHealthModal() {
       <button onclick="setDrcActiveFilter('warning')" class="px-2.5 py-1 rounded-lg font-semibold transition-all flex items-center gap-1 ${drcActiveFilter === 'warning' ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-amber-300'}">
         <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
         Warnings (${audit.warningCount})
+      </button>
+      <button onclick="setDrcActiveFilter('cabling')" class="px-2.5 py-1 rounded-lg font-semibold transition-all ${drcActiveFilter === 'cabling' ? 'bg-slate-700 text-amber-300 border border-amber-500' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+        Cabling &amp; Wet Conduit (${cableCount})
+      </button>
+      <button onclick="setDrcActiveFilter('egress')" class="px-2.5 py-1 rounded-lg font-semibold transition-all ${drcActiveFilter === 'egress' ? 'bg-slate-700 text-rose-300 border border-rose-500' : 'bg-slate-800 text-slate-400 hover:text-white'}">
+        Life Safety &amp; Egress (${egressCount})
       </button>
       <button onclick="setDrcActiveFilter('distance')" class="px-2.5 py-1 rounded-lg font-semibold transition-all ${drcActiveFilter === 'distance' ? 'bg-slate-700 text-amber-300 border border-amber-500' : 'bg-slate-800 text-slate-400 hover:text-white'}">
         Distance (${distCount})
@@ -911,7 +1266,7 @@ function renderProjectHealthModal() {
         </div>
         <h3 class="text-base font-bold text-white">All Design Rule Checks Passed</h3>
         <p class="text-xs text-slate-300 max-w-lg mx-auto leading-relaxed">
-          TIA-568 horizontal cable run lengths are within permanent link limits, PoE power supplies deliver required watts to all field hardware, closet port quantities satisfy all drops, and VMS camera channels are licensed.
+          National &amp; local codes (NEC 300.9 / 800.100, NFPA 101, TIA-568) and Orion Internal Standards (TOW Structured Cabling, Life Safety Power, and Switch Configuration) are 100% verified. No manufacturer or industry discrepancies detected.
         </p>
         <div class="pt-2">
           <button onclick="toggleProjectHealthModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer">
@@ -930,9 +1285,10 @@ function renderProjectHealthModal() {
             <div>
               <h3 class="text-xs font-bold text-white flex items-center gap-2">
                 <span>${filteredIssues.length} Finding${filteredIssues.length === 1 ? '' : 's'} in Current Filter</span>
+                ${conflictCount > 0 ? `<span class="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-amber-900 text-amber-200 border border-amber-600">${conflictCount} Code/Orion Conflict${conflictCount === 1 ? '' : 's'}</span>` : ''}
                 ${audit.criticalCount > 0 ? `<span class="text-[10px] font-mono font-bold px-2 py-0.2 rounded-full bg-rose-900 text-rose-200 border border-rose-700">${audit.criticalCount} Critical</span>` : ''}
               </h3>
-              <p class="text-[11px] text-slate-300">Click any action button below to jump directly to the target canvas, port matrix, or 1-click resolve.</p>
+              <p class="text-[11px] text-slate-300">Priority order: 1. National/Local Code &rarr; 2. Orion Standards &rarr; 3. Manufacturer Best Practices / Industry Norms.</p>
             </div>
           </div>
           <button onclick="autoFixAllProjectMisses()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs shadow-lg shadow-rose-900/40 flex items-center gap-1.5 cursor-pointer transition-all">
@@ -941,7 +1297,7 @@ function renderProjectHealthModal() {
           </button>
         </div>
 
-        <!-- Issue Findings Cards List -->
+        <!-- Issue Findings Cards List with Priority and Conflict Badging -->
         <div class="space-y-2.5">
           ${filteredIssues.map(iss => `
             <div class="p-4 rounded-xl bg-slate-950 border ${iss.severity === 'critical' ? 'border-rose-700/80 hover:border-rose-500' : 'border-amber-700/80 hover:border-amber-500'} space-y-2.5 shadow-md transition-colors">
@@ -952,15 +1308,35 @@ function renderProjectHealthModal() {
                   </span>
                   <span class="text-xs font-bold text-white">${escapeHTML(iss.title)}</span>
                 </div>
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  ${iss.priority === 1 ? `<span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-600 flex items-center gap-1"><i data-lucide="shield" class="w-2.5 h-2.5 text-blue-400"></i> PRIORITY 1: NATIONAL CODE</span>` : ''}
+                  ${iss.priority === 2 ? `<span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-600 flex items-center gap-1"><i data-lucide="award" class="w-2.5 h-2.5 text-indigo-400"></i> PRIORITY 2: ORION STANDARD</span>` : ''}
                   ${iss.badgeText ? `<span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-900 text-slate-300 border border-slate-700">${escapeHTML(iss.badgeText)}</span>` : ''}
                   <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded uppercase ${iss.severity === 'critical' ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
                     ${iss.severity === 'critical' ? 'Critical Deficit' : 'Engineering Warning'}
                   </span>
                 </div>
               </div>
+
               <p class="text-xs text-slate-200 font-mono font-medium">${escapeHTML(iss.summary)}</p>
               <p class="text-[11px] text-slate-400 leading-relaxed">${escapeHTML(iss.details)}</p>
+
+              <!-- Conflict Highlight Box: Flags discrepancies where manufacturer practice or industry shortcut conflicts with Code or Orion Standards -->
+              ${iss.isConflict ? `
+                <div class="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/60 space-y-1">
+                  <div class="flex items-center justify-between text-xs font-bold text-amber-300 flex-wrap gap-1">
+                    <span class="flex items-center gap-1.5">
+                      <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-400"></i>
+                      <span>${escapeHTML(iss.conflictBadge || 'MANUFACTURER / INDUSTRY NORM CONFLICT')}</span>
+                    </span>
+                    ${iss.standardsReference ? `<span class="text-[10px] font-mono text-amber-400/90 font-semibold">[Governing Standard: ${escapeHTML(iss.standardsReference)}]</span>` : ''}
+                  </div>
+                  <div class="text-[11px] text-amber-200/90 leading-relaxed font-sans">
+                    ${escapeHTML(iss.conflictDetails || '')}
+                  </div>
+                </div>
+              ` : ''}
+
               <div class="pt-2 border-t border-slate-800 flex items-center justify-between flex-wrap gap-2">
                 <span class="text-[10px] text-slate-500 uppercase tracking-wider font-mono">Remediation Action:</span>
                 <button onclick="${iss.actionFn}" class="px-3 py-1.5 ${iss.severity === 'critical' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-amber-600 hover:bg-amber-500'} text-white font-bold rounded-lg text-xs shadow flex items-center gap-1.5 cursor-pointer transition-all">
@@ -1528,16 +1904,252 @@ function autoFixAllProjectMisses() {
   const hasLicenses = audit.issues.some(i => i.id === "missing_licenses");
   const hasDAC = audit.issues.some(i => i.id === "missing_stack_dac");
   const hasPoE = audit.issues.some(i => i.id === "poe_deficit");
+  const hasOutdoorCmp = audit.issues.some(i => i.id.startsWith("outdoor_jacket_violation_"));
+  const hasMaglock = audit.issues.some(i => i.id.startsWith("level3_maglock_violation_"));
+  const hasBtSurge = audit.issues.some(i => i.id.startsWith("outdoor_surge_bt_mismatch_"));
+  const has10gCat6 = audit.issues.some(i => i.id.startsWith("10g_cat6_violation_"));
+  const hasBet = audit.issues.some(i => i.id.startsWith("osp_50ft_building_entry_limit"));
 
   if (hasUnassigned) autoFixUnassignedGear();
   if (hasLicenses) autoAddMissingLicenses();
   if (hasDAC) autoAddMissingDACCables();
   if (hasPoE) autoAddPoeSupplyOrSwitch();
+  if (hasOutdoorCmp) quickConvertToOutdoorCable('all_outdoor');
+  if (hasMaglock) {
+    const magIssues = audit.issues.filter(i => i.id.startsWith("level3_maglock_violation_"));
+    magIssues.forEach(mi => quickSwitchToFailSecureLock(mi.id.replace("level3_maglock_violation_", "")));
+  }
+  if (hasBtSurge) quickAdd8023btSurgeProtector();
+  if (has10gCat6) {
+    const cat6Issues = audit.issues.filter(i => i.id.startsWith("10g_cat6_violation_"));
+    cat6Issues.forEach(ci => quickUpgradeToCat6A(ci.id.replace("10g_cat6_violation_", "")));
+  }
+  if (hasBet) quickAddBuildingEntranceTerminal();
+  const hasDualPsu = audit.issues.some(i => i.id.startsWith("switch_dual_psu_single_feed_"));
+  if (hasDualPsu) {
+    const psuIssues = audit.issues.filter(i => i.id.startsWith("switch_dual_psu_single_feed_"));
+    psuIssues.forEach(pi => {
+      quickAddSecondaryPdu(pi.closetName || "MDF • Rack-1");
+    });
+  }
 
   updateBOMView();
   updateProjectHealthUI();
   if (typeof showToast === "function") {
-    showToast("1-Click Remediation Complete: All global engineering misses resolved!");
+    showToast("1-Click Remediation Complete: All National Code, Orion Standards, and Manufacturer Conflicts resolved!");
+  }
+}
+
+function quickConvertToOutdoorCable(targetId) {
+  if (typeof projectBOM === "undefined") return;
+  let count = 0;
+
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(floor => {
+      (floor.nodes || []).filter(n => n.type === "device" && (n.id === targetId || n.instanceId === targetId || targetId === 'all_outdoor')).forEach(dev => {
+        dev.cableSku = "C6A-OUTDOOR-1K";
+        dev.cableCategory = "Cat6A OSP Direct Burial (Gel-Filled)";
+        dev.cableRating = "OSP";
+        count++;
+      });
+    });
+  }
+
+  projectBOM.forEach(item => {
+    if (item.instanceId === targetId || (targetId === 'all_outdoor' && item.outdoor)) {
+      item.cableSku = "C6A-OUTDOOR-1K";
+      item.cableRating = "OSP";
+      count++;
+    }
+  });
+
+  const hasSpool = projectBOM.some(i => i.sku === "C6A-OUTDOOR-1K" || (i.model || '').includes("OSP Direct Burial"));
+  if (!hasSpool) {
+    projectBOM.push({
+      instanceId: `spool-osp-${Date.now()}`,
+      id: "C6A-OUTDOOR-1K",
+      sku: "C6A-OUTDOOR-1K",
+      model: "Cat6A Shielded OSP Direct Burial / UV Outdoor Cable (1,000 ft Spool)",
+      name: "Cat6A Shielded OSP Direct Burial / UV Outdoor Cable (1,000 ft Spool)",
+      role: "Structured Cabling",
+      category: "cabling",
+      vendor: "Superior Essex",
+      rating: "OSP",
+      standard: "Cat6A",
+      jacketType: "Outdoor / Direct Burial",
+      msrp: 495,
+      qty: 1,
+      closetName: "MDF • Rack-1",
+      rackId: "MDF • Rack-1",
+      rackSlot: null
+    });
+  }
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  if (typeof showToast === "function") {
+    showToast(`Converted drop to Cat6A OSP Outdoor Gel-Filled Cable (NEC 300.9 & TOW Compliant).`);
+  }
+}
+
+function quickSwitchToFailSecureLock(targetId) {
+  if (typeof projectBOM === "undefined") return;
+
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(floor => {
+      (floor.nodes || []).filter(n => n.type === "device" && (n.id === targetId || n.instanceId === targetId)).forEach(dev => {
+        dev.lockType = "fail_secure_mortise";
+        dev.lockModel = "HES 9600 Heavy-Duty Fail-Secure Surface Windstorm Strike";
+      });
+    });
+  }
+
+  projectBOM.forEach(item => {
+    if (item.instanceId === targetId || (item.model || '').toLowerCase().includes("maglock")) {
+      item.model = "HES 9600 Series Heavy-Duty Fail-Secure Electric Strike (Windstorm & Fire-Rated)";
+      item.sku = "HES-9600-630";
+      item.failSecure = true;
+      item.securityLevel = 3;
+    }
+  });
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  if (typeof showToast === "function") {
+    showToast(`Replaced Maglock with Fail-Secure Strike (TOW Egress & NFPA 101 Level 3 Compliant).`);
+  }
+}
+
+function quickAdd8023btSurgeProtector(targetId) {
+  if (typeof projectBOM === "undefined") return;
+
+  const instId = `inst-surge-bt-${Date.now()}`;
+  projectBOM.push({
+    instanceId: instId,
+    id: "SURGE-POE-BT90",
+    sku: "SURGE-POE-BT90",
+    model: "DITEK 802.3bt 90W Industrial Gas Discharge PoE Surge Protector (DIN/Wall, #10 AWG Ground)",
+    name: "DITEK 802.3bt 90W Industrial Gas Discharge PoE Surge Protector",
+    vendor: "DITEK",
+    category: "accessories",
+    role: "Surge Protection",
+    poeStandard: "802.3bt",
+    poeWattsMax: 90,
+    groundWire: "#10 AWG Stranded Green",
+    msrp: 95,
+    qty: 1,
+    closetName: "MDF • Rack-1",
+    rackId: "MDF • Rack-1",
+    rackSlot: null
+  });
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  if (typeof showToast === "function") {
+    showToast(`Added DITEK 802.3bt 90W High-PoE Surge Protector (TOW Camera Standards Compliant).`);
+  }
+}
+
+function quickUpgradeToCat6A(targetId) {
+  if (typeof projectBOM === "undefined") return;
+
+  projectBOM.forEach(item => {
+    if (item.instanceId === targetId || (item.role === "Structured Cabling" && item.standard === "Cat6")) {
+      item.sku = "C6A-CMP-1K-BL";
+      item.model = "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Blue)";
+      item.standard = "Cat6A";
+      item.msrp = 410;
+    }
+  });
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  if (typeof showToast === "function") {
+    showToast(`Upgraded link to Cat6A 10G-Certified (TOW Switch & Cabling Standards Compliant).`);
+  }
+}
+
+function quickAddBuildingEntranceTerminal() {
+  if (typeof projectBOM === "undefined") return;
+
+  projectBOM.push({
+    instanceId: `inst-bet-${Date.now()}`,
+    id: "CIRC-BET-24P",
+    sku: "CIRC-BET-24P",
+    model: "Circa Building Entrance Terminal (BET) 24-Pair Gas Tube Transition Protector Enclosure",
+    name: "Circa Building Entrance Terminal (BET) 24-Pair Gas Tube Transition Protector Enclosure",
+    vendor: "Circa Telecom",
+    category: "cabling",
+    role: "Structured Cabling",
+    standard: "NEC 800.100 Building Entrance Terminal",
+    msrp: 385,
+    qty: 1,
+    closetName: "MDF • Rack-1",
+    rackId: "MDF • Rack-1",
+    rackSlot: null
+  });
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  if (typeof showToast === "function") {
+    showToast(`Added Building Entrance Terminal Enclosure (NEC 800.100 Compliant).`);
+  }
+}
+
+function quickAddSecondaryPdu(closetName) {
+  if (typeof projectBOM === "undefined") return;
+  const targetLoc = closetName || "MDF • Rack-1";
+  const normLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(targetLoc) : targetLoc;
+  const existingPdus = projectBOM.filter(i => {
+    if (i.parentInstanceId) return false;
+    const itemLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId);
+    return itemLoc === normLoc && ((i.role || '').toLowerCase().includes("pdu") || (i.category || '').toLowerCase().includes("pdu") || (i.model || '').toLowerCase().includes("pdu"));
+  }).reduce((acc, p) => acc + (p.qty || 1), 0);
+
+  const needed = Math.max(1, 2 - existingPdus);
+  for (let i = 0; i < needed; i++) {
+    const circuitLetter = (existingPdus + i === 0) ? "A" : "B";
+    projectBOM.push({
+      instanceId: `inst-pdu-${circuitLetter.toLowerCase()}-${Date.now()}-${i}`,
+      id: `AP7552-CIRCUIT-${circuitLetter}`,
+      sku: `AP7552-CIRCUIT-${circuitLetter}`,
+      model: `APC Basic Rack PDU 16A 120V (Circuit ${circuitLetter} / UPS ${circuitLetter} Feed)`,
+      name: `APC Basic Rack PDU 16A 120V (Circuit ${circuitLetter} / UPS ${circuitLetter} Feed)`,
+      vendor: "APC by Schneider Electric",
+      category: "power",
+      role: "PDU",
+      voltage: "120V",
+      circuit: `Circuit ${circuitLetter} / UPS ${circuitLetter}`,
+      msrp: 295,
+      qty: 1,
+      closetName: targetLoc,
+      rackId: targetLoc,
+      rackSlot: null
+    });
+  }
+
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  if (typeof showToast === "function") {
+    showToast(`Added Redundant A/B PDU Feeds to ${targetLoc} (TOW Switch Redundancy Compliant).`);
   }
 }
 
@@ -1563,3 +2175,10 @@ window.quickAddDefaultNvrServer = quickAddDefaultNvrServer;
 window.quickAddDefaultAcsController = quickAddDefaultAcsController;
 window.quickAddUpsToCloset = quickAddUpsToCloset;
 window.quickAddEbpToCloset = quickAddEbpToCloset;
+window.quickConvertToOutdoorCable = quickConvertToOutdoorCable;
+window.quickSwitchToFailSecureLock = quickSwitchToFailSecureLock;
+window.quickAdd8023btSurgeProtector = quickAdd8023btSurgeProtector;
+window.quickUpgradeToCat6A = quickUpgradeToCat6A;
+window.quickAddBuildingEntranceTerminal = quickAddBuildingEntranceTerminal;
+window.quickAddSecondaryPdu = quickAddSecondaryPdu;
+

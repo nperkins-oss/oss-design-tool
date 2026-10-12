@@ -14,6 +14,74 @@ let activeRackHeight = 24;
 let activeHostTab = "telemetry"; // "telemetry" | "endpoints"
 let rackViewOrientation = "front"; // "front" | "rear"
 let draggedRackItemInstanceId = null;
+let showRackPatchJumpers = true;
+window.showRackPatchJumpers = true;
+
+function toggleRackPatchJumpers() {
+  showRackPatchJumpers = !showRackPatchJumpers;
+  window.showRackPatchJumpers = showRackPatchJumpers;
+  const btn = document.getElementById("btnRackPatchJumpers");
+  if (btn) {
+    if (showRackPatchJumpers) {
+      btn.className = "px-2.5 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-600/70 text-cyan-300 font-bold text-xs rounded-lg flex items-center gap-1 shadow-sm transition-all";
+      btn.innerHTML = `<i data-lucide="git-commit" class="w-3 h-3 text-cyan-400"></i> <span>Patch Cords: ON</span>`;
+    } else {
+      btn.className = "px-2.5 py-0.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-xs rounded-lg flex items-center gap-1 transition-all";
+      btn.innerHTML = `<i data-lucide="git-commit" class="w-3 h-3 text-slate-500"></i> <span>Patch Cords: OFF</span>`;
+    }
+  }
+  renderRackVisualizer();
+  if (window.lucide) lucide.createIcons();
+}
+window.toggleRackPatchJumpers = toggleRackPatchJumpers;
+
+function renderStandardPodPatchJumpersUpperSVG(is48P) {
+  if (!showRackPatchJumpers) return '';
+  const portCount = is48P ? 24 : 12;
+  const cords = [];
+  const startX = 26;
+  const spacing = 19;
+  const colors = ["#38bdf8", "#38bdf8", "#10b981", "#10b981", "#10b981", "#10b981", "#f59e0b", "#f59e0b", "#a855f7", "#a855f7", "#06b6d4", "#38bdf8"];
+  
+  for (let i = 0; i < portCount; i++) {
+    const x1 = startX + i * spacing;
+    const x2 = startX + i * spacing + (i % 2 === 0 ? 2 : -2);
+    const color = colors[i % colors.length];
+    cords.push(`<path d="M ${x1} 1 C ${x1} 10, ${x2} 15, ${x2} 24" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" opacity="0.85" class="hover:stroke-white hover:stroke-width-3 transition-all cursor-pointer"><title>Port ${i+1}: 6\" Cat6A Slim Patch Cord (Upper Deck)</title></path>`);
+  }
+
+  return `
+    <div class="px-2 py-0.5 bg-slate-950/70 rounded border border-purple-900/30 flex items-center justify-center my-0.5 overflow-hidden select-none" title="Standard Pod: 6-Inch Cat6A Slim Patch Jumpers Direct to Upper 24P Patch Panel">
+      <svg width="100%" height="24" viewBox="0 0 ${startX + portCount * spacing + 20} 24" class="w-full max-w-[620px] overflow-visible">
+        ${cords.join('')}
+      </svg>
+    </div>
+  `;
+}
+
+function renderStandardPodPatchJumpersLowerSVG(is48P) {
+  if (!showRackPatchJumpers) return '';
+  const portCount = is48P ? 24 : 12;
+  const cords = [];
+  const startX = 26;
+  const spacing = 19;
+  const colors = ["#38bdf8", "#38bdf8", "#10b981", "#10b981", "#10b981", "#10b981", "#f59e0b", "#f59e0b", "#a855f7", "#a855f7", "#06b6d4", "#38bdf8"];
+  
+  for (let i = 0; i < portCount; i++) {
+    const x1 = startX + i * spacing;
+    const x2 = startX + i * spacing + (i % 2 === 0 ? 2 : -2);
+    const color = colors[i % colors.length];
+    cords.push(`<path d="M ${x1} 1 C ${x1} 9, ${x2} 14, ${x2} 24" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" opacity="0.85" class="hover:stroke-white hover:stroke-width-3 transition-all cursor-pointer"><title>Port ${i + (is48P ? 25 : 13)}: 6\" Cat6A Slim Patch Cord (Lower Deck)</title></path>`);
+  }
+
+  return `
+    <div class="px-2 py-0.5 bg-slate-950/70 rounded border border-purple-900/30 flex items-center justify-center my-0.5 overflow-hidden select-none" title="Standard Pod: 6-Inch Cat6A Slim Patch Jumpers Direct to Lower 24P Patch Panel">
+      <svg width="100%" height="24" viewBox="0 0 ${startX + portCount * spacing + 20} 24" class="w-full max-w-[620px] overflow-visible">
+        ${cords.join('')}
+      </svg>
+    </div>
+  `;
+}
 
 function isPassiveInfrastructure(item) {
   if (!item) return false;
@@ -2276,6 +2344,9 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                         </div>
                       </div>
 
+                      <!-- Patch Jumper Direct Cords (Upper Deck) -->
+                      ${renderStandardPodPatchJumpersUpperSVG(is48P)}
+
                       <!-- Middle Deck: Switch Chassis Unit ${unitNum} -->
                       <div class="p-1.5 rounded bg-slate-950/90 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2">
@@ -2290,6 +2361,9 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                           <span>Connected via ${parseInt(it.ports, 10) || 24}x 6" Cat6A Slim Patch Cables</span>
                         </div>
                       </div>
+
+                      <!-- Patch Jumper Direct Cords (Lower Deck) -->
+                      ${renderStandardPodPatchJumpersLowerSVG(is48P)}
 
                       <!-- Lower 24-Port Patch Panel Deck (Directly Below Unit ${unitNum}) -->
                       <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
@@ -2447,15 +2521,32 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
   const maxWt = activeEncObj?.maxWeightLbs || 3000;
 
   const topFasciaHtml = `
-    <div class="px-3 py-1.5 mb-1.5 rounded-lg bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/80 shadow-md flex items-center justify-between text-xs select-none">
+    <div class="px-3 py-1.5 mb-1.5 rounded-lg bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-700/80 shadow-md flex items-center justify-between text-xs select-none gap-2 flex-wrap">
       <div class="flex items-center gap-2 min-w-0">
         <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse shrink-0"></span>
         <span class="font-mono font-bold text-slate-200 tracking-wide uppercase text-[11px] truncate">${escapeHTML(vendor)} &bull; ${escapeHTML(sku)}</span>
-        <span class="text-[10px] text-slate-400 hidden md:inline truncate max-w-[220px]">${escapeHTML(model)}</span>
+        <span class="text-[10px] text-slate-400 hidden md:inline truncate max-w-[200px]">${escapeHTML(model)}</span>
       </div>
-      <div class="flex items-center gap-2 font-mono text-[10px] text-slate-400 shrink-0">
-        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-cyan-300 font-bold">${depth}" Depth</span>
-        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-emerald-300 font-bold">${maxWt.toLocaleString()} lbs Max</span>
+      
+      <!-- PDU Power Distribution Telemetry Bar & Auto-Balancer -->
+      <div class="flex items-center gap-2 font-mono text-[10px] shrink-0">
+        ${pduMetrics ? `
+          <span class="px-2 py-0.5 rounded bg-slate-950/90 border ${pduMetrics.pduA.pct > 80 ? 'border-rose-600 text-rose-300' : 'border-emerald-700/60 text-emerald-300'} font-bold flex items-center gap-1" title="Feed A 120V Circuit: ${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}% of 16A NEC safe limit)">
+            <i data-lucide="zap" class="w-2.5 h-2.5 ${pduMetrics.pduA.pct > 80 ? 'text-rose-400' : 'text-emerald-400'}"></i>
+            <span>PDU-A: ${pduMetrics.pduA.amps}A (${pduMetrics.pduA.pct}%)</span>
+          </span>
+          ${pduMetrics.pduB ? `
+            <span class="px-2 py-0.5 rounded bg-slate-950/90 border ${pduMetrics.pduB.pct > 80 ? 'border-rose-600 text-rose-300' : 'border-sky-700/60 text-sky-300'} font-bold flex items-center gap-1" title="Feed B 120V Circuit: ${pduMetrics.pduB.watts}W (${pduMetrics.pduB.pct}% of 16A NEC safe limit)">
+              <i data-lucide="zap" class="w-2.5 h-2.5 ${pduMetrics.pduB.pct > 80 ? 'text-rose-400' : 'text-sky-400'}"></i>
+              <span>PDU-B: ${pduMetrics.pduB.amps}A (${pduMetrics.pduB.pct}%)</span>
+            </span>
+          ` : ''}
+          <button type="button" onclick="event.stopPropagation(); autoBalanceRackPowerFeeds()" class="px-2 py-0.5 rounded bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white font-bold text-[9.5px] flex items-center gap-1 transition-colors cursor-pointer" title="Auto-balance dual-corded devices evenly across PDU-A and PDU-B to eliminate single point of failure">
+            <i data-lucide="scale" class="w-2.5 h-2.5 text-emerald-400"></i> Auto-Balance A+B
+          </button>
+        ` : ''}
+        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-cyan-300 font-bold hidden sm:inline">${depth}" Depth</span>
+        <span class="px-1.5 py-0.2 rounded bg-slate-950/80 border border-slate-700 text-emerald-300 font-bold hidden sm:inline">${maxWt.toLocaleString()} lbs Max</span>
       </div>
     </div>
   `;
