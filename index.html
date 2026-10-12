@@ -235,22 +235,22 @@
 <body class="h-full flex flex-col overflow-hidden">
 
   <!-- Top Navigation Header -->
-  <header id="primaryTopHeader" class="bg-slate-900 border-b border-slate-800 shrink-0 z-50 relative">
-    <div class="px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between gap-2 lg:gap-4">
+  <header id="primaryTopHeader" class="bg-slate-900 border-b border-slate-800 shrink-0 z-50 relative h-14">
+    <div class="px-3 sm:px-4 h-full flex items-center justify-between gap-2 lg:gap-3 flex-nowrap">
       
       <!-- Brand & Project Selector -->
-      <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
-        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/20 shrink-0">
+      <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/20 shrink-0">
           <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-xs sm:text-sm font-bold text-white tracking-tight truncate max-w-[150px] sm:max-w-none">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden xl:inline">v0.10.44-alpha</span>
+            <h1 class="text-xs sm:text-sm font-bold text-white tracking-tight truncate max-w-[140px] sm:max-w-none">OSS Network Design Tool</h1>
+            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden 2xl:inline">v0.10.44-alpha</span>
           </div>
-          <div class="flex items-center gap-2 mt-0.5">
-            <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1.5 hover:text-white cursor-pointer" title="Switch or Manage Projects">
-              <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors font-semibold truncate max-w-[110px] sm:max-w-[180px]">Default Project</span>
+          <div class="flex items-center gap-1.5 sm:gap-2 mt-0.5">
+            <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1 hover:text-white cursor-pointer" title="Switch or Manage Projects">
+              <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors font-semibold truncate max-w-[100px] sm:max-w-[150px]">Default Project</span>
               <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500 group-hover:text-slate-300"></i>
             </button>
             <span class="text-slate-700 text-xs">|</span>
@@ -320,13 +320,13 @@
       </div>
 
       <!-- Omnichannel Global Catalog Search Bar (Ctrl+K) -->
-      <div id="headerGlobalSearchWrapper" class="relative flex-1 max-w-xs xl:max-w-md hidden xl:block">
-        <div class="flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 hover:border-slate-500 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 rounded-xl px-3 py-1.5 transition-all shadow-inner">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
+      <div id="headerGlobalSearchWrapper" class="relative flex-1 max-w-[200px] lg:max-w-xs xl:max-w-sm hidden lg:block">
+        <div class="flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 hover:border-slate-500 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 rounded-xl px-2.5 py-1.5 transition-all shadow-inner">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
           <input
             type="text"
             id="globalSearchInput"
-            placeholder="Search entire catalog... (Ctrl+K)"
+            placeholder="Search catalog... (Ctrl+K)"
             autocomplete="off"
             class="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none"
             oninput="GlobalSearchEngine.handleInput(this.value)"
@@ -334,10 +334,10 @@
             onkeydown="GlobalSearchEngine.handleKeydown(event)"
           />
           <button id="globalSearchClearBtn" onclick="GlobalSearchEngine.clearSearch()" class="hidden text-slate-400 hover:text-white p-0.5" title="Clear search">
-            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            <i data-lucide="x" class="w-3 h-3"></i>
           </button>
-          <kbd onclick="GlobalSearchEngine.openModal()" class="cursor-pointer hidden xl:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[10px] font-mono text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 rounded shadow-sm select-none transition-colors" title="Open Command Palette (Ctrl+K)">
-            <span class="text-[9px]">Ctrl</span>K
+          <kbd onclick="GlobalSearchEngine.openModal()" class="cursor-pointer hidden xl:inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-mono text-slate-400 bg-slate-800 hover:bg-slate-700 hover:text-white border border-slate-700 rounded shadow-sm select-none transition-colors" title="Open Command Palette (Ctrl+K)">
+            <span class="text-[8px]">Ctrl</span>K
           </kbd>
         </div>
         
@@ -365,45 +365,45 @@
       </div>
 
       <!-- Action Tools: Catalog, Facility, Topology, Physical Layout, Compare, DRC, BOM -->
-      <div class="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
-        <button onclick="GlobalSearchEngine.openModal()" class="xl:hidden p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center transition-all shadow-sm cursor-pointer" title="Global Catalog Search (Ctrl+K)">
-          <i data-lucide="search" class="w-4 h-4 text-brand-400"></i>
+      <div class="flex items-center gap-1 sm:gap-1.5 shrink-0 flex-nowrap">
+        <button onclick="GlobalSearchEngine.openModal()" class="lg:hidden p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center transition-all shadow-sm cursor-pointer" title="Global Catalog Search (Ctrl+K)">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-brand-400"></i>
         </button>
 
-        <!-- Catalog Domain Selector (Inline on 2xl+, Clean Dropdown Popover on Compact Screens) -->
+        <!-- Catalog Domain Dropdown -->
         <div class="relative shrink-0" id="catalogDomainWrapper">
-          <button id="catalogExpandBtn" onclick="handleCatalogNavClick()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Product Catalog Domains">
-            <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-400"></i>
+          <button id="catalogExpandBtn" onclick="handleCatalogNavClick()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Product Catalog Domains">
+            <i data-lucide="layers" class="w-3.5 h-3.5 text-brand-400"></i>
             <span class="font-bold hidden sm:inline">Catalog</span>
-            <i data-lucide="chevron-right" id="catalogExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
+            <i data-lucide="chevron-down" id="catalogExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
           </button>
 
-          <!-- Domain Tabs Container -->
-          <div id="domainNavigationContainer" class="flex items-center gap-1 overflow-hidden transition-all duration-300 max-w-0 opacity-0 pointer-events-none whitespace-nowrap bg-slate-950/95 p-1 rounded-2xl border border-slate-700/90 2xl:relative 2xl:top-auto 2xl:left-auto 2xl:shadow-none 2xl:border-slate-800/80 absolute top-full mt-2 left-0 sm:left-auto sm:right-0 z-[75] shadow-2xl backdrop-blur-xl">
+          <!-- Floating Domain Tabs Container -->
+          <div id="domainNavigationContainer" class="hidden absolute top-full mt-2 right-0 sm:right-auto sm:left-0 z-[75] bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl p-1.5 flex items-center gap-1 backdrop-blur-xl whitespace-nowrap overflow-x-auto max-w-[90vw]">
             <!-- Injected dynamically by buildDomainNavigation() in js/core/app.js -->
           </div>
         </div>
 
-        <!-- Facility & Enclosures Selector (Inline on 2xl+, Clean Dropdown Popover on Compact Screens) -->
+        <!-- Facility & Enclosures Dropdown -->
         <div class="relative shrink-0" id="facilityDomainWrapper">
-          <button id="facilityExpandBtn" onclick="handleFacilityNavClick()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Facility & Enclosures Studios">
-            <i data-lucide="building-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400"></i>
-            <span class="font-bold hidden 2xl:inline">Facility &amp; Enclosures</span>
-            <span class="font-bold hidden sm:inline 2xl:hidden">Facility</span>
-            <i data-lucide="chevron-right" id="facilityExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
+          <button id="facilityExpandBtn" onclick="handleFacilityNavClick()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Facility & Enclosures Studios">
+            <i data-lucide="building-2" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span class="font-bold hidden xl:inline">Facility &amp; Enclosures</span>
+            <span class="font-bold hidden sm:inline xl:hidden">Facility</span>
+            <i data-lucide="chevron-down" id="facilityExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
           </button>
 
-          <!-- Facility Sub-Views Container -->
-          <div id="facilityNavigationContainer" class="flex items-center gap-1 overflow-hidden transition-all duration-300 max-w-0 opacity-0 pointer-events-none whitespace-nowrap bg-slate-950/95 p-1 rounded-2xl border border-slate-700/90 2xl:relative 2xl:top-auto 2xl:left-auto 2xl:shadow-none 2xl:border-slate-800/80 absolute top-full mt-2 left-0 sm:left-auto sm:right-0 z-[75] shadow-2xl backdrop-blur-xl">
-            <button onclick="TabManager.openTab('facility')" id="facility-nav-hierarchy" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 transition-all cursor-pointer shrink-0" title="Floors, Spaces & Building Layout">
+          <!-- Floating Facility Sub-Views Container -->
+          <div id="facilityNavigationContainer" class="hidden absolute top-full mt-2 right-0 sm:right-auto sm:left-0 z-[75] bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl p-1.5 flex items-center gap-1 backdrop-blur-xl whitespace-nowrap">
+            <button onclick="TabManager.openTab('facility'); toggleFacilityExpand(false)" id="facility-nav-hierarchy" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Floors, Spaces & Building Layout">
               <i data-lucide="building-2" class="w-3.5 h-3.5 text-sky-400"></i>
               <span>Hierarchy &amp; Spaces</span>
             </button>
-            <button onclick="TabManager.openTab('enclosures')" id="facility-nav-enclosures" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 transition-all cursor-pointer shrink-0" title="Equipment Rack & Enclosure Elevations">
+            <button onclick="TabManager.openTab('enclosures'); toggleFacilityExpand(false)" id="facility-nav-enclosures" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Equipment Rack & Enclosure Elevations">
               <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i>
               <span>Enclosure Visualizer</span>
             </button>
-            <button onclick="TabManager.openTab('port_matrix')" id="facility-nav-portmatrix" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 transition-all cursor-pointer shrink-0" title="Switch Port Cross-Connect & Patch Matrix">
+            <button onclick="TabManager.openTab('port_matrix'); toggleFacilityExpand(false)" id="facility-nav-portmatrix" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Switch Port Cross-Connect & Patch Matrix">
               <i data-lucide="cpu" class="w-3.5 h-3.5 text-purple-400"></i>
               <span>Port Matrix</span>
             </button>
@@ -411,49 +411,49 @@
         </div>
 
         <!-- Topology Canvas Studio Button -->
-        <button onclick="toggleTopologyModal()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Network Topology & Switch Uplink Designer">
-          <i data-lucide="network" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i>
+        <button onclick="toggleTopologyModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Network Topology & Switch Uplink Designer">
+          <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-400"></i>
           <span class="hidden 2xl:inline">Topology Canvas</span>
           <span class="hidden sm:inline 2xl:hidden">Topology</span>
         </button>
 
         <!-- Physical Layout Canvas Studio Button -->
-        <button onclick="toggleCableLayoutModal()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Physical Layout & Cable Pathways Blueprint">
-          <i data-lucide="map" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400"></i>
+        <button onclick="toggleCableLayoutModal()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Physical Layout & Cable Pathways Blueprint">
+          <i data-lucide="map" class="w-3.5 h-3.5 text-amber-400"></i>
           <span class="hidden 2xl:inline">Physical Layout Canvas</span>
           <span class="hidden sm:inline 2xl:hidden">Physical</span>
         </button>
 
         <!-- Hardware Comparison Matrix Button -->
-        <button id="compareNavButton" onclick="toggleCompareModal()" class="hidden relative px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Compare selected models">
-          <i data-lucide="columns-3" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400"></i>
+        <button id="compareNavButton" onclick="toggleCompareModal()" class="hidden relative px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Compare selected models">
+          <i data-lucide="columns-3" class="w-3.5 h-3.5 text-purple-400"></i>
           <span class="hidden sm:inline">Compare</span>
           <span id="compareCountBadge" class="hidden absolute -top-1.5 -right-1.5 bg-purple-500 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">0</span>
         </button>
 
         <!-- Design Rule Checker (DRC) Health Audit Pill -->
-        <button id="projectHealthPill" onclick="toggleProjectHealthModal()" class="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Design Rule Checker (DRC): Real-time audit of TIA-568 distance limits, PoE power & classes, closet capacity, and scope compliance">
-          <i id="projectHealthPillIcon" data-lucide="check-circle-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i>
+        <button id="projectHealthPill" onclick="toggleProjectHealthModal()" class="px-2 sm:px-2.5 py-1.5 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Design Rule Checker (DRC): Real-time audit of TIA-568 distance limits, PoE power & classes, closet capacity, and scope compliance">
+          <i id="projectHealthPillIcon" data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
           <span id="projectHealthPillLabel" class="hidden 2xl:inline">Design Validated</span>
           <span id="projectHealthPillCount" class="hidden bg-rose-500 text-white font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
         </button>
 
         <!-- Quote BOM Button -->
-        <button onclick="toggleBomModal()" class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer">
-          <i data-lucide="shopping-bag" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+        <button onclick="toggleBomModal()" class="px-2.5 sm:px-3 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer">
+          <i data-lucide="shopping-bag" class="w-3.5 h-3.5"></i>
           <span class="hidden 2xl:inline">Quote BOM</span>
           <span class="inline 2xl:hidden">BOM</span>
           <span id="bomCountBadge" class="bg-white/20 text-white font-mono text-[11px] px-1.5 py-0.2 rounded-md">0</span>
         </button>
 
         <!-- Authenticated Corporate User Profile Pill -->
-        <div id="authUserWrapper" class="hidden items-center gap-2 pl-2 border-l border-slate-800 shrink-0">
-          <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700/80 text-xs shadow-inner">
-            <div id="authUserAvatar" class="w-5 h-5 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
+        <div id="authUserWrapper" class="hidden items-center gap-2 pl-1.5 sm:pl-2 border-l border-slate-800 shrink-0">
+          <div class="flex items-center gap-1.5 sm:gap-2 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-950/80 border border-slate-700/80 text-xs shadow-inner">
+            <div id="authUserAvatar" class="w-5 h-5 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm shrink-0">
               U
             </div>
-            <span id="authUserEmail" class="text-slate-300 font-medium hidden 2xl:inline max-w-[150px] truncate" title="Signed in corporate account">User</span>
-            <a href="/.auth/logout?post_logout_redirect_uri=/login.html" class="text-slate-400 hover:text-rose-400 transition-colors ml-1 p-0.5" title="Sign Out">
+            <span id="authUserEmail" class="text-slate-300 font-medium hidden 2xl:inline max-w-[140px] truncate" title="Signed in corporate account">User</span>
+            <a href="/.auth/logout?post_logout_redirect_uri=/login.html" class="text-slate-400 hover:text-rose-400 transition-colors p-0.5" title="Sign Out">
               <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
             </a>
           </div>

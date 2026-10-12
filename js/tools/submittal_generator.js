@@ -230,9 +230,12 @@ const SubmittalGenerator = {
 
 function openSubmittalModal() {
   let modal = document.getElementById("submittalModal");
+  const viewport = document.getElementById("workspaceMainViewport") || document.body;
   if (!modal) {
     modal = createSubmittalModalDOM();
-    document.body.appendChild(modal);
+    viewport.appendChild(modal);
+  } else if (modal.parentElement !== viewport) {
+    viewport.appendChild(modal);
   }
   modal.classList.remove("hidden");
   renderSubmittalPreview();
@@ -247,7 +250,7 @@ function closeSubmittalModal() {
 function createSubmittalModalDOM() {
   const div = document.createElement("div");
   div.id = "submittalModal";
-  div.className = "hidden fixed top-[100px] inset-x-0 bottom-0 z-30 bg-slate-950 flex flex-col p-1 sm:p-2 animate-fade-in";
+  div.className = "hidden absolute inset-0 z-30 bg-slate-950 flex flex-col p-1 sm:p-2 animate-fade-in";
   div.innerHTML = `
     <div class="bg-slate-900 border border-slate-800 rounded-xl w-full h-full flex flex-col shadow-2xl overflow-hidden">
       <!-- Header -->

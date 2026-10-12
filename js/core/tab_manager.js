@@ -24,7 +24,7 @@ const TabManager = (() => {
       openFn: () => {
         closeAllToolModals();
         if (typeof switchDomain === "function") switchDomain("networking", false);
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
+        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: null
@@ -40,7 +40,7 @@ const TabManager = (() => {
       openFn: () => {
         closeAllToolModals();
         if (typeof switchDomain === "function") switchDomain("physical_security", false);
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
+        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: null
@@ -56,7 +56,7 @@ const TabManager = (() => {
       openFn: () => {
         closeAllToolModals();
         if (typeof switchDomain === "function") switchDomain("compute_storage", false);
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
+        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: null
@@ -72,7 +72,7 @@ const TabManager = (() => {
       openFn: () => {
         closeAllToolModals();
         if (typeof switchDomain === "function") switchDomain("infrastructure", false);
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
+        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: null
@@ -88,7 +88,7 @@ const TabManager = (() => {
       openFn: () => {
         closeAllToolModals();
         if (typeof switchDomain === "function") switchDomain("software", false);
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
+        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: null
@@ -102,7 +102,7 @@ const TabManager = (() => {
       modalId: null,
       openFn: () => {
         closeAllToolModals();
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
+        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: () => {
@@ -280,17 +280,20 @@ const TabManager = (() => {
       closable: true,
       modalId: "cableScheduleModal",
       openFn: () => {
+        const viewport = document.getElementById("workspaceMainViewport") || document.body;
         let m = document.getElementById("cableScheduleModal");
         if (!m) {
           if (typeof createCableScheduleModalDOM === "function") {
-            const el = createCableScheduleModalDOM();
-            if (el && !document.getElementById("cableScheduleModal")) document.body.appendChild(el);
+            createCableScheduleModalDOM();
           }
           m = document.getElementById("cableScheduleModal");
+        } else if (m.parentElement !== viewport) {
+          viewport.appendChild(m);
         }
         if (m) {
           m.classList.remove("hidden");
-          if (typeof renderCablePullSchedule === "function") renderCablePullSchedule();
+          if (typeof renderCablePullScheduleContent === "function") renderCablePullScheduleContent();
+          else if (typeof renderCablePullSchedule === "function") renderCablePullSchedule();
           if (window.lucide) lucide.createIcons();
         }
       },
@@ -327,13 +330,16 @@ const TabManager = (() => {
       closable: true,
       modalId: "submittalModal",
       openFn: () => {
+        const viewport = document.getElementById("workspaceMainViewport") || document.body;
         let m = document.getElementById("submittalModal");
         if (!m) {
           if (typeof createSubmittalModalDOM === "function") {
             const el = createSubmittalModalDOM();
-            if (el && !document.getElementById("submittalModal")) document.body.appendChild(el);
+            if (el && !document.getElementById("submittalModal")) viewport.appendChild(el);
           }
           m = document.getElementById("submittalModal");
+        } else if (m.parentElement !== viewport) {
+          viewport.appendChild(m);
         }
         if (m) {
           m.classList.remove("hidden");
@@ -354,13 +360,16 @@ const TabManager = (() => {
       closable: true,
       modalId: "revisionModal",
       openFn: () => {
+        const viewport = document.getElementById("workspaceMainViewport") || document.body;
         let m = document.getElementById("revisionModal");
         if (!m) {
           if (typeof createRevisionModalDOM === "function") {
             const el = createRevisionModalDOM();
-            if (el && !document.getElementById("revisionModal")) document.body.appendChild(el);
+            if (el && !document.getElementById("revisionModal")) viewport.appendChild(el);
           }
           m = document.getElementById("revisionModal");
+        } else if (m.parentElement !== viewport) {
+          viewport.appendChild(m);
         }
         if (m) {
           m.classList.remove("hidden");
@@ -405,9 +414,6 @@ const TabManager = (() => {
   function init() {
     renderTabBar();
     setupGlobalSyncHooks();
-    if (activeTabId.startsWith("catalog") && typeof toggleCatalogExpand === "function") {
-      toggleCatalogExpand(true);
-    }
   }
 
   function openTab(studioKey, context = null) {
@@ -462,18 +468,9 @@ const TabManager = (() => {
       }
     }
 
-    // Auto-expand/collapse catalog and facility sub-views depending on active tab
-    if (tabId.startsWith("catalog")) {
-      if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
-      if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
-    } else if (tabId === "facility" || tabId === "enclosures" || tabId === "port_matrix") {
-      if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(true);
-      if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
-      if (typeof updateFacilitySubNavUI === "function") updateFacilitySubNavUI();
-    } else {
-      if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
-      if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
-    }
+    // Close any floating header dropdowns on tab switch
+    if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
+    if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
 
     renderTabBar();
   }
