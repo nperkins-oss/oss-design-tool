@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PowerAndInfrastructureCatalogEntry",
+  "description": "Standardized schema for telecom racks, UPS systems, external battery packs, and PDUs in NetSelect Enterprise",
+  "type": "object",
+  "required": [
+    "id",
+    "vendor",
+    "model",
+    "sku",
+    "role",
+    "category",
+    "msrp"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique slug identifier (e.g. 'apc-smt2200rm2uc', 'tripplite-sr42ub')"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Manufacturer (e.g. 'APC by Schneider Electric', 'Eaton', 'Tripp Lite', 'Chatsworth (CPI)', 'Altronix')"
+    },
+    "model": {
+      "type": "string",
+      "description": "Full commercial model name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Manufacturer orderable part number"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["UPS", "Battery Pack", "PDU", "Rack", "Enclosure", "Power Supply"],
+      "default": "UPS"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["infrastructure", "power", "ups", "pdu", "racks"],
+      "default": "infrastructure"
+    },
+    "hostType": {
+      "type": "string",
+      "enum": ["equipment_rack", "wall_cabinet", "industrial_din", "nema_enclosure"]
+    },
+    "rackUnits": {
+      "type": "integer",
+      "description": "Vertical space occupied or provided in Rack Units (e.g. 1U, 2U, 42U)"
+    },
+    "va": {
+      "type": "integer",
+      "description": "UPS Volt-Ampere capacity (e.g. 1500, 2200, 3000, 5000)"
+    },
+    "watts": {
+      "type": "integer",
+      "description": "UPS real continuous power capacity in Watts (e.g. 1350, 1980, 2700)"
+    },
+    "inputVoltage": {
+      "type": "string",
+      "enum": ["120V", "208V", "230V", "120V/208V Split-Phase"],
+      "description": "Nominal facility input voltage (DRC Rule 8B flags voltage mismatches between UPS and PDU)"
+    },
+    "inputPlug": {
+      "type": "string",
+      "description": "AC utility plug type (e.g. 'NEMA 5-15P', 'NEMA 5-20P', 'NEMA L5-30P', 'NEMA L6-30P'). DRC Rule 8A mandates dedicated 30A branch circuit for 30A plugs."
+    },
+    "outputReceptacles": {
+      "type": "string",
+      "description": "Available output receptacles (e.g. '(6) 5-20R, (1) L5-30R', '(8) C13, (2) C19')"
+    },
+    "topology": {
+      "type": "string",
+      "enum": ["Online Double-Conversion", "Line-Interactive", "Industrial DC-UPS"]
+    },
+    "batteryChemistry": {
+      "type": "string",
+      "enum": ["VRLA Lead-Acid", "LiFePO4 Lithium-Ion", "Capacitor Buffer"],
+      "description": "VRLA is hazardous in unventilated NEMA boxes per DRC Rule 7; LiFePO4 or DC-UPS required"
+    },
+    "outlets": {
+      "type": "integer",
+      "description": "PDU output receptacle count (DRC Rule 8C checks against active power cords)"
+    },
+    "circuit": {
+      "type": "string",
+      "description": "Power feed circuit designation (e.g. 'Circuit A / UPS A', 'Circuit B / UPS B' per DRC Rule 14)"
+    },
+    "msrp": {
+      "type": "number",
+      "description": "MSRP in USD"
+    },
+    "taa": {
+      "type": "boolean",
+      "description": "NDAA / TAA compliant"
+    },
+    "keyFeatures": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

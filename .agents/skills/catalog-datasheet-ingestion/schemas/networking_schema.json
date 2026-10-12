@@ -1,0 +1,112 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "NetworkingCatalogEntry",
+  "description": "Standardized schema for enterprise switches, firewalls, and wireless bridges in NetSelect Enterprise",
+  "type": "object",
+  "required": [
+    "id",
+    "vendor",
+    "model",
+    "sku",
+    "role",
+    "category",
+    "ports",
+    "msrp"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique slug identifier (e.g. 'juniper-ex4100-24p', 'unifi-ecs-48-poe')"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Manufacturer (e.g. 'Juniper Networks', 'Ubiquiti', 'Aruba', 'Cisco', 'AMG', 'Allied Telesis')"
+    },
+    "model": {
+      "type": "string",
+      "description": "Full commercial model name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Manufacturer orderable part number"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["Access", "Aggregation", "Core / Spine", "Industrial DIN-Rail Switch", "Firewall", "Wireless"],
+      "default": "Access"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["networking"],
+      "default": "networking"
+    },
+    "ports": {
+      "type": "integer",
+      "description": "Count of physical copper RJ-45 access ports (e.g. 8, 12, 16, 24, 48)"
+    },
+    "poeBudget": {
+      "type": "number",
+      "description": "Total available PoE power budget in Watts (critical for DRC Rule 2)"
+    },
+    "poeStandard": {
+      "type": "string",
+      "enum": ["802.3af", "802.3at", "802.3bt"],
+      "description": "Highest supported PoE delivery standard"
+    },
+    "poeMaxPortWatts": {
+      "type": "number",
+      "default": 30,
+      "description": "Maximum wattage deliverable on an individual port (e.g. 30W for at, 60W or 90W for bt)"
+    },
+    "uplinkPorts": {
+      "type": "integer",
+      "description": "Number of high-speed uplink ports"
+    },
+    "uplinkSpeed": {
+      "type": "string",
+      "enum": ["1G SFP", "10G SFP+", "25G SFP28", "40G QSFP+", "100G QSFP28"],
+      "description": "Uplink interface type and speed (DRC Rule 13 mandates Cat6A or Fiber on 10G+)"
+    },
+    "dualPowerSupply": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if switch supports redundant hot-swappable dual PSUs (DRC Rule 14 mandates separate Circuit A/B feeds)"
+    },
+    "stackingSupported": {
+      "type": "boolean",
+      "default": false,
+      "description": "True if hardware supports stacking rings (DRC Rule 5 mandates stacking DAC cables)"
+    },
+    "maxStackUnits": {
+      "type": "integer",
+      "default": 8
+    },
+    "throughputGbps": {
+      "type": "number"
+    },
+    "operatingTempMinC": {
+      "type": "number",
+      "default": 0
+    },
+    "operatingTempMaxC": {
+      "type": "number",
+      "default": 45
+    },
+    "formFactor": {
+      "type": "string",
+      "enum": ["1U Rackmount", "2U Rackmount", "DIN-Rail Industrial", "Wall-Mount Compact", "Desktop"]
+    },
+    "msrp": {
+      "type": "number",
+      "description": "MSRP in USD"
+    },
+    "taa": {
+      "type": "boolean",
+      "description": "NDAA / TAA compliant"
+    },
+    "keyFeatures": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

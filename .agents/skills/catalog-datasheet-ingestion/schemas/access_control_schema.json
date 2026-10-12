@@ -1,0 +1,145 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AccessControlCatalogEntry",
+  "description": "Standardized schema for enterprise electronic access control hardware, readers, locks, and power enclosures in NetSelect Enterprise",
+  "type": "object",
+  "required": [
+    "id",
+    "vendor",
+    "model",
+    "sku",
+    "role",
+    "category",
+    "hardwareSubtype",
+    "powerSource",
+    "msrp"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique slug identifier (e.g. 'mercury-lp1502-poe-controller', 'hid-signo-40-reader', 'hes-9600-strike')"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Manufacturer (e.g. 'Mercury Security', 'HID Global', 'HES / ASSA ABLOY', 'Securitron', 'Altronix', 'LifeSafety Power')"
+    },
+    "model": {
+      "type": "string",
+      "description": "Full commercial model name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Manufacturer orderable part number"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["Access Control", "Lock Hardware", "Power Supply", "Access Accessory"],
+      "default": "Access Control"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["access_control", "access"],
+      "default": "access_control"
+    },
+    "hardwareSubtype": {
+      "type": "string",
+      "enum": [
+        "intelligent_controller",
+        "sub_controller",
+        "reader",
+        "electric_strike",
+        "mortise_lock",
+        "maglock",
+        "power_enclosure",
+        "request_to_exit",
+        "door_contact"
+      ]
+    },
+    "doorCapacity": {
+      "type": "integer",
+      "description": "Number of door openings controlled by this unit (e.g. 1, 2, 4, 8, 16)"
+    },
+    "readerCapacity": {
+      "type": "integer",
+      "description": "Number of card reader ports available on the controller"
+    },
+    "readerProtocols": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Supported reader protocols (e.g. ['OSDP v2 Secure Channel', 'Wiegand'])"
+    },
+    "securityLevel": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "Orion TOW & Life Safety Egress Security Level: 1 = Public / Free Egress; 2 = Restricted Entry / Free Egress (drops on FAI); 3 = High-Security Vault / SCIF / Evidence (stays locked on FAI & power outage; MAGLOCKS STRICTLY PROHIBITED)"
+    },
+    "lockType": {
+      "type": "string",
+      "enum": [
+        "fail_secure_strike",
+        "fail_secure_mortise",
+        "fail_secure_bolt",
+        "fail_safe_strike",
+        "maglock",
+        "motorized_latch_retraction"
+      ],
+      "description": "Locking hardware mechanism (critical for DRC Rule 11 egress validation)"
+    },
+    "failSecure": {
+      "type": "boolean",
+      "description": "True if lock remains securely locked during power loss and fire alarm activation (Mandatory for Level 3)"
+    },
+    "powerSource": {
+      "type": "string",
+      "enum": ["poe_switch", "external_dc", "line_120vac"],
+      "description": "Primary operating power source"
+    },
+    "poeStandard": {
+      "type": "string",
+      "enum": ["802.3af", "802.3at", "802.3bt"],
+      "description": "If poe_switch powered, required IEEE PoE class"
+    },
+    "powerConsumptionWatts": {
+      "type": "number",
+      "description": "Operational power demand in Watts"
+    },
+    "voltageVdc": {
+      "type": "string",
+      "description": "Operating DC voltage (e.g. '12VDC', '24VDC', '12-24VDC')"
+    },
+    "holdingForceLbs": {
+      "type": "number",
+      "description": "Magnetic lock holding force in pounds (e.g. 600, 1200)"
+    },
+    "fireAlarmRelay": {
+      "type": "boolean",
+      "description": "Has dedicated FAI fire alarm drop relay connection"
+    },
+    "ul294StandbyHours": {
+      "type": "number",
+      "default": 4.0,
+      "description": "Required standby battery reserve hours per UL 294 / NFPA 731"
+    },
+    "supportedEngines": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Compatible VMS/ACS host software (e.g. ['Lenel OnGuard', 'Genetec Synergis', 'Software House C•CURE 9000', 'Avigilon Unity'])"
+    },
+    "mounting": {
+      "type": "string",
+      "description": "Mounting method (e.g. 'Trove Backplate', 'DIN-Rail', 'Door Frame Mortise', 'Single-Gang Box')"
+    },
+    "msrp": {
+      "type": "number",
+      "description": "MSRP in USD"
+    },
+    "taa": {
+      "type": "boolean",
+      "description": "NDAA / TAA compliant"
+    },
+    "keyFeatures": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "CameraCatalogEntry",
+  "description": "Standardized schema for enterprise IP surveillance cameras and video sensors in NetSelect Enterprise",
+  "type": "object",
+  "required": [
+    "id",
+    "vendor",
+    "model",
+    "sku",
+    "role",
+    "category",
+    "formFactor",
+    "resolution",
+    "poeStandard",
+    "powerConsumptionWatts",
+    "msrp"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique slug identifier (e.g. 'axis-p3265-lve-dome', 'hanwha-xnv-8081r')"
+    },
+    "vendor": {
+      "type": "string",
+      "description": "Manufacturer name (e.g. 'Axis Communications', 'Hanwha Vision', 'Avigilon', 'Bosch')"
+    },
+    "model": {
+      "type": "string",
+      "description": "Full commercial model name"
+    },
+    "sku": {
+      "type": "string",
+      "description": "Manufacturer orderable part number (e.g. '02327-001', 'XNV-8081R')"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["Camera"],
+      "default": "Camera"
+    },
+    "category": {
+      "type": "string",
+      "enum": ["cameras"],
+      "default": "cameras"
+    },
+    "formFactor": {
+      "type": "string",
+      "enum": [
+        "Dome (Indoor)",
+        "Dome (Outdoor / Vandal)",
+        "Dome (Ultra High-Res)",
+        "Bullet (Outdoor / IR)",
+        "PTZ (High-PoE)",
+        "PTZ (Standard)",
+        "Multi-Sensor (4-Way Panoramic)",
+        "Fisheye (360 Panoramic)",
+        "Turret (Fixed)",
+        "Box / CS-Mount",
+        "Thermal Sensor",
+        "Covert / Modular"
+      ]
+    },
+    "resolution": {
+      "type": "string",
+      "description": "Resolution and framerate (e.g. '2MP (1080p @ 60fps)', '4K (8MP @ 30fps)', '20MP Multi-Sensor')"
+    },
+    "sensorMegapixels": {
+      "type": "number",
+      "description": "Sensor megapixel count (e.g. 2, 4, 8, 20)"
+    },
+    "compression": {
+      "type": "string",
+      "default": "H.265 / H.264 / Smart Codec"
+    },
+    "streamBitrateMbps": {
+      "type": "number",
+      "description": "Typical primary stream bitrate for VMS bandwidth and storage sizing (e.g. 3.5, 6.0, 12.0)"
+    },
+    "poeStandard": {
+      "type": "string",
+      "enum": ["802.3af", "802.3at", "802.3bt"],
+      "description": "Required PoE IEEE standard: 802.3af (<=15.4W), 802.3at (<=30W), or 802.3bt (60W-90W)"
+    },
+    "poeClass": {
+      "type": "string",
+      "enum": ["Class 1", "Class 2", "Class 3", "Class 4", "Class 5", "Class 6", "Class 7", "Class 8"]
+    },
+    "powerConsumptionWatts": {
+      "type": "number",
+      "description": "Nominal operational power consumption in Watts"
+    },
+    "maxPowerWatts": {
+      "type": "number",
+      "description": "Maximum power draw with IR illuminators, heaters, and PTZ motors at full load (used for switch PoE budget and surge validation)"
+    },
+    "irIllumination": {
+      "type": "boolean",
+      "description": "Whether camera has integrated infrared LEDs"
+    },
+    "irRangeMeters": {
+      "type": "number",
+      "description": "Effective IR illumination distance in meters"
+    },
+    "lensType": {
+      "type": "string",
+      "description": "Focal length and lens characteristics (e.g. 'Varifocal 3.4-8.9mm Remote Zoom', 'Fixed 2.8mm')"
+    },
+    "fieldOfViewDeg": {
+      "type": "number",
+      "description": "Horizontal field of view in degrees"
+    },
+    "ipRating": {
+      "type": "string",
+      "description": "Ingress protection rating (e.g. 'IP66 / IP67 / NEMA 4X' or 'Indoor IP52')"
+    },
+    "ikRating": {
+      "type": "string",
+      "description": "Vandal impact resistance rating (e.g. 'IK10', 'IK10+')"
+    },
+    "outdoor": {
+      "type": "boolean",
+      "description": "True if camera is rated for outdoor exterior mounting (triggers DRC Rule 9 cable jacket and Rule 12 surge rules)"
+    },
+    "operatingTempMinC": {
+      "type": "number",
+      "default": -40
+    },
+    "operatingTempMaxC": {
+      "type": "number",
+      "default": 50
+    },
+    "weightLbs": {
+      "type": "number"
+    },
+    "msrp": {
+      "type": "number",
+      "description": "Manufacturer Suggested Retail Price in USD"
+    },
+    "taa": {
+      "type": "boolean",
+      "description": "NDAA / TAA compliant (US government / federal projects)"
+    },
+    "deepLearningAnalytics": {
+      "type": "boolean",
+      "description": "Onboard AI object classification / DLPU analytics"
+    },
+    "matingAccessories": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Compatible mounting brackets and accessories (e.g. ['T91B61-WALL', 'T91A64-CORNER', 'T91B57-POLE'])"
+    },
+    "keyFeatures": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
