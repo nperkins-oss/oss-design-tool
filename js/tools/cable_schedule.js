@@ -323,9 +323,12 @@ function generateCableScheduleData() {
  */
 function openCablePullScheduleModal() {
   let modal = document.getElementById("cableScheduleModal");
+  const viewport = document.getElementById("workspaceMainViewport") || document.body;
   if (!modal) {
     createCableScheduleModalDOM();
     modal = document.getElementById("cableScheduleModal");
+  } else if (modal.parentElement !== viewport) {
+    viewport.appendChild(modal);
   }
   if (!modal) return;
 
@@ -348,7 +351,7 @@ function createCableScheduleModalDOM() {
   if (document.getElementById("cableScheduleModal")) return;
 
   const modalHtml = `
-    <div id="cableScheduleModal" class="hidden fixed top-[100px] inset-x-0 bottom-0 z-30 bg-slate-950 flex flex-col p-1 sm:p-2 animate-fade-in">
+    <div id="cableScheduleModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col p-1 sm:p-2 animate-fade-in">
       <div class="bg-slate-900 border border-slate-800 rounded-xl w-full h-full flex flex-col shadow-2xl overflow-hidden">
         
         <!-- Header -->
@@ -447,7 +450,8 @@ function createCableScheduleModalDOM() {
     </div>
   `;
 
-  document.body.insertAdjacentHTML("beforeend", modalHtml);
+  const viewport = document.getElementById("workspaceMainViewport") || document.body;
+  viewport.insertAdjacentHTML("beforeend", modalHtml);
   if (window.lucide) lucide.createIcons();
 }
 

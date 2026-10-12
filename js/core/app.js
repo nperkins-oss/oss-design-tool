@@ -273,7 +273,6 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof updateCompareBadge === "function") updateCompareBadge();
   if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
   if (typeof renderProjectDefaultsSummary === "function") renderProjectDefaultsSummary();
-  if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(true);
   safeCreateIcons();
 });
 
@@ -335,7 +334,7 @@ function buildDomainNavigation() {
       : "text-slate-400 hover:text-slate-200 border-transparent hover:bg-slate-900/60";
 
     return `
-      <button onclick="switchDomain('${dKey}')" id="domain-tab-${dKey}" class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all ${activeClasses} cursor-pointer shrink-0">
+      <button onclick="switchDomain('${dKey}'); if (typeof toggleCatalogExpand === 'function') toggleCatalogExpand(false);" id="domain-tab-${dKey}" class="px-3 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all ${activeClasses} cursor-pointer shrink-0">
         <i data-lucide="${def.icon}" class="w-3.5 h-3.5 ${isActive ? 'text-brand-400' : 'text-slate-500'}"></i>
         <span>${def.label}</span>
       </button>
@@ -1782,15 +1781,13 @@ function toggleCatalogExpand(forceState = null) {
   }
 
   if (isCatalogExpanded) {
-    container.classList.remove("max-w-0", "opacity-0", "pointer-events-none");
-    container.classList.add("max-w-[900px]", "opacity-100", "pointer-events-auto");
+    container.classList.remove("hidden");
     if (chevron) chevron.style.transform = "rotate(180deg)";
     if (btn) {
       btn.classList.add("bg-brand-600/20", "border-brand-500/40", "text-brand-300");
     }
   } else {
-    container.classList.add("max-w-0", "opacity-0", "pointer-events-none");
-    container.classList.remove("max-w-[900px]", "opacity-100", "pointer-events-auto");
+    container.classList.add("hidden");
     if (chevron) chevron.style.transform = "";
     if (btn) {
       btn.classList.remove("bg-brand-600/20", "border-brand-500/40", "text-brand-300");
@@ -1808,8 +1805,6 @@ function handleCatalogNavClick() {
     if (!activeTab.startsWith("catalog")) {
       const targetDomain = typeof activeDomain !== "undefined" ? activeDomain : "networking";
       TabManager.openTab("catalog_" + targetDomain);
-      toggleCatalogExpand(true);
-      toggleFacilityExpand(false);
       return;
     }
   }
@@ -1831,16 +1826,14 @@ function toggleFacilityExpand(forceState = null) {
   }
 
   if (isFacilityExpanded) {
-    container.classList.remove("max-w-0", "opacity-0", "pointer-events-none");
-    container.classList.add("max-w-[700px]", "opacity-100", "pointer-events-auto");
+    container.classList.remove("hidden");
     if (chevron) chevron.style.transform = "rotate(180deg)";
     if (btn) {
       btn.classList.add("bg-sky-600/20", "border-sky-500/40", "text-sky-300");
     }
     updateFacilitySubNavUI();
   } else {
-    container.classList.add("max-w-0", "opacity-0", "pointer-events-none");
-    container.classList.remove("max-w-[700px]", "opacity-100", "pointer-events-auto");
+    container.classList.add("hidden");
     if (chevron) chevron.style.transform = "";
     if (btn) {
       btn.classList.remove("bg-sky-600/20", "border-sky-500/40", "text-sky-300");
@@ -1880,8 +1873,6 @@ function handleFacilityNavClick() {
     const cur = TabManager.getActiveTabId();
     if (cur !== "facility" && cur !== "enclosures" && cur !== "port_matrix") {
       TabManager.openTab("facility");
-      toggleFacilityExpand(true);
-      toggleCatalogExpand(false);
       return;
     }
   }
