@@ -236,21 +236,21 @@
 
   <!-- Top Navigation Header -->
   <header id="primaryTopHeader" class="bg-slate-900 border-b border-slate-800 shrink-0 z-50 relative">
-    <div class="px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+    <div class="px-3 sm:px-5 py-2 sm:py-2.5 flex items-center justify-between gap-2 lg:gap-4">
       
       <!-- Brand & Project Selector -->
-      <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/20">
-          <i data-lucide="shield-check" class="w-5 h-5"></i>
+      <div class="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        <div class="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-500/20 shrink-0">
+          <i data-lucide="shield-check" class="w-4 h-4 sm:w-5 sm:h-5"></i>
         </div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-sm font-bold text-white tracking-tight">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded">v0.10.44-alpha</span>
+            <h1 class="text-xs sm:text-sm font-bold text-white tracking-tight truncate max-w-[150px] sm:max-w-none">OSS Network Design Tool</h1>
+            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden xl:inline">v0.10.44-alpha</span>
           </div>
           <div class="flex items-center gap-2 mt-0.5">
             <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1.5 hover:text-white cursor-pointer" title="Switch or Manage Projects">
-              <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors font-semibold">Default Project</span>
+              <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors font-semibold truncate max-w-[110px] sm:max-w-[180px]">Default Project</span>
               <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500 group-hover:text-slate-300"></i>
             </button>
             <span class="text-slate-700 text-xs">|</span>
@@ -258,7 +258,8 @@
             <div class="relative" id="projectLevelMenuWrapper">
               <button onclick="toggleProjectLevelMenu()" class="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-sm" title="Project Level Tools (Revisions, Submittals, Standards)">
                 <i data-lucide="folder-cog" class="w-3 h-3 text-indigo-400"></i>
-                <span>Project Menu</span>
+                <span class="hidden sm:inline">Project Menu</span>
+                <span class="inline sm:hidden">Menu</span>
                 <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
               </button>
               
@@ -319,7 +320,7 @@
       </div>
 
       <!-- Omnichannel Global Catalog Search Bar (Ctrl+K) -->
-      <div id="headerGlobalSearchWrapper" class="relative flex-1 max-w-xs xl:max-w-md hidden lg:block">
+      <div id="headerGlobalSearchWrapper" class="relative flex-1 max-w-xs xl:max-w-md hidden xl:block">
         <div class="flex items-center gap-2 bg-slate-950/80 border border-slate-700/80 hover:border-slate-500 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20 rounded-xl px-3 py-1.5 transition-all shadow-inner">
           <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
           <input
@@ -364,36 +365,36 @@
       </div>
 
       <!-- Action Tools: Catalog, Facility, Topology, Physical Layout, Compare, DRC, BOM -->
-      <div class="flex items-center gap-2">
-        <button onclick="GlobalSearchEngine.openModal()" class="lg:hidden p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center transition-all shadow-sm" title="Global Catalog Search (Ctrl+K)">
+      <div class="flex items-center gap-1 sm:gap-1.5 xl:gap-2 shrink-0">
+        <button onclick="GlobalSearchEngine.openModal()" class="xl:hidden p-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center justify-center transition-all shadow-sm cursor-pointer" title="Global Catalog Search (Ctrl+K)">
           <i data-lucide="search" class="w-4 h-4 text-brand-400"></i>
         </button>
 
-        <!-- Inline Expandable Catalog Domain Selector -->
-        <div class="flex items-center gap-1.5 shrink-0" id="catalogDomainWrapper">
-          <button id="catalogExpandBtn" onclick="handleCatalogNavClick()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Product Catalog Domains">
-            <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
-            <span class="font-bold">Catalog</span>
+        <!-- Catalog Domain Selector (Inline on 2xl+, Clean Dropdown Popover on Compact Screens) -->
+        <div class="relative shrink-0" id="catalogDomainWrapper">
+          <button id="catalogExpandBtn" onclick="handleCatalogNavClick()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Product Catalog Domains">
+            <i data-lucide="layers" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-400"></i>
+            <span class="font-bold hidden sm:inline">Catalog</span>
             <i data-lucide="chevron-right" id="catalogExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
           </button>
 
-          <!-- Inline Domain Tabs (Smooth horizontal auto-expansion) -->
-          <div id="domainNavigationContainer" class="flex items-center gap-1 overflow-hidden transition-all duration-300 max-w-0 opacity-0 pointer-events-none whitespace-nowrap bg-slate-950/80 p-0.5 rounded-2xl border border-slate-800/80">
+          <!-- Domain Tabs Container -->
+          <div id="domainNavigationContainer" class="flex items-center gap-1 overflow-hidden transition-all duration-300 max-w-0 opacity-0 pointer-events-none whitespace-nowrap bg-slate-950/95 p-1 rounded-2xl border border-slate-700/90 2xl:relative 2xl:top-auto 2xl:left-auto 2xl:shadow-none 2xl:border-slate-800/80 absolute top-full mt-2 left-0 sm:left-auto sm:right-0 z-[75] shadow-2xl backdrop-blur-xl">
             <!-- Injected dynamically by buildDomainNavigation() in js/core/app.js -->
           </div>
         </div>
 
-        <!-- Inline Expandable Facility & Enclosures Sub-Views -->
-        <div class="flex items-center gap-1.5 shrink-0" id="facilityDomainWrapper">
-          <button id="facilityExpandBtn" onclick="handleFacilityNavClick()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Facility & Enclosures Studios">
-            <i data-lucide="building-2" class="w-4 h-4 text-sky-400"></i>
-            <span class="font-bold hidden sm:inline">Facility &amp; Enclosures</span>
-            <span class="font-bold sm:hidden">Facility</span>
+        <!-- Facility & Enclosures Selector (Inline on 2xl+, Clean Dropdown Popover on Compact Screens) -->
+        <div class="relative shrink-0" id="facilityDomainWrapper">
+          <button id="facilityExpandBtn" onclick="handleFacilityNavClick()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Facility & Enclosures Studios">
+            <i data-lucide="building-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-sky-400"></i>
+            <span class="font-bold hidden 2xl:inline">Facility &amp; Enclosures</span>
+            <span class="font-bold hidden sm:inline 2xl:hidden">Facility</span>
             <i data-lucide="chevron-right" id="facilityExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
           </button>
 
-          <!-- Inline Facility Sub-Views (Smooth horizontal auto-expansion) -->
-          <div id="facilityNavigationContainer" class="flex items-center gap-1 overflow-hidden transition-all duration-300 max-w-0 opacity-0 pointer-events-none whitespace-nowrap bg-slate-950/80 p-0.5 rounded-2xl border border-slate-800/80">
+          <!-- Facility Sub-Views Container -->
+          <div id="facilityNavigationContainer" class="flex items-center gap-1 overflow-hidden transition-all duration-300 max-w-0 opacity-0 pointer-events-none whitespace-nowrap bg-slate-950/95 p-1 rounded-2xl border border-slate-700/90 2xl:relative 2xl:top-auto 2xl:left-auto 2xl:shadow-none 2xl:border-slate-800/80 absolute top-full mt-2 left-0 sm:left-auto sm:right-0 z-[75] shadow-2xl backdrop-blur-xl">
             <button onclick="TabManager.openTab('facility')" id="facility-nav-hierarchy" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 transition-all cursor-pointer shrink-0" title="Floors, Spaces & Building Layout">
               <i data-lucide="building-2" class="w-3.5 h-3.5 text-sky-400"></i>
               <span>Hierarchy &amp; Spaces</span>
@@ -408,37 +409,50 @@
             </button>
           </div>
         </div>
-        <button onclick="toggleTopologyModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
-          <i data-lucide="network" class="w-4 h-4 text-emerald-400"></i>
-          <span class="hidden sm:inline">Topology Canvas</span>
+
+        <!-- Topology Canvas Studio Button -->
+        <button onclick="toggleTopologyModal()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Network Topology & Switch Uplink Designer">
+          <i data-lucide="network" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i>
+          <span class="hidden 2xl:inline">Topology Canvas</span>
+          <span class="hidden sm:inline 2xl:hidden">Topology</span>
         </button>
-        <button onclick="toggleCableLayoutModal()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm">
-          <i data-lucide="map" class="w-4 h-4 text-amber-400"></i>
-          <span class="hidden sm:inline">Physical Layout Canvas</span>
+
+        <!-- Physical Layout Canvas Studio Button -->
+        <button onclick="toggleCableLayoutModal()" class="px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Physical Layout & Cable Pathways Blueprint">
+          <i data-lucide="map" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-400"></i>
+          <span class="hidden 2xl:inline">Physical Layout Canvas</span>
+          <span class="hidden sm:inline 2xl:hidden">Physical</span>
         </button>
-        <button id="compareNavButton" onclick="toggleCompareModal()" class="hidden relative px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Compare selected models">
-          <i data-lucide="columns-3" class="w-4 h-4 text-purple-400"></i>
+
+        <!-- Hardware Comparison Matrix Button -->
+        <button id="compareNavButton" onclick="toggleCompareModal()" class="hidden relative px-2.5 py-1.5 sm:px-3 sm:py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Compare selected models">
+          <i data-lucide="columns-3" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-purple-400"></i>
           <span class="hidden sm:inline">Compare</span>
           <span id="compareCountBadge" class="hidden absolute -top-1.5 -right-1.5 bg-purple-500 text-white font-mono text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">0</span>
         </button>
-        <button id="projectHealthPill" onclick="toggleProjectHealthModal()" class="px-2.5 py-2 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Design Rule Checker (DRC): Real-time audit of TIA-568 distance limits, PoE power & classes, closet capacity, and scope compliance">
-          <i id="projectHealthPillIcon" data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
-          <span id="projectHealthPillLabel" class="hidden xl:inline">Design Validated</span>
+
+        <!-- Design Rule Checker (DRC) Health Audit Pill -->
+        <button id="projectHealthPill" onclick="toggleProjectHealthModal()" class="px-2 sm:px-2.5 py-1.5 sm:py-2 bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-400 border border-emerald-800/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Design Rule Checker (DRC): Real-time audit of TIA-568 distance limits, PoE power & classes, closet capacity, and scope compliance">
+          <i id="projectHealthPillIcon" data-lucide="check-circle-2" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400"></i>
+          <span id="projectHealthPillLabel" class="hidden 2xl:inline">Design Validated</span>
           <span id="projectHealthPillCount" class="hidden bg-rose-500 text-white font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
         </button>
-        <button onclick="toggleBomModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-all shadow-lg shadow-brand-500/25">
-          <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-          <span>Quote BOM</span>
+
+        <!-- Quote BOM Button -->
+        <button onclick="toggleBomModal()" class="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 sm:gap-2 transition-all shadow-lg shadow-brand-500/25 shrink-0 cursor-pointer">
+          <i data-lucide="shopping-bag" class="w-3.5 h-3.5 sm:w-4 sm:h-4"></i>
+          <span class="hidden 2xl:inline">Quote BOM</span>
+          <span class="inline 2xl:hidden">BOM</span>
           <span id="bomCountBadge" class="bg-white/20 text-white font-mono text-[11px] px-1.5 py-0.2 rounded-md">0</span>
         </button>
 
         <!-- Authenticated Corporate User Profile Pill -->
-        <div id="authUserWrapper" class="hidden items-center gap-2 pl-2 border-l border-slate-800">
+        <div id="authUserWrapper" class="hidden items-center gap-2 pl-2 border-l border-slate-800 shrink-0">
           <div class="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-slate-950/80 border border-slate-700/80 text-xs shadow-inner">
             <div id="authUserAvatar" class="w-5 h-5 rounded-full bg-gradient-to-tr from-brand-600 to-indigo-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
               U
             </div>
-            <span id="authUserEmail" class="text-slate-300 font-medium hidden md:inline max-w-[150px] truncate" title="Signed in corporate account">User</span>
+            <span id="authUserEmail" class="text-slate-300 font-medium hidden 2xl:inline max-w-[150px] truncate" title="Signed in corporate account">User</span>
             <a href="/.auth/logout?post_logout_redirect_uri=/login.html" class="text-slate-400 hover:text-rose-400 transition-colors ml-1 p-0.5" title="Sign Out">
               <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
             </a>
@@ -693,6 +707,9 @@
           </button>
           <button onclick="exportComprehensiveProjectCSV()" class="py-2 px-3 bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer" title="Export complete multi-section project CSV workbook">
             <i data-lucide="table" class="w-3.5 h-3.5 text-emerald-400"></i> Comprehensive CSV
+          </button>
+          <button onclick="exportProjectEngineeringWorkbook()" class="py-2 px-3 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer" title="Export 4-Tab Architectural Excel Engineering Workbook (.xls)">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-indigo-400"></i> Multi-Tab Excel (.XLS)
           </button>
           <button onclick="openEngineeringSubmittalModal()" class="py-2 px-4 bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md shadow-brand-500/20 cursor-pointer" title="Generate Proposal & Print Submittal">
             <i data-lucide="file-check" class="w-4 h-4"></i> Engineering Proposal
@@ -1024,25 +1041,28 @@
   <div id="cableLayoutModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col transition-all">
     <div id="cableModalCard" class="bg-slate-900 w-full h-full flex flex-col overflow-hidden transition-all">
       
-      <!-- Tier 1: Identity & Primary Actions Bar -->
-      <div class="px-5 py-2.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 shrink-0 gap-4">
+      <!-- Tier 1: Identity, Level Navigation & Primary Submittal Actions -->
+      <div class="px-4 sm:px-5 py-2 sm:py-2.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/90 shrink-0 gap-3">
         
-        <!-- Left: Level Navigation & Blueprint Picker -->
-        <div class="flex items-center gap-3 min-w-0">
+        <!-- Left: Level Navigation, Blueprint Picker & Calibration Badge -->
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-wrap">
           <div class="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
             <i data-lucide="map" class="w-4 h-4"></i>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <h2 class="text-sm font-bold text-white tracking-tight shrink-0">Physical Layout &amp; Cable Pathways</h2>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold shrink-0">TIA-568 Pathways</span>
+              <h2 class="text-xs sm:text-sm font-bold text-white tracking-tight shrink-0">Physical Layout &amp; Pathways</h2>
+              <span class="text-[9.5px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-bold hidden sm:inline shrink-0">TIA-568 Pathways</span>
             </div>
           </div>
-          <div class="flex items-center gap-1.5 ml-2">
-            <select id="floorSelector" onchange="switchActiveFloor(this.value)" class="bg-slate-900 border border-slate-700 text-amber-300 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500">
+          
+          <!-- Floor Switcher & Floor Manager Controls -->
+          <div class="flex items-center gap-1 sm:gap-1.5">
+            <select id="floorSelector" onchange="switchActiveFloor(this.value)" class="bg-slate-900 border border-slate-700 text-amber-300 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-amber-500 cursor-pointer shadow-sm">
             </select>
-            <button onclick="promptAddNewFloor()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors" title="Add Floor / Building Level">
-              <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i> Floor/Building
+            <button onclick="promptAddNewFloor()" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-sm" title="Add Floor / Building Level">
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span class="hidden md:inline">Floor/Level</span>
             </button>
             <button onclick="promptRenameActiveFloor()" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg border border-slate-700 text-xs flex items-center justify-center cursor-pointer transition-colors" title="Rename Current Floor/Building">
               <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
@@ -1050,89 +1070,153 @@
             <button onclick="promptDeleteActiveFloor()" class="p-1.5 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-400 rounded-lg border border-slate-700 hover:border-rose-800 text-xs flex items-center justify-center cursor-pointer transition-colors" title="Delete Current Floor/Building">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
-            <button onclick="openFacilityModal('hierarchy')" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors" title="Manage Facility, Floors/Buildings, Spaces & Enclosures Engine">
-              <i data-lucide="building-2" class="w-3.5 h-3.5 text-cyan-400"></i> Location Studio
-            </button>
-            <label class="cursor-pointer px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm">
+            
+            <label class="cursor-pointer px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all shadow-sm" title="Upload Architectural Blueprint (PDF, PNG, JPG, SVG)">
               <i data-lucide="file-up" class="w-3.5 h-3.5 text-sky-400"></i>
-              <span>Upload Plan</span>
+              <span class="hidden sm:inline">Upload Plan</span>
               <input type="file" id="floorPlanFileInput" accept="application/pdf,image/png,image/jpeg,image/svg+xml" onchange="handleUniversalPlanUpload(event)" class="hidden" />
             </label>
+
+            <!-- Interactive Blueprint Scale Badge -->
+            <button id="physHeaderScaleBtn" onclick="setCableTool('calibrate')" class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 hover:border-amber-400 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="Blueprint Scale: Click to calibrate across known distance (or press R)">
+              <i data-lucide="ruler" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span id="physHeaderScaleLabel">Scale: 100px = 25 ft</span>
+            </button>
+
+            <button onclick="openFacilityModal('hierarchy')" class="px-2 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 text-xs font-semibold hidden lg:flex items-center gap-1 cursor-pointer transition-colors" title="Manage Facility, Floors/Buildings, Spaces & Enclosures Engine">
+              <i data-lucide="building-2" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Spaces</span>
+            </button>
           </div>
         </div>
 
-        <!-- Right: Primary Actions -->
+        <!-- Right: Primary Engineering & Submittal Actions -->
         <div class="flex items-center gap-2 shrink-0">
-          <!-- Cable Schedule & Labels -->
-          <button onclick="openCablePullScheduleModal()" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer" title="Cable Pull Schedule & Field Cut Sheets">
-            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Cable Schedule
+          <!-- Real-Time TIA-568 Distance DRC Status Pill -->
+          <div id="physLayoutDrcPill" onclick="handlePhysicalDrcPillClick()" class="px-2.5 py-1.5 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/60 text-emerald-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer" title="TIA-568 Channel Distance Audit: Click to cycle through caution/violation runs">
+            <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span class="hidden sm:inline">Distances OK</span>
+          </div>
+
+          <!-- Cable Schedule & Labels Modal Trigger -->
+          <button onclick="openCablePullScheduleModal()" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer" title="TIA-606-C Structured Cable Pull Schedule & Orion 2-Line Heat Shrink Wire Marker Labels">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Cable Schedule</span>
           </button>
 
-          <!-- Sync to BOM -->
-          <button onclick="commitCablingToBOM()" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer" title="Commit cabling to BOM">
-            <i data-lucide="package-plus" class="w-3.5 h-3.5"></i> Add to Quote
+          <!-- 1-Click Sync Cabling & Panels to Quote BOM -->
+          <button onclick="commitCablingToBOM({ userInitiated: true })" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer" title="Commit horizontal cable runs, patch panels, keystones, and patch jumpers directly into Quote BOM">
+            <i data-lucide="package-plus" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Add to Quote</span>
           </button>
 
-          <!-- Toggle Inspector Drawer (like Topology) -->
-          <button id="cableInspectorHeaderBtn" onclick="togglePhysicalInspector()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer" title="Toggle Inspector Panel">
-            <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-400"></i> Inspector
+          <!-- Toggle Inspector Drawer -->
+          <button id="cableInspectorHeaderBtn" onclick="togglePhysicalInspector()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer" title="Toggle Hardware Inspector & Live Rack Peek Panel">
+            <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span class="hidden md:inline">Inspector</span>
           </button>
 
-          <button onclick="toggleModalFullscreen()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-slate-700" title="Expand Fullscreen">
+          <button onclick="toggleModalFullscreen()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-slate-700 transition-colors" title="Expand Fullscreen">
             <i data-lucide="maximize-2" id="iconFullscreen" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
 
-      <!-- Tier 2: Drawing Toolbar & Canvas Controls -->
-      <div class="px-5 py-2 border-b border-slate-800 flex flex-wrap items-center justify-between bg-slate-900/90 shrink-0 gap-3 text-xs">
+      <!-- Tier 2: Clustered Engineering Toolbar & Canvas View Controls -->
+      <div class="px-4 sm:px-5 py-2 border-b border-slate-800 flex items-center justify-between bg-slate-900/95 shrink-0 gap-2.5 text-xs overflow-x-auto no-scrollbar">
         
-        <!-- Left: Tool Selector & Place All -->
-        <div class="flex items-center gap-2">
-          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs">
-            <button id="tool-select" onclick="setCableTool('select')" class="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-medium flex items-center gap-1 shadow">
-              <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i> Select & Route
+        <!-- Left: Clustered Tool Commands -->
+        <div class="flex items-center gap-2 shrink-0">
+          
+          <!-- Cluster 1: Pointer & Selection -->
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs shadow-inner">
+            <button id="tool-select" onclick="setCableTool('select')" class="px-2.5 py-1 rounded-lg bg-brand-600 text-white font-bold flex items-center gap-1.5 shadow transition-all" title="Select, Move & Route Drops (Press V)">
+              <i data-lucide="mouse-pointer" class="w-3.5 h-3.5"></i>
+              <span>Select</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">V</kbd>
             </button>
-            <button id="tool-marquee" onclick="setCableTool('marquee')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1" title="Marquee Multi-Select (or Shift+Drag on Canvas)">
-              <i data-lucide="box-select" class="w-3.5 h-3.5 text-indigo-400"></i> Multi-Select
-            </button>
-            <button id="tool-device" onclick="setCableTool('device')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1">
-              <i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i> Drop
-            </button>
-            <button id="tool-mdf" onclick="setCableTool('mdf')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1">
-              <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Closet
-            </button>
-            <button id="tool-pathway" onclick="setCableTool('pathway')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1" title="Draw Main Cable Pathway Corridor (Trays, J-Hooks, Conduits)">
-              <i data-lucide="route" class="w-3.5 h-3.5 text-amber-400"></i> Pathway Trunk
-            </button>
-            <button id="tool-fiber" onclick="setCableTool('fiber')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1" title="Connect closets with fiber backbone">
-              <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i> Fiber Backbone
-            </button>
-            <button id="tool-auto-fiber" onclick="manualAutoLinkTopology()" class="px-2.5 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-800/80 text-cyan-300 hover:text-white font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Auto-link closets with fiber backbones based on Topology inter-switch uplinks">
-              <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i> Auto-Link Topology
-            </button>
-            <button onclick="placeAllUnplacedOnActiveFloor()" class="px-2.5 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600 border border-amber-500/40 text-amber-200 hover:text-white font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Place all unplaced devices for this location onto the floor blueprint">
-              <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i> Place All
+            <button id="tool-marquee" onclick="setCableTool('marquee')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-all" title="Marquee Multi-Select Box (Press M or Shift+Drag on Canvas)">
+              <i data-lucide="box-select" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span class="hidden sm:inline">Marquee</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">M</kbd>
             </button>
           </div>
 
-          <button id="btnOrthogonalToggle" onclick="toggleOrthogonalMode()" class="px-2.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors">
-            <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-400"></i>
-            <span id="orthoLabel">90°: OFF</span>
-          </button>
+          <!-- Cluster 2: Equipment Drops -->
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs shadow-inner">
+            <button id="tool-device" onclick="setCableTool('device')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-all" title="Place Device Drop: IP Camera, Access Door, Intercom, Sensor (Press D)">
+              <i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>+ Drop</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">D</kbd>
+            </button>
+            <button id="tool-mdf" onclick="setCableTool('mdf')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-all" title="Place Telecommunications Room / Enclosure (Press C)">
+              <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>+ Closet</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">C</kbd>
+            </button>
+            <button id="placeAllUnplacedBtn" onclick="placeAllUnplacedOnActiveFloor()" class="px-2.5 py-1 rounded-lg bg-amber-600/30 hover:bg-amber-600 border border-amber-500/40 text-amber-200 hover:text-white font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Auto-place unplaced BOM devices onto this floor blueprint">
+              <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span class="hidden md:inline">Place Unplaced</span>
+              <span id="btnPlaceUnplacedCount" class="px-1.5 py-0.2 rounded bg-amber-500/30 text-[10px] font-mono font-bold">0</span>
+            </button>
+          </div>
+
+          <!-- Cluster 3: Pathways & Cabling -->
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs shadow-inner">
+            <button id="tool-pathway" onclick="setCableTool('pathway')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-all" title="Draw Main Cable Pathway Corridor: Trays, J-Hooks, Conduits (Press T)">
+              <i data-lucide="route" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span class="hidden sm:inline">Pathway</span>
+              <span class="inline sm:hidden">Trunk</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">T</kbd>
+            </button>
+            <button id="tool-fiber" onclick="setCableTool('fiber')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-all" title="Connect closets with high-speed Fiber Backbone trunk (Press F)">
+              <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Fiber</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">F</kbd>
+            </button>
+            <button id="tool-auto-fiber" onclick="manualAutoLinkTopology()" class="px-2 py-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-800/80 text-cyan-300 hover:text-white font-semibold hidden xl:flex items-center gap-1 transition-colors cursor-pointer" title="Auto-link closets with fiber backbones based on Topology core switch uplinks">
+              <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Auto-Link</span>
+            </button>
+            <button id="btnOrthogonalToggle" onclick="toggleOrthogonalMode()" class="px-2 py-1 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Toggle 90° Orthogonal Cable Bends">
+              <i data-lucide="corner-down-right" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span id="orthoLabel">90°: OFF</span>
+            </button>
+            <button id="btnTogglePhysicalCableIds" onclick="togglePhysicalCableIds()" class="px-2 py-1 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Toggle TIA-606-C Cable ID Labels on floor drops">
+              <i data-lucide="tag" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span class="hidden lg:inline">Cable IDs</span>
+            </button>
+          </div>
+
+          <!-- Cluster 4: Calibration & Field Audit -->
+          <div class="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 gap-1 text-xs shadow-inner">
+            <button id="tool-calibrate" onclick="setCableTool('calibrate')" class="px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1.5 transition-all" title="Calibrate Floor Plan Scale: Click 2 points across known distance (Press R)">
+              <i data-lucide="ruler" class="w-3.5 h-3.5 text-yellow-400"></i>
+              <span class="hidden sm:inline">Calibrate</span>
+              <kbd class="text-[9px] font-mono opacity-70 bg-black/40 px-1 py-0.2 rounded font-normal">R</kbd>
+            </button>
+            <button id="btnWalkAuditModal" onclick="openWalkReconciliationModal()" class="px-2.5 py-1 rounded-lg border border-emerald-700/80 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-sm cursor-pointer" title="Open Onsite Camera Walk Audit & Blueprint Reconciliation Studio">
+              <i data-lucide="clipboard-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Walk Audit</span>
+            </button>
+            <button id="btnCanvasFieldAudit" onclick="toggleCanvasFieldAuditMode()" class="px-2.5 py-1 rounded-lg border border-slate-800 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Toggle Field Walk Mode: Click any drop on canvas to quickly verify or flag">
+              <i data-lucide="check-square" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Walk Mode</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Right: Search, Layers, Zoom, Cable Spec -->
-        <div class="flex items-center gap-2">
+        <!-- Right: View Controls, Search, Layers, Revision Compare & Spec -->
+        <div class="flex items-center gap-2 shrink-0">
           <!-- Quick Search & Jump Menu -->
-          <div class="relative flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1">
+          <div class="relative flex items-center bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1 shadow-inner">
             <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 mr-1.5"></i>
             <input 
               type="text" 
               id="physCanvasSearchInput" 
-              placeholder="Find device or rack..." 
+              placeholder="Find drop or rack..." 
               oninput="filterPhysCanvasSearch(this.value)" 
-              class="bg-transparent font-medium text-xs text-slate-200 placeholder-slate-500 focus:outline-none w-24 sm:w-32 focus:w-40 transition-all"
+              class="bg-transparent font-medium text-xs text-slate-200 placeholder-slate-500 focus:outline-none w-20 sm:w-28 focus:w-36 transition-all"
               autocomplete="off"
             />
             <div id="physQuickSearchResults" class="hidden absolute left-0 top-full mt-1.5 w-64 max-h-72 overflow-y-auto bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-1.5 space-y-1 backdrop-blur-md"></div>
@@ -1140,9 +1224,9 @@
 
           <!-- Physical Layers Filter Menu -->
           <div class="relative" id="physicalLayerFilterContainer">
-            <button id="btnPhysicalLayers" onclick="togglePhysicalLayerMenu()" class="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Filter Physical Layout Device Layers">
+            <button id="btnPhysicalLayers" onclick="togglePhysicalLayerMenu()" class="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm" title="Filter Physical Layout Device Layers">
               <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
-              <span>Layers</span>
+              <span class="hidden sm:inline">Layers</span>
               <span id="badgePhysicalLayerCount" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 font-bold">All</span>
             </button>
             <div id="physicalLayerMenu" class="hidden absolute right-0 top-full mt-1.5 w-64 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 backdrop-blur-md">
@@ -1157,45 +1241,53 @@
               <div class="space-y-1.5 text-xs">
                 <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
                   <input type="checkbox" id="physLayer-cameras" checked onchange="setPhysicalLayerFilter('cameras', this.checked)" class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i> Cameras & Video</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i> Cameras &amp; Video</span>
                 </label>
                 <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
                   <input type="checkbox" id="physLayer-access" checked onchange="setPhysicalLayerFilter('access', this.checked)" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control & Doors</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control &amp; Doors</span>
                 </label>
                 <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
                   <input type="checkbox" id="physLayer-wireless" checked onchange="setPhysicalLayerFilter('wireless', this.checked)" class="rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-sky-400"></i> Wireless Bridges & Radios</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-sky-400"></i> Wireless Bridges &amp; Radios</span>
                 </label>
                 <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
                   <input type="checkbox" id="physLayer-closets" checked onchange="setPhysicalLayerFilter('closets', this.checked)" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="server" class="w-3.5 h-3.5 text-amber-400"></i> Closets & Hosts</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="server" class="w-3.5 h-3.5 text-amber-400"></i> Closets &amp; Hosts</span>
                 </label>
                 <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
                   <input type="checkbox" id="physLayer-pathways" checked onchange="setPhysicalLayerFilter('pathways', this.checked)" class="rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="git-commit" class="w-3.5 h-3.5 text-indigo-400"></i> Cable Runs & Pathways</span>
+                  <span class="flex items-center gap-1.5"><i data-lucide="git-commit" class="w-3.5 h-3.5 text-indigo-400"></i> Cable Runs &amp; Pathways</span>
                 </label>
               </div>
             </div>
           </div>
 
+          <!-- Visual Revision Compare Dropdown -->
+          <div class="hidden xl:flex items-center">
+            <select id="physRevisionCompareSelect" onchange="setPhysicalRevisionCompare(this.value)" class="bg-slate-950 border border-slate-800 text-purple-300 font-bold text-xs rounded-xl px-2 py-1.5 focus:outline-none cursor-pointer max-w-[130px] truncate shadow-inner" title="Visual Revision Diff: Highlight additions, deletions & modifications against snapshot">
+              <option value="none">Compare Rev: Off</option>
+            </select>
+          </div>
+
           <!-- Canvas Zoom & Fit Controls -->
-          <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5">
+          <div class="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5 shadow-inner">
             <button onclick="adjustCanvasZoom(-0.15)" class="px-2 py-1 text-slate-400 hover:text-white text-xs font-bold" title="Zoom Out">-</button>
             <span id="canvasZoomLabel" class="text-[10px] font-mono text-slate-300 px-1 font-bold">100%</span>
             <button onclick="adjustCanvasZoom(0.15)" class="px-2 py-1 text-slate-400 hover:text-white text-xs font-bold" title="Zoom In">+</button>
             <button onclick="resetCanvasZoom()" class="px-1.5 py-1 text-slate-500 hover:text-slate-300 text-[10px]" title="Reset Zoom">
               <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
             </button>
-            <button onclick="fitPhysicalLayoutToScreen()" class="px-2 py-1 text-slate-300 hover:text-white rounded hover:bg-slate-800 border-l border-slate-800 ml-0.5 transition-colors flex items-center gap-1 text-[11px] font-semibold" title="Fit & Center All Floor Elements">
-              <i data-lucide="maximize-2" class="w-3 h-3 text-amber-400"></i> Fit All
+            <button onclick="fitPhysicalLayoutToScreen()" class="px-2 py-1 text-slate-300 hover:text-white rounded hover:bg-slate-800 border-l border-slate-800 ml-0.5 transition-colors flex items-center gap-1 text-[11px] font-semibold" title="Fit &amp; Center All Floor Elements">
+              <i data-lucide="maximize-2" class="w-3 h-3 text-amber-400"></i>
+              <span class="hidden sm:inline">Fit</span>
             </button>
           </div>
 
           <!-- Cable Spec Selector -->
-          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1 text-xs">
-            <span class="text-slate-400 text-[10px] uppercase font-mono">Spec:</span>
-            <select id="cableTypeSelector" onchange="updateSelectedCableSpec(this.value)" class="bg-transparent text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer max-w-[110px] truncate">
+          <div class="flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-xl px-2 py-1 text-xs shadow-inner">
+            <span class="text-slate-400 text-[10px] uppercase font-mono hidden sm:inline">Spec:</span>
+            <select id="cableTypeSelector" onchange="updateSelectedCableSpec(this.value)" class="bg-transparent text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer max-w-[105px] truncate">
               <option value="C6A-CMP-1K-BL">Cat6A Plenum</option>
               <option value="C6A-CMR-1K-BL">Cat6A Riser</option>
               <option value="C6-CMP-1K-BL">Cat6 Plenum</option>
@@ -2178,6 +2270,12 @@
                   </button>
                 </div>
 
+                <!-- Patch Cords & Jumpers Toggle -->
+                <button id="btnRackPatchJumpers" onclick="toggleRackPatchJumpers()" class="px-2.5 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-600/70 text-cyan-300 font-bold text-xs rounded-lg flex items-center gap-1 shadow-sm transition-all ml-1 cursor-pointer" title="Toggle Switch-to-Patch Panel 1:1 Jumper Visualizer">
+                  <i data-lucide="git-commit" class="w-3 h-3 text-cyan-400"></i>
+                  <span>Patch Cords: ON</span>
+                </button>
+
                 <!-- 0U Vertical Channels & PDU Config (For 19" equipment racks) -->
                 <div id="rackPduConfigControl" class="flex items-center gap-1.5 ml-1">
                   <button type="button" onclick="toggleRackVerticalChannelsModal()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/60 rounded-lg text-xs font-semibold text-indigo-300 flex items-center gap-1 shadow-inner transition-all cursor-pointer" title="Configure 4-Corner 0U Verticals: PDUs or Cable Managers in Front-Left, Front-Right, Rear-Left, Rear-Right">
@@ -2658,6 +2756,8 @@
   <script src="js/tools/cable_schedule.js"></script>
   <script src="js/tools/revisions.js"></script>
   <script src="js/tools/submittal_generator.js"></script>
+  <script src="js/tools/walk_reconciliation.js"></script>
+  <script src="js/tools/engineering_workbook_export.js"></script>
 
   <!-- Master Application Orchestrator -->
   <script src="js/core/app.js"></script>

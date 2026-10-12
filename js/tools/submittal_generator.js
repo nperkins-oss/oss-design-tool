@@ -4,8 +4,51 @@
  * Engineering Submittal Packages (Title Page, Scope, BOM, Rack Elevation, 
  * Cable Pull Schedule, UPS Battery Standby Engine, and Design Sign-Off).
  */
-
 const SubmittalGenerator = {
+  generateDatasheetsHtml(bomItems = null) {
+    const bom = bomItems || (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) ? projectBOM : []);
+    const uniqueItems = [];
+    const seenSkus = new Set();
+    bom.forEach(i => {
+      const key = i.sku || i.model;
+      if (!seenSkus.has(key)) {
+        seenSkus.add(key);
+        uniqueItems.push(i);
+      }
+    });
+
+    return `
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 14%;">Manufacturer</th>
+            <th style="width: 22%;">Part / Model Number</th>
+            <th style="width: 20%;">Subsystem / Role</th>
+            <th style="width: 44%;">Technical Cut Sheet / Specification Reference</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${uniqueItems.map(item => {
+            let ds = (typeof CATALOG_ASSETS !== "undefined" && item.sku && CATALOG_ASSETS[item.sku]) ? CATALOG_ASSETS[item.sku].datasheetPath : null;
+            if (!ds && typeof CATALOG_ASSETS !== "undefined" && item.id && CATALOG_ASSETS[item.id]) ds = CATALOG_ASSETS[item.id].datasheetPath;
+            const dsLabel = ds ? ds.split('/').pop().replace('.pdf', '') : `${item.vendor || 'Manufacturer'} Technical Specification Data Sheet`;
+
+            return `
+              <tr>
+                <td style="font-weight: bold; color: #1a202c;">${escapeHTML(item.vendor || 'Generic')}</td>
+                <td><code style="font-size: 8pt; background: #edf2f7; padding: 1px 4px; border-radius: 3px;">${escapeHTML(item.sku || item.model)}</code></td>
+                <td style="color: #4a5568;">${escapeHTML(item.role || item.category || 'Infrastructure')}</td>
+                <td style="font-size: 8pt; color: #2b6cb0;">
+                  📄 ${escapeHTML(dsLabel)}
+                </td>
+              </tr>
+            `;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+  },
+
   gatherProjectData() {
     const projName = typeof StorageService !== "undefined" ? StorageService.getActiveProjectName() : "Security & Network Infrastructure";
     const projId = typeof StorageService !== "undefined" ? StorageService.getActiveProjectId() : "default";
@@ -223,6 +266,10 @@ function createSubmittalModalDOM() {
         </div>
 
         <div class="flex items-center gap-2">
+          <button onclick="exportProjectEngineeringWorkbook()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer" title="Export Multi-Tab Excel Engineering Workbook with BOM, Cable Schedule, Port Matrix, and Rack Elevations">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>Export Multi-Tab Excel (.XLS)</span>
+          </button>
           <button onclick="printSubmittalPackage()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
             <i data-lucide="printer" class="w-4 h-4"></i>
             <span>Print / Save as PDF</span>
@@ -780,6 +827,52 @@ function printSubmittalPackage() {
             </table>
           </div>
         ` : ''}
+
+        <!-- SECTION 7: TECHNICAL EQUIPMENT CUT SHEET APPENDIX -->
+        <div class="page">
+          <h2>Section 7: Technical Equipment Datasheet &amp; Cut Sheet Appendix</h2>
+          <p>Technical specification cut sheets for all major Division 27 and Division 28 hardware quoted in this project submittal:</p>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 14%;">Manufacturer</th>
+                <th style="width: 22%;">Part / Model Number</th>
+                <th style="width: 20%;">Subsystem / Role</th>
+                <th style="width: 44%;">Technical Cut Sheet / Specification Reference</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${(() => {
+                const uniqueItems = [];
+                const seenSkus = new Set();
+                data.bom.forEach(i => {
+                  const key = i.sku || i.model;
+                  if (!seenSkus.has(key)) {
+                    seenSkus.add(key);
+                    uniqueItems.push(i);
+                  }
+                });
+
+                return uniqueItems.map(item => {
+                  let ds = (typeof CATALOG_ASSETS !== "undefined" && item.sku && CATALOG_ASSETS[item.sku]) ? CATALOG_ASSETS[item.sku].datasheetPath : null;
+                  if (!ds && typeof CATALOG_ASSETS !== "undefined" && item.id && CATALOG_ASSETS[item.id]) ds = CATALOG_ASSETS[item.id].datasheetPath;
+                  const dsLabel = ds ? ds.split('/').pop().replace('.pdf', '') : `${item.vendor || 'Manufacturer'} Technical Specification Data Sheet`;
+
+                  return `
+                    <tr>
+                      <td style="font-weight: bold; color: #1a202c;">${escapeHTML(item.vendor || 'Generic')}</td>
+                      <td><code style="font-size: 8pt; background: #edf2f7; padding: 1px 4px; border-radius: 3px;">${escapeHTML(item.sku || item.model)}</code></td>
+                      <td style="color: #4a5568;">${escapeHTML(item.role || item.category || 'Infrastructure')}</td>
+                      <td style="font-size: 8pt; color: #2b6cb0;">
+                        📄 ${escapeHTML(dsLabel)}
+                      </td>
+                    </tr>
+                  `;
+                }).join('');
+              })()}
+            </tbody>
+          </table>
+        </div>
 
         <!-- FINAL PAGE: CODE STANDARDS & SIGNOFF -->
         <div class="page">

@@ -1532,6 +1532,18 @@ document.addEventListener("keydown", (e) => {
       return;
     }
 
+    // 2b. Catalog & Facility Menus
+    if (typeof isCatalogExpanded !== "undefined" && isCatalogExpanded) {
+      e.preventDefault();
+      toggleCatalogExpand(false);
+      return;
+    }
+    if (typeof isFacilityExpanded !== "undefined" && isFacilityExpanded) {
+      e.preventDefault();
+      toggleFacilityExpand(false);
+      return;
+    }
+
     // 3. Global Search Modal (Ctrl+K Command Palette) & Dropdown
     const globalSearchModal = document.getElementById("globalSearchModal");
     if (globalSearchModal && !globalSearchModal.classList.contains("hidden")) {
@@ -1884,6 +1896,19 @@ window.handleFacilityNavClick = handleFacilityNavClick;
 window.toggleFacilityExpand = toggleFacilityExpand;
 window.updateFacilitySubNavUI = updateFacilitySubNavUI;
 window.isFacilityExpanded = isFacilityExpanded;
+
+// Click-outside listener for Catalog and Facility popovers
+document.addEventListener("click", (e) => {
+  const catWrapper = document.getElementById("catalogDomainWrapper");
+  if (catWrapper && isCatalogExpanded && !catWrapper.contains(e.target)) {
+    toggleCatalogExpand(false);
+  }
+  const facWrapper = document.getElementById("facilityDomainWrapper");
+  if (facWrapper && isFacilityExpanded && !facWrapper.contains(e.target)) {
+    toggleFacilityExpand(false);
+  }
+});
+
 
 // Outside click handler to close projectLevelDropdown
 document.addEventListener("click", (e) => {

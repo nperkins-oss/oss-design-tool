@@ -82,26 +82,93 @@ function generateCableScheduleData() {
     }
   });
 
-  // 2. Iterate through each closet and assign sequential Patch Panel & Port numbers
+  // 2. Determine project-wide Building and Floor counts for standard legend formatting
+  const totalFloorCount = (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) ? facilityFloors.length : 1;
+  const buildingSet = new Set();
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    facilityFloors.forEach(fl => {
+      const bMatch = (fl.name || "").match(/b(?:uildin)?g\s*([a-zA-Z0-9]+)/i);
+      if (bMatch) buildingSet.add(bMatch[1].toUpperCase());
+    });
+  }
+  const isMultiBuilding = buildingSet.size > 1;
+  const isMultiFloor = totalFloorCount > 1;
+
+  // Subsystem Sort Hierarchy per Orion Legend: 1. ACS Doors -> 2. Cameras (VMS) -> 3. Intrusion -> 4. Intercom/Data
+  const getSubsystemPriority = (layer) => {
+    if (layer === "access") return 1;
+    if (layer === "cameras") return 2;
+    if (layer === "intrusion") return 3;
+    if (layer === "intercom") return 4;
+    return 5;
+  };
+
+  // 3. Iterate through each closet and assign sequential cable numbers per OSS Standard Cable Label Legend
   Object.keys(dropsByCloset).sort().forEach(closetKey => {
-    const drops = dropsByCloset[closetKey];
+    const rawDrops = dropsByCloset[closetKey];
     const closetCode = closetKey.split(" • ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase() || "MDF";
 
+    // Sort drops by Orion Subsystem Order, then by device tag/number
+    const drops = [...rawDrops].sort((a, b) => {
+      const devLayerA = (typeof getDeviceLayerType === "function") ? getDeviceLayerType(a.bomItem || a.devNode) : "cameras";
+      const devLayerB = (typeof getDeviceLayerType === "function") ? getDeviceLayerType(b.bomItem || b.devNode) : "cameras";
+      const pDiff = getSubsystemPriority(devLayerA) - getSubsystemPriority(devLayerB);
+      if (pDiff !== 0) return pDiff;
+
+      const numA = (a.bomItem && a.bomItem.deviceNumber) ? a.bomItem.deviceNumber : (a.devNode ? a.devNode.deviceNumber : "");
+      const numB = (b.bomItem && b.bomItem.deviceNumber) ? b.bomItem.deviceNumber : (b.devNode ? b.devNode.deviceNumber : "");
+      return String(numA).localeCompare(String(numB), undefined, { numeric: true });
+    });
+
     drops.forEach((entry, idx) => {
-      const dropIndex = idx + 1;
+      // Sequential unique cable number per closet per OSS Standard Cable Label Legend
+      const cableNumber = idx + 1;
+      const dropIndex = cableNumber;
       const panelNum = Math.ceil(dropIndex / 24);
       const panelPort = ((dropIndex - 1) % 24) + 1;
       const panelTag = `PP${String(panelNum).padStart(2, "0")}-${String(panelPort).padStart(2, "0")}`;
-      const cableId = `${closetCode}-${panelTag}`;
 
       const dev = entry.devNode;
       const bom = entry.bomItem;
       const targetDev = bom || dev || {};
 
+      // Parse Building and Floor tokens for Legend: [Building]-[Floor]-[Closet]-[CableNumber]
+      let bldgToken = "";
+      let floorToken = "";
+      const flName = entry.floorName || "";
+      const bMatch = flName.match(/b(?:uildin)?g\s*([a-zA-Z0-9]+)/i);
+      if (bMatch) {
+        bldgToken = bMatch[1].toUpperCase();
+      } else if (isMultiBuilding) {
+        bldgToken = "1";
+      }
+
+      const fMatch = flName.match(/(?:level|floor|fl|lvl)\s*([a-zA-Z0-9]+)/i) || flName.match(/^([0-9]+)/);
+      if (fMatch) {
+        floorToken = fMatch[1].toUpperCase();
+      } else if (isMultiFloor) {
+        floorToken = "1";
+      }
+
+      // Format Cable ID per OSS Standard Cable Label Legend:
+      // Multi-building & Multi-floor: 1-2-IDFC-11
+      // Multi-floor standalone: 2-IDFA-11
+      // Single-story standalone: IDFC-11 or IDF2-26
+      let cableId = "";
+      if (bldgToken && floorToken) {
+        cableId = `${bldgToken}-${floorToken}-${closetCode}-${cableNumber}`;
+      } else if (floorToken && isMultiFloor) {
+        cableId = `${floorToken}-${closetCode}-${cableNumber}`;
+      } else if (bldgToken) {
+        cableId = `${bldgToken}-${closetCode}-${cableNumber}`;
+      } else {
+        cableId = `${closetCode}-${cableNumber}`;
+      }
+
       // Device Naming and Tag
       let deviceNum = (bom && bom.deviceNumber) ? bom.deviceNumber : (dev && dev.deviceNumber ? dev.deviceNumber : null);
       if (!deviceNum) {
-        deviceNum = String(dropIndex).padStart(3, '0');
+        deviceNum = String(cableNumber).padStart(3, '0');
       }
 
       let deviceTag = (bom && bom.deviceNumber) ? bom.deviceNumber : (dev ? (dev.label || dev.name) : null);
@@ -109,7 +176,7 @@ function generateCableScheduleData() {
         const prefix = (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.getDeviceType === "function")
           ? DeviceTaxonomy.getDeviceType(targetDev)?.prefix
           : "DEV";
-        deviceTag = `${prefix || 'DEV'}-${String(dropIndex).padStart(2, '0')}`;
+        deviceTag = `${prefix || 'DEV'}-${String(cableNumber).padStart(2, '0')}`;
       }
 
       const deviceName = bom ? (bom.friendlyName || bom.model) : (dev ? (dev.label || dev.name || "Edge Device") : "Field Drop");
@@ -119,20 +186,46 @@ function generateCableScheduleData() {
       const devLayer = (typeof getDeviceLayerType === "function") ? getDeviceLayerType(bom || dev) : "cameras";
       const subsystemLabel = devLayer === "cameras" ? "Surveillance (VMS)" :
                              devLayer === "access" ? "Access Control (ACS)" :
+                             devLayer === "intrusion" ? "Intrusion (IDS)" :
+                             devLayer === "intercom" ? "Video Intercom" :
                              devLayer === "wireless" ? "Wireless / PtP" : "Data Network";
 
-      // Run Standards (Color & Category)
+      // Environmental Detection: Indoor vs. Outdoor/Burial
+      const locationDesc = dev && dev.spaceName ? dev.spaceName : (entry.floorName || "Field");
+      const locLower = (locationDesc + " " + (entry.closetName || "") + " " + (targetDev.model || "")).toLowerCase();
+      const isOutdoorDrop = targetDev.outdoor === true ||
+                            targetDev.isOutdoor === true ||
+                            locLower.includes("outdoor") ||
+                            locLower.includes("pole") ||
+                            locLower.includes("exterior") ||
+                            locLower.includes("perimeter") ||
+                            locLower.includes("yard") ||
+                            locLower.includes("parking") ||
+                            locLower.includes("roof") ||
+                            targetDev.cableSku === "C6A-OUTDOOR-1K";
+
+      // Run Standards (Color & Category per TOW Structured Cabling: Cat6A CMP indoor, CMX/Gel-Filled outdoor)
+      let runCategory = isOutdoorDrop ? "Cat6A OSP Direct Burial (Gel-Filled)" : "Cat6A CMP Plenum";
+      let runColor = isOutdoorDrop ? "Black" : "Yellow";
+      let runHex = isOutdoorDrop ? "#1e293b" : "#eab308";
+
       const runStd = (typeof getProjectCablingStandard === "function")
         ? getProjectCablingStandard(targetDev, "run")
-        : { color: "Yellow", category: "Cat6A CMP", hex: "#eab308" };
+        : null;
+
+      if (runStd && !isOutdoorDrop) {
+        runCategory = runStd.category || runCategory;
+        runColor = runStd.color || runColor;
+        runHex = runStd.hex || runHex;
+      }
 
       const patchStd = (typeof getProjectCablingStandard === "function")
         ? getProjectCablingStandard(targetDev, "patch")
         : { color: "Yellow", lengthFt: 1, hex: "#eab308" };
 
-      // Measured Length & Cut Length (Footage + Service Loops: 10ft at device, 15ft in closet per Orion standard)
+      // Measured Length & Cut Length (Footage + Service Loops: 10ft at device, 15ft in closet per TOW standard p. 8)
       const measuredFt = dev && dev.calculatedRun ? Math.round(dev.calculatedRun.totalFt || 0) : 125;
-      const serviceLoopFt = 25; // 10ft drop + 15ft rack dressing
+      const serviceLoopFt = 25; // 10ft at drop + 15ft at telecom rack dressing
       const cutLengthFt = measuredFt > 0 ? measuredFt + serviceLoopFt : 150;
 
       // Switch Port Termination
@@ -164,43 +257,22 @@ function generateCableScheduleData() {
       const switchPortTag = switchPortNumber ? `${switchCode}P${switchPortNumber}` : `${switchCode}P${panelPort}`;
 
       // =========================================================================
-      // ORION 2-LINE LABELING STANDARDS (TOW_Structured Cabling Standards, Page 4)
+      // OSS STANDARD CABLE LABEL LEGEND (Docx & TOW Cabling Standard)
+      // Rule 1: Always label both ends of ALL cables with the same cable label
+      // Rule 2: Affix label within 6 inches of cable termination
+      // Rule 3: Brady PN: M21-750-499 Black on White Nylon cloth tape (vinyl for outdoor/wet)
       // =========================================================================
-      let headendLabelLine1 = "";
-      let headendLabelLine2 = "";
-      let fieldLabelLine1 = "";
-      let fieldLabelLine2 = "";
+      const headendLabelLine1 = cableId;
+      const headendLabelLine2 = `${deviceTag} → ${switchPortTag}`;
 
-      const locationDesc = dev && dev.spaceName ? dev.spaceName : (entry.floorName || "Field");
+      const fieldLabelLine1 = cableId;
+      const fieldLabelLine2 = `${deviceTag} → ${locationDesc}`;
 
-      if (devLayer === "cameras") {
-        // Orion Figure 3: Camera / Network Cable Label
-        // Switch End: Line 1: [017-SW1P1] | Line 2: Camera Number -> Switch/Port
-        headendLabelLine1 = `${deviceNum}-${switchPortTag}`;
-        headendLabelLine2 = `${deviceTag} → ${switchPortTag}`;
-
-        // Camera End: Line 1: [017-B850] | Line 2: Camera Number -> Connected Building/Area
-        fieldLabelLine1 = `${deviceNum}-${closetCode}`;
-        fieldLabelLine2 = `${deviceTag} → ${locationDesc}`;
-      } else if (devLayer === "access") {
-        // Orion Figure 4 & 5: Alarm Point / Access Control Cable Label
-        // Format: [Panel]-AP[Alarm Point] / Building/Area + [Device]
-        headendLabelLine1 = `${closetCode}-AP${deviceNum}`;
-        headendLabelLine2 = `${locationDesc} ${deviceName}`;
-
-        fieldLabelLine1 = `${closetCode}-AP${deviceNum}`;
-        fieldLabelLine2 = `${locationDesc} ${deviceName}`;
-      } else {
-        // General Communication: COMM-[Panel]-[Type]-[Seq] / [From] -> [To]
-        headendLabelLine1 = `COMM-${panelTag}`;
-        headendLabelLine2 = `${closetCode} → ${deviceTag}`;
-
-        fieldLabelLine1 = `COMM-${deviceNum}-${closetCode}`;
-        fieldLabelLine2 = `${deviceTag} → ${locationDesc}`;
-      }
+      const labelTapePart = isOutdoorDrop ? "Brady Vinyl (Outdoor/Wet Rated)" : "Brady M21-750-499 (Nylon Cloth)";
 
       schedule.push({
         cableId,
+        cableNumber,
         dropIndex,
         panelNum,
         panelPort,
@@ -208,16 +280,16 @@ function generateCableScheduleData() {
         closetName: entry.closetName,
         closetCode,
         floorName: entry.floorName,
-        roomName: dev && dev.spaceName ? dev.spaceName : "General Space",
+        roomName: locationDesc,
         deviceNum,
         deviceTag,
         deviceName,
         deviceModel,
         subsystem: subsystemLabel,
         subsystemKey: devLayer,
-        runCategory: runStd.category || "Cat6A CMP",
-        runColor: runStd.color || "Yellow",
-        runHex: runStd.hex || "#eab308",
+        runCategory,
+        runColor,
+        runHex,
         patchColor: patchStd.color || "Yellow",
         patchHex: patchStd.hex || "#eab308",
         patchLengthFt: patchStd.lengthFt || 1,
@@ -234,6 +306,8 @@ function generateCableScheduleData() {
         headendLabelLine2,
         fieldLabelLine1,
         fieldLabelLine2,
+        labelTapePart,
+        isOutdoorDrop,
         isOverLimit: measuredFt > 295,
         instanceId: bom ? bom.instanceId : (dev ? dev.instanceId : null),
         nodeId: dev ? dev.id : null
@@ -308,10 +382,10 @@ function createCableScheduleModalDOM() {
         <div class="px-5 py-2 bg-amber-950/30 border-b border-amber-800/40 text-[11px] text-amber-300 flex flex-wrap items-center justify-between gap-3">
           <div class="flex items-center gap-2">
             <i data-lucide="info" class="w-4 h-4 shrink-0 text-amber-400"></i>
-            <span><strong>Orion Mandatory Installation Parameters:</strong> T568-B horizontal terminations (100m / 328ft channel max) &bull; CMP Plenum required for all indoor runs (NEC 300.22(C)) &bull; Support every 5' (every 4' for trunks ≥ 5 cables) &bull; 90° corners, no diagonal routing.</span>
+            <span><strong>Orion Mandatory Standards:</strong> OSS Cable Label Legend (Building-Floor-Location-Cable#) &bull; Brady PN: M21-750-499 Black on White Nylon cloth tape affixed within 6" of termination &bull; T568-B horizontal terminations (100m / 328ft max channel) &bull; CMP Plenum indoors / CMX-Gel-Filled outdoor &bull; 90° pathway routing &bull; 6" power separation.</span>
           </div>
           <div class="flex items-center gap-3 text-slate-300 font-mono text-[10px]">
-            <span>Separation: 6" from conduit, 12" from power lines, 24" from comm/lighting</span>
+            <span>Tape: Brady M21-750-499 Nylon (Vinyl Wet/Outdoor) | Separation: 6" from power</span>
           </div>
         </div>
 
@@ -575,14 +649,15 @@ function exportCableScheduleCSV() {
   }
 
   const headers = [
-    "Cable ID",
+    "OSS Cable Label (Legend)",
     "Origin Closet",
-    "Patch Panel",
-    "Panel Port",
+    "Patch Panel Port",
     "Headend Label L1",
     "Headend Label L2",
     "Field Label L1",
     "Field Label L2",
+    "Brady Label Tape Spec",
+    "Termination Offset",
     "Floor",
     "Room / Space",
     "Device Tag",
@@ -604,12 +679,13 @@ function exportCableScheduleCSV() {
   const rows = allRuns.map(r => [
     r.cableId,
     r.closetName,
-    `PP-${r.panelNum}`,
-    r.panelPort,
+    r.panelTag || `PP-${r.panelNum}`,
     r.headendLabelLine1,
     r.headendLabelLine2,
     r.fieldLabelLine1,
     r.fieldLabelLine2,
+    r.labelTapePart || "Brady M21-750-499 Nylon Cloth",
+    "Within 6 inches of termination",
     r.floorName,
     r.roomName,
     r.deviceTag,
@@ -625,7 +701,7 @@ function exportCableScheduleCSV() {
     r.switchPortNumber ? `Port ${r.switchPortNumber}` : "Unpatched",
     r.portVlan,
     r.portPoe,
-    "TOW_Structured Cabling Standards (T568-B, CMP Plenum)"
+    "OSS Standard Cable Label Legend & TOW Structured Cabling"
   ]);
 
   const csvContent = [
@@ -702,9 +778,10 @@ function printCableSchedule() {
         </div>
 
         <div class="spec-box">
-          <strong>Installation Parameters:</strong><br>
-          • <strong>Termination:</strong> T568-B both ends, solid-core horizontal runs (100m / 328ft max channel).<br>
-          • <strong>Cabling Route:</strong> Route through spaces using 90° corners, not diagonally. Outside cabling must terminate within 50' of building entry.<br>
+          <strong>Orion Installation &amp; Commissioning Parameters:</strong><br>
+          • <strong>Termination &amp; Channel:</strong> T568-B solid-core horizontal runs (100m / 328ft max channel, 90m / 295ft permanent link).<br>
+          • <strong>Labeling Standard (OSS Cable Legend):</strong> Affix uniform labels within 6" of termination at both ends using Brady M21-750-499 Black on White Nylon cloth tape (vinyl for outdoor/wet). Unique sequential numbering per closet (ACS → Cameras → IDS → Network). Both ends carry identical Cable ID.<br>
+          • <strong>Cabling Route:</strong> Route through spaces using 90° corners, not diagonally. Outside cabling must terminate within 50' of building entry (NEC 800.100).<br>
           • <strong>Pathway Support:</strong> Supported every 5' minimum for single runs, every 4' minimum for trunks (≥5 cables). Max 50% visual J-hook fill.<br>
           • <strong>Separation from Power:</strong> 6" from power line conduits; 12" from unshielded lines/lighting; 24" for communications; 90° crossing only.
         </div>
@@ -712,11 +789,11 @@ function printCableSchedule() {
         <table>
           <thead>
             <tr>
-              <th>Patch Panel</th>
+              <th>OSS Cable ID</th>
               <th>Headend Label (2-Line)</th>
               <th>Field Device Label (2-Line)</th>
               <th>Destination Device &amp; Room</th>
-              <th style="text-align: center;">Cable Spec</th>
+              <th style="text-align: center;">Cable Spec &amp; Tape</th>
               <th style="text-align: center;">Cut Length</th>
               <th>Switch Port</th>
             </tr>

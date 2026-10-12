@@ -4,6 +4,13 @@
 // ==========================================
 
 let projectBOM = [];
+try {
+  Object.defineProperty(window, "projectBOM", {
+    get: () => projectBOM,
+    set: (val) => { projectBOM = val; },
+    configurable: true
+  });
+} catch(e) {}
 let bomViewMode = "grouped"; // "grouped" | "category" | "flat"
 let bomSearchQuery = "";
 let bomSelectedLocation = "all";

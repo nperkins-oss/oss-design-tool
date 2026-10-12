@@ -17,6 +17,13 @@ let isModalFullscreen = false;
 
 let activeFloorId = null;
 let facilityFloors = [];
+try {
+  Object.defineProperty(window, "facilityFloors", {
+    get: () => facilityFloors,
+    set: (val) => { facilityFloors = val; },
+    configurable: true
+  });
+} catch(e) {}
 
 let fiberFirstClosetId = null;
 
@@ -38,8 +45,12 @@ let physicalLayerFilters = {
 
 // Enhanced Physical Engineering State: Cable IDs, DRC Distance Violations, and Revision Compare
 let showPhysicalCableIds = false;
+let isFieldWalkMode = false;
+let isPhysSpacebarDown = false;
+let isPhysKeyListenersInitialized = false;
 let activeRevisionCompareId = null;
 let currentDistanceViolationNodeIndex = -1;
+let scaleCalibrationStartPoint = null;
 
 function getDeviceCableId(dev) {
   if (!dev) return "";
@@ -53,7 +64,7 @@ function getDeviceCableId(dev) {
   }
   const closetShort = (dev.assignedCloset || (dev.calculatedRun && dev.calculatedRun.closetName) || "MDF").split("•")[0].trim().replace(/\s+/g, "");
   const devNum = (dev.deviceNumber || dev.name || "01").replace(/\D/g, "") || "01";
-  return `${closetShort}-PP01-${String(devNum).padStart(2, '0')}`;
+  return `${closetShort}-${String(devNum).padStart(2, '0')}`;
 }
 
 function getFloorDistanceViolations(floor = null) {
@@ -123,6 +134,24 @@ function togglePhysicalCableIds() {
   renderCableCanvas();
   if (typeof showToast === "function") {
     showToast(showPhysicalCableIds ? "TIA-606-C Cable IDs displayed on floorplan." : "Cable ID tags hidden.");
+  }
+}
+
+function toggleFieldWalkMode() {
+  isFieldWalkMode = !isFieldWalkMode;
+  const btn = document.getElementById("btnToggleWalkMode");
+  if (btn) {
+    if (isFieldWalkMode) {
+      btn.classList.add("bg-amber-600", "text-white", "shadow");
+      btn.classList.remove("text-slate-300", "hover:text-white");
+    } else {
+      btn.classList.remove("bg-amber-600", "text-white", "shadow");
+      btn.classList.add("text-slate-300", "hover:text-white");
+    }
+  }
+  renderCableCanvas();
+  if (typeof showToast === "function") {
+    showToast(isFieldWalkMode ? "Field Walk Mode Active: Enlarged touch hit areas enabled for tablet site audits." : "Field Walk Mode Deactivated.");
   }
 }
 
@@ -315,8 +344,11 @@ function toggleCableLayoutModal() {
     }
     renderFloorSelector();
     syncFloorControlInputs();
+    updateUnplacedCountBadge();
+    populateRevisionCompareDropdown();
     recalculateCurrentFloorCables();
     renderCableCanvas();
+    updatePhysicalDrcPill();
     renderInspector();
     renderSidebarTabContent();
     setTimeout(() => {
@@ -415,6 +447,97 @@ function loadFacilityState() {
 let isPhysViewportPanning = false;
 let physPanStart = { x: 0, y: 0, scrollLeft: 0, scrollTop: 0 };
 
+function deleteSelectedPhysicalItems() {
+  if (selectedNodeIds && selectedNodeIds.size > 1) {
+    executeBulkDeleteNodes();
+    return;
+  }
+  if (selectedNodeId) {
+    const floor = getActiveFloor();
+    const node = floor?.nodes?.find(n => n.id === selectedNodeId);
+    if (node) {
+      if (node.type === "closet") {
+        deleteClosetWithReassignment(node.id);
+      } else {
+        deleteNode(node.id);
+      }
+      return;
+    }
+  }
+  if (selectedPathwayTrunkId) {
+    deletePathwayTrunk(selectedPathwayTrunkId);
+    return;
+  }
+  if (selectedFiberBackboneId) {
+    deleteFiberBackbone(selectedFiberBackboneId);
+    return;
+  }
+}
+
+function handlePhysKeyDown(e) {
+  if (!isPhysCanvasVisible()) return;
+  const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
+  if (activeTag === "input" || activeTag === "textarea" || activeTag === "select" || document.activeElement?.isContentEditable) {
+    return;
+  }
+
+  // Spacebar pan mode
+  if (e.code === "Space" && !e.repeat) {
+    isPhysSpacebarDown = true;
+    const viewport = document.getElementById("cableCanvasViewport");
+    if (viewport && !isPhysViewportPanning) {
+      viewport.style.cursor = "grab";
+    }
+    e.preventDefault();
+    return;
+  }
+
+  // Physical Layout Hotkeys
+  const key = e.key.toUpperCase();
+  if (key === "V") {
+    setCableTool("select");
+  } else if (key === "M") {
+    setCableTool("marquee");
+  } else if (key === "D") {
+    setCableTool("device");
+  } else if (key === "C") {
+    setCableTool("mdf");
+  } else if (key === "T") {
+    setCableTool("pathway");
+  } else if (key === "F") {
+    setCableTool("fiber");
+  } else if (key === "R") {
+    setCableTool("calibrate");
+  } else if (e.key === "Delete" || e.key === "Backspace") {
+    deleteSelectedPhysicalItems();
+    e.preventDefault();
+  } else if (e.key === "Escape") {
+    if (activeCableTool !== "select") {
+      setCableTool("select");
+    } else {
+      selectedNodeId = null;
+      selectedNodeIds.clear();
+      selectedFiberBackboneId = null;
+      selectedPathwayTrunkId = null;
+      activeDrawingPathwayId = null;
+      scaleCalibrationStartPoint = null;
+      renderInspector();
+      renderSidebarTabContent();
+      renderCableCanvas();
+    }
+  }
+}
+
+function handlePhysKeyUp(e) {
+  if (e.code === "Space") {
+    isPhysSpacebarDown = false;
+    const viewport = document.getElementById("cableCanvasViewport");
+    if (viewport && !isPhysViewportPanning) {
+      viewport.style.cursor = "default";
+    }
+  }
+}
+
 function initCableCanvas() {
   const svg = document.getElementById("cableSvgCanvas");
   const viewport = document.getElementById("cableCanvasViewport");
@@ -423,10 +546,29 @@ function initCableCanvas() {
   svg.dataset.initialized = "true";
   svg.addEventListener("mousedown", handlePhysMouseDown);
   if (viewport) {
+    viewport.addEventListener("mousedown", (e) => {
+      if (e.button === 1 || isPhysSpacebarDown) {
+        isPhysViewportPanning = true;
+        physPanStart = {
+          x: e.clientX,
+          y: e.clientY,
+          scrollLeft: viewport.scrollLeft,
+          scrollTop: viewport.scrollTop
+        };
+        viewport.style.cursor = "grabbing";
+        e.preventDefault();
+      }
+    });
     viewport.addEventListener("wheel", handlePhysWheel, { passive: false });
   }
   window.addEventListener("mousemove", handlePhysMouseMove);
   window.addEventListener("mouseup", handlePhysMouseUp);
+
+  if (!isPhysKeyListenersInitialized) {
+    isPhysKeyListenersInitialized = true;
+    window.addEventListener("keydown", handlePhysKeyDown);
+    window.addEventListener("keyup", handlePhysKeyUp);
+  }
 }
 
 function handlePhysWheel(e) {
@@ -449,6 +591,25 @@ function getCanvasCoordinates(e) {
 
 function handlePhysMouseDown(e) {
   if (!isPhysCanvasVisible()) return;
+
+  // Spacebar pan mode or Middle-Click pan mode
+  if (e.button === 1 || isPhysSpacebarDown) {
+    const viewport = document.getElementById("cableCanvasViewport");
+    if (viewport) {
+      isPhysViewportPanning = true;
+      physPanStart = {
+        x: e.clientX,
+        y: e.clientY,
+        scrollLeft: viewport.scrollLeft,
+        scrollTop: viewport.scrollTop
+      };
+      viewport.style.cursor = "grabbing";
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+  }
+
   const pos = getCanvasCoordinates(e);
   const floor = getActiveFloor();
   if (!floor) return;
@@ -500,7 +661,53 @@ function handlePhysMouseDown(e) {
     return;
   }
 
-  // 1b. Main Pathway Trunk Corridor Tool
+  // 1b. Floor Plan Scale Calibration Tool
+  if (activeCableTool === "calibrate") {
+    if (!scaleCalibrationStartPoint) {
+      scaleCalibrationStartPoint = { x: pos.x, y: pos.y };
+      renderCableCanvas();
+      if (typeof showToast === "function") {
+        showToast("Point 1 marked. Now click Point 2 at the other end of known distance.");
+      }
+    } else {
+      const p1 = scaleCalibrationStartPoint;
+      const p2 = { x: pos.x, y: pos.y };
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const distPx = Math.sqrt(dx * dx + dy * dy);
+      scaleCalibrationStartPoint = null;
+
+      if (distPx < 5) {
+        if (typeof showToast === "function") showToast("Points too close together to calibrate scale.");
+        renderCableCanvas();
+        return;
+      }
+
+      const input = prompt(`Measured calibration vector: ${Math.round(distPx)} pixels.\nEnter real-world distance in feet (e.g. 10 for corridor, 3 for door opening, 30 for building bay):`, "10");
+      if (input !== null) {
+        const realFeet = parseFloat(input);
+        if (realFeet > 0) {
+          const scaleFtFor100Px = (realFeet / distPx) * 100;
+          floor.scaleFt = Math.round(scaleFtFor100Px * 10) / 10;
+          const scaleInput = document.getElementById("cableScaleFt");
+          if (scaleInput) scaleInput.value = floor.scaleFt;
+          syncFloorControlInputs();
+          recalculateCurrentFloorCables();
+          renderCableCanvas();
+          saveFacilityState();
+          setCableTool("select");
+          if (typeof showToast === "function") {
+            showToast(`Scale Calibrated! 100px = ${floor.scaleFt} ft (${Math.round((distPx / realFeet) * 10) / 10} px/ft)`);
+          }
+        }
+      } else {
+        renderCableCanvas();
+      }
+    }
+    return;
+  }
+
+  // 1c. Main Pathway Trunk Corridor Tool
   if (activeCableTool === "pathway") {
     floor.pathwayTrunks = floor.pathwayTrunks || [];
     if (!activeDrawingPathwayId) {
@@ -711,6 +918,17 @@ function handlePhysMouseDown(e) {
     const nodeId = nodeEl.getAttribute("data-node-id");
     const node = floor.nodes.find(n => n.id === nodeId);
     if (node) {
+      if (typeof WalkReconciliationEngine !== "undefined" && WalkReconciliationEngine.isFieldAuditModeActive) {
+        node.walkVerified = !node.walkVerified;
+        node.walkDate = new Date().toISOString().split('T')[0];
+        saveFacilityState();
+        renderCableCanvas();
+        if (typeof showToast === "function") {
+          showToast(`${node.name}: Marked ${node.walkVerified ? "✓ VERIFIED" : "Unverified"}`);
+        }
+        return;
+      }
+
       selectedPathwayTrunkId = null;
       selectedFiberBackboneId = null;
 
@@ -880,7 +1098,7 @@ function handlePhysMouseUp() {
   if (isPhysViewportPanning) {
     isPhysViewportPanning = false;
     const viewport = document.getElementById("cableCanvasViewport");
-    if (viewport) viewport.style.cursor = "default";
+    if (viewport) viewport.style.cursor = isPhysSpacebarDown ? "grab" : "default";
   }
 
   if (isMarqueeSelecting) {
@@ -1109,11 +1327,17 @@ function syncFloorControlInputs() {
   const slackInput = document.getElementById("cableSlackFt");
   const slabInput = document.getElementById("cableSlabFt");
   const cableSelect = document.getElementById("cableTypeSelector");
+  const scaleBadgeLabel = document.getElementById("physHeaderScaleLabel");
+
+  const scaleFtVal = floor ? (floor.scaleFt || 25) : 25;
+  if (scaleBadgeLabel) {
+    scaleBadgeLabel.textContent = `Scale: 100px = ${scaleFtVal} ft`;
+  }
 
   if (!floor) {
     if (scaleInput) scaleInput.value = 25;
     if (slackInput) slackInput.value = 15;
-    if (slabInput) slabInput.value = 14;
+    if (slabInput) slackInput.value = 14;
     return;
   }
 
@@ -1187,14 +1411,16 @@ function setCableTool(tool) {
     activeDrawingPathwayId = null;
   }
 
-  const tools = ["select", "marquee", "device", "mdf", "pathway", "fiber"];
+  const tools = ["select", "marquee", "device", "mdf", "pathway", "fiber", "calibrate"];
   tools.forEach(t => {
     const btn = document.getElementById(`tool-${t}`);
     if (!btn) return;
     if (t === tool) {
-      btn.className = "px-2.5 py-1 rounded-lg bg-brand-600 text-white font-medium flex items-center gap-1 shadow";
+      btn.classList.add("bg-brand-600", "text-white", "shadow");
+      btn.classList.remove("text-slate-300", "hover:text-white");
     } else {
-      btn.className = "px-2.5 py-1 rounded-lg text-slate-300 hover:text-white flex items-center gap-1";
+      btn.classList.remove("bg-brand-600", "text-white", "shadow");
+      btn.classList.add("text-slate-300", "hover:text-white");
     }
   });
 
@@ -1204,6 +1430,7 @@ function setCableTool(tool) {
     else if (tool === "marquee") svg.style.cursor = "crosshair";
     else if (tool === "pathway") svg.style.cursor = "crosshair";
     else if (tool === "fiber") svg.style.cursor = "cell";
+    else if (tool === "calibrate") svg.style.cursor = "crosshair";
     else svg.style.cursor = "crosshair";
   }
 
@@ -1213,6 +1440,8 @@ function setCableTool(tool) {
     showToast("Pathway Trunk Mode: Click to draw main cable tray / J-hook corridors.");
   } else if (tool === "marquee" && typeof showToast === "function") {
     showToast("Marquee Multi-Select: Click and drag a box across devices to bulk-select.");
+  } else if (tool === "calibrate" && typeof showToast === "function") {
+    showToast("Scale Calibration: Click Point 1, then Point 2 across a known distance (e.g. corridor or door).");
   }
 }
 
@@ -1270,23 +1499,26 @@ function applyCanvasZoom() {
 }
 
 function toggleModalFullscreen() {
-  const card = document.getElementById("cableModalCard");
+  const modal = document.getElementById("cableLayoutModal");
   const icon = document.getElementById("iconFullscreen");
   isModalFullscreen = !isModalFullscreen;
 
-  if (isModalFullscreen) {
-    card.classList.replace("max-w-7xl", "max-w-full");
-    card.classList.replace("h-[95vh]", "h-screen");
-    card.classList.replace("rounded-2xl", "rounded-none");
-    if (icon) icon.setAttribute("data-lucide", "minimize-2");
-  } else {
-    card.classList.replace("max-w-full", "max-w-7xl");
-    card.classList.replace("h-screen", "h-[95vh]");
-    card.classList.replace("rounded-none", "rounded-2xl");
-    if (icon) icon.setAttribute("data-lucide", "maximize-2");
+  if (modal) {
+    if (isModalFullscreen) {
+      modal.classList.remove("p-2", "sm:p-4");
+      modal.classList.add("p-0");
+    } else {
+      modal.classList.remove("p-0");
+      modal.classList.add("p-2", "sm:p-4");
+    }
   }
-  if (window.lucide) lucide.createIcons();
+
+  if (icon) {
+    icon.setAttribute("data-lucide", isModalFullscreen ? "minimize-2" : "maximize-2");
+    if (window.lucide) lucide.createIcons();
+  }
 }
+window.togglePhysicalLayoutFullscreen = toggleModalFullscreen;
 
 // -----------------------------------------------------------
 // Telemetry & Calculations
@@ -1588,6 +1820,10 @@ function recalculateCurrentFloorCables() {
     if (scaleInput) floor.scaleFt = parseFloat(scaleInput.value) || 25;
     if (slackInput) floor.slackFt = parseFloat(slackInput.value) || 15;
     if (slabInput) floor.slabFt = parseFloat(slabInput.value) || 14;
+    const scaleBadgeLabel = document.getElementById("physHeaderScaleLabel");
+    if (scaleBadgeLabel) {
+      scaleBadgeLabel.textContent = `Scale: 100px = ${floor.scaleFt || 25} ft`;
+    }
   }
 
   const allClosets = getAllClosetsAcrossFacility();
@@ -1741,7 +1977,35 @@ function isFieldDeviceForPhysicalLayout(item) {
   return isEdge || item.isFieldDevice === true;
 }
 
+function getUnplacedDevicesCount() {
+  const placedInstanceIds = new Set();
+  facilityFloors.forEach(fl => {
+    (fl.nodes || []).forEach(n => {
+      if (n.instanceId) placedInstanceIds.add(n.instanceId);
+      if (n.id && n.id.startsWith("dev-")) placedInstanceIds.add(n.id.replace("dev-", ""));
+      if (n.id) placedInstanceIds.add(n.id);
+    });
+  });
+
+  const unplacedBOM = (typeof projectBOM !== "undefined" ? projectBOM : []).filter(item => {
+    if (typeof isFieldDeviceForPhysicalLayout === "function") {
+      if (!isFieldDeviceForPhysicalLayout(item)) return false;
+    }
+    return !placedInstanceIds.has(item.instanceId);
+  });
+
+  return unplacedBOM.length;
+}
+
+function updateUnplacedCountBadge() {
+  const countBadge = document.getElementById("btnPlaceUnplacedCount");
+  if (!countBadge) return;
+  const count = getUnplacedDevicesCount();
+  countBadge.textContent = count;
+}
+
 function renderSidebarTabContent() {
+  updateUnplacedCountBadge();
   const container = document.getElementById("sidebarTabContent");
   if (!container) return;
 
@@ -3604,6 +3868,15 @@ function renderCableCanvas() {
 
     ${floor.image ? `
       <image id="svgFloorPlanImage" href="${floor.image}" x="0" y="0" width="4500" height="2800" preserveAspectRatio="xMidYMid meet" opacity="${floor.opacity || 0.7}" />
+    ` : (!floor.nodes || floor.nodes.length === 0) ? `
+      <g transform="translate(620, 380)" text-anchor="middle" class="opacity-80 select-none pointer-events-none">
+        <rect x="-260" y="-100" width="520" height="200" rx="16" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-dasharray="6 6" stroke-width="1.5" />
+        <circle cx="0" cy="-35" r="28" fill="#1e293b"/>
+        <path d="M -10 -35 L 10 -35 M 0 -45 L 0 -25" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round"/>
+        <text x="0" y="10" fill="#f1f5f9" font-size="16" font-weight="bold" font-family="system-ui, sans-serif">Upload Plan or Place Equipment</text>
+        <text x="0" y="32" fill="#94a3b8" font-size="12" font-family="system-ui, sans-serif">Use "Upload Plan" for PDF/CAD or press [D] for Drop, [C] for Closet</text>
+        <text x="0" y="52" fill="#64748b" font-size="11" font-family="system-ui, sans-serif">Press [V] Select • [M] Marquee • [T] Trunk • [F] Fiber • [R] Calibrate Scale</text>
+      </g>
     ` : ''}
   `;
 
@@ -4351,12 +4624,20 @@ function renderCableCanvas() {
       g.appendChild(modPill);
     }
 
+    const baseRadius = (isFieldWalkMode ? 17 : 12) + (isSelected ? 3 : 0);
     const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("r", isSelected ? 15 : 12);
+    circle.setAttribute("r", baseRadius);
     circle.setAttribute("fill", isSelected ? "#047857" : "#064e3b");
     circle.setAttribute("stroke", isSelected ? "#34d399" : "#10b981");
     circle.setAttribute("stroke-width", isSelected ? "3.5" : "2");
     g.appendChild(circle);
+
+    if (isFieldWalkMode) {
+      const touchHit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      touchHit.setAttribute("r", "28");
+      touchHit.setAttribute("fill", "transparent");
+      g.appendChild(touchHit);
+    }
 
     const devNum = (bomItem && bomItem.deviceNumber) || dev.deviceNumber;
     if (devNum && !isChannelViolation && !isDistanceCaution && !revStatus) {
@@ -4414,8 +4695,62 @@ function renderCableCanvas() {
       }
     }
 
+    // Walk Audit Verified Badge
+    if (dev.walkVerified) {
+      const auditG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      const yOffset = showPhysicalCableIds ? 50 : 34;
+      auditG.setAttribute("transform", `translate(0, ${yOffset})`);
+      const badgeBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      badgeBg.setAttribute("x", "-32"); badgeBg.setAttribute("y", "-7");
+      badgeBg.setAttribute("width", "64"); badgeBg.setAttribute("height", "14");
+      badgeBg.setAttribute("rx", "4");
+      badgeBg.setAttribute("fill", "#064e3b");
+      badgeBg.setAttribute("stroke", "#10b981");
+      badgeBg.setAttribute("stroke-width", "1");
+      auditG.appendChild(badgeBg);
+
+      const badgeTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      badgeTxt.setAttribute("x", "0"); badgeTxt.setAttribute("y", "3.5");
+      badgeTxt.setAttribute("text-anchor", "middle");
+      badgeTxt.setAttribute("fill", "#a7f3d0");
+      badgeTxt.setAttribute("font-size", "7.5");
+      badgeTxt.setAttribute("font-weight", "bold");
+      badgeTxt.setAttribute("font-family", "monospace");
+      badgeTxt.textContent = "✓ VERIFIED";
+      auditG.appendChild(badgeTxt);
+      g.appendChild(auditG);
+    }
+
     svg.appendChild(g);
   });
+
+  // Scale Calibration In-Progress Marker
+  if (scaleCalibrationStartPoint) {
+    const calG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    calG.setAttribute("transform", `translate(${scaleCalibrationStartPoint.x}, ${scaleCalibrationStartPoint.y})`);
+    const cDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    cDot.setAttribute("r", "8");
+    cDot.setAttribute("fill", "#eab308");
+    cDot.setAttribute("stroke", "#ffffff");
+    cDot.setAttribute("stroke-width", "2");
+    calG.appendChild(cDot);
+    const cPulse = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    cPulse.setAttribute("r", "18");
+    cPulse.setAttribute("fill", "none");
+    cPulse.setAttribute("stroke", "#eab308");
+    cPulse.setAttribute("stroke-width", "1.5");
+    cPulse.setAttribute("stroke-dasharray", "3 3");
+    calG.appendChild(cPulse);
+    const cText = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    cText.setAttribute("x", "0"); cText.setAttribute("y", "-14");
+    cText.setAttribute("text-anchor", "middle");
+    cText.setAttribute("fill", "#fef08a");
+    cText.setAttribute("font-size", "9");
+    cText.setAttribute("font-weight", "bold");
+    cText.textContent = "Point 1 (Now Click Pt 2)";
+    calG.appendChild(cText);
+    svg.appendChild(calG);
+  }
 
   // 5. Visual Revision Compare - Demolished / Removed Ghost Nodes
   if (activeRevisionCompareId && typeof RevisionEngine !== "undefined") {
@@ -4468,8 +4803,9 @@ function renderCableCanvas() {
     }
   }
 
-  // Update live Physical DRC Distance status pill
+  // Update live Physical DRC Distance status pill and unplaced count badge
   updatePhysicalDrcPill();
+  updateUnplacedCountBadge();
 }
 
 // -----------------------------------------------------------
@@ -5406,6 +5742,10 @@ if (typeof window !== "undefined") {
 
   // Engineering View State exports
   window.togglePhysicalCableIds = togglePhysicalCableIds;
+  window.toggleFieldWalkMode = toggleFieldWalkMode;
+  window.updateUnplacedCountBadge = updateUnplacedCountBadge;
+  window.deleteSelectedPhysicalItems = deleteSelectedPhysicalItems;
+  window.togglePhysicalLayoutFullscreen = toggleModalFullscreen;
   window.stepToNextDistanceViolation = handlePhysicalDrcPillClick;
   window.handlePhysicalDrcPillClick = handlePhysicalDrcPillClick;
   window.getSelectedNodeId = () => selectedNodeId;
