@@ -1200,6 +1200,27 @@ function renderFloorSelector() {
   }).join('');
 }
 
+function toggleFloorActionMenu(forceState) {
+  const menu = document.getElementById("floorActionMenu");
+  if (!menu) return;
+  if (typeof forceState === "boolean") {
+    if (forceState) menu.classList.remove("hidden");
+    else menu.classList.add("hidden");
+  } else {
+    menu.classList.toggle("hidden");
+  }
+}
+
+document.addEventListener("click", (e) => {
+  const floorContainer = document.getElementById("floorActionsDropdownContainer");
+  const floorMenu = document.getElementById("floorActionMenu");
+  if (floorMenu && !floorMenu.classList.contains("hidden")) {
+    if (floorContainer && !floorContainer.contains(e.target)) {
+      floorMenu.classList.add("hidden");
+    }
+  }
+});
+
 function switchActiveFloor(floorId) {
   activeFloorId = floorId;
   selectedNodeId = null;
@@ -5754,4 +5775,5 @@ if (typeof window !== "undefined") {
   window.exportFloorplanToSubmittal = exportFloorplanToSubmittal;
   window.getDeviceCableId = getDeviceCableId;
   window.getFloorDistanceViolations = getFloorDistanceViolations;
+  window.toggleFloorActionMenu = toggleFloorActionMenu;
 }
