@@ -26,6 +26,147 @@ let topologyGroupingMode = typeof localStorage !== "undefined" ? (localStorage.g
 let projectDefaultFiberType = "mmf"; // "mmf" | "smf"
 let linkInterconnectOverrides = {}; // linkId -> { medium, dacLength, fiberType }
 
+// =========================================================================
+// GRANULAR TOPOLOGY UNDO / REDO HISTORY STACK (Ctrl+Z / Ctrl+Y)
+// =========================================================================
+const TopologyHistory = {
+  _undoStack: [],
+  _redoStack: [],
+  _maxSteps: 40,
+
+  captureSnapshot(label = "Topology Edit") {
+    const positions = typeof loadTopologyPositions === "function" ? loadTopologyPositions() : {};
+    const overrides = linkInterconnectOverrides ? JSON.parse(JSON.stringify(linkInterconnectOverrides)) : {};
+    const bomNodes = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.filter(i => !i.parentInstanceId).map(i => ({
+          instanceId: i.instanceId,
+          closetName: i.closetName,
+          rackId: i.rackId,
+          spaceName: i.spaceName,
+          uplinkTargetId: i.uplinkTargetId || null,
+          customUplinkTargetId: i.customUplinkTargetId || null,
+          customLinkMultiplier: i.customLinkMultiplier || 1,
+          customLinkSpeed: i.customLinkSpeed || null,
+          assignedSwitchPort: i.assignedSwitchPort || null,
+          powerSourceOverride: i.powerSourceOverride || null,
+          assignedVmsServerId: i.assignedVmsServerId || null,
+          assignedAccessServerId: i.assignedAccessServerId || null,
+          isUplinkForSwitch: !!i.isUplinkForSwitch,
+          unassignedByUser: !!i.unassignedByUser,
+          stackedUnits: i.stackedUnits || 0,
+          qty: i.qty || 1,
+          hostedRoles: Array.isArray(i.hostedRoles) ? [...i.hostedRoles] : undefined
+        }))
+      : [];
+    return {
+      label,
+      positions: JSON.parse(JSON.stringify(positions || {})),
+      overrides,
+      bomNodes
+    };
+  },
+
+  pushState(label = "Topology Edit") {
+    this._undoStack.push(this.captureSnapshot(label));
+    if (this._undoStack.length > this._maxSteps) {
+      this._undoStack.shift();
+    }
+    this._redoStack = [];
+    this.updateToolbarButtons();
+  },
+
+  popSilent() {
+    if (this._undoStack.length > 0) {
+      this._undoStack.pop();
+      this.updateToolbarButtons();
+    }
+  },
+
+  applySnapshot(snap) {
+    if (!snap) return;
+    const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function")
+      ? FacilityStore.getProjectId()
+      : "default";
+    try {
+      localStorage.setItem(`netselect_topo_pos_${projKey}`, JSON.stringify(snap.positions || {}));
+    } catch (e) {}
+
+    linkInterconnectOverrides = JSON.parse(JSON.stringify(snap.overrides || {}));
+    try {
+      localStorage.setItem(`netselect_link_overrides_${projKey}`, JSON.stringify(linkInterconnectOverrides));
+    } catch (e) {}
+
+    if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && Array.isArray(snap.bomNodes)) {
+      snap.bomNodes.forEach(saved => {
+        const item = projectBOM.find(i => i.instanceId === saved.instanceId);
+        if (!item) return;
+        item.closetName = saved.closetName;
+        item.rackId = saved.rackId;
+        if (saved.spaceName !== undefined) item.spaceName = saved.spaceName;
+        item.uplinkTargetId = saved.uplinkTargetId;
+        item.customUplinkTargetId = saved.customUplinkTargetId;
+        item.customLinkMultiplier = saved.customLinkMultiplier;
+        item.customLinkSpeed = saved.customLinkSpeed;
+        item.assignedSwitchPort = saved.assignedSwitchPort;
+        item.powerSourceOverride = saved.powerSourceOverride;
+        item.assignedVmsServerId = saved.assignedVmsServerId;
+        item.assignedAccessServerId = saved.assignedAccessServerId;
+        item.isUplinkForSwitch = saved.isUplinkForSwitch;
+        if (saved.unassignedByUser) item.unassignedByUser = true;
+        else delete item.unassignedByUser;
+        item.stackedUnits = saved.stackedUnits;
+        item.qty = saved.qty;
+        if (saved.hostedRoles !== undefined) item.hostedRoles = [...saved.hostedRoles];
+      });
+    }
+
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof renderTopology === "function") renderTopology();
+    if (typeof renderTopologyInspector === "function") renderTopologyInspector();
+    this.updateToolbarButtons();
+  },
+
+  undo() {
+    if (this._undoStack.length === 0) return;
+    const current = this.captureSnapshot("Current");
+    const prev = this._undoStack.pop();
+    this._redoStack.push({ ...current, label: prev.label });
+    this.applySnapshot(prev);
+    if (typeof showToast === "function") {
+      showToast(`Undid: ${prev.label}`);
+    }
+  },
+
+  redo() {
+    if (this._redoStack.length === 0) return;
+    const current = this.captureSnapshot("Current");
+    const next = this._redoStack.pop();
+    this._undoStack.push({ ...current, label: next.label });
+    this.applySnapshot(next);
+    if (typeof showToast === "function") {
+      showToast(`Redid: ${next.label}`);
+    }
+  },
+
+  updateToolbarButtons() {
+    const undoBtn = document.getElementById("btnTopoUndo");
+    const redoBtn = document.getElementById("btnTopoRedo");
+    if (undoBtn) {
+      undoBtn.disabled = this._undoStack.length === 0;
+      const topLabel = this._undoStack.length > 0 ? this._undoStack[this._undoStack.length - 1].label : "";
+      undoBtn.title = topLabel ? `Undo: ${topLabel} (Ctrl+Z)` : "Undo Topology Action (Ctrl+Z)";
+    }
+    if (redoBtn) {
+      redoBtn.disabled = this._redoStack.length === 0;
+      const topLabel = this._redoStack.length > 0 ? this._redoStack[this._redoStack.length - 1].label : "";
+      redoBtn.title = topLabel ? `Redo: ${topLabel} (Ctrl+Y)` : "Redo Topology Action (Ctrl+Y)";
+    }
+  }
+};
+window.TopologyHistory = TopologyHistory;
+
 function getProjectFiberType() {
   if (projectDefaultFiberType) return projectDefaultFiberType;
   const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
@@ -199,6 +340,7 @@ function getLinkInterconnectOverride(linkId) {
 }
 
 function updateLinkOverride(linkId, key, value) {
+  TopologyHistory.pushState(`Update Link ${key}`);
   if (!linkInterconnectOverrides) linkInterconnectOverrides = {};
   if (!linkInterconnectOverrides[linkId]) linkInterconnectOverrides[linkId] = {};
   linkInterconnectOverrides[linkId][key] = value;
@@ -613,6 +755,7 @@ function toggleTopologyModal() {
     initTopologyCanvas();
     renderTopology();
     renderTopologyInspector();
+    TopologyHistory.updateToolbarButtons();
     setTimeout(() => {
       fitTopologyToScreen();
     }, 60);
@@ -634,6 +777,17 @@ function initTopologyCanvas() {
   viewport.addEventListener("wheel", handleViewportWheel, { passive: false });
   window.addEventListener("mousemove", handleTopologyMouseMove);
   window.addEventListener("mouseup", handleTopologyMouseUp);
+  window.addEventListener("keydown", (e) => {
+    if (!isTopologyModalVisible()) return;
+    if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT" || e.target.isContentEditable)) return;
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      TopologyHistory.undo();
+    } else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) {
+      e.preventDefault();
+      TopologyHistory.redo();
+    }
+  });
 }
 
 function handleViewportMouseDown(e) {
@@ -4361,6 +4515,7 @@ function getRoleBadgeStyle(role) {
 function updateCustomUplink(nodeInstanceId, targetInstanceId) {
   const item = projectBOM.find(i => i.instanceId === nodeInstanceId);
   if (item) {
+    TopologyHistory.pushState(`Change Uplink (${item.model})`);
     item.customUplinkTargetId = targetInstanceId || null;
     FacilityStore.notifyWorkspaceChange();
     renderTopology();
@@ -4371,6 +4526,7 @@ function updateCustomUplink(nodeInstanceId, targetInstanceId) {
 function updateCustomLinkMultiplier(nodeInstanceId, multiplierVal) {
   const item = projectBOM.find(i => i.instanceId === nodeInstanceId);
   if (item) {
+    TopologyHistory.pushState(`Change LAG Trunks (${item.model})`);
     item.customLinkMultiplier = parseInt(multiplierVal, 10) || 1;
     FacilityStore.notifyWorkspaceChange();
     renderTopology();
@@ -4381,6 +4537,7 @@ function updateCustomLinkMultiplier(nodeInstanceId, multiplierVal) {
 function updateCustomLinkSpeed(nodeInstanceId, speedVal) {
   const item = projectBOM.find(i => i.instanceId === nodeInstanceId);
   if (item) {
+    TopologyHistory.pushState(`Change Link Speed (${item.model})`);
     item.customLinkSpeed = speedVal || null;
     FacilityStore.notifyWorkspaceChange();
     renderTopology();
@@ -4397,6 +4554,7 @@ function handleClusterMouseDown(e, clusterEl, loc) {
     return;
   }
 
+  TopologyHistory.pushState(`Move Rack (${loc})`);
   isCanvasDragging = true;
   dragStartPos = { x: e.clientX, y: e.clientY };
   draggedTopologyNode = {
@@ -4451,8 +4609,9 @@ function handleTopologyMouseUp(e) {
     isCanvasDragging = false;
     saveTopologyPosition(draggedTopologyNode.loc, draggedTopologyNode.el.offsetLeft, draggedTopologyNode.el.offsetTop);
     
-    // If movement was minimal (< 5px), treat as a click to select the rack
+    // If movement was minimal (< 5px), treat as a click to select the rack and pop no-op history state
     if (e && Math.hypot(e.clientX - dragStartPos.x, e.clientY - dragStartPos.y) < 5) {
+      TopologyHistory.popSilent();
       selectTopologyRack(draggedTopologyNode.loc);
     }
     draggedTopologyNode = null;
@@ -4470,6 +4629,7 @@ function autoArrangeTopologyHierarchy(layoutMode = null) {
     layoutMode = modeSelect ? modeSelect.value : "tree";
   }
 
+  TopologyHistory.pushState(`Auto-Arrange Topology (${layoutMode})`);
   const positions = {};
   const activeNodes = projectBOM.filter(item => {
     if (item.parentInstanceId) return false;
@@ -4640,6 +4800,7 @@ function updateTopologyCounters(nodesCount, linksCount, poeFlowWatts = 0) {
 function updateSwitchVmsServer(switchInstanceId, serverInstanceId) {
   const item = projectBOM.find(i => i.instanceId === switchInstanceId);
   if (item) {
+    TopologyHistory.pushState(`Assign VMS Server (${item.model})`);
     item.assignedVmsServerId = serverInstanceId || null;
     FacilityStore.notifyWorkspaceChange();
     renderTopology();
@@ -4650,6 +4811,7 @@ function updateSwitchVmsServer(switchInstanceId, serverInstanceId) {
 function updateSwitchAccessServer(switchInstanceId, serverInstanceId) {
   const item = projectBOM.find(i => i.instanceId === switchInstanceId);
   if (item) {
+    TopologyHistory.pushState(`Assign Access Server (${item.model})`);
     item.assignedAccessServerId = serverInstanceId || null;
     FacilityStore.notifyWorkspaceChange();
     renderTopology();
@@ -4660,6 +4822,7 @@ function updateSwitchAccessServer(switchInstanceId, serverInstanceId) {
 function toggleServerRole(serverInstanceId, roleName) {
   const item = projectBOM.find(i => i.instanceId === serverInstanceId);
   if (item) {
+    TopologyHistory.pushState(`Toggle Server Role (${item.model})`);
     if (!item.hostedRoles) item.hostedRoles = [];
     const idx = item.hostedRoles.indexOf(roleName);
     if (idx >= 0) {
@@ -4676,6 +4839,7 @@ function toggleServerRole(serverInstanceId, roleName) {
 function setDevicePowerSource(deviceInstanceId, newPowerSource) {
   const item = projectBOM.find(i => i.instanceId === deviceInstanceId);
   if (!item) return;
+  TopologyHistory.pushState(`Change Power Source (${item.model})`);
   if (typeof PortEngine !== "undefined") {
     PortEngine.setPowerSource(item, newPowerSource);
   } else {
@@ -4693,6 +4857,7 @@ function setDevicePowerSource(deviceInstanceId, newPowerSource) {
 function setDeviceHostSwitch(deviceInstanceId, newSwitchId) {
   const item = projectBOM.find(i => i.instanceId === deviceInstanceId);
   if (!item) return;
+  TopologyHistory.pushState(`Reassign Switch (${item.model})`);
   const oldSwitchId = item.uplinkTargetId;
   item.uplinkTargetId = newSwitchId || null;
   if (typeof PortEngine !== "undefined") {
@@ -4738,6 +4903,7 @@ function setDeviceSwitchPort(deviceInstanceId, newPortNumber) {
   if (!item || !item.uplinkTargetId) return;
   const sw = projectBOM.find(i => i.instanceId === item.uplinkTargetId);
   if (!sw) return;
+  TopologyHistory.pushState(`Change Switch Port (${item.model})`);
   if (typeof PortEngine !== "undefined") {
     PortEngine.connect(sw, parseInt(newPortNumber, 10), item, 1);
   } else {
@@ -4752,6 +4918,7 @@ function setDeviceSwitchPort(deviceInstanceId, newPortNumber) {
 function toggleRadioUplinkRole(radioInstanceId, isUplink) {
   const radio = projectBOM.find(i => i.instanceId === radioInstanceId);
   if (!radio) return;
+  TopologyHistory.pushState(`Toggle Radio Uplink (${radio.model})`);
   radio.isUplinkForSwitch = isUplink;
   if (radio.uplinkTargetId) {
     const sw = projectBOM.find(i => i.instanceId === radio.uplinkTargetId);
@@ -4774,6 +4941,7 @@ function toggleRadioUplinkRole(radioInstanceId, isUplink) {
 function updateRadioPartner(radioInstanceId, partnerInstanceId) {
   const radio = projectBOM.find(i => i.instanceId === radioInstanceId);
   if (radio) {
+    TopologyHistory.pushState(`Change Radio Partner (${radio.model})`);
     radio.customUplinkTargetId = partnerInstanceId || null;
     FacilityStore.notifyWorkspaceChange();
     renderTopology();
@@ -4810,6 +4978,7 @@ function inspectSwitchPort(switchInstanceId, portNum) {
 function updateDeviceLocation(instanceId, newLoc) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item || !newLoc) return;
+  TopologyHistory.pushState(`Move Device (${item.model})`);
   const parsed = FacilityStore.parse(newLoc);
   item.closetName = newLoc;
   item.rackId = parsed.enclosure || newLoc;

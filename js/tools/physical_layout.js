@@ -43,9 +43,10 @@ let physicalLayerFilters = {
   pathways: true
 };
 
-// Enhanced Physical Engineering State: Cable IDs, Camera FOV Cones, DRC Distance Violations, and Revision Compare
+// Enhanced Physical Engineering State: Cable IDs, Camera FOV Cones, DORI Color Bands, DRC Distance Violations, and Revision Compare
 let showPhysicalCableIds = false;
 let showCameraFovCones = true;
+let showDoriColorBands = true;
 let isFieldWalkMode = false;
 let isPhysSpacebarDown = false;
 let isPhysKeyListenersInitialized = false;
@@ -184,14 +185,35 @@ function toggleCameraFovCones() {
 }
 window.toggleCameraFovCones = toggleCameraFovCones;
 
+function toggleDoriColorBands() {
+  showDoriColorBands = !showDoriColorBands;
+  const btn = document.getElementById("btnToggleDoriBands");
+  if (btn) {
+    if (showDoriColorBands) {
+      btn.className = "p-1 rounded-lg border border-sky-600/60 bg-sky-950/70 text-sky-300 hover:text-white text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer";
+    } else {
+      btn.className = "p-1 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer";
+    }
+  }
+  if (!showCameraFovCones && showDoriColorBands) {
+    showCameraFovCones = true;
+  }
+  renderCableCanvas();
+  renderInspector();
+  if (typeof showToast === "function") {
+    showToast(showDoriColorBands ? "DORI Pixel-Per-Foot (PPF) multi-zone color bands enabled." : "Single-zone DORI FOV cones enabled.");
+  }
+}
+window.toggleDoriColorBands = toggleDoriColorBands;
+
 function ensureCameraFovDefaults(dev, bomItem = null) {
   if (!dev) return;
   if (typeof dev.fovEnabled !== "boolean") dev.fovEnabled = true;
   if (typeof dev.fovAngleDeg !== "number" || isNaN(dev.fovAngleDeg)) dev.fovAngleDeg = 0;
 
-  const text = `${bomItem?.model || ""} ${bomItem?.description || ""} ${bomItem?.category || ""} ${dev.name || ""}`.toLowerCase();
+  const text = `${bomItem?.model || ""} ${bomItem?.description || ""} ${bomItem?.category || ""} ${bomItem?.formFactor || ""} ${dev.name || ""}`.toLowerCase();
   if ((typeof dev.fovSpanDeg !== "number" || isNaN(dev.fovSpanDeg)) && (typeof dev.fovApertureDeg !== "number" || isNaN(dev.fovApertureDeg))) {
-    let defaultSpan = 95;
+    let defaultSpan = Number(bomItem?.fieldOfViewDeg) || 95;
     if (/fisheye|360|panoramic|multisensor|multi-sensor|quad/i.test(text)) {
       defaultSpan = 360;
     } else if (/180|panoramic-180|dualsensor/i.test(text)) {
@@ -213,21 +235,28 @@ function ensureCameraFovDefaults(dev, bomItem = null) {
     if (/lpr|anpr|ptz/i.test(text)) {
       dev.fovDistanceFt = 85;
     } else if (/fisheye|360/i.test(text)) {
-      dev.fovDistanceFt = 30;
+      dev.fovDistanceFt = 35;
     } else {
-      dev.fovDistanceFt = 45;
+      dev.fovDistanceFt = 50;
     }
   }
 }
 
 function computeCameraDoriTelemetry(dev, bomItem = null, floor = null) {
   ensureCameraFovDefaults(dev, bomItem);
-  const text = `${bomItem?.resolution || ""} ${bomItem?.model || ""} ${bomItem?.description || ""} ${dev.name || ""}`.toLowerCase();
+  const text = `${bomItem?.resolution || ""} ${bomItem?.model || ""} ${bomItem?.description || ""} ${bomItem?.formFactor || ""} ${dev.name || ""}`.toLowerCase();
+  const isMultiSensor = /multisensor|multi-sensor|quad|4x|pnm-|q37/i.test(text);
 
   let horizPixels = 2560; // Default 4MP (2560x1440)
   let mpLabel = "4MP";
-  const overrideMp = Number(dev.resolutionMP);
-  if (overrideMp === 12) {
+  const overrideMp = Number(dev.resolutionMP || bomItem?.sensorMegapixels);
+  if (overrideMp >= 20) {
+    horizPixels = 7680;
+    mpLabel = `${overrideMp}MP Multi`;
+  } else if (overrideMp >= 15) {
+    horizPixels = 5120;
+    mpLabel = `${overrideMp}MP Multi`;
+  } else if (overrideMp === 12) {
     horizPixels = 4000;
     mpLabel = "12MP";
   } else if (overrideMp === 8) {
@@ -245,6 +274,12 @@ function computeCameraDoriTelemetry(dev, bomItem = null, floor = null) {
   } else if (overrideMp === 4) {
     horizPixels = 2560;
     mpLabel = "4MP";
+  } else if (/20\s*mp|4\s*x\s*5\s*mp/i.test(text)) {
+    horizPixels = 7680;
+    mpLabel = "20MP (4x5MP)";
+  } else if (/15\s*mp|3\s*x\s*5\s*mp/i.test(text)) {
+    horizPixels = 5120;
+    mpLabel = "15MP";
   } else if (/12\s*mp|4000\s*x/i.test(text)) {
     horizPixels = 4000;
     mpLabel = "12MP";
@@ -268,21 +303,29 @@ function computeCameraDoriTelemetry(dev, bomItem = null, floor = null) {
   const scaleFt = (activeFl && Number(activeFl.scaleFt) > 0) ? Number(activeFl.scaleFt) : 25;
   const radiusPx = Math.max(28, Math.round((distFt / scaleFt) * 100));
 
-  // Scene horizontal width at target distance (ft)
-  let sceneWidthFt;
+  // Scene horizontal width factor per foot of distance
+  let widthFactorPerFt;
   if (spanDeg >= 360) {
-    sceneWidthFt = 2 * Math.PI * distFt;
+    widthFactorPerFt = 2 * Math.PI;
   } else if (spanDeg >= 160) {
-    sceneWidthFt = distFt * (spanDeg * Math.PI / 180);
+    widthFactorPerFt = (spanDeg * Math.PI) / 180;
   } else {
     const halfRad = (Math.min(150, spanDeg) / 2) * (Math.PI / 180);
-    sceneWidthFt = Math.max(2, 2 * distFt * Math.tan(halfRad));
+    widthFactorPerFt = Math.max(0.15, 2 * Math.tan(halfRad));
   }
 
+  const sceneWidthFt = Math.max(2, distFt * widthFactorPerFt);
   const ppf = Math.max(1, Math.round(horizPixels / sceneWidthFt));
 
-  // IEC 62676-4 / IPVM DORI Thresholds (Pixels Per Foot):
-  // Identification >= 76 PPF (250 PPM), Recognition >= 38 PPF (125 PPM), Observation >= 19 PPF (62 PPM), Detection >= 8 PPF (25 PPM)
+  // Compute exact max distance (ft & px) for each DORI band (IEC 62676-4):
+  // Identification >= 76 PPF, Recognition >= 38 PPF, Observation >= 19 PPF, Detection >= 8 PPF
+  const identMaxFt = Math.max(4, Math.round(horizPixels / (76 * widthFactorPerFt)));
+  const recogMaxFt = Math.max(identMaxFt + 2, Math.round(horizPixels / (38 * widthFactorPerFt)));
+  const obsvMaxFt = Math.max(recogMaxFt + 4, Math.round(horizPixels / (19 * widthFactorPerFt)));
+  const detMaxFt = Math.max(obsvMaxFt + 8, Math.round(horizPixels / (8 * widthFactorPerFt)));
+
+  const ftToPx = (ft) => Math.max(12, Math.round((ft / scaleFt) * 100));
+
   let doriClass = "Detection";
   let doriShort = "DET";
   let strokeColor = "#f43f5e";
@@ -307,6 +350,7 @@ function computeCameraDoriTelemetry(dev, bomItem = null, floor = null) {
   return {
     horizPixels,
     mpLabel,
+    isMultiSensor,
     distFt,
     spanDeg,
     angleDeg: Number(dev.fovAngleDeg) || 0,
@@ -317,7 +361,17 @@ function computeCameraDoriTelemetry(dev, bomItem = null, floor = null) {
     strokeColor,
     doriHex: strokeColor,
     fillColor,
-    radiusPx
+    radiusPx,
+    doriBands: {
+      identFt: identMaxFt,
+      recogFt: recogMaxFt,
+      obsvFt: obsvMaxFt,
+      detFt: detMaxFt,
+      identPx: ftToPx(identMaxFt),
+      recogPx: ftToPx(recogMaxFt),
+      obsvPx: ftToPx(obsvMaxFt),
+      detPx: ftToPx(detMaxFt)
+    }
   };
 }
 
@@ -1374,7 +1428,7 @@ function requestPhysCanvasRedraw() {
   _physRafPending = true;
   requestAnimationFrame(() => {
     _physRafPending = false;
-    recalculateCurrentFloorCables();
+    recalculateCurrentFloorCables(true);
     renderCableCanvas();
   });
 }
@@ -1394,7 +1448,7 @@ function requestPhysDragFastUpdate() {
     const svg = document.getElementById("cableSvgCanvas");
     if (!floor || !svg) return;
 
-    recalculateCurrentFloorCables();
+    recalculateCurrentFloorCables(true);
 
     const movedIds = (selectedNodeIds && selectedNodeIds.size > 0)
       ? Array.from(selectedNodeIds)
@@ -2626,7 +2680,8 @@ window.getAllClosetsAcrossFacility = getAllClosetsAcrossFacility;
 
 /**
  * Renders the SVG child elements of a Camera FOV & DORI cone group in-place.
- * Supports both standard directional wedges (<360°) and full 360° fisheye/panoramic domes.
+ * Supports standard directional wedges (<360°), full 360° fisheye/multi-sensor domes,
+ * and IEC 62676-4 concentric DORI Pixel Density Color Bands (Identification, Recognition, Observation, Detection).
  */
 function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
   if (!fovG || !dev) return;
@@ -2637,69 +2692,107 @@ function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
   const angleDeg = dev.fovAngleDeg || 0;
   const apertureDeg = dev.fovApertureDeg || dev.fovSpanDeg || 90;
   const doriColor = telem.doriHex || telem.strokeColor || "#10b981";
+  const bands = telem.doriBands || { identPx: Math.round(radiusPx * 0.35), recogPx: Math.round(radiusPx * 0.6), obsvPx: Math.round(radiusPx * 0.85), detPx: radiusPx };
 
   const rad = (deg) => (deg * Math.PI) / 180;
 
+  // Helper to build a sector path for a given radius r
+  const buildWedgePath = (r, startDeg, endDeg, span) => {
+    const x1 = r * Math.cos(rad(startDeg));
+    const y1 = r * Math.sin(rad(startDeg));
+    const x2 = r * Math.cos(rad(endDeg));
+    const y2 = r * Math.sin(rad(endDeg));
+    const largeArc = span > 180 ? 1 : 0;
+    return `M 0 0 L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${r.toFixed(1)} ${r.toFixed(1)} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`;
+  };
+
+  const doriZones = [
+    { key: "det", maxR: radiusPx, color: "#f43f5e", opacity: isSelected ? "0.18" : "0.11" },
+    { key: "obsv", maxR: Math.min(radiusPx, bands.obsvPx), color: "#f59e0b", opacity: isSelected ? "0.20" : "0.13" },
+    { key: "recog", maxR: Math.min(radiusPx, bands.recogPx), color: "#0ea5e9", opacity: isSelected ? "0.22" : "0.15" },
+    { key: "ident", maxR: Math.min(radiusPx, bands.identPx), color: "#10b981", opacity: isSelected ? "0.26" : "0.18" }
+  ];
+
   if (apertureDeg >= 359) {
     // 360° Fisheye / Multi-Sensor Dome Coverage Circle
-    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    circle.setAttribute("cx", "0");
-    circle.setAttribute("cy", "0");
-    circle.setAttribute("r", radiusPx);
-    circle.setAttribute("fill", doriColor);
-    circle.setAttribute("fill-opacity", isSelected ? "0.22" : "0.13");
-    circle.setAttribute("stroke", doriColor);
-    circle.setAttribute("stroke-width", isSelected ? "2" : "1.25");
-    circle.setAttribute("stroke-dasharray", "6 4");
-    circle.style.pointerEvents = "none";
-    fovG.appendChild(circle);
+    if (showDoriColorBands) {
+      doriZones.forEach((zone, idx) => {
+        if (zone.maxR < 8) return;
+        if (idx > 0 && zone.maxR >= doriZones[idx - 1].maxR) return;
+        const bandCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        bandCircle.setAttribute("cx", "0");
+        bandCircle.setAttribute("cy", "0");
+        bandCircle.setAttribute("r", zone.maxR.toFixed(1));
+        bandCircle.setAttribute("fill", zone.color);
+        bandCircle.setAttribute("fill-opacity", zone.opacity);
+        bandCircle.setAttribute("stroke", zone.color);
+        bandCircle.setAttribute("stroke-width", idx === 0 ? (isSelected ? "2" : "1.25") : "1");
+        bandCircle.setAttribute("stroke-dasharray", idx === 0 ? "6 4" : "3 3");
+        bandCircle.style.pointerEvents = "none";
+        fovG.appendChild(bandCircle);
+      });
+    } else {
+      const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("cx", "0");
+      circle.setAttribute("cy", "0");
+      circle.setAttribute("r", radiusPx);
+      circle.setAttribute("fill", doriColor);
+      circle.setAttribute("fill-opacity", isSelected ? "0.22" : "0.13");
+      circle.setAttribute("stroke", doriColor);
+      circle.setAttribute("stroke-width", isSelected ? "2" : "1.25");
+      circle.setAttribute("stroke-dasharray", "6 4");
+      circle.style.pointerEvents = "none";
+      fovG.appendChild(circle);
+    }
 
-    const midRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    midRing.setAttribute("cx", "0");
-    midRing.setAttribute("cy", "0");
-    midRing.setAttribute("r", Math.round(radiusPx * 0.5));
-    midRing.setAttribute("fill", "none");
-    midRing.setAttribute("stroke", doriColor);
-    midRing.setAttribute("stroke-width", "1");
-    midRing.setAttribute("stroke-dasharray", "3 3");
-    midRing.setAttribute("opacity", "0.45");
-    midRing.style.pointerEvents = "none";
-    fovG.appendChild(midRing);
+    // If Multi-Sensor / Quad camera, render 4 quadrant lens divider rays
+    if (telem.isMultiSensor) {
+      [0, 90, 180, 270].forEach(qOffset => {
+        const rayDeg = angleDeg + qOffset + 45;
+        const rx = radiusPx * Math.cos(rad(rayDeg));
+        const ry = radiusPx * Math.sin(rad(rayDeg));
+        const qLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        qLine.setAttribute("x1", "0");
+        qLine.setAttribute("y1", "0");
+        qLine.setAttribute("x2", rx.toFixed(1));
+        qLine.setAttribute("y2", ry.toFixed(1));
+        qLine.setAttribute("stroke", doriColor);
+        qLine.setAttribute("stroke-width", "1");
+        qLine.setAttribute("stroke-dasharray", "3 3");
+        qLine.setAttribute("opacity", "0.55");
+        qLine.style.pointerEvents = "none";
+        fovG.appendChild(qLine);
+      });
+    }
   } else {
-    // Directional Wedge Sector
+    // Directional Wedge Sector (<360°)
     const startAngle = angleDeg - apertureDeg / 2;
     const endAngle = angleDeg + apertureDeg / 2;
-    const x1 = radiusPx * Math.cos(rad(startAngle));
-    const y1 = radiusPx * Math.sin(rad(startAngle));
-    const x2 = radiusPx * Math.cos(rad(endAngle));
-    const y2 = radiusPx * Math.sin(rad(endAngle));
-    const largeArc = apertureDeg > 180 ? 1 : 0;
 
-    const pathData = `M 0 0 L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${radiusPx.toFixed(1)} ${radiusPx.toFixed(1)} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`;
-    const wedge = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    wedge.setAttribute("d", pathData);
-    wedge.setAttribute("fill", doriColor);
-    wedge.setAttribute("fill-opacity", isSelected ? "0.24" : "0.14");
-    wedge.setAttribute("stroke", doriColor);
-    wedge.setAttribute("stroke-width", isSelected ? "2" : "1.25");
-    wedge.style.pointerEvents = "none";
-    fovG.appendChild(wedge);
-
-    // 50% Range Sub-Arc (Higher PPF zone indicator)
-    const halfR = radiusPx * 0.5;
-    const hx1 = halfR * Math.cos(rad(startAngle));
-    const hy1 = halfR * Math.sin(rad(startAngle));
-    const hx2 = halfR * Math.cos(rad(endAngle));
-    const hy2 = halfR * Math.sin(rad(endAngle));
-    const subArc = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    subArc.setAttribute("d", `M ${hx1.toFixed(1)} ${hy1.toFixed(1)} A ${halfR.toFixed(1)} ${halfR.toFixed(1)} 0 ${largeArc} 1 ${hx2.toFixed(1)} ${hy2.toFixed(1)}`);
-    subArc.setAttribute("fill", "none");
-    subArc.setAttribute("stroke", doriColor);
-    subArc.setAttribute("stroke-width", "1");
-    subArc.setAttribute("stroke-dasharray", "3 3");
-    subArc.setAttribute("opacity", "0.55");
-    subArc.style.pointerEvents = "none";
-    fovG.appendChild(subArc);
+    if (showDoriColorBands) {
+      doriZones.forEach((zone, idx) => {
+        if (zone.maxR < 8) return;
+        if (idx > 0 && zone.maxR >= doriZones[idx - 1].maxR) return;
+        const bandWedge = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        bandWedge.setAttribute("d", buildWedgePath(zone.maxR, startAngle, endAngle, apertureDeg));
+        bandWedge.setAttribute("fill", zone.color);
+        bandWedge.setAttribute("fill-opacity", zone.opacity);
+        bandWedge.setAttribute("stroke", zone.color);
+        bandWedge.setAttribute("stroke-width", idx === 0 ? (isSelected ? "2" : "1.35") : "1");
+        if (idx > 0) bandWedge.setAttribute("stroke-dasharray", "3 3");
+        bandWedge.style.pointerEvents = "none";
+        fovG.appendChild(bandWedge);
+      });
+    } else {
+      const wedge = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      wedge.setAttribute("d", buildWedgePath(radiusPx, startAngle, endAngle, apertureDeg));
+      wedge.setAttribute("fill", doriColor);
+      wedge.setAttribute("fill-opacity", isSelected ? "0.24" : "0.14");
+      wedge.setAttribute("stroke", doriColor);
+      wedge.setAttribute("stroke-width", isSelected ? "2" : "1.25");
+      wedge.style.pointerEvents = "none";
+      fovG.appendChild(wedge);
+    }
   }
 
   // Center Aim Axis Ray & Interactive Aim/Range Handle
@@ -2722,7 +2815,8 @@ function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
   const labelDist = Math.max(38, radiusPx * 0.68);
   const lx = labelDist * Math.cos(rad(angleDeg));
   const ly = labelDist * Math.sin(rad(angleDeg));
-  const pillW = 92;
+  const pillTextStr = `${telem.doriShort} ${telem.ppf} PPF • ${dev.fovDistanceFt}'`;
+  const pillW = Math.max(98, pillTextStr.length * 5.8 + 14);
   const pillH = 16;
 
   const pillBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
@@ -2732,7 +2826,7 @@ function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
   pillBg.setAttribute("height", pillH);
   pillBg.setAttribute("rx", "6");
   pillBg.setAttribute("fill", "#0f172a");
-  pillBg.setAttribute("fill-opacity", "0.88");
+  pillBg.setAttribute("fill-opacity", "0.9");
   pillBg.setAttribute("stroke", doriColor);
   pillBg.setAttribute("stroke-width", "1");
   pillBg.style.pointerEvents = "none";
@@ -2747,7 +2841,7 @@ function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
   pillTxt.setAttribute("font-family", "monospace");
   pillTxt.setAttribute("font-weight", "bold");
   pillTxt.style.pointerEvents = "none";
-  pillTxt.textContent = `${telem.ppf} PPF • ${dev.fovDistanceFt}'`;
+  pillTxt.textContent = pillTextStr;
   fovG.appendChild(pillTxt);
 
   // Interactive Drag Handle at tip of FOV cone to aim & resize range
@@ -2780,38 +2874,91 @@ function _projectPointToSegment(p, a, b) {
 }
 
 /**
- * Computes automatic horizontal cable routing along drawn Pathway Trunks when a device has no manual waypoints.
+ * Helper: Appends vertices along a single trunk between projA and projB.
+ */
+function _traceSingleTrunkVertices(trunk, projA, projB, pts, useOrtho) {
+  const entryPt = { x: Math.round(projA.x), y: Math.round(projA.y) };
+  const exitPt = { x: Math.round(projB.x), y: Math.round(projB.y) };
+  const lastPt = pts[pts.length - 1];
+
+  if (lastPt && Math.hypot(entryPt.x - lastPt.x, entryPt.y - lastPt.y) > 8) {
+    if (useOrtho && entryPt.x !== lastPt.x && entryPt.y !== lastPt.y) {
+      pts.push({ x: entryPt.x, y: lastPt.y });
+    }
+    pts.push(entryPt);
+  }
+
+  if (projA.posAlong <= projB.posAlong) {
+    for (let k = projA.segIdx + 1; k <= projB.segIdx; k++) {
+      pts.push({ x: trunk.points[k].x, y: trunk.points[k].y });
+    }
+  } else {
+    for (let k = projA.segIdx; k > projB.segIdx; k--) {
+      pts.push({ x: trunk.points[k].x, y: trunk.points[k].y });
+    }
+  }
+
+  if (Math.hypot(exitPt.x - entryPt.x, exitPt.y - entryPt.y) > 6) {
+    pts.push(exitPt);
+  }
+}
+
+/**
+ * Projects a point onto a trunk polyline and returns best segment projection.
+ */
+function _projectPointOntoTrunk(pt, trunk) {
+  if (!trunk || !trunk.points || trunk.points.length < 2) return null;
+  let best = null;
+  for (let i = 0; i < trunk.points.length - 1; i++) {
+    const a = trunk.points[i];
+    const b = trunk.points[i + 1];
+    const pr = _projectPointToSegment(pt, a, b);
+    if (!best || pr.dist < best.dist) {
+      best = { ...pr, segIdx: i, posAlong: i + pr.t };
+    }
+  }
+  return best;
+}
+
+/**
+ * Computes deterministic horizontal cable routing along drawn Pathway Trunks (including multi-trunk intersections).
  * Returns { points: Array<{x,y}>, traversedTrunks: Array<string> }
  */
-function computePathwayTrunkRoute(closetPt, devPt, floorTrunks, useOrtho) {
+function computePathwayTrunkRoute(closetPt, devPt, floorTrunks, useOrtho, forceSnap = false) {
   const traversedTrunks = [];
-  if (Array.isArray(floorTrunks) && floorTrunks.length > 0) {
+  const validTrunks = Array.isArray(floorTrunks) ? floorTrunks.filter(t => t.points && t.points.length >= 2) : [];
+
+  if (validTrunks.length > 0) {
+    const maxDevSnapDist = forceSnap ? 1400 : 380;
+    const maxClosetSnapDist = forceSnap ? 1400 : 520;
+
+    // 1. Check single-trunk routing first
     let bestTrunk = null;
     let bestDevProj = null;
     let bestClosetProj = null;
     let bestScore = Infinity;
 
-    floorTrunks.forEach(trunk => {
-      if (!trunk.points || trunk.points.length < 2) return;
-      let minDev = null;
-      let minCloset = null;
+    // Also track closest trunk to closet and closest trunk to device for 2-trunk bridge routing
+    let closestTrunkToCloset = null;
+    let closestClosetProj = null;
+    let closestTrunkToDev = null;
+    let closestDevProj = null;
 
-      for (let i = 0; i < trunk.points.length - 1; i++) {
-        const a = trunk.points[i];
-        const b = trunk.points[i + 1];
-        const dp = _projectPointToSegment(devPt, a, b);
-        if (!minDev || dp.dist < minDev.dist) {
-          minDev = { ...dp, segIdx: i, posAlong: i + dp.t };
-        }
-        const cp = _projectPointToSegment(closetPt, a, b);
-        if (!minCloset || cp.dist < minCloset.dist) {
-          minCloset = { ...cp, segIdx: i, posAlong: i + cp.t };
-        }
+    validTrunks.forEach(trunk => {
+      const minDev = _projectPointOntoTrunk(devPt, trunk);
+      const minCloset = _projectPointOntoTrunk(closetPt, trunk);
+
+      if (minCloset && (!closestClosetProj || minCloset.dist < closestClosetProj.dist)) {
+        closestClosetProj = minCloset;
+        closestTrunkToCloset = trunk;
+      }
+      if (minDev && (!closestDevProj || minDev.dist < closestDevProj.dist)) {
+        closestDevProj = minDev;
+        closestTrunkToDev = trunk;
       }
 
-      // Snap to trunk if device is within 260px of the trunk corridor and routing via trunk is reasonable
-      if (minDev && minCloset && minDev.dist <= 260 && minCloset.dist <= 420) {
-        const score = minDev.dist + minCloset.dist * 0.6;
+      if (minDev && minCloset && minDev.dist <= maxDevSnapDist && minCloset.dist <= maxClosetSnapDist) {
+        const score = minDev.dist + minCloset.dist * 0.65;
         if (score < bestScore) {
           bestScore = score;
           bestTrunk = trunk;
@@ -2821,37 +2968,58 @@ function computePathwayTrunkRoute(closetPt, devPt, floorTrunks, useOrtho) {
       }
     });
 
+    // 2. Check if a 2-trunk connected corridor route (Closet -> Trunk A -> Trunk B -> Device) is closer
+    if (
+      closestTrunkToCloset &&
+      closestTrunkToDev &&
+      closestTrunkToCloset.id !== closestTrunkToDev.id &&
+      closestClosetProj.dist <= maxClosetSnapDist &&
+      closestDevProj.dist <= maxDevSnapDist
+    ) {
+      // Find closest junction between Trunk A and Trunk B
+      let bestJunctionA = null;
+      let bestJunctionB = null;
+      let minJunctionDist = Infinity;
+
+      closestTrunkToCloset.points.forEach((ptA, idxA) => {
+        const projB = _projectPointOntoTrunk(ptA, closestTrunkToDev);
+        if (projB && projB.dist < minJunctionDist) {
+          minJunctionDist = projB.dist;
+          bestJunctionA = { x: ptA.x, y: ptA.y, segIdx: Math.min(idxA, closestTrunkToCloset.points.length - 2), posAlong: idxA, dist: 0 };
+          bestJunctionB = projB;
+        }
+      });
+      closestTrunkToDev.points.forEach((ptB, idxB) => {
+        const projA = _projectPointOntoTrunk(ptB, closestTrunkToCloset);
+        if (projA && projA.dist < minJunctionDist) {
+          minJunctionDist = projA.dist;
+          bestJunctionA = projA;
+          bestJunctionB = { x: ptB.x, y: ptB.y, segIdx: Math.min(idxB, closestTrunkToDev.points.length - 2), posAlong: idxB, dist: 0 };
+        }
+      });
+
+      const twoTrunkScore = closestDevProj.dist + closestClosetProj.dist * 0.65 + minJunctionDist;
+      if (minJunctionDist <= 180 && twoTrunkScore < bestScore) {
+        traversedTrunks.push(closestTrunkToCloset.id, closestTrunkToDev.id);
+        const pts = [{ x: closetPt.x, y: closetPt.y }];
+        _traceSingleTrunkVertices(closestTrunkToCloset, closestClosetProj, bestJunctionA, pts, useOrtho);
+        _traceSingleTrunkVertices(closestTrunkToDev, bestJunctionB, closestDevProj, pts, useOrtho);
+        const lastPt = pts[pts.length - 1];
+        if (useOrtho && lastPt.x !== devPt.x && lastPt.y !== devPt.y) {
+          pts.push({ x: devPt.x, y: lastPt.y });
+        }
+        pts.push({ x: devPt.x, y: devPt.y });
+        return { points: pts, traversedTrunks };
+      }
+    }
+
     if (bestTrunk && bestDevProj && bestClosetProj) {
       traversedTrunks.push(bestTrunk.id);
       const pts = [{ x: closetPt.x, y: closetPt.y }];
-
-      // Orthogonal dogleg from closet onto trunk entry point if orthogonal mode is active
-      const entryPt = { x: Math.round(bestClosetProj.x), y: Math.round(bestClosetProj.y) };
-      const exitPt = { x: Math.round(bestDevProj.x), y: Math.round(bestDevProj.y) };
-
-      if (Math.hypot(entryPt.x - closetPt.x, entryPt.y - closetPt.y) > 8) {
-        if (useOrtho && entryPt.x !== closetPt.x && entryPt.y !== closetPt.y) {
-          pts.push({ x: entryPt.x, y: closetPt.y });
-        }
-        pts.push(entryPt);
-      }
-
-      // Follow intermediate trunk vertices between closet projection and device projection
-      if (bestClosetProj.posAlong <= bestDevProj.posAlong) {
-        for (let k = bestClosetProj.segIdx + 1; k <= bestDevProj.segIdx; k++) {
-          pts.push({ x: bestTrunk.points[k].x, y: bestTrunk.points[k].y });
-        }
-      } else {
-        for (let k = bestClosetProj.segIdx; k > bestDevProj.segIdx; k--) {
-          pts.push({ x: bestTrunk.points[k].x, y: bestTrunk.points[k].y });
-        }
-      }
-
-      if (Math.hypot(exitPt.x - entryPt.x, exitPt.y - entryPt.y) > 6) {
-        pts.push(exitPt);
-      }
-      if (useOrtho && exitPt.x !== devPt.x && exitPt.y !== devPt.y) {
-        pts.push({ x: devPt.x, y: exitPt.y });
+      _traceSingleTrunkVertices(bestTrunk, bestClosetProj, bestDevProj, pts, useOrtho);
+      const lastPt = pts[pts.length - 1];
+      if (useOrtho && lastPt.x !== devPt.x && lastPt.y !== devPt.y) {
+        pts.push({ x: devPt.x, y: lastPt.y });
       }
       pts.push({ x: devPt.x, y: devPt.y });
       return { points: pts, traversedTrunks };
@@ -2867,7 +3035,41 @@ function computePathwayTrunkRoute(closetPt, devPt, floorTrunks, useOrtho) {
   return { points: pts, traversedTrunks };
 }
 
-function recalculateCurrentFloorCables() {
+/**
+ * 1-Click Deterministic Pathway Snap: Snaps all drops on the active floor (or drops near a specific trunk)
+ * onto the drawn Pathway Trunk corridors, clearing stray manual waypoints.
+ */
+function snapAllFloorCablesToTrunks() {
+  const floor = getActiveFloor();
+  if (!floor) return;
+  if (!Array.isArray(floor.pathwayTrunks) || floor.pathwayTrunks.length === 0) {
+    if (typeof showToast === "function") {
+      showToast("Draw a Pathway Corridor [Press T] first to snap horizontal cables.", "warning");
+    }
+    return;
+  }
+
+  CanvasHistory.pushState("Snap Cables to Pathway Trunks");
+  let snappedCount = 0;
+  (floor.nodes || []).filter(n => n.type === "device").forEach(dev => {
+    dev.waypoints = [];
+    dev.snapToPathway = true;
+    snappedCount++;
+  });
+
+  recalculateCurrentFloorCables();
+  renderCableCanvas();
+  renderInspector();
+  renderSidebarTabContent();
+  saveFacilityState(true);
+
+  if (typeof showToast === "function") {
+    showToast(`Snapped ${snappedCount} floor cable run${snappedCount === 1 ? "" : "s"} to Pathway Corridors & recalculated NEC fill.`, "success");
+  }
+}
+window.snapAllFloorCablesToTrunks = snapAllFloorCablesToTrunks;
+
+function recalculateCurrentFloorCables(skipSidebarRebuild = false) {
   const floor = getActiveFloor();
   const scaleInput = document.getElementById("cableScaleFt");
   const slackInput = document.getElementById("cableSlackFt");
@@ -2916,7 +3118,8 @@ function recalculateCurrentFloorCables() {
             { x: closet.x, y: closet.y },
             { x: dev.x, y: dev.y },
             fl.pathwayTrunks || [],
-            useOrthogonalRouting
+            useOrthogonalRouting,
+            dev.snapToPathway === true
           );
           pts = routed.points;
           traversedTrunks = routed.traversedTrunks;
@@ -2973,14 +3176,16 @@ function recalculateCurrentFloorCables() {
 
   if (footageEl) footageEl.innerText = `${globalFootage.toLocaleString()} ft`;
   if (spoolEl) spoolEl.innerText = `${spoolBoxes} Box${spoolBoxes === 1 ? '' : 'es'}`;
-  if (countActiveEl) countActiveEl.innerText = floor.nodes.filter(n => n.type === 'device').length;
+  if (countActiveEl && floor) countActiveEl.innerText = floor.nodes.filter(n => n.type === 'device').length;
   if (totalDropsEl) totalDropsEl.innerText = `${globalDropsCount} Drop${globalDropsCount === 1 ? '' : 's'}`;
   if (patchPanelsEl) {
     const panelsNeeded = Math.ceil(globalDropsCount / 24);
     patchPanelsEl.innerText = `${panelsNeeded} Panel${panelsNeeded === 1 ? '' : 's'} (${panelsNeeded * 24}P)`;
   }
 
-  renderSidebarTabContent();
+  if (!skipSidebarRebuild) {
+    renderSidebarTabContent();
+  }
 }
 
 // -----------------------------------------------------------
@@ -4154,8 +4359,16 @@ function renderInspector() {
             <p class="text-[10px] opacity-80 mt-1.5">
               ${isOverfilled 
                 ? `Pathway exceeds the ${maxFillPct}% ${trunk.type === 'conduit' ? 'NEC Chapter 9 Table 1 conduit' : 'NEC Article 392 cable tray'} fill limit for data cables. Upgrade size or divide runs.`
-                : `Drops within 260px automatically snap to this trunk spine. Maintains compliant ≤${maxFillPct}% cross-sectional fill.`}
+                : `Drops within 280px automatically snap to this trunk spine (and connected corridor trunks). Maintains compliant ≤${maxFillPct}% cross-sectional fill.`}
             </p>
+          </div>
+
+          <!-- 1-Click Snap All Floor Cables to Pathways -->
+          <div class="pt-1">
+            <button onclick="snapAllFloorCablesToTrunks()" class="w-full py-2 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-white border border-amber-500/40 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow">
+              <i data-lucide="magnet" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Snap Floor Cables to Pathway Corridors</span>
+            </button>
           </div>
         </div>
       `;
@@ -6907,4 +7120,6 @@ if (typeof window !== "undefined") {
   window.getDeviceCableId = getDeviceCableId;
   window.getFloorDistanceViolations = getFloorDistanceViolations;
   window.toggleFloorActionMenu = toggleFloorActionMenu;
+  window.toggleDoriColorBands = toggleDoriColorBands;
+  window.snapAllFloorCablesToTrunks = snapAllFloorCablesToTrunks;
 }
