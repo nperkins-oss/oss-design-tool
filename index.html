@@ -10,36 +10,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            },
-            slate: {
-              750: '#293548',
-              850: '#151e2e',
-              950: '#070b14',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <!-- Pre-Compiled Tailwind CSS (v3.4.17 Static Build — Option A) -->
+  <link rel="stylesheet" href="assets/css/tailwind.min.css" />
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -246,7 +218,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-xs sm:text-sm font-bold text-white tracking-tight truncate max-w-[140px] sm:max-w-none">OSS Network Design Tool</h1>
-            <span class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden 2xl:inline">v0.10.44-alpha</span>
+            <span id="appVersionBadge" class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden xl:inline" title="Application Version &amp; Build">v0.11.0-beta.1</span>
           </div>
           <div class="flex items-center gap-1.5 sm:gap-2 mt-0.5">
             <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1 hover:text-white cursor-pointer" title="Switch or Manage Projects">
@@ -1152,8 +1124,23 @@
             <button id="btnTogglePhysicalCableIds" onclick="togglePhysicalCableIds()" class="p-1 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer" title="Toggle TIA-606-C Cable ID Labels on floor drops">
               <i data-lucide="tag" class="w-3.5 h-3.5 text-emerald-400"></i>
             </button>
+            <button id="btnToggleCameraFov" onclick="toggleCameraFovCones()" class="p-1 rounded-lg border border-emerald-600/60 bg-emerald-950/70 text-emerald-300 hover:text-white text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer" title="Toggle Camera Field-of-View (FOV) &amp; DORI Coverage Cones">
+              <i data-lucide="cone" class="w-3.5 h-3.5 text-emerald-400"></i>
+            </button>
             <button id="tool-auto-fiber" onclick="manualAutoLinkTopology()" class="p-1 rounded-lg bg-cyan-950/60 hover:bg-cyan-900 border border-cyan-800/80 text-cyan-300 hover:text-white font-semibold flex items-center justify-center transition-colors cursor-pointer" title="Auto-link closets with fiber backbones based on Topology core switch uplinks">
               <i data-lucide="network" class="w-3.5 h-3.5 text-cyan-400"></i>
+            </button>
+          </div>
+
+          <div class="w-px h-4 bg-slate-800 my-auto"></div>
+
+          <!-- Cluster 3b: Granular Canvas Undo / Redo -->
+          <div class="flex items-center gap-0.5">
+            <button id="btnPhysUndo" onclick="CanvasHistory.undo()" disabled class="p-1 rounded-lg text-slate-400 hover:text-white disabled:opacity-35 disabled:pointer-events-none flex items-center justify-center transition-colors cursor-pointer" title="Undo Canvas Action (Ctrl+Z)">
+              <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+            </button>
+            <button id="btnPhysRedo" onclick="CanvasHistory.redo()" disabled class="p-1 rounded-lg text-slate-400 hover:text-white disabled:opacity-35 disabled:pointer-events-none flex items-center justify-center transition-colors cursor-pointer" title="Redo Canvas Action (Ctrl+Y)">
+              <i data-lucide="redo-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
 

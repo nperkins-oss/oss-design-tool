@@ -488,18 +488,19 @@ const PortEngine = {
    * Ensures uplink cages in the physical port matrix reflect live connected devices with deep-linking
    * @param {Object} item - Switch BOM item
    */
-  syncSwitchUplinks(item) {
+  syncSwitchUplinks(item, bomById = null) {
     if (!item || !Array.isArray(item.physicalPorts) || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
 
     const uplinkPorts = item.physicalPorts.filter(p => p.isUplink || p.role === "uplink");
     if (uplinkPorts.length === 0) return;
 
+    const idMap = bomById || new Map(projectBOM.filter(Boolean).map(i => [i.instanceId, i]));
     const isCoreOrAgg = item.role === "Core" || item.role === "Core & Agg" || item.role === "Aggregation" || item.role === "Spine" || item.role === "Gateways & WAN" || item.role === "Security WAN" || item.role === "Firewall" || item.category === "firewall" || item.category === "Firewall";
 
     if (isCoreOrAgg) {
       // Find downstream access switches homing back to this core/aggregation switch
       const downstreamSwitches = projectBOM.filter(s => 
-        (s.customUplinkTargetId === item.instanceId || s.uplinkTargetId === item.instanceId) && 
+        s && (s.customUplinkTargetId === item.instanceId || s.uplinkTargetId === item.instanceId) && 
         s.instanceId !== item.instanceId
       );
 
@@ -521,7 +522,7 @@ const PortEngine = {
       });
       // Clear any remaining unassigned uplink cages on this core switch
       for (let m = portIdx; m < uplinkPorts.length; m++) {
-        if (!uplinkPorts[m].connectedDeviceId || !projectBOM.some(i => i.instanceId === uplinkPorts[m].connectedDeviceId)) {
+        if (!uplinkPorts[m].connectedDeviceId || !idMap.has(uplinkPorts[m].connectedDeviceId)) {
           uplinkPorts[m].connectedDeviceId = null;
           uplinkPorts[m].connectedDeviceModel = null;
           uplinkPorts[m].connectedDeviceRole = null;
@@ -532,7 +533,7 @@ const PortEngine = {
     } else {
       // Access Switch: Uplink homes to Core/Agg switch
       const targetId = item.customUplinkTargetId || item.uplinkTargetId;
-      const targetSw = targetId ? projectBOM.find(i => i.instanceId === targetId) : null;
+      const targetSw = targetId ? (idMap.get(targetId) || null) : null;
       const linkCount = Math.min(uplinkPorts.length, parseInt(item.customLinkMultiplier || 1, 10));
 
       uplinkPorts.forEach((p, idx) => {
@@ -555,16 +556,51 @@ const PortEngine = {
   },
 
   /**
+   * Builds an O(1) lookup map of device instanceId -> { normLoc, spaceLower } from placed floorplan nodes
+   */
+  _buildDropClosetIndex() {
+    const dropMap = new Map();
+    if (typeof facilityFloors === "undefined" || !Array.isArray(facilityFloors)) return dropMap;
+    const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
+    const closetById = new Map();
+    allClosets.forEach(c => {
+      if (!c || !c.id) return;
+      const norm = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(c.name) : c.name;
+      const spaceLower = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(norm).space.toLowerCase() : "";
+      closetById.set(c.id, { normLoc: norm, spaceLower });
+    });
+
+    for (const fl of facilityFloors) {
+      if (!fl || !Array.isArray(fl.nodes)) continue;
+      for (const n of fl.nodes) {
+        if (!n || !n.assignedClosetId) continue;
+        const clInfo = closetById.get(n.assignedClosetId);
+        if (!clInfo) continue;
+        if (n.instanceId) dropMap.set(n.instanceId, clInfo);
+        if (n.id) {
+          dropMap.set(n.id, clInfo);
+          if (typeof n.id === "string" && n.id.startsWith("dev-")) {
+            dropMap.set(n.id.slice(4), clInfo);
+          }
+        }
+      }
+    }
+    return dropMap;
+  },
+
+  /**
    * Synchronizes edge client devices (Cameras, Access Control, APs, Intercoms) homed to this switch
    * Auto-allocates switch ports supporting the device's PoE standards and speed if unassigned
    * @param {Object} switchItem - Network switch BOM item
+   * @param {Map} [precomputedDropMap] - Optional pre-indexed drop closet lookup map
    */
-  syncSwitchEdgePorts(switchItem) {
+  syncSwitchEdgePorts(switchItem, precomputedDropMap = null) {
     if (!switchItem || !Array.isArray(switchItem.physicalPorts) || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
 
     const ports = switchItem.physicalPorts;
     const switchLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(switchItem.closetName || switchItem.rackId) : (switchItem.closetName || switchItem.rackId);
     const switchSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(switchLoc).space.toLowerCase() : "";
+    const dropClosetMap = precomputedDropMap || this._buildDropClosetIndex();
 
     // 1. Gather all field devices that are homed to this switch or in this switch's closet/rack
     const edgeDevices = projectBOM.filter(item => {
@@ -581,20 +617,11 @@ const PortEngine = {
 
       // Or if not homed to ANY switch yet (and not explicitly unassigned by user), check if it terminates at this switch's closet / space
       if (!item.uplinkTargetId && !item.unassignedByUser) {
-        // A. Check if placed on physical layout canvas assigned to this closet
-        if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
-          for (const fl of facilityFloors) {
-            const drop = (fl.nodes || []).find(n => n.instanceId === item.instanceId || n.id === `dev-${item.instanceId}` || n.id === item.instanceId);
-            if (drop && drop.assignedClosetId) {
-              const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
-              const cl = allClosets.find(c => c.id === drop.assignedClosetId);
-              if (cl) {
-                const clNorm = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cl.name) : cl.name;
-                if (clNorm === switchLoc || (switchSpace && FacilityStore.parse(clNorm).space.toLowerCase() === switchSpace)) {
-                  return true;
-                }
-              }
-            }
+        // A. Check O(1) pre-indexed physical layout drop map
+        const clInfo = dropClosetMap.get(item.instanceId);
+        if (clInfo) {
+          if (clInfo.normLoc === switchLoc || (switchSpace && clInfo.spaceLower === switchSpace)) {
+            return true;
           }
         }
 
@@ -706,19 +733,11 @@ const PortEngine = {
 
     let searchSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(targetLoc).space.toLowerCase() : "";
     if (searchSpace === "field" || searchSpace === "unassigned" || !searchSpace) {
-      if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
-        for (const fl of facilityFloors) {
-          const drop = (fl.nodes || []).find(n => n.instanceId === deviceItem.instanceId || n.id === `dev-${deviceItem.instanceId}` || n.id === deviceItem.instanceId);
-          if (drop && drop.assignedClosetId) {
-            const allClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
-            const cl = allClosets.find(c => c.id === drop.assignedClosetId);
-            if (cl) {
-              targetLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cl.name) : cl.name;
-              searchSpace = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(targetLoc).space.toLowerCase() : "";
-              break;
-            }
-          }
-        }
+      const dropMap = this._buildDropClosetIndex();
+      const clInfo = dropMap.get(deviceItem.instanceId);
+      if (clInfo) {
+        targetLoc = clInfo.normLoc;
+        searchSpace = clInfo.spaceLower;
       }
     }
 
@@ -779,7 +798,7 @@ const PortEngine = {
 
       if (port) {
         if (deviceItem.uplinkTargetId && deviceItem.uplinkTargetId !== sw.instanceId) {
-          const oldSw = projectBOM.find(i => i.instanceId === deviceItem.uplinkTargetId);
+          const oldSw = allSwitches.find(i => i.instanceId === deviceItem.uplinkTargetId);
           if (oldSw) this.disconnectPort(oldSw, deviceItem.assignedSwitchPort);
         }
 
@@ -796,15 +815,21 @@ const PortEngine = {
    */
   syncAllSwitchPorts() {
     if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
-    const switches = projectBOM.filter(i => !i.parentInstanceId && (
+    const bomById = new Map(projectBOM.filter(Boolean).map(i => [i.instanceId, i]));
+    const dropClosetMap = this._buildDropClosetIndex();
+    const switches = projectBOM.filter(i => i && !i.parentInstanceId && (
       (i.role || "").toLowerCase().includes("switch") || (i.category || "").toLowerCase().includes("switch") ||
       i.role === "Access" || i.role === "Core" || i.role === "Aggregation" || i.role === "Core & Agg" || i.role === "Security WAN"
     ));
     switches.forEach(sw => {
       this.initSwitchPorts(sw);
-      this.syncSwitchUplinks(sw);
-      this.syncSwitchEdgePorts(sw);
+      this.syncSwitchUplinks(sw, bomById);
+      this.syncSwitchEdgePorts(sw, dropClosetMap);
     });
+  },
+
+  autoSyncAllSwitchPorts() {
+    this.syncAllSwitchPorts();
   },
 
   /**
@@ -1333,20 +1358,48 @@ const PortEngine = {
   },
 
   /**
-   * Sets power delivery mode on device and synchronizes BOM accessories
+   * Sets power delivery mode on device, updates host switch PoE load, and synchronizes BOM accessories
    */
-  setPowerSource(deviceItem, newPowerMode) {
-    if (!deviceItem || !newPowerMode) return;
+  setPowerSource(deviceItem, newPowerMode, hostSwitchItem = null) {
+    if (!deviceItem || !newPowerMode) return false;
     const supported = this.getSupportedPowerModes(deviceItem);
     if (!supported.includes(newPowerMode)) {
       newPowerMode = supported[0] || "internal_psu";
     }
     deviceItem.powerSourceOverride = newPowerMode;
     deviceItem.powerSource = newPowerMode;
+
+    const interfaces = this.initDeviceInterfaces(deviceItem);
+    if (interfaces.length > 0) {
+      interfaces[0].powerSource = newPowerMode;
+    }
+
+    let sw = hostSwitchItem;
+    if (!sw && deviceItem.uplinkTargetId && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      sw = projectBOM.find(i => i && i.instanceId === deviceItem.uplinkTargetId);
+    }
+    if (sw) {
+      const ports = this.initSwitchPorts(sw);
+      const port = ports.find(p => p.connectedDeviceId === deviceItem.instanceId || p.portNumber === deviceItem.assignedSwitchPort);
+      if (port) {
+        if (newPowerMode === "poe_switch" && port.poeStandard) {
+          const watts = parseFloat(deviceItem.powerConsumptionWatts || deviceItem.maxPowerWatts || 15.0) * (parseInt(deviceItem.qty, 10) || 1);
+          port.poeOutputWatts = Math.min(watts, port.maxPoeWatts);
+        } else {
+          port.poeOutputWatts = 0;
+        }
+      }
+      this.recalculateSwitchPoE(sw);
+    }
+
     this.syncPowerAccessories(deviceItem, newPowerMode);
     if (typeof updateBOMView === "function") {
       updateBOMView();
     }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    return true;
   },
 
   /**

@@ -16,6 +16,22 @@ if (typeof window.escapeHTML !== "function") {
   };
 }
 
+if (typeof window.escapeJSAttr !== "function") {
+  window.escapeJSAttr = function(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/\\/g, "\\x5c")
+      .replace(/'/g, "\\x27")
+      .replace(/"/g, "\\x22")
+      .replace(/`/g, "\\x60")
+      .replace(/</g, "\\x3c")
+      .replace(/>/g, "\\x3e")
+      .replace(/&/g, "\\x26")
+      .replace(/\r/g, "\\r")
+      .replace(/\n/g, "\\n");
+  };
+}
+
 if (typeof window.safeCreateIcons !== "function") {
   window.safeCreateIcons = function(rootElement) {
     if (typeof lucide !== "undefined" && typeof lucide.createIcons === "function") {
@@ -32,9 +48,181 @@ if (typeof window.safeCreateIcons !== "function") {
   };
 }
 
+// ==========================================
+// INDEXED-DB BLUEPRINT & BLOB OFFLOAD ENGINE
+// Offloads and deduplicates heavy base64 floorplan rasters out of 5MB LocalStorage
+// ==========================================
+const BlueprintCache = new Map();
+
+const NetSelectIDB = {
+  DB_NAME: "netselect_enterprise_db",
+  DB_VERSION: 1,
+  STORE_BLUEPRINTS: "blueprints",
+  _dbPromise: null,
+
+  open() {
+    if (this._dbPromise) return this._dbPromise;
+    if (typeof indexedDB === "undefined") return Promise.resolve(null);
+    this._dbPromise = new Promise((resolve) => {
+      try {
+        const req = indexedDB.open(this.DB_NAME, this.DB_VERSION);
+        req.onupgradeneeded = (ev) => {
+          const db = ev.target.result;
+          if (!db.objectStoreNames.contains(this.STORE_BLUEPRINTS)) {
+            db.createObjectStore(this.STORE_BLUEPRINTS, { keyPath: "ref" });
+          }
+        };
+        req.onsuccess = (ev) => resolve(ev.target.result);
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+    return this._dbPromise;
+  },
+
+  computeBlueprintRef(dataUrl) {
+    let h1 = 0x811c9dc5;
+    let h2 = 0x01000193;
+    const len = dataUrl.length;
+    const step = len > 16384 ? Math.floor(len / 8192) : 1;
+    for (let i = 0; i < len; i += step) {
+      const c = dataUrl.charCodeAt(i);
+      h1 ^= c;
+      h1 = Math.imul(h1, 0x01000193);
+      h2 ^= (c + (i & 0xff));
+      h2 = Math.imul(h2, 0x85ebca6b);
+    }
+    const hex1 = (h1 >>> 0).toString(16).padStart(8, "0");
+    const hex2 = (h2 >>> 0).toString(16).padStart(8, "0");
+    return `idb://bp_${hex1}${hex2}_${len}`;
+  },
+
+  async putBlueprint(ref, dataUrl) {
+    if (!ref || !dataUrl) return false;
+    BlueprintCache.set(ref, dataUrl);
+    const db = await this.open();
+    if (!db) return false;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(this.STORE_BLUEPRINTS, "readwrite");
+        const store = tx.objectStore(this.STORE_BLUEPRINTS);
+        store.put({ ref, dataUrl, updatedAt: Date.now() });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      } catch (e) {
+        resolve(false);
+      }
+    });
+  },
+
+  async getBlueprint(ref) {
+    if (!ref) return null;
+    if (BlueprintCache.has(ref)) return BlueprintCache.get(ref);
+    const db = await this.open();
+    if (!db) return null;
+    return new Promise((resolve) => {
+      try {
+        const tx = db.transaction(this.STORE_BLUEPRINTS, "readonly");
+        const store = tx.objectStore(this.STORE_BLUEPRINTS);
+        const req = store.get(ref);
+        req.onsuccess = () => {
+          const val = req.result ? req.result.dataUrl : null;
+          if (val) BlueprintCache.set(ref, val);
+          resolve(val);
+        };
+        req.onerror = () => resolve(null);
+      } catch (e) {
+        resolve(null);
+      }
+    });
+  },
+
+  async preloadAllToCache() {
+    const db = await this.open();
+    if (!db) return;
+    try {
+      const tx = db.transaction(this.STORE_BLUEPRINTS, "readonly");
+      const store = tx.objectStore(this.STORE_BLUEPRINTS);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const rows = req.result || [];
+        rows.forEach((r) => {
+          if (r && r.ref && r.dataUrl) {
+            BlueprintCache.set(r.ref, r.dataUrl);
+          }
+        });
+        if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+          let hydratedAny = false;
+          facilityFloors.forEach((f) => {
+            if (f && typeof f.image === "string" && f.image.startsWith("idb://") && BlueprintCache.has(f.image)) {
+              f.image = BlueprintCache.get(f.image);
+              hydratedAny = true;
+            }
+          });
+          if (hydratedAny && typeof renderCableCanvas === "function") {
+            renderCableCanvas();
+          }
+        }
+      };
+    } catch (e) {}
+  }
+};
+
+window.NetSelectIDB = NetSelectIDB;
+window.BlueprintCache = BlueprintCache;
+NetSelectIDB.preloadAllToCache();
+
 const StorageService = {
   AUTO_SAVE_DEBOUNCE_MS: 300,
   _autoSaveTimer: null,
+
+  /**
+   * Offloads heavy base64 floorplan images into IndexedDB + BlueprintCache,
+   * returning a lightweight cloned floors array safe for LocalStorage serialization.
+   */
+  offloadFloorBlueprints(floors) {
+    if (!Array.isArray(floors)) return [];
+    return floors.map((f) => {
+      if (!f || typeof f !== "object") return f;
+      const copy = JSON.parse(JSON.stringify(f));
+      if (typeof copy.image === "string" && copy.image.startsWith("data:image/") && copy.image.length > 2048) {
+        const ref = NetSelectIDB.computeBlueprintRef(copy.image);
+        NetSelectIDB.putBlueprint(ref, copy.image);
+        copy.image = ref;
+      }
+      return copy;
+    });
+  },
+
+  /**
+   * Restores idb:// blueprint references on a floor array from BlueprintCache (sync)
+   * or IndexedDB (async fallback with optional re-render callback).
+   */
+  hydrateFloorBlueprints(floors, onAsyncHydrated = null) {
+    if (!Array.isArray(floors)) return floors;
+    let pendingAsync = 0;
+    floors.forEach((f) => {
+      if (!f || typeof f.image !== "string" || !f.image.startsWith("idb://")) return;
+      const ref = f.image;
+      if (BlueprintCache.has(ref)) {
+        f.image = BlueprintCache.get(ref);
+      } else {
+        pendingAsync++;
+        NetSelectIDB.getBlueprint(ref).then((dataUrl) => {
+          if (dataUrl) {
+            f.image = dataUrl;
+          }
+          pendingAsync--;
+          if (pendingAsync === 0) {
+            if (typeof onAsyncHydrated === "function") onAsyncHydrated();
+            else if (typeof renderCableCanvas === "function") renderCableCanvas();
+          }
+        });
+      }
+    });
+    return floors;
+  },
 
   /**
    * Safely writes to LocalStorage with QuotaExceededError protection
@@ -286,18 +474,22 @@ const StorageService = {
     }
 
     let physicalCanvas = null;
-    try {
-      const rawFac = localStorage.getItem(`netselect_facility_${projId}`);
-      if (rawFac) physicalCanvas = JSON.parse(rawFac);
-    } catch (e) {}
-
-    if (!physicalCanvas && typeof facilityFloors !== "undefined") {
+    if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
       physicalCanvas = {
         activeFloorId: typeof activeFloorId !== "undefined" ? activeFloorId : "floor-1",
         activeCableSku: typeof activeCableSku !== "undefined" ? activeCableSku : "CAT6A-UTP-PLEN",
         useOrthogonalRouting: typeof useOrthogonalRouting !== "undefined" ? useOrthogonalRouting : false,
-        facilityFloors: Array.isArray(facilityFloors) ? JSON.parse(JSON.stringify(facilityFloors)) : []
+        facilityFloors: JSON.parse(JSON.stringify(facilityFloors))
       };
+    } else {
+      try {
+        const rawFac = localStorage.getItem(`netselect_facility_${projId}`);
+        if (rawFac) physicalCanvas = JSON.parse(rawFac);
+      } catch (e) {}
+    }
+
+    if (physicalCanvas && Array.isArray(physicalCanvas.facilityFloors)) {
+      this.hydrateFloorBlueprints(physicalCanvas.facilityFloors);
     }
 
     let topologyPositions = {};
@@ -322,7 +514,8 @@ const StorageService = {
     } catch (e) {}
 
     return {
-      schemaVersion: "2.0.0",
+      schemaVersion: window.SCHEMA_VERSION || "2.1.0",
+      appVersion: window.APP_VERSION || "0.11.0-beta.1",
       projectId: projId,
       projectName: projName,
       createdAt: new Date().toISOString(),
@@ -409,10 +602,14 @@ const StorageService = {
       }
     }
 
-    // 6. Restore Physical Canvas Data
+    // 6. Restore Physical Canvas Data (offloading blueprints before LocalStorage write)
     const physData = bundle.physicalCanvas || bundle.facilityData;
     if (physData) {
-      this.safeSetItem(`netselect_facility_${projId}`, JSON.stringify(physData));
+      const physForStorage = JSON.parse(JSON.stringify(physData));
+      if (Array.isArray(physForStorage.facilityFloors)) {
+        physForStorage.facilityFloors = this.offloadFloorBlueprints(physForStorage.facilityFloors);
+      }
+      this.safeSetItem(`netselect_facility_${projId}`, JSON.stringify(physForStorage));
     }
     if (typeof loadFacilityState === "function") {
       loadFacilityState();
@@ -533,6 +730,15 @@ const StorageService = {
     }
 
     const itemsCount = bundle.projectBOM ? bundle.projectBOM.reduce((acc, i) => acc + (i.qty || 1), 0) : 0;
+
+    // Offload base64 floorplan images to IndexedDB before persisting quote snapshot in LocalStorage
+    const compactBundle = JSON.parse(JSON.stringify(bundle));
+    let compactFloors = [];
+    if (compactBundle.physicalCanvas && Array.isArray(compactBundle.physicalCanvas.facilityFloors)) {
+      compactFloors = this.offloadFloorBlueprints(compactBundle.physicalCanvas.facilityFloors);
+      compactBundle.physicalCanvas.facilityFloors = compactFloors;
+    }
+
     const entry = {
       id,
       name,
@@ -540,10 +746,10 @@ const StorageService = {
       updatedAt: Date.now(),
       itemsCount,
       totalMsrp,
-      bom: bundle.projectBOM || [],
-      demandCounts: bundle.calculator?.demandCounts || bundle.demandCounts || {},
-      facilityFloors: bundle.physicalCanvas?.facilityFloors || [],
-      bundle
+      bom: compactBundle.projectBOM || [],
+      demandCounts: compactBundle.calculator?.demandCounts || compactBundle.demandCounts || {},
+      facilityFloors: compactFloors,
+      bundle: compactBundle
     };
 
     const existingIdx = saved.findIndex(p => p.id === id);
@@ -881,7 +1087,15 @@ const StorageService = {
       };
     }
 
-    this._downloadJSON(bundle, bundle.projectName || proj.name || "Project");
+    const exportCopy = JSON.parse(JSON.stringify(bundle));
+    if (exportCopy.physicalCanvas && Array.isArray(exportCopy.physicalCanvas.facilityFloors)) {
+      this.hydrateFloorBlueprints(exportCopy.physicalCanvas.facilityFloors);
+    }
+    if (Array.isArray(exportCopy.facilityFloors)) {
+      this.hydrateFloorBlueprints(exportCopy.facilityFloors);
+    }
+
+    this._downloadJSON(exportCopy, exportCopy.projectName || proj.name || "Project");
   },
 
   /**

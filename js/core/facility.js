@@ -1573,49 +1573,73 @@ const FacilityStore = {
   // =========================================================================
   // UNIFIED WORKSPACE DISPATCHER (Cross-Modal Sync & Real-Time Recalculations)
   // =========================================================================
-  notifyWorkspaceChange() {
+  _notifyTimer: null,
+
+  notifyWorkspaceChange(immediate = false) {
     try {
+      // 1. Always run fast in-memory taxonomy & BOM normalization synchronously
       if (typeof unbundleMultiQtyCameras === "function" && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
         unbundleMultiQtyCameras(projectBOM);
       }
       if (typeof DeviceTaxonomy !== "undefined" && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
         DeviceTaxonomy.recalculateNumbers(projectBOM);
       }
-      if (typeof saveBOMState === "function") saveBOMState();
-      if (typeof updateBOMView === "function") updateBOMView();
-      if (typeof runActiveFilter === "function") runActiveFilter();
-
-      // 1. Live update Facility Modal (Visualizer or Hierarchy)
-      const facModal = document.getElementById("facilityModal");
-      if (facModal && !facModal.classList.contains("hidden")) {
-        if (typeof facilityActiveView !== "undefined" && facilityActiveView === "visualizer") {
-          if (typeof renderRackVisualizer === "function") renderRackVisualizer();
-        } else {
-          if (typeof renderFacilityManager === "function") renderFacilityManager();
-        }
-      }
-
-      // 2. Live update Topology if open
-      const topoModal = document.getElementById("topologyModal");
-      if (topoModal && !topoModal.classList.contains("hidden")) {
-        if (typeof renderTopology === "function") renderTopology();
-      }
-
-      // 3. Live update Physical Layout Canvas & State
-      if (typeof syncBOMClosetsToFloors === "function") syncBOMClosetsToFloors();
-      if (typeof syncBOMDevicesToFloors === "function") syncBOMDevicesToFloors();
-
-      const cableModal = document.getElementById("cableLayoutModal");
-      if (cableModal && !cableModal.classList.contains("hidden")) {
-        if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
-        if (typeof renderCableCanvas === "function") renderCableCanvas();
-        if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
-        if (typeof renderInspector === "function") renderInspector();
-      }
-
-      // 4. Live update Intra-Rack Cabling & Interconnects (DACs and Patch Cords adjust based on U separation)
       if (typeof syncRackInterconnectsAndCabling === "function") {
         syncRackInterconnectsAndCabling();
+      }
+      if (typeof syncBOMClosetsToFloors === "function") syncBOMClosetsToFloors();
+      if (typeof syncBOMDevicesToFloors === "function") syncBOMDevicesToFloors();
+      if (typeof saveBOMState === "function") saveBOMState();
+
+      const flushUIRenders = () => {
+        this._notifyTimer = null;
+        try {
+          if (typeof updateBOMView === "function") updateBOMView();
+
+          // Only re-filter hardware catalog grid if none of the fullscreen studio modals are covering it
+          const facModal = document.getElementById("facilityModal");
+          const topoModal = document.getElementById("topologyModal");
+          const cableModal = document.getElementById("cableLayoutModal");
+          const facOpen = Boolean(facModal && !facModal.classList.contains("hidden"));
+          const topoOpen = Boolean(topoModal && !topoModal.classList.contains("hidden"));
+          const cableOpen = Boolean(cableModal && !cableModal.classList.contains("hidden"));
+
+          if (!facOpen && !topoOpen && !cableOpen) {
+            if (typeof runActiveFilter === "function") runActiveFilter();
+          }
+
+          // 1. Live update Facility Modal (Visualizer or Hierarchy) only if visible
+          if (facOpen) {
+            if (typeof facilityActiveView !== "undefined" && facilityActiveView === "visualizer") {
+              if (typeof renderRackVisualizer === "function") renderRackVisualizer();
+            } else {
+              if (typeof renderFacilityManager === "function") renderFacilityManager();
+            }
+          }
+
+          // 2. Live update Topology only if visible
+          if (topoOpen) {
+            if (typeof renderTopology === "function") renderTopology();
+          }
+
+          // 3. Live update Physical Layout Canvas & State only if visible
+          if (cableOpen) {
+            if (typeof recalculateCurrentFloorCables === "function") recalculateCurrentFloorCables();
+            if (typeof renderCableCanvas === "function") renderCableCanvas();
+            if (typeof renderSidebarTabContent === "function") renderSidebarTabContent();
+            if (typeof renderInspector === "function") renderInspector();
+          }
+        } catch (innerErr) {
+          console.error("Error in FacilityStore UI flush:", innerErr);
+        }
+      };
+
+      if (immediate) {
+        if (this._notifyTimer) clearTimeout(this._notifyTimer);
+        flushUIRenders();
+      } else {
+        if (this._notifyTimer) clearTimeout(this._notifyTimer);
+        this._notifyTimer = setTimeout(flushUIRenders, 16);
       }
     } catch (e) {
       console.error("Error in FacilityStore.notifyWorkspaceChange:", e);

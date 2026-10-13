@@ -4,9 +4,30 @@
 // Single-Page Domain Switcher, Multi-Sizer Pipeline & State Coordinator
 // =========================================================================
 
-// Version & Build Information
-const APP_VERSION = "0.10.14-alpha";
-const BUILD_NUMBER = "2026.09.25.1330";
+// Version & Build Information (Single Source of Truth — synced via scripts/bump_version.py)
+const APP_VERSION = "0.11.0-beta.1";
+const BUILD_NUMBER = "2026.10.13.1230";
+const SCHEMA_VERSION = "2.1.0";
+
+function getAppEnvironment() {
+  const host = (typeof window !== "undefined" && window.location && window.location.hostname) ? window.location.hostname.toLowerCase() : "";
+  if (!host || host === "localhost" || host === "127.0.0.1" || (typeof window !== "undefined" && window.location.protocol === "file:")) {
+    return { id: "local", label: "LOCAL DEV", badgeClass: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
+  }
+  if (host.includes("staging") || host.includes("-dev") || host.includes("azurestaticapps.net") && APP_VERSION.includes("-")) {
+    return { id: "staging", label: "STAGING", badgeClass: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
+  }
+  return { id: "production", label: "PROD", badgeClass: "bg-indigo-500/10 text-indigo-400 border-indigo-500/30" };
+}
+
+function renderVersionBadge() {
+  const el = document.getElementById("appVersionBadge");
+  if (!el) return;
+  const env = getAppEnvironment();
+  el.textContent = env.id === "production" ? `v${APP_VERSION}` : `v${APP_VERSION} • ${env.label}`;
+  el.title = `OSS Network Design Tool v${APP_VERSION} | Build ${BUILD_NUMBER} | Schema v${SCHEMA_VERSION} (${env.label})`;
+  el.className = `text-[10px] font-mono border px-1.5 py-0.5 rounded hidden xl:inline ${env.badgeClass}`;
+}
 
 // Active Navigation State
 let activeDomain = "networking"; // "networking" | "physical_security" | "compute_storage" | "infrastructure" | "software"
@@ -225,6 +246,7 @@ const AppState = {
   extraHeadroomPercent,
   version: APP_VERSION,
   build: BUILD_NUMBER,
+  schemaVersion: SCHEMA_VERSION,
   resetFilters(mode) {
     if (typeof resetCurrentFilters === "function") {
       resetCurrentFilters();
@@ -234,6 +256,9 @@ const AppState = {
 window.AppState = AppState;
 window.APP_VERSION = APP_VERSION;
 window.BUILD_NUMBER = BUILD_NUMBER;
+window.SCHEMA_VERSION = SCHEMA_VERSION;
+window.getAppEnvironment = getAppEnvironment;
+window.renderVersionBadge = renderVersionBadge;
 
 // Debounced filter runner for fast typing response
 const debouncedRunActiveFilter = debounce(() => {
@@ -244,6 +269,7 @@ const debouncedRunActiveFilter = debounce(() => {
 // Initialization Lifecycle
 // -----------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
+  renderVersionBadge();
   if (typeof StorageService !== "undefined") {
     StorageService.restoreStateFromLocalStorage();
   }
