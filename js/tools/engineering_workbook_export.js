@@ -318,7 +318,7 @@ const EngineeringWorkbookExporter = {
       const cableId = row.cableId || `CBL-${String(idx + 1).padStart(3, '0')}`;
       const closet = row.closetName || "MDF • Main Telecom";
       const ppPort = (row.panelTag && row.panelPort)
-        ? `${row.panelTag}-P${row.panelPort}`
+        ? (String(row.panelTag).includes('-P') ? String(row.panelTag) : `${row.panelTag}-P${row.panelPort}`)
         : (row.patchPanelPort || `PP01-P${String((idx % 24) + 1).padStart(2, '0')}`);
       const dropName = row.deviceTag
         ? `${row.deviceTag} (${row.deviceName || row.deviceModel || 'Endpoint'})`
@@ -460,8 +460,8 @@ const EngineeringWorkbookExporter = {
         const speedStr = portObj.speed || (isUplink ? (sw.uplinkSpeed || "10 Gbps") : "1 Gbps");
         const targetDev = portObj.connectedDeviceId ? bomById.get(portObj.connectedDeviceId) : null;
 
-        let vlan = parseInt(portObj.vlan, 10) || (isUplink ? 1 : 10);
-        let vlanName = isUplink ? "802.1Q Trunk" : "Unused / Parking";
+        let vlan = 1;
+        let vlanName = isUplink ? "Untagged Uplink (Flat)" : "Untagged (Spare)";
         let role = isUplink ? "Spare Uplink" : "Spare Access Port";
         let poeAlloc = 0;
         let connectedDrop = "Spare Available";
@@ -472,25 +472,13 @@ const EngineeringWorkbookExporter = {
           connectedDrop = `${tagPrefix}${targetDev.friendlyName || targetDev.model || "Endpoint"}`;
           role = targetDev.role || targetDev.category || "Connected Endpoint";
 
-          const catStr = `${targetDev.category || ""} ${targetDev.role || ""} ${targetDev.model || ""}`.toLowerCase();
-          if (isUplink || catStr.includes("switch") || catStr.includes("firewall") || catStr.includes("core")) {
-            vlan = parseInt(portObj.vlan, 10) || 1;
-            vlanName = "802.1Q Infrastructure Trunk";
-          } else if (catStr.includes("camera") || catStr.includes("video") || catStr.includes("cctv")) {
-            vlan = parseInt(portObj.vlan, 10) || 30;
-            vlanName = "Surveillance (CCTV)";
-          } else if (catStr.includes("access") || catStr.includes("door") || catStr.includes("reader") || catStr.includes("intercom")) {
-            vlan = parseInt(portObj.vlan, 10) || 40;
-            vlanName = "Access Control (EAC)";
-          } else if (catStr.includes("wireless") || catStr.includes("wifi") || catStr.includes("radio") || catStr.includes("bridge")) {
-            vlan = parseInt(portObj.vlan, 10) || 50;
-            vlanName = "Wireless (WLAN)";
-          } else if (catStr.includes("server") || catStr.includes("nvr") || catStr.includes("storage")) {
-            vlan = parseInt(portObj.vlan, 10) || 20;
-            vlanName = "Security Compute / VMS";
+          if (typeof getProjectVlanDetailsForDevice === "function") {
+            const vDet = getProjectVlanDetailsForDevice(targetDev, portObj, isUplink);
+            vlan = vDet.vlanId || 1;
+            vlanName = vDet.vlanName || "Untagged (Flat Network)";
           } else {
-            vlan = parseInt(portObj.vlan, 10) || 10;
-            vlanName = "Corporate Data";
+            vlan = parseInt(portObj.vlan, 10) || 1;
+            vlanName = "Untagged (Flat Network)";
           }
 
           const pwrSource = (typeof PortEngine !== "undefined" && typeof PortEngine.getDevicePowerSource === "function")
@@ -503,8 +491,14 @@ const EngineeringWorkbookExporter = {
           totalActivePorts++;
           connectedDrop = portObj.connectedDeviceName || "Patched Endpoint";
           role = portObj.role || (isUplink ? "Uplink Trunk" : "Patched Port");
-          vlan = parseInt(portObj.vlan, 10) || (isUplink ? 1 : 10);
-          vlanName = isUplink ? "802.1Q Infrastructure Trunk" : "Assigned Segment";
+          if (typeof getProjectVlanDetailsForDevice === "function") {
+            const vDet = getProjectVlanDetailsForDevice(null, portObj, isUplink);
+            vlan = vDet.vlanId || 1;
+            vlanName = vDet.vlanName || "Untagged (Flat Network)";
+          } else {
+            vlan = parseInt(portObj.vlan, 10) || 1;
+            vlanName = "Untagged (Flat Network)";
+          }
           poeAlloc = parseFloat(portObj.poeOutputWatts || 0) || 0;
         }
 

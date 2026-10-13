@@ -73,6 +73,14 @@ function buildSidebarFilters() {
     buildCablingSidebar(container, baseSet);
   } else if (currentMode === "pathways") {
     buildPathwaysSidebar(container, baseSet);
+  } else if (currentMode === "cameras") {
+    buildCamerasSidebar(container, baseSet);
+  } else if (currentMode === "access_control") {
+    buildAccessControlSidebar(container, baseSet);
+  } else if (currentMode === "power_enclosures") {
+    buildEnclosuresSidebar(container, baseSet);
+  } else if (currentMode === "servers" || currentMode === "storage" || currentMode === "workstations") {
+    buildServersSidebar(container, baseSet);
   } else {
     buildDomainPlaceholderSidebar(container, currentMode);
   }
@@ -1291,6 +1299,271 @@ function buildPathwaysSidebar(container, baseSet) {
   `;
 }
 
+function buildCamerasSidebar(container, baseSet) {
+  const vendors = ["Axis Communications", "Hanwha Vision", "Avigilon", "Bosch Security"];
+  const formFactors = [
+    { id: "dome", label: "Fixed / Vandal Dome" },
+    { id: "bullet", label: "IR Bullet / LPR" },
+    { id: "ptz", label: "PTZ / PTRZ Pan-Tilt-Zoom" },
+    { id: "multisensor", label: "Multi-Sensor / Panoramic" }
+  ];
+  const resolutions = [
+    { id: "2mp", label: "2 MP (1080p Full HD)" },
+    { id: "4mp", label: "4 MP – 6 MP (QHD)" },
+    { id: "8mp", label: "4K UHD (8 MP)" },
+    { id: "multi", label: "15 MP – 32 MP (Multi-Imager)" }
+  ];
+
+  const camVendors = typeof selectedCamVendors !== "undefined" ? selectedCamVendors : [];
+  const camForms = typeof selectedCamFormFactors !== "undefined" ? selectedCamFormFactors : [];
+  const camRes = typeof selectedCamResolutions !== "undefined" ? selectedCamResolutions : [];
+
+  container.innerHTML = `
+    <div class="space-y-5">
+      <!-- Camera Manufacturers -->
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Camera Manufacturer</span>
+        <div class="space-y-1.5">
+          ${vendors.map(v => {
+            const count = baseSet.filter(c => (c.vendor || '').toLowerCase().includes(v.toLowerCase())).length;
+            const isChecked = camVendors.includes(v);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('camVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Form Factor -->
+      <div class="pt-3 border-t border-slate-800/80">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Housing & Form Factor</span>
+        <div class="space-y-1.5">
+          ${formFactors.map(ff => {
+            const isChecked = camForms.includes(ff.id);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('camFormFactor', '${ff.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+                  <span>${ff.label}</span>
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Sensor Resolution -->
+      <div class="pt-3 border-t border-slate-800/80">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Sensor Resolution (DORI)</span>
+        <div class="space-y-1.5">
+          ${resolutions.map(r => {
+            const isChecked = camRes.includes(r.id);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('camResolution', '${r.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+                  <span>${r.label}</span>
+                </div>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Technical Mandates -->
+      <div class="pt-3 border-t border-slate-800/80 space-y-2">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Optical & Security Mandates</span>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+          <input type="checkbox" onchange="requireCamAnalytics = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamAnalytics !== 'undefined' && requireCamAnalytics) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+          <span>Edge AI / Deep Learning Analytics</span>
+        </label>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+          <input type="checkbox" onchange="requireCamVandal = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamVandal !== 'undefined' && requireCamVandal) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+          <span>IK10 Vandal-Resistant Housing</span>
+        </label>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+          <input type="checkbox" onchange="requireCamTaa = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamTaa !== 'undefined' && requireCamTaa) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+          <span>NDAA / TAA Compliant Only</span>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function buildAccessControlSidebar(container, baseSet) {
+  const vendors = [
+    "Mercury Security",
+    "Axis Communications",
+    "HID Global",
+    "HES (ASSA ABLOY)",
+    "Securitron (ASSA ABLOY)",
+    "Bosch Security",
+    "George Risk Industries (GRI)",
+    "Interlogix / Sentrol"
+  ];
+  const deviceRoles = [
+    { id: "intelligent_controller", label: "Intelligent Controllers (IP/PoE)" },
+    { id: "sub_controller", label: "RS-485 Door Sub-Controllers" },
+    { id: "edge_controller", label: "Network Edge Door Controllers" },
+    { id: "reader", label: "Smart Card & Mobile Readers" },
+    { id: "door_lock", label: "Electric Strikes & Maglocks" },
+    { id: "rex_sensor", label: "Request-to-Exit (REX) Sensors" },
+    { id: "dps_contact", label: "Door Position Switches (DPS)" }
+  ];
+
+  const acsVendors = typeof selectedAcsVendors !== "undefined" ? selectedAcsVendors : [];
+  const acsTypes = typeof selectedAcsControllerTypes !== "undefined" ? selectedAcsControllerTypes : [];
+  const pwrSrc = typeof selectedAcsPowerSource !== "undefined" ? selectedAcsPowerSource : "all";
+
+  container.innerHTML = `
+    <div class="space-y-5">
+      <!-- Hardware Role / Component Type -->
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Door & Panel Component Role</span>
+        <div class="space-y-1.5">
+          ${deviceRoles.map(r => {
+            const count = baseSet.filter(a => a.controllerType === r.id).length;
+            const isChecked = acsTypes.includes(r.id);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('acsType', '${r.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+                  <span>${r.label}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Manufacturer -->
+      <div class="pt-3 border-t border-slate-800/80">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Manufacturer</span>
+        <div class="space-y-1.5">
+          ${vendors.map(v => {
+            const count = baseSet.filter(a => (a.vendor || '').toLowerCase().includes(v.toLowerCase())).length;
+            const isChecked = acsVendors.includes(v);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('acsVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+                  <span class="truncate max-w-[165px]">${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Power Source -->
+      <div class="pt-3 border-t border-slate-800/80">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Power Delivery</span>
+        <select onchange="selectedAcsPowerSource = this.value; buildSidebarFilters(); runActiveFilter();" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+          <option value="all" ${pwrSrc === 'all' ? 'selected' : ''}>All Power Sources</option>
+          <option value="poe_switch" ${pwrSrc === 'poe_switch' ? 'selected' : ''}>PoE+ Switch Powered (802.3at)</option>
+          <option value="external_dc" ${pwrSrc === 'external_dc' ? 'selected' : ''}>12/24VDC Access Power Supply</option>
+          <option value="controller_dc" ${pwrSrc === 'controller_dc' ? 'selected' : ''}>Controller 12/24VDC Bus Powered</option>
+          <option value="passive" ${pwrSrc === 'passive' ? 'selected' : ''}>Passive Dry Contact (0W)</option>
+        </select>
+      </div>
+
+      <!-- Security Protocol -->
+      <div class="pt-3 border-t border-slate-800/80 space-y-2">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Credential Encryption</span>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+          <input type="checkbox" onchange="requireAcsOsdp = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireAcsOsdp !== 'undefined' && requireAcsOsdp) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+          <span>OSDP v2 Secure Channel Support</span>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
+function buildServersSidebar(container, baseSet) {
+  const vendors = ["Dell Technologies", "BCDVideo", "Supermicro", "HPE"];
+  const rackUnits = [
+    { val: 1, label: "1U Compact NVR / Edge Host" },
+    { val: 2, label: "2U Enterprise VMS Recorder" },
+    { val: 4, label: "4U High-Density SAN Array" }
+  ];
+
+  const srvVendors = typeof selectedSrvVendors !== "undefined" ? selectedSrvVendors : [];
+  const srvUnits = typeof selectedSrvRackUnits !== "undefined" ? selectedSrvRackUnits : [];
+  const minTb = typeof minSrvStorageTb !== "undefined" ? minSrvStorageTb : 0;
+
+  container.innerHTML = `
+    <div class="space-y-5">
+      <!-- Server Manufacturer -->
+      <div>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Compute & Storage Vendor</span>
+        <div class="space-y-1.5">
+          ${vendors.map(v => {
+            const count = baseSet.filter(s => (s.vendor || '').toLowerCase().includes(v.toLowerCase())).length;
+            const isChecked = srvVendors.includes(v);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('srvVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0">
+                  <span>${v}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Chassis Rack Units -->
+      <div class="pt-3 border-t border-slate-800/80">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Rackmount Chassis Size</span>
+        <div class="space-y-1.5">
+          ${rackUnits.map(ru => {
+            const count = baseSet.filter(s => parseInt(s.rackUnits, 10) === ru.val).length;
+            const isChecked = srvUnits.includes(ru.val);
+            return `
+              <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" onchange="toggleFilterItem('srvRackUnit', ${ru.val})" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0">
+                  <span>${ru.label}</span>
+                </div>
+                <span class="text-[10px] font-mono text-slate-500">${count}</span>
+              </label>
+            `;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- Usable RAID Storage Capacity -->
+      <div class="pt-3 border-t border-slate-800/80">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Minimum Usable RAID Storage</span>
+        <select onchange="minSrvStorageTb = parseInt(this.value, 10) || 0; buildSidebarFilters(); runActiveFilter();" class="w-full bg-slate-900 border border-slate-700 rounded-xl px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none">
+          <option value="0" ${minTb === 0 ? 'selected' : ''}>Any Storage Capacity</option>
+          <option value="20" ${minTb === 20 ? 'selected' : ''}>20+ TB Usable (Branch NVR)</option>
+          <option value="80" ${minTb === 80 ? 'selected' : ''}>80+ TB Usable (Enterprise RAID-6)</option>
+          <option value="200" ${minTb === 200 ? 'selected' : ''}>200+ TB Usable (High-Density SAN)</option>
+        </select>
+      </div>
+
+      <!-- Redundancy -->
+      <div class="pt-3 border-t border-slate-800/80 space-y-2">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">High Availability</span>
+        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+          <input type="checkbox" onchange="requireSrvDualPsu = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireSrvDualPsu !== 'undefined' && requireSrvDualPsu) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0">
+          <span>Redundant Hot-Swap Dual PSU</span>
+        </label>
+      </div>
+    </div>
+  `;
+}
+
 function buildDomainPlaceholderSidebar(container, mode) {
   const modeTitle = (mode || "").replace(/_/g, " ").toUpperCase();
   container.innerHTML = `
@@ -1305,7 +1578,7 @@ function buildDomainPlaceholderSidebar(container, mode) {
       <div class="space-y-2">
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
         <div class="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
-          Ready for domain catalog ingestion.
+          Use the global search bar above to filter licenses and software packages.
         </div>
       </div>
     </div>

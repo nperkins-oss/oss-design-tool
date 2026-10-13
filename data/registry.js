@@ -263,6 +263,11 @@ const CatalogRegistry = {
     // Ingest Physical Security & Compute
     this.physical_security.cameras = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
     this.physical_security.accessControl = typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : [];
+    this.physical_security.powerEnclosures = this.infrastructure.accessories.filter(a =>
+      a.type === "security_cabinet" || a.category === "security_cabinet" ||
+      (a.vendor || "").toLowerCase().includes("altronix") ||
+      (a.vendor || "").toLowerCase().includes("lifesafety")
+    );
     this.compute_storage.servers = typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : [];
 
     // 3. Build Lookup Indexes
@@ -385,7 +390,10 @@ const CatalogRegistry = {
    * Retrieves racks, cabinets, and enclosures, optionally filtered by hostType
    */
   getRacks(hostType = null) {
-    const all = this.infrastructure.racks || [];
+    const all = [
+      ...(this.infrastructure.racks || []),
+      ...(this.infrastructure.enclosures || [])
+    ];
     if (!hostType) return all;
     return all.filter(r => {
       if (hostType === "equipment_rack") return r.type === "equipment_rack" || r.category === "racks";
@@ -403,10 +411,14 @@ const CatalogRegistry = {
     if (!idOrSku) return null;
     const s = String(idOrSku).toLowerCase();
     const item = this.get(idOrSku);
-    if (item && (item.type === "equipment_rack" || item.type === "security_cabinet" || item.type === "industrial_din" || item.type === "architectural_backboard" || item.category === "racks" || item.category === "security_cabinet" || item.category === "industrial_din")) {
+    if (item && (item.type === "equipment_rack" || item.type === "security_cabinet" || item.type === "industrial_din" || item.type === "architectural_backboard" || item.category === "racks" || item.category === "security_cabinet" || item.category === "industrial_din" || item.category === "architectural_backboard")) {
       return item;
     }
-    return (this.infrastructure.racks || []).find(r => r.sku?.toLowerCase() === s || r.id?.toLowerCase() === s) || null;
+    const all = [
+      ...(this.infrastructure.racks || []),
+      ...(this.infrastructure.enclosures || [])
+    ];
+    return all.find(r => r.sku?.toLowerCase() === s || r.id?.toLowerCase() === s) || null;
   },
 
   /**

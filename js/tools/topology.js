@@ -592,7 +592,8 @@ function setTopologyGroupingMode(mode) {
   } catch (e) {}
   const sel = document.getElementById("topologyGroupingSelector");
   if (sel) sel.value = mode;
-  renderTopologyStudio();
+  if (typeof renderTopology === "function") renderTopology();
+  if (typeof renderTopologyInspector === "function") renderTopologyInspector();
   if (typeof showToast === "function") {
     showToast(mode === "floor" ? "Topology: Grouped by Physical Floor (Showing Cable Runs)" : "Topology: Grouped by Serving Switch Enclosure");
   }
@@ -3025,7 +3026,7 @@ function renderTopologyInspector() {
         if (d.parentInstanceId) return false;
         if (d.role !== "Access Control" && !(d.category && d.category.includes("access"))) return false;
         if (d.assignedAccessServerId === item.instanceId) return true;
-        if (!d.assignedAccessServerId && c.uplinkTargetId) {
+        if (!d.assignedAccessServerId && d.uplinkTargetId) {
           const sw = projectBOM.find(s => s.instanceId === d.uplinkTargetId);
           if (sw && sw.assignedAccessServerId === item.instanceId) return true;
         }

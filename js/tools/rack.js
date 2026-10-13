@@ -1422,11 +1422,8 @@ function autoMountAllToActiveRack() {
 
     // 1. Mount network & server gear top-to-bottom: ISP > Firewalls > Core > Aggregation > Access > Servers
     nonUpsItems.forEach(item => {
-      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 1;
-      if (rawRU === 0) return; // 0U accessories or DIN devices do not consume vertical rack rail slots
-      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-      const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (rawRU * stackUnits) + ppOffset;
+      const itemHeight = getRackItemHeight(item);
+      if (itemHeight <= 0) return; // 0U accessories or DIN devices do not consume vertical rack rail slots
       const slot = findNextAvailableSlotFromTop(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -1441,11 +1438,8 @@ function autoMountAllToActiveRack() {
 
     // 2. Mount heavy UPS / battery backup systems at the bottom of the rack (U1+) ascending
     upsItems.forEach(item => {
-      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 2;
-      if (rawRU === 0) return;
-      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-      const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (rawRU * stackUnits) + ppOffset;
+      const itemHeight = getRackItemHeight(item);
+      if (itemHeight <= 0) return;
       const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
       if (slot) {
         item.rackSlot = slot;
@@ -3757,88 +3751,49 @@ function mountItemToFirstAvailableSlot(instanceId) {
       autoSelectMountingForHost(targetItem, activeRackId, hostType);
     }
 
-    // Collect all mountable items currently in active rack (including targetItem)
-    const mountableItems = projectBOM.filter(item => {
-      if (item.parentInstanceId) return false;
-      if (item.role === "Optics & DAC" || item.role === "Mgmt License" || item.role === "Security License") return false;
+    const itemHeight = getRackItemHeight(targetItem);
+    if (itemHeight <= 0) {
+      // 0U items (e.g. vertical PDUs) mount to 0U rail
+      targetItem.rackSlot = "0U-Left";
+      FacilityStore.notifyWorkspaceChange();
+      renderRackVisualizer();
+      if (typeof updateBOMView === "function") updateBOMView();
+      if (typeof showToast === "function") showToast(`Mounted 0U ${targetItem.model} in ${activeRackId}`);
+      return;
+    }
+
+    // Build map of currently occupied slots in activeRackId WITHOUT wiping existing manual placements
+    const slots = {};
+    for (let u = 1; u <= activeRackHeight; u++) slots[u] = null;
+    projectBOM.forEach(item => {
+      if (item.parentInstanceId || item.instanceId === targetItem.instanceId) return;
       const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
-      if (itemLoc !== activeRackId) return false;
-      const compat = checkDeviceHostCompatibility(item, hostType);
-      return compat.compatible;
+      if (itemLoc !== activeRackId) return;
+      const assignedU = parseInt(item.rackSlot, 10);
+      const h = getRackItemHeight(item);
+      if (assignedU && assignedU >= 1 && h > 0) {
+        for (let offset = 0; offset < h; offset++) {
+          if (assignedU + offset <= activeRackHeight) {
+            slots[assignedU + offset] = item.instanceId;
+          }
+        }
+      }
     });
 
-    // Calculate total required RU to ensure fit
-    let totalRU = 0;
-    mountableItems.forEach(item => {
-      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 1;
-      if (rawRU === 0) return; // 0U items do not consume rack rail slots
-      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-      const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const h = (rawRU * stackUnits) + ppOffset;
-      totalRU += h;
-    });
+    const isUps = getDeviceMountPriority(targetItem).priority === 7;
+    const slot = isUps
+      ? findNextAvailableSlot(slots, itemHeight, activeRackHeight)
+      : findNextAvailableSlotFromTop(slots, itemHeight, activeRackHeight);
 
-    if (totalRU > activeRackHeight) {
+    if (!slot) {
       targetItem.rackSlot = null;
       if (typeof showToast === "function") {
-        showToast(`Cannot mount ${targetItem.model}: rack capacity exceeded (${totalRU}U needed, ${activeRackHeight}U available in ${activeRackId}).`);
+        showToast(`Cannot mount ${targetItem.model}: no continuous ${itemHeight}U space available in ${activeRackId}.`);
       }
       return;
     }
 
-    // Sort according to Enterprise Priority matching autoMountAllToActiveRack:
-    // ISP Equipment (1) > Firewalls (2) > Core (3) > Aggregation (4) > Access (5, ports desc) > Servers (6) > UPS (7) > Other (8)
-    mountableItems.sort((a, b) => {
-      const pA = getDeviceMountPriority(a);
-      const pB = getDeviceMountPriority(b);
-      if (pA.priority !== pB.priority) {
-        return pA.priority - pB.priority;
-      }
-      if (pA.priority === 5 || pA.portCount || pB.portCount) {
-        const portDiff = (pB.portCount || 0) - (pA.portCount || 0);
-        if (portDiff !== 0) return portDiff;
-      }
-      return (a.model || "").localeCompare(b.model || "");
-    });
-
-    const slots = {};
-    for (let u = 1; u <= activeRackHeight; u++) slots[u] = null;
-    mountableItems.forEach(i => i.rackSlot = null);
-
-    const upsItems = mountableItems.filter(i => getDeviceMountPriority(i).priority === 7);
-    const nonUpsItems = mountableItems.filter(i => getDeviceMountPriority(i).priority !== 7);
-
-    // 1. Mount network & server gear top-to-bottom: ISP > Firewalls > Core > Aggregation > Access > Servers
-    nonUpsItems.forEach(item => {
-      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 1;
-      if (rawRU === 0) return;
-      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-      const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (rawRU * stackUnits) + ppOffset;
-      const slot = findNextAvailableSlotFromTop(slots, itemHeight, activeRackHeight);
-      if (slot) {
-        item.rackSlot = slot;
-        for (let offset = 0; offset < itemHeight; offset++) {
-          slots[slot + offset] = item.instanceId;
-        }
-      }
-    });
-
-    // 2. Mount heavy UPS / battery backup systems at the bottom of the rack (U1+) ascending
-    upsItems.forEach(item => {
-      const rawRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? parseInt(item.rackUnits, 10) : 2;
-      if (rawRU === 0) return;
-      const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-      const ppOffset = (stackUnits >= 2 && item.patchPanelBetween) ? (stackUnits - 1) : 0;
-      const itemHeight = (rawRU * stackUnits) + ppOffset;
-      const slot = findNextAvailableSlot(slots, itemHeight, activeRackHeight);
-      if (slot) {
-        item.rackSlot = slot;
-        for (let offset = 0; offset < itemHeight; offset++) {
-          slots[slot + offset] = item.instanceId;
-        }
-      }
-    });
+    targetItem.rackSlot = slot;
 
     FacilityStore.notifyWorkspaceChange();
     renderRackVisualizer();
@@ -3848,15 +3803,16 @@ function mountItemToFirstAvailableSlot(instanceId) {
       StorageService.queueAutoSave();
     }
     if (typeof showToast === "function") {
-      const uLabel = targetItem.rackSlot ? `U${targetItem.rackSlot}` : 'unslotted';
-      showToast(`Mounted ${targetItem.model} at ${uLabel} in ${activeRackId} (auto-prioritized)`);
+      const uLabel = itemHeight > 1 ? `U${slot}-U${slot + itemHeight - 1}` : `U${slot}`;
+      showToast(`Mounted ${targetItem.model} at ${uLabel} in ${activeRackId}`);
     }
   } else if (hostType === "security_cabinet") {
     const occupied = new Set();
     projectBOM.forEach(item => {
       const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
       if (itemLoc === activeRackId && item.rackSlot) {
-        occupied.add(parseInt(item.rackSlot, 10));
+        const m = String(item.rackSlot).match(/(\d+)/);
+        if (m) occupied.add(parseInt(m[1], 10));
       }
     });
 
@@ -3870,25 +3826,25 @@ function mountItemToFirstAvailableSlot(instanceId) {
 
     const item = projectBOM.find(i => i.instanceId === instanceId);
     if (item) {
-      item.rackSlot = targetBay;
+      item.rackSlot = `Bay-${targetBay}`;
       item.closetName = activeRackId;
       item.rackId = activeRackId;
       FacilityStore.notifyWorkspaceChange();
       renderRackVisualizer();
       if (typeof showToast === "function") {
-        showToast(`Mounted ${item.model} in Bay ${targetBay}`);
+        showToast(`Mounted ${item.model} in Bay-${targetBay}`);
       }
     }
   } else if (hostType === "industrial_din") {
     const item = projectBOM.find(i => i.instanceId === instanceId);
     if (item) {
-      item.rackSlot = "Rail 1";
+      item.rackSlot = "Rail-1";
       item.closetName = activeRackId;
       item.rackId = activeRackId;
       FacilityStore.notifyWorkspaceChange();
       renderRackVisualizer();
       if (typeof showToast === "function") {
-        showToast(`Mounted ${item.model} on DIN Rail`);
+        showToast(`Mounted ${item.model} on DIN Rail-1`);
       }
     }
   } else if (hostType === "structural_mount") {
@@ -3906,13 +3862,13 @@ function mountItemToFirstAvailableSlot(instanceId) {
   } else {
     const item = projectBOM.find(i => i.instanceId === instanceId);
     if (item) {
-      item.rackSlot = "Zone A";
+      item.rackSlot = "Wall-Bracket";
       item.closetName = activeRackId;
       item.rackId = activeRackId;
       FacilityStore.notifyWorkspaceChange();
       renderRackVisualizer();
       if (typeof showToast === "function") {
-        showToast(`Mounted ${item.model} on Backboard`);
+        showToast(`Mounted ${item.model} on Backboard (Wall-Bracket)`);
       }
     }
   }
@@ -4957,7 +4913,7 @@ window.addSpecificEbpCountToRack = function(targetEbpCount) {
 
   const locations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocations() : [];
   const activeEnc = locations.find(l => l.name === activeRackId || l.id === activeRackId);
-  const maxRU = (activeEnc && activeEnc.rackUnits) ? activeEnc.rackUnits : 42;
+  const maxRU = (activeEnc && (activeEnc.heightU || activeEnc.rackUnits)) ? (activeEnc.heightU || activeEnc.rackUnits) : (activeRackHeight || 42);
 
   function findSlot(neededRU) {
     for (let u = 1; u <= maxRU - neededRU + 1; u++) {
@@ -5027,13 +4983,30 @@ window.addRecommendedUpsAndEbpToRack = function() {
     return;
   }
 
-  const assignedItems = projectBOM.filter(i => (i.closetName === activeRackId || i.location === activeRackId || i.rackId === activeRackId));
+  const hostNorm = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(activeRackId) : activeRackId;
+  // Remove existing UPS and EBP units in this rack before slotting recommended units
+  for (let i = projectBOM.length - 1; i >= 0; i--) {
+    const it = projectBOM[i];
+    const itNorm = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(it.closetName || it.location || it.rackId) : (it.closetName || it.location || it.rackId);
+    if (itNorm === hostNorm && !it.isPdu && (it.category === "ups" || it.type === "ups" || it.role === "UPS" || it.type === "ebp" || it.isEbp || it.role === "Battery Pack")) {
+      projectBOM.splice(i, 1);
+    }
+  }
+
+  const assignedItems = projectBOM.filter(i => {
+    const itNorm = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(i.closetName || i.location || i.rackId) : (i.closetName || i.location || i.rackId);
+    return itNorm === hostNorm;
+  });
   const plan = (typeof NetworkSizer !== "undefined" && typeof NetworkSizer.calculateUPSPlan === "function")
     ? NetworkSizer.calculateUPSPlan(assignedItems, {
         targetRuntimeMinutes: window.currentUpsTargetRuntime,
         safetyMargin: window.currentUpsSafetyMargin,
         preferredVoltage: window.currentUpsVoltage,
-        selectedModelSku: window.currentUpsModelSku
+        selectedModelSku: window.currentUpsModelSku,
+        loadMode: window.currentUpsLoadMode || "connected",
+        connectedWatts: window._lastRackConnectedAcWatts || 0,
+        agingFactor: window.currentUpsBatteryAging || 0.85,
+        complianceStandard: window.currentUpsComplianceStandard || "ul294"
       })
     : null;
 
@@ -5056,7 +5029,7 @@ window.addRecommendedUpsAndEbpToRack = function() {
 
   const locations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocations() : [];
   const activeEnc = locations.find(l => l.name === activeRackId || l.id === activeRackId);
-  const maxRU = (activeEnc && activeEnc.rackUnits) ? activeEnc.rackUnits : 42;
+  const maxRU = (activeEnc && (activeEnc.heightU || activeEnc.rackUnits)) ? (activeEnc.heightU || activeEnc.rackUnits) : (activeRackHeight || 42);
 
   // Helper to find lowest available continuous slot from bottom (U1+)
   function findLowestOpenSlot(neededRU) {
@@ -5469,9 +5442,9 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     const cogAdvisories = [];
 
     assignedItems.forEach(it => {
-      const units = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
+      const units = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : (parseInt(it.qty, 10) || 1);
       const ru = (it.rackUnits !== undefined && it.rackUnits !== null) ? (parseInt(it.rackUnits, 10) || 0) : 1;
-      if (it.rackSlot) occupiedU += (ru * units);
+      if (it.rackSlot) occupiedU += getRackItemHeight(it);
       totalPoE += parseFloat(it.poeBudget || 0) * units;
       totalBaseWatts += parseFloat(it.baseWatts || 0) * units;
       totalOutlets += units;
@@ -5621,6 +5594,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
       const totalConnectedPoEWithLoss = Math.round(fieldPoEWatts * 1.10);
       const effectiveConnectedPoE = fieldDeviceCount > 0 ? totalConnectedPoEWithLoss : Math.round(totalPoE * 0.40);
       const connectedAcWatts = Math.round(totalBaseWatts + effectiveConnectedPoE);
+      window._lastRackConnectedAcWatts = connectedAcWatts;
 
       // Sizing calculation powered by upgraded NetworkSizer engine
       const upsPlan = (typeof NetworkSizer !== "undefined" && typeof NetworkSizer.calculateUPSPlan === "function")

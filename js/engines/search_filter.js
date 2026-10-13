@@ -980,6 +980,108 @@ function filterCablingStrategy(items, ctx) {
 }
 FilterEngine.register("cabling", filterCablingStrategy);
 
+// 7. IP Surveillance Cameras Strategy
+function filterCamerasStrategy(items, ctx) {
+  let results = items;
+  const vendors = ctx.selectedCamVendors || (typeof selectedCamVendors !== "undefined" ? selectedCamVendors : []);
+  const forms = ctx.selectedCamFormFactors || (typeof selectedCamFormFactors !== "undefined" ? selectedCamFormFactors : []);
+  const resList = ctx.selectedCamResolutions || (typeof selectedCamResolutions !== "undefined" ? selectedCamResolutions : []);
+  const reqAnalytics = typeof ctx.requireCamAnalytics !== "undefined" ? ctx.requireCamAnalytics : (typeof requireCamAnalytics !== "undefined" && requireCamAnalytics);
+  const reqVandal = typeof ctx.requireCamVandal !== "undefined" ? ctx.requireCamVandal : (typeof requireCamVandal !== "undefined" && requireCamVandal);
+  const reqTaa = typeof ctx.requireCamTaa !== "undefined" ? ctx.requireCamTaa : (typeof requireCamTaa !== "undefined" && requireCamTaa);
+
+  if (vendors.length > 0) {
+    results = results.filter(c => vendors.some(v => (c.vendor || '').toLowerCase().includes(v.toLowerCase())));
+  }
+  if (forms.length > 0) {
+    results = results.filter(c => {
+      const ff = ((c.formFactor || '') + ' ' + (c.model || '')).toLowerCase();
+      return forms.some(f => {
+        if (f === "dome") return ff.includes("dome");
+        if (f === "bullet") return ff.includes("bullet");
+        if (f === "ptz") return ff.includes("ptz") || ff.includes("ptrz");
+        if (f === "multisensor") return ff.includes("multi") || ff.includes("panoramic") || (c.sensorCount && c.sensorCount > 1);
+        return ff.includes(f);
+      });
+    });
+  }
+  if (resList.length > 0) {
+    results = results.filter(c => {
+      const mp = parseFloat(c.sensorMegapixels || 0);
+      const resStr = (c.resolution || '').toLowerCase();
+      return resList.some(r => {
+        if (r === "2mp") return mp === 2 || resStr.includes("2mp") || resStr.includes("1080p");
+        if (r === "4mp") return (mp >= 4 && mp <= 6) || resStr.includes("4mp") || resStr.includes("5mp");
+        if (r === "8mp") return mp === 8 || resStr.includes("4k") || resStr.includes("8mp");
+        if (r === "multi") return mp > 8 || resStr.includes("multi") || resStr.includes("16mp") || resStr.includes("20mp") || resStr.includes("32mp");
+        return false;
+      });
+    });
+  }
+  if (reqAnalytics) {
+    results = results.filter(c => c.deepLearningAnalytics === true || /ai|deep learning|analytics|dlpu/i.test((c.model || '') + ' ' + (c.keyFeatures || []).join(' ')));
+  }
+  if (reqVandal) {
+    results = results.filter(c => /ik10/i.test((c.ikRating || '') + ' ' + (c.formFactor || '')));
+  }
+  if (reqTaa) {
+    results = results.filter(c => c.taa === true);
+  }
+  return results;
+}
+FilterEngine.register("cameras", filterCamerasStrategy);
+
+// 8. Access Control Hardware Strategy
+function filterAccessControlStrategy(items, ctx) {
+  let results = items;
+  const vendors = ctx.selectedAcsVendors || (typeof selectedAcsVendors !== "undefined" ? selectedAcsVendors : []);
+  const types = ctx.selectedAcsControllerTypes || (typeof selectedAcsControllerTypes !== "undefined" ? selectedAcsControllerTypes : []);
+  const pwrSource = ctx.selectedAcsPowerSource || (typeof selectedAcsPowerSource !== "undefined" ? selectedAcsPowerSource : "all");
+  const reqOsdp = typeof ctx.requireAcsOsdp !== "undefined" ? ctx.requireAcsOsdp : (typeof requireAcsOsdp !== "undefined" && requireAcsOsdp);
+
+  if (vendors.length > 0) {
+    results = results.filter(a => vendors.some(v => (a.vendor || '').toLowerCase().includes(v.toLowerCase())));
+  }
+  if (types.length > 0) {
+    results = results.filter(a => types.includes(a.controllerType));
+  }
+  if (pwrSource !== "all") {
+    results = results.filter(a => (a.powerSource || '') === pwrSource);
+  }
+  if (reqOsdp) {
+    results = results.filter(a => Array.isArray(a.readerProtocols) && a.readerProtocols.some(p => p.toLowerCase().includes("osdp")));
+  }
+  return results;
+}
+FilterEngine.register("access_control", filterAccessControlStrategy);
+FilterEngine.register("power_enclosures", filterAccessoriesStrategy);
+
+// 9. Compute, Servers, Storage & Workstations Strategy
+function filterServersStrategy(items, ctx) {
+  let results = items;
+  const vendors = ctx.selectedSrvVendors || (typeof selectedSrvVendors !== "undefined" ? selectedSrvVendors : []);
+  const rackUnits = ctx.selectedSrvRackUnits || (typeof selectedSrvRackUnits !== "undefined" ? selectedSrvRackUnits : []);
+  const minTb = typeof ctx.minSrvStorageTb !== "undefined" ? ctx.minSrvStorageTb : (typeof minSrvStorageTb !== "undefined" ? minSrvStorageTb : 0);
+  const reqDualPsu = typeof ctx.requireSrvDualPsu !== "undefined" ? ctx.requireSrvDualPsu : (typeof requireSrvDualPsu !== "undefined" && requireSrvDualPsu);
+
+  if (vendors.length > 0) {
+    results = results.filter(s => vendors.some(v => (s.vendor || '').toLowerCase().includes(v.toLowerCase())));
+  }
+  if (rackUnits.length > 0) {
+    results = results.filter(s => rackUnits.includes(parseInt(s.rackUnits, 10)));
+  }
+  if (minTb > 0) {
+    results = results.filter(s => (parseFloat(s.usableStorageTb || s.rawStorageTb || 0)) >= minTb);
+  }
+  if (reqDualPsu) {
+    results = results.filter(s => s.dualPsu === true);
+  }
+  return results;
+}
+FilterEngine.register("servers", filterServersStrategy);
+FilterEngine.register("storage", filterServersStrategy);
+FilterEngine.register("workstations", filterServersStrategy);
+
 // ==========================================
 // ACTIVE FILTER PILLS DISPLAY
 // ==========================================
@@ -1203,7 +1305,7 @@ function renderActiveFilterPills() {
   }
 
   // Accessories & Supporting Hardware Pills
-  if (typeof currentMode !== "undefined" && (currentMode === "accessories" || currentMode === "racks" || currentMode === "enclosures" || currentMode === "pathways")) {
+  if (typeof currentMode !== "undefined" && (currentMode === "accessories" || currentMode === "racks" || currentMode === "enclosures" || currentMode === "pathways" || currentMode === "power_enclosures")) {
     if (typeof selectedAccSubCategory !== "undefined" && selectedAccSubCategory !== "all") {
       const subLabels = {
         mounts: "Mounts & Brackets",
@@ -1256,6 +1358,50 @@ function renderActiveFilterPills() {
     }
     if (typeof requireCableShielded !== "undefined" && requireCableShielded) pills.push({ label: "Shielded Cable", onRemove: () => { requireCableShielded = false; } });
     if (typeof requireEtherlighting !== "undefined" && requireEtherlighting) pills.push({ label: "Etherlighting™", onRemove: () => { requireEtherlighting = false; } });
+  }
+
+  // Cameras Pills
+  if (typeof currentMode !== "undefined" && currentMode === "cameras") {
+    if (typeof selectedCamVendors !== "undefined") {
+      selectedCamVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('camVendor', v) }));
+    }
+    if (typeof selectedCamFormFactors !== "undefined") {
+      selectedCamFormFactors.forEach(f => pills.push({ label: `Form: ${f.toUpperCase()}`, onRemove: () => toggleFilterItem('camFormFactor', f) }));
+    }
+    if (typeof selectedCamResolutions !== "undefined") {
+      selectedCamResolutions.forEach(r => pills.push({ label: `Res: ${r.toUpperCase()}`, onRemove: () => toggleFilterItem('camResolution', r) }));
+    }
+    if (typeof requireCamAnalytics !== "undefined" && requireCamAnalytics) pills.push({ label: "AI Deep Learning", onRemove: () => { requireCamAnalytics = false; } });
+    if (typeof requireCamVandal !== "undefined" && requireCamVandal) pills.push({ label: "IK10 Vandal-Proof", onRemove: () => { requireCamVandal = false; } });
+    if (typeof requireCamTaa !== "undefined" && requireCamTaa) pills.push({ label: "TAA / NDAA Compliant", onRemove: () => { requireCamTaa = false; } });
+  }
+
+  // Access Control Pills
+  if (typeof currentMode !== "undefined" && currentMode === "access_control") {
+    if (typeof selectedAcsVendors !== "undefined") {
+      selectedAcsVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('acsVendor', v) }));
+    }
+    if (typeof selectedAcsControllerTypes !== "undefined") {
+      selectedAcsControllerTypes.forEach(t => pills.push({ label: `Role: ${t.replace(/_/g, ' ')}`, onRemove: () => toggleFilterItem('acsType', t) }));
+    }
+    if (typeof selectedAcsPowerSource !== "undefined" && selectedAcsPowerSource !== "all") {
+      pills.push({ label: `Power: ${selectedAcsPowerSource.replace(/_/g, ' ')}`, onRemove: () => { selectedAcsPowerSource = "all"; } });
+    }
+    if (typeof requireAcsOsdp !== "undefined" && requireAcsOsdp) pills.push({ label: "OSDP v2 Encrypted", onRemove: () => { requireAcsOsdp = false; } });
+  }
+
+  // Servers, Storage & Workstations Pills
+  if (typeof currentMode !== "undefined" && (currentMode === "servers" || currentMode === "storage" || currentMode === "workstations")) {
+    if (typeof selectedSrvVendors !== "undefined") {
+      selectedSrvVendors.forEach(v => pills.push({ label: `Vendor: ${v}`, onRemove: () => toggleFilterItem('srvVendor', v) }));
+    }
+    if (typeof selectedSrvRackUnits !== "undefined") {
+      selectedSrvRackUnits.forEach(u => pills.push({ label: `Chassis: ${u}U`, onRemove: () => toggleFilterItem('srvRackUnit', u) }));
+    }
+    if (typeof minSrvStorageTb !== "undefined" && minSrvStorageTb > 0) {
+      pills.push({ label: `Storage: ≥${minSrvStorageTb} TB`, onRemove: () => { minSrvStorageTb = 0; } });
+    }
+    if (typeof requireSrvDualPsu !== "undefined" && requireSrvDualPsu) pills.push({ label: "Redundant Dual PSU", onRemove: () => { requireSrvDualPsu = false; } });
   }
 
   if (pills.length === 0) {

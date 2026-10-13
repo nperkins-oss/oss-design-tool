@@ -17,6 +17,9 @@ const GlobalSearchEngine = {
    */
   CATEGORY_CONFIG: {
     all: { label: "All Items", icon: "search", color: "indigo" },
+    cameras: { label: "IP Cameras", icon: "video", color: "sky" },
+    access_control: { label: "Access Control", icon: "door-closed", color: "emerald" },
+    compute: { label: "Servers & NVRs", icon: "hard-drive", color: "purple" },
     switches: { label: "Switches", icon: "layers", color: "indigo" },
     firewalls: { label: "Gateways & Firewalls", icon: "shield", color: "emerald" },
     wireless: { label: "Wireless PtP", icon: "radio", color: "cyan" },
@@ -49,6 +52,80 @@ const GlobalSearchEngine = {
     const role = (item.role || "").toLowerCase();
     const cat = (item.category || "").toLowerCase();
     const type = (item.type || "").toLowerCase();
+
+    // 0a. IP Surveillance Cameras
+    if (sourceMode === "cameras" || cat === "cameras" || role === "camera" || (typeof CAMERAS_DATABASE !== "undefined" && CAMERAS_DATABASE.some(c => c.sku === sku || c.id === id))) {
+      return {
+        domain: "physical_security",
+        mode: "cameras",
+        domainLabel: "Physical Security",
+        modeLabel: "IP Cameras",
+        icon: "video",
+        badgeColor: "border-sky-500/40 bg-sky-500/10 text-sky-300",
+        searchCategory: "cameras"
+      };
+    }
+
+    // 0b. Access Control Controllers, Readers, Locks & Sensors
+    if (sourceMode === "access_control" || cat === "access_control" || role === "access control" || (typeof ACCESS_CONTROL_DATABASE !== "undefined" && ACCESS_CONTROL_DATABASE.some(a => a.sku === sku || a.id === id))) {
+      return {
+        domain: "physical_security",
+        mode: "access_control",
+        domainLabel: "Physical Security",
+        modeLabel: "Access Control",
+        icon: "door-closed",
+        badgeColor: "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
+        searchCategory: "access_control"
+      };
+    }
+
+    // 0c. Access Power & Security Enclosures
+    if (sourceMode === "power_enclosures") {
+      return {
+        domain: "physical_security",
+        mode: "power_enclosures",
+        domainLabel: "Physical Security",
+        modeLabel: "Access Power & Enclosures",
+        icon: "zap",
+        badgeColor: "border-amber-500/40 bg-amber-500/10 text-amber-300",
+        searchCategory: "access_control"
+      };
+    }
+
+    // 0d. VMS Servers, NVRs, SAN Storage & Workstations
+    if (sourceMode === "servers" || cat === "servers" || role === "server" || (typeof SERVERS_DATABASE !== "undefined" && SERVERS_DATABASE.some(s => s.sku === sku || s.id === id))) {
+      return {
+        domain: "compute",
+        mode: "servers",
+        domainLabel: "Compute & Storage",
+        modeLabel: "VMS Servers & NVRs",
+        icon: "server",
+        badgeColor: "border-purple-500/40 bg-purple-500/10 text-purple-300",
+        searchCategory: "compute"
+      };
+    }
+    if (sourceMode === "storage" || cat === "storage") {
+      return {
+        domain: "compute",
+        mode: "storage",
+        domainLabel: "Compute & Storage",
+        modeLabel: "SAN / NAS & Drives",
+        icon: "database",
+        badgeColor: "border-purple-500/40 bg-purple-500/10 text-purple-300",
+        searchCategory: "compute"
+      };
+    }
+    if (sourceMode === "workstations" || cat === "workstations") {
+      return {
+        domain: "compute",
+        mode: "workstations",
+        domainLabel: "Compute & Storage",
+        modeLabel: "Client Workstations",
+        icon: "monitor",
+        badgeColor: "border-purple-500/40 bg-purple-500/10 text-purple-300",
+        searchCategory: "compute"
+      };
+    }
 
     // 1. Explicit or detected: Firewalls & Security Gateways
     if (sourceMode === "firewalls" || cat === "firewall" || cat === "cellular" || cat === "gateway" || cat === "teleworker" || role === "firewall" || role === "security wan" || role === "security" || (typeof FIREWALL_DATABASE !== "undefined" && FIREWALL_DATABASE.some(f => f.sku === sku || f.id === id))) {
@@ -213,6 +290,34 @@ const GlobalSearchEngine = {
     if (!item) return "";
     const parts = [];
 
+    // Camera specs
+    if (item.category === "cameras" || item.role === "Camera") {
+      if (item.resolution) parts.push(item.resolution);
+      if (item.formFactor) parts.push(item.formFactor);
+      if (item.poeStandard) parts.push(`${item.poeStandard} (${item.powerConsumptionWatts || 10}W)`);
+      if (item.irRangeMeters) parts.push(`IR ${item.irRangeMeters}m`);
+      return parts.join(" • ") || (item.keyFeatures ? item.keyFeatures[0] : "");
+    }
+
+    // Access Control specs
+    if (item.category === "access_control" || item.role === "Access Control") {
+      if (item.doorCapacity) parts.push(`${item.doorCapacity}-Door`);
+      if (Array.isArray(item.readerProtocols) && item.readerProtocols.length > 0) parts.push(item.readerProtocols.join("/"));
+      if (item.holdingForceLbs) parts.push(`${item.holdingForceLbs} lb Hold`);
+      if (item.voltageVdc) parts.push(item.voltageVdc);
+      if (item.powerConsumptionWatts) parts.push(`${item.powerConsumptionWatts}W`);
+      return parts.join(" • ") || (item.keyFeatures ? item.keyFeatures[0] : "");
+    }
+
+    // Server / NVR specs
+    if (item.category === "servers" || item.role === "Server") {
+      if (item.formFactor) parts.push(item.formFactor);
+      if (item.usableStorageTb) parts.push(`${item.usableStorageTb}TB Usable (${item.raidLevel || 'RAID'})`);
+      if (item.maxIngestBandwidthMbps) parts.push(`${item.maxIngestBandwidthMbps} Mbps Ingest`);
+      if (item.cpu) parts.push(item.cpu);
+      return parts.join(" • ") || (item.keyFeatures ? item.keyFeatures[0] : "");
+    }
+
     // Switch specs
     if (item.ports) {
       let pStr = `${item.ports} Ports`;
@@ -332,6 +437,16 @@ const GlobalSearchEngine = {
         item
       });
     };
+
+    // 0. Gather Physical Security & Compute (Cameras, Access Control, Servers/NVRs)
+    const cameras = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []);
+    cameras.forEach(i => addEntry(i, "cameras"));
+
+    const accessCtrl = (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []);
+    accessCtrl.forEach(i => addEntry(i, "access_control"));
+
+    const servers = (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []);
+    servers.forEach(i => addEntry(i, "servers"));
 
     // 1. Gather switches
     const switches = (typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE : []);

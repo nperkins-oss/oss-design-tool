@@ -313,12 +313,14 @@ function auditProjectHealth() {
 
   // Orphaned Floorplan Drops (Nodes with no assigned closet)
   if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    const allFacilityClosets = (typeof getAllClosetsAcrossFacility === "function")
+      ? getAllClosetsAcrossFacility()
+      : facilityFloors.flatMap(f => (f.nodes || []).filter(n => n.type === "closet"));
     facilityFloors.forEach(fl => {
       if (!fl.nodes) return;
-      const allClosets = fl.nodes.filter(n => n.type === "closet");
       fl.nodes.filter(n => n.type === "device").forEach(dev => {
-        const hasValidCloset = allClosets.some(c => c.id === dev.assignedClosetId);
-        if (!hasValidCloset && allClosets.length > 0) {
+        const hasValidCloset = allFacilityClosets.some(c => c.id === dev.assignedClosetId);
+        if (!hasValidCloset && allFacilityClosets.length > 0) {
           issues.push({
             id: `orphaned_floor_drop_${dev.id}`,
             category: "hardware",
@@ -988,11 +990,104 @@ function auditProjectHealth() {
     }
   });
 
+  // =========================================================================
+  // RULE 15: VIDEO RETENTION, BITRATE & NVR STORAGE CAPACITY AUDIT
+  // Validates quoted NVR usable TB and recording throughput against BOM camera demand
+  // =========================================================================
+  if (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function") {
+    const vAudit = VideoStorageSizer.calculateFromBOM(projectBOM, {
+      retentionDays: typeof videoRetentionDays !== "undefined" ? videoRetentionDays : 30,
+      codec: typeof videoCodec !== "undefined" ? videoCodec : "H.265",
+      fps: typeof videoFps !== "undefined" ? videoFps : 20,
+      motionDutyCycle: typeof videoMotionDuty !== "undefined" ? videoMotionDuty : 0.70,
+      raidType: typeof videoRaidType !== "undefined" ? videoRaidType : "RAID 5"
+    });
+
+    if (vAudit.totalCameras > 0) {
+      const quotedNvrs = projectBOM.filter(i => {
+        const r = (i.role || "").toLowerCase();
+        const c = (i.category || "").toLowerCase();
+        return r.includes("nvr") || r.includes("recorder") || r.includes("server") || c === "servers" || c === "storage";
+      });
+      const totalQuotedUsableTB = quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTB ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0);
+      const totalMaxThroughputMbps = quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.maxThroughputMbps || 600)) * (nvr.qty || 1)), 0);
+
+      if (totalQuotedUsableTB < vAudit.requiredUsableTB) {
+        const deficitTB = Math.ceil((vAudit.requiredUsableTB - totalQuotedUsableTB) * 10) / 10;
+        issues.push({
+          id: "video_storage_retention_deficit",
+          category: "capacity",
+          severity: totalQuotedUsableTB === 0 ? "critical" : "warning",
+          priority: 2,
+          title: totalQuotedUsableTB === 0
+            ? `Missing NVR / VMS Recording Storage (${vAudit.requiredUsableTB} TB Usable Required)`
+            : `Video Retention Storage Deficit: ${totalQuotedUsableTB} TB Quoted vs ${vAudit.requiredUsableTB} TB Required`,
+          summary: `${vAudit.totalCameras} camera(s) (${vAudit.totalSensors} streams @ ${vAudit.totalBandwidthMbps} Mbps) require ${vAudit.requiredUsableTB} TB usable (${vAudit.requiredRawTB} TB raw ${vAudit.raidType}) for ${vAudit.retentionDays}-day retention`,
+          details: `Based on ${vAudit.retentionDays}-day retention (${vAudit.codec}, ${vAudit.fps} FPS, ${Math.round(vAudit.motionDutyCycle * 100)}% motion duty cycle, ${vAudit.raidType}), the camera fleet requires ${vAudit.requiredUsableTB} TB of usable storage (${deficitTB} TB deficit). Auto-fit an NVR appliance to meet target retention.`,
+          actionLabel: `+ Auto-Fit NVR for ${vAudit.requiredUsableTB} TB Usable`,
+          actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModalContent();",
+          badgeText: `${deficitTB} TB STORAGE DEFICIT`
+        });
+      } else if (quotedNvrs.length > 0 && vAudit.totalBandwidthMbps > totalMaxThroughputMbps) {
+        issues.push({
+          id: "video_throughput_exceeded",
+          category: "capacity",
+          severity: "warning",
+          priority: 2,
+          title: `NVR Recording Throughput Exceeded (${vAudit.totalBandwidthMbps} Mbps vs ${totalMaxThroughputMbps} Mbps Max)`,
+          summary: `Camera ingest bitrate (${vAudit.totalBandwidthMbps} Mbps) exceeds quoted NVR recording throughput limit (${totalMaxThroughputMbps} Mbps)`,
+          details: `Even when hard drive storage capacity is sufficient, exceeding the NVR's maximum network ingest throughput (${totalMaxThroughputMbps} Mbps) causes dropped video frames and database corruption during high-motion events. Distribute cameras across an additional NVR or upgrade to a higher-throughput enterprise recorder.`,
+          actionLabel: `+ Add Additional NVR Appliance`,
+          actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModalContent();",
+          badgeText: "THROUGHPUT OVERLOAD"
+        });
+      }
+    }
+  }
+
+  // =========================================================================
+  // RULE 16: ACCESS CONTROL DOOR & READER CONTROLLER CAPACITY AUDIT
+  // Validates that quoted Access Control Panels have sufficient door/reader capacity
+  // =========================================================================
+  const totalReadersQuoted = projectBOM.reduce((sum, item) => {
+    const r = (item.role || "").toLowerCase();
+    return (r === "reader" || (item.model || "").toLowerCase().includes("signo")) ? sum + (item.qty || 1) : sum;
+  }, 0);
+  const totalLocksQuoted = projectBOM.reduce((sum, item) => {
+    const r = (item.role || "").toLowerCase();
+    return (r === "door_lock" || r === "strike" || r === "maglock") ? sum + (item.qty || 1) : sum;
+  }, 0);
+  const totalControllerDoorCap = projectBOM.reduce((sum, item) => {
+    const cap = Number(item.doorCapacity || 0);
+    return cap > 0 ? sum + (cap * (item.qty || 1)) : sum;
+  }, 0);
+
+  const requiredControlledDoors = Math.max(totalReadersQuoted, totalLocksQuoted);
+  if (requiredControlledDoors > 0 && totalControllerDoorCap < requiredControlledDoors) {
+    const doorDeficit = requiredControlledDoors - totalControllerDoorCap;
+    const controllersToAdd = Math.ceil(doorDeficit / 2);
+    issues.push({
+      id: "acs_controller_door_capacity_deficit",
+      category: "capacity",
+      severity: "critical",
+      priority: 2,
+      title: `Access Control Panel Capacity Deficit (${requiredControlledDoors} Doors vs ${totalControllerDoorCap} Panel Doors)`,
+      summary: `${requiredControlledDoors} controlled door(s) (${totalReadersQuoted} readers, ${totalLocksQuoted} locks) quoted, but panels only support ${totalControllerDoorCap} door(s)`,
+      details: `Every controlled door opening requires a dedicated reader port, lock relay, REX input, and DPS supervised input on an intelligent door controller or downstream interface module. Add ${controllersToAdd}x 2-Door Intelligent Controller(s) (Mercury LP1502) to terminate all ${requiredControlledDoors} doors.`,
+      actionLabel: `+ Add ${controllersToAdd}x Mercury LP1502 Controller(s)`,
+      actionFn: `if(typeof addToBOM==='function'){addToBOM('mercury-lp1502', ${controllersToAdd}); updateProjectHealthUI(); renderProjectHealthModalContent();}`,
+      badgeText: `${doorDeficit} DOORS UNTERMINATED`
+    });
+  }
+
   const criticalCount = issues.filter(i => i.severity === "critical").length;
   const warningCount = issues.filter(i => i.severity === "warning").length;
   const conflictCount = issues.filter(i => i.isConflict).length;
   const codeCount = issues.filter(i => i.priority === 1).length;
   const orionCount = issues.filter(i => i.priority === 2).length;
+  const totalAudits = 16;
+  const passedCount = Math.max(0, totalAudits - Math.min(totalAudits, criticalCount + warningCount));
+  const score = Math.max(0, Math.min(100, 100 - (criticalCount * 15) - (warningCount * 5)));
 
   return {
     isHealthy: issues.length === 0,
@@ -1002,6 +1097,14 @@ function auditProjectHealth() {
     conflictCount,
     codeCount,
     orionCount,
+    score,
+    passedCount,
+    totalAudits,
+    summary: {
+      critical: criticalCount,
+      warnings: warningCount,
+      conflicts: conflictCount
+    },
     issues,
     stats
   };
@@ -1401,7 +1504,10 @@ function autoAssignFloorDropToNearestCloset(floorId, devId) {
   const floor = facilityFloors.find(f => f.id === floorId);
   if (!floor || !floor.nodes) return;
 
-  const closets = floor.nodes.filter(n => n.type === "closet");
+  let closets = floor.nodes.filter(n => n.type === "closet");
+  if (closets.length === 0 && typeof getAllClosetsAcrossFacility === "function") {
+    closets = getAllClosetsAcrossFacility();
+  }
   const dev = floor.nodes.find(n => n.id === devId);
   if (!dev || closets.length === 0) return;
 
@@ -1416,8 +1522,21 @@ function autoAssignFloorDropToNearestCloset(floorId, devId) {
   });
 
   dev.assignedClosetId = nearest.id;
+  if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+    const bomItem = projectBOM.find(i => i.instanceId && (i.instanceId === dev.instanceId || `dev-${i.instanceId}` === dev.id));
+    if (bomItem && nearest.name) {
+      bomItem.closetName = nearest.name;
+      bomItem.rackId = nearest.name;
+      if (typeof PortEngine !== "undefined") {
+        PortEngine.autoAssignDeviceToClosetSwitch(bomItem, nearest.name);
+      }
+    }
+  }
   if (typeof calculateAllRunsOnFloor === "function") {
     calculateAllRunsOnFloor(floor);
+  }
+  if (typeof saveFacilityState === "function") {
+    saveFacilityState();
   }
 
   updateProjectHealthUI();

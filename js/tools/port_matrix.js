@@ -461,6 +461,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
               <th class="p-2.5">Status</th>
               <th class="p-2.5">Connected Device</th>
               <th class="p-2.5">Target Location</th>
+              <th class="p-2.5">VLAN</th>
               <th class="p-2.5">Cabling & Media</th>
               <th class="p-2.5">PoE Delivery</th>
               <th class="p-2.5 text-right">Actions</th>
@@ -491,6 +492,9 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                   </td>
                   <td class="p-2.5 text-slate-400">
                     ${escapeHTML(loc)} [Rack Stacking Bus]
+                  </td>
+                  <td class="p-2.5 text-indigo-300 text-[10px]">
+                    Backplane
                   </td>
                   <td class="p-2.5">
                     <div class="flex items-center gap-1.5 text-indigo-300">
@@ -529,6 +533,11 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                 const isPoE = (p.poeOutputWatts || 0) > 0;
                 const isOptical = p.connector && p.connector !== "RJ-45";
                 const isStack = !!p.isStackPort;
+                const isUplinkPort = Boolean(p.isUplink || isOptical);
+                const resolvedVlan = (typeof getProjectVlanForDevice === "function")
+                  ? getProjectVlanForDevice(targetDev, p, isUplinkPort)
+                  : "Untagged (Flat)";
+                const curPortVlan = p.vlan || "auto";
 
                 return `
                   <tr id="matrix-row-${p.portNumber}" class="hover:bg-slate-900/60 transition-colors ${hasDev || isStack ? '' : 'opacity-60'}">
@@ -572,6 +581,21 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                       ${(hasDev || isStack) ? escapeHTML(targetLoc) : '-'}
                     </td>
                     <td class="p-2.5">
+                      ${isStack ? `<span class="text-indigo-400/80 text-[10px]">Stack Ring</span>` : `
+                        <select onchange="updateMatrixPortVlan('${sw.instanceId}', ${p.portNumber}, this.value)" class="bg-slate-900 hover:bg-slate-800 border border-slate-700/80 rounded px-1.5 py-0.5 text-[10px] text-slate-200 font-mono focus:outline-none focus:border-indigo-500 cursor-pointer max-w-[135px]">
+                          <option value="auto" ${curPortVlan === 'auto' ? 'selected' : ''}>Auto (${escapeHTML(resolvedVlan)})</option>
+                          <option value="untagged" ${curPortVlan === 'untagged' ? 'selected' : ''}>Untagged (Flat)</option>
+                          <option value="trunk" ${curPortVlan === 'trunk' ? 'selected' : ''}>802.1Q Trunk</option>
+                          <option value="10" ${String(curPortVlan) === '10' ? 'selected' : ''}>VLAN 10 (DATA)</option>
+                          <option value="20" ${String(curPortVlan) === '20' ? 'selected' : ''}>VLAN 20 (CCTV)</option>
+                          <option value="30" ${String(curPortVlan) === '30' ? 'selected' : ''}>VLAN 30 (ACS)</option>
+                          <option value="40" ${String(curPortVlan) === '40' ? 'selected' : ''}>VLAN 40 (SIP)</option>
+                          <option value="50" ${String(curPortVlan) === '50' ? 'selected' : ''}>VLAN 50 (WLAN)</option>
+                          <option value="99" ${String(curPortVlan) === '99' ? 'selected' : ''}>VLAN 99 (MGMT)</option>
+                        </select>
+                      `}
+                    </td>
+                    <td class="p-2.5">
                       ${isStack ? `
                         <div class="flex items-center gap-1.5 text-indigo-300">
                           <span class="w-2 h-2 rounded-full bg-indigo-500 shrink-0"></span>
@@ -607,7 +631,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                     </td>
                     <td class="p-2.5">
                       ${isPoE ? `
-                        <span class="text-amber-400 font-bold font-mono">${p.poeOutputWatts} W (802.3at)</span>
+                        <span class="text-amber-400 font-bold font-mono">${p.poeOutputWatts} W (${p.poeStandard === 'bt90' ? '802.3bt-90W' : (p.poeStandard === 'bt60' ? '802.3bt-60W' : (p.poeStandard === 'af' ? '802.3af' : '802.3at'))})</span>
                       ` : (isStack ? `<span class="text-indigo-400/80 text-[10px]">DAC Copper</span>` : (hasDev ? `<span class="text-slate-500">Data Only</span>` : '-'))}
                     </td>
                     <td class="p-2.5 text-right">
@@ -649,6 +673,24 @@ function renderPortMatrixStudioContent(switchInstanceId) {
   if (facilityContainer) facilityContainer.innerHTML = matrixHtml;
 
   if (window.lucide) lucide.createIcons();
+}
+
+function updateMatrixPortVlan(switchInstanceId, portNumber, vlanVal) {
+  const sw = projectBOM.find(i => i.instanceId === switchInstanceId);
+  if (!sw) return;
+  const ports = sw.physicalPorts || sw.portsList || [];
+  const p = ports.find(pt => pt.portNumber === parseInt(portNumber, 10));
+  if (p) {
+    if (!vlanVal || vlanVal === "auto") {
+      delete p.vlan;
+    } else {
+      p.vlan = vlanVal;
+    }
+  }
+  if (typeof StorageService !== "undefined") {
+    StorageService.queueAutoSave();
+  }
+  renderPortMatrixStudioContent(switchInstanceId);
 }
 
 function highlightMatrixPort(portNum) {
@@ -774,6 +816,7 @@ function connectDeviceFromMatrix(switchInstanceId, portNumber, deviceInstanceId)
 window.openPortMatrixStudio = openPortMatrixStudio;
 window.closePortMatrixStudio = closePortMatrixStudio;
 window.renderPortMatrixStudioContent = renderPortMatrixStudioContent;
+window.updateMatrixPortVlan = updateMatrixPortVlan;
 window.highlightMatrixPort = highlightMatrixPort;
 window.jumpFromMatrixStudioToElevation = jumpFromMatrixStudioToElevation;
 window.jumpFromMatrixStudioToTopology = jumpFromMatrixStudioToTopology;

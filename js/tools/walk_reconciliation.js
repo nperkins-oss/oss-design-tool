@@ -336,6 +336,7 @@ const WalkReconciliationEngine = {
       catalogMatch = CAMERAS_DATABASE.find(c => c.model.toLowerCase().includes(walkModel.toLowerCase().split(' ')[0])) || CAMERAS_DATABASE[0];
     }
 
+    const defaultLoc = (typeof getActiveTargetLocation === "function") ? getActiveTargetLocation() : "MDF • Rack-1";
     const newItem = {
       instanceId: `inst-cam-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       id: catalogMatch ? catalogMatch.id : "field-walk-camera",
@@ -345,19 +346,28 @@ const WalkReconciliationEngine = {
       category: "cameras",
       vendor: catalogMatch ? catalogMatch.vendor : "Enterprise Video",
       friendlyName: walkTag,
+      msrp: catalogMatch ? catalogMatch.msrp : 799,
       unitMSRP: catalogMatch ? catalogMatch.msrp : 799,
+      qty: 1,
       quantity: 1,
-      poeBudget: catalogMatch ? catalogMatch.powerConsumptionWatts : 12.0,
-      baseWatts: 0,
-      closetName: "MDF • Main Telecom",
-      rackId: "MDF • Main Telecom",
+      powerConsumptionWatts: catalogMatch ? (catalogMatch.powerConsumptionWatts || 12.0) : 12.0,
+      poeBudget: 0,
+      baseWatts: catalogMatch ? (catalogMatch.powerConsumptionWatts || 12.0) : 12.0,
+      closetName: defaultLoc,
+      rackId: defaultLoc,
       walkVerified: true,
       walkNotes: walkNotes || "Added from onsite field walk audit"
     };
 
     projectBOM.push(newItem);
-    if (typeof saveBOMState === "function") saveBOMState();
-    if (typeof renderBOMTable === "function") renderBOMTable();
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof renderBOM === "function") renderBOM();
+    if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+      StorageService.queueAutoSave();
+    }
 
     // Re-run reconciliation so this now counts as Mated
     this.runReconciliation();
