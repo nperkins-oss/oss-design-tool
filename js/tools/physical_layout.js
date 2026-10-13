@@ -43,14 +43,274 @@ let physicalLayerFilters = {
   pathways: true
 };
 
-// Enhanced Physical Engineering State: Cable IDs, DRC Distance Violations, and Revision Compare
+// Enhanced Physical Engineering State: Cable IDs, Camera FOV Cones, DRC Distance Violations, and Revision Compare
 let showPhysicalCableIds = false;
+let showCameraFovCones = true;
 let isFieldWalkMode = false;
 let isPhysSpacebarDown = false;
 let isPhysKeyListenersInitialized = false;
 let activeRevisionCompareId = null;
 let currentDistanceViolationNodeIndex = -1;
 let scaleCalibrationStartPoint = null;
+
+// =========================================================================
+// GRANULAR CANVAS UNDO / REDO ENGINE (40-Step Ring Buffer)
+// =========================================================================
+const CanvasHistory = {
+  MAX_STEPS: 40,
+  undoStack: [],
+  redoStack: [],
+
+  _cloneFloorGeometry(floor) {
+    if (!floor) return null;
+    return {
+      floorId: floor.id,
+      scaleFt: floor.scaleFt || 25,
+      slackFt: floor.slackFt || 15,
+      slabFt: floor.slabFt || 14,
+      nodes: JSON.parse(JSON.stringify(floor.nodes || [])),
+      pathwayTrunks: JSON.parse(JSON.stringify(floor.pathwayTrunks || [])),
+      fiberBackbones: JSON.parse(JSON.stringify(floor.fiberBackbones || []))
+    };
+  },
+
+  pushState(actionLabel = "Canvas Edit") {
+    const floor = getActiveFloor();
+    if (!floor) return;
+    const snap = this._cloneFloorGeometry(floor);
+    if (!snap) return;
+    snap.label = actionLabel;
+    this.undoStack.push(snap);
+    if (this.undoStack.length > this.MAX_STEPS) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+    this.updateButtons();
+  },
+
+  _applySnapshot(snap) {
+    if (!snap) return false;
+    let floor = facilityFloors.find(f => f.id === snap.floorId);
+    if (!floor) floor = getActiveFloor();
+    if (!floor) return false;
+
+    if (activeFloorId !== floor.id) {
+      activeFloorId = floor.id;
+      renderFloorSelector();
+    }
+    floor.scaleFt = snap.scaleFt;
+    floor.slackFt = snap.slackFt;
+    floor.slabFt = snap.slabFt;
+    floor.nodes = JSON.parse(JSON.stringify(snap.nodes || []));
+    floor.pathwayTrunks = JSON.parse(JSON.stringify(snap.pathwayTrunks || []));
+    floor.fiberBackbones = JSON.parse(JSON.stringify(snap.fiberBackbones || []));
+
+    syncFloorControlInputs();
+    recalculateCurrentFloorCables();
+    renderCableCanvas();
+    updatePhysicalDrcPill();
+    renderInspector();
+    renderSidebarTabContent();
+    saveFacilityState();
+    return true;
+  },
+
+  undo() {
+    if (this.undoStack.length === 0) return;
+    const floor = getActiveFloor();
+    const targetSnap = this.undoStack.pop();
+    if (floor) {
+      const currentSnap = this._cloneFloorGeometry(floor);
+      currentSnap.label = targetSnap.label;
+      this.redoStack.push(currentSnap);
+    }
+    this._applySnapshot(targetSnap);
+    this.updateButtons();
+    if (typeof showToast === "function") {
+      showToast(`Undid: ${targetSnap.label || "Canvas Action"}`);
+    }
+  },
+
+  redo() {
+    if (this.redoStack.length === 0) return;
+    const floor = getActiveFloor();
+    const nextSnap = this.redoStack.pop();
+    if (floor) {
+      const currentSnap = this._cloneFloorGeometry(floor);
+      currentSnap.label = nextSnap.label;
+      this.undoStack.push(currentSnap);
+    }
+    this._applySnapshot(nextSnap);
+    this.updateButtons();
+    if (typeof showToast === "function") {
+      showToast(`Redid: ${nextSnap.label || "Canvas Action"}`);
+    }
+  },
+
+  updateButtons() {
+    const undoBtn = document.getElementById("btnPhysUndo");
+    const redoBtn = document.getElementById("btnPhysRedo");
+    if (undoBtn) {
+      undoBtn.disabled = this.undoStack.length === 0;
+      const last = this.undoStack[this.undoStack.length - 1];
+      undoBtn.title = last ? `Undo: ${last.label} (Ctrl+Z)` : "Undo Canvas Action (Ctrl+Z)";
+    }
+    if (redoBtn) {
+      redoBtn.disabled = this.redoStack.length === 0;
+      const next = this.redoStack[this.redoStack.length - 1];
+      redoBtn.title = next ? `Redo: ${next.label} (Ctrl+Y)` : "Redo Canvas Action (Ctrl+Y)";
+    }
+  }
+};
+window.CanvasHistory = CanvasHistory;
+
+// =========================================================================
+// CAMERA FIELD-OF-VIEW (FOV) & IEC 62676-4 DORI / PPF COVERAGE ENGINE
+// =========================================================================
+function toggleCameraFovCones() {
+  showCameraFovCones = !showCameraFovCones;
+  const btn = document.getElementById("btnToggleCameraFov");
+  if (btn) {
+    if (showCameraFovCones) {
+      btn.className = "p-1 rounded-lg border border-emerald-600/60 bg-emerald-950/70 text-emerald-300 hover:text-white text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer";
+    } else {
+      btn.className = "p-1 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white text-xs font-semibold flex items-center justify-center transition-colors cursor-pointer";
+    }
+  }
+  renderCableCanvas();
+  if (typeof showToast === "function") {
+    showToast(showCameraFovCones ? "Camera FOV & DORI PPF coverage cones enabled." : "Camera FOV cones hidden.");
+  }
+}
+window.toggleCameraFovCones = toggleCameraFovCones;
+
+function ensureCameraFovDefaults(dev, bomItem = null) {
+  if (!dev) return;
+  if (typeof dev.fovEnabled !== "boolean") dev.fovEnabled = true;
+  if (typeof dev.fovAngleDeg !== "number" || isNaN(dev.fovAngleDeg)) dev.fovAngleDeg = 0;
+
+  const text = `${bomItem?.model || ""} ${bomItem?.description || ""} ${bomItem?.category || ""} ${dev.name || ""}`.toLowerCase();
+  if (typeof dev.fovSpanDeg !== "number" || isNaN(dev.fovSpanDeg)) {
+    if (/fisheye|360|panoramic|multisensor|multi-sensor|quad/i.test(text)) {
+      dev.fovSpanDeg = 360;
+    } else if (/180|panoramic-180|dualsensor/i.test(text)) {
+      dev.fovSpanDeg = 180;
+    } else if (/lpr|anpr|telephoto|ptz/i.test(text)) {
+      dev.fovSpanDeg = 42;
+    } else if (/bullet|varifocal/i.test(text)) {
+      dev.fovSpanDeg = 78;
+    } else {
+      dev.fovSpanDeg = 95;
+    }
+  }
+  if (typeof dev.fovDistanceFt !== "number" || isNaN(dev.fovDistanceFt)) {
+    if (/lpr|anpr|ptz/i.test(text)) {
+      dev.fovDistanceFt = 85;
+    } else if (/fisheye|360/i.test(text)) {
+      dev.fovDistanceFt = 30;
+    } else {
+      dev.fovDistanceFt = 45;
+    }
+  }
+}
+
+function computeCameraDoriTelemetry(dev, bomItem = null) {
+  ensureCameraFovDefaults(dev, bomItem);
+  const text = `${bomItem?.resolution || ""} ${bomItem?.model || ""} ${bomItem?.description || ""} ${dev.name || ""}`.toLowerCase();
+
+  let horizPixels = 2560; // Default 4MP (2560x1440)
+  let mpLabel = "4MP";
+  if (/12\s*mp|4000\s*x/i.test(text)) {
+    horizPixels = 4000;
+    mpLabel = "12MP";
+  } else if (/4k|8\s*mp|3840\s*x|uhd/i.test(text)) {
+    horizPixels = 3840;
+    mpLabel = "4K (8MP)";
+  } else if (/6\s*mp|3200\s*x/i.test(text)) {
+    horizPixels = 3200;
+    mpLabel = "6MP";
+  } else if (/5\s*mp|2592\s*x/i.test(text)) {
+    horizPixels = 2592;
+    mpLabel = "5MP";
+  } else if (/2\s*mp|1080p|1920\s*x|fhd/i.test(text)) {
+    horizPixels = 1920;
+    mpLabel = "2MP (1080p)";
+  }
+
+  const distFt = Math.max(5, Number(dev.fovDistanceFt) || 45);
+  const spanDeg = Math.max(10, Math.min(360, Number(dev.fovSpanDeg) || 95));
+
+  // Scene horizontal width at target distance (ft)
+  let sceneWidthFt;
+  if (spanDeg >= 360) {
+    sceneWidthFt = 2 * Math.PI * distFt;
+  } else if (spanDeg >= 160) {
+    sceneWidthFt = distFt * (spanDeg * Math.PI / 180);
+  } else {
+    const halfRad = (Math.min(150, spanDeg) / 2) * (Math.PI / 180);
+    sceneWidthFt = Math.max(2, 2 * distFt * Math.tan(halfRad));
+  }
+
+  const ppf = Math.max(1, Math.round(horizPixels / sceneWidthFt));
+
+  // IEC 62676-4 / IPVM DORI Thresholds (Pixels Per Foot):
+  // Identification >= 76 PPF (250 PPM), Recognition >= 38 PPF (125 PPM), Observation >= 19 PPF (62 PPM), Detection >= 8 PPF (25 PPM)
+  let doriClass = "Detection";
+  let doriShort = "DET";
+  let strokeColor = "#f43f5e";
+  let fillColor = "rgba(244, 63, 94, 0.16)";
+  if (ppf >= 76) {
+    doriClass = "Identification";
+    doriShort = "IDENT";
+    strokeColor = "#10b981";
+    fillColor = "rgba(16, 185, 129, 0.18)";
+  } else if (ppf >= 38) {
+    doriClass = "Recognition";
+    doriShort = "RECOG";
+    strokeColor = "#0ea5e9";
+    fillColor = "rgba(14, 165, 233, 0.18)";
+  } else if (ppf >= 19) {
+    doriClass = "Observation";
+    doriShort = "OBSV";
+    strokeColor = "#f59e0b";
+    fillColor = "rgba(245, 158, 11, 0.18)";
+  }
+
+  return {
+    horizPixels,
+    mpLabel,
+    distFt,
+    spanDeg,
+    angleDeg: Number(dev.fovAngleDeg) || 0,
+    sceneWidthFt: Math.round(sceneWidthFt * 10) / 10,
+    ppf,
+    doriClass,
+    doriShort,
+    strokeColor,
+    fillColor
+  };
+}
+
+function updateNodeFovSetting(nodeId, field, rawVal) {
+  const floor = getActiveFloor();
+  if (!floor) return;
+  const node = (floor.nodes || []).find(n => n.id === nodeId);
+  if (!node) return;
+  CanvasHistory.pushState("Adjust Camera FOV");
+  if (field === "fovEnabled") {
+    node.fovEnabled = Boolean(rawVal);
+  } else if (field === "fovAngleDeg") {
+    node.fovAngleDeg = ((parseFloat(rawVal) || 0) % 360 + 360) % 360;
+  } else if (field === "fovSpanDeg") {
+    node.fovSpanDeg = Math.max(10, Math.min(360, parseFloat(rawVal) || 90));
+  } else if (field === "fovDistanceFt") {
+    node.fovDistanceFt = Math.max(5, Math.min(400, parseFloat(rawVal) || 45));
+  }
+  renderCableCanvas();
+  renderInspector();
+  saveFacilityState();
+}
+window.updateNodeFovSetting = updateNodeFovSetting;
 
 function getDeviceCableId(dev) {
   if (!dev) return "";
@@ -307,6 +567,8 @@ let isDraggingPhysNode = false;
 let draggedPhysNode = null;
 let isDraggingPhysWaypoint = false;
 let draggedPhysWaypoint = null;
+let isDraggingFovHandle = false;
+let draggedFovNode = null;
 let physDragOffset = { x: 0, y: 0 };
 
 function isPhysCanvasVisible() {
@@ -351,6 +613,7 @@ function toggleCableLayoutModal() {
     updatePhysicalDrcPill();
     renderInspector();
     renderSidebarTabContent();
+    CanvasHistory.updateButtons();
     setTimeout(() => {
       fitPhysicalLayoutToScreen();
     }, 60);
@@ -359,16 +622,18 @@ function toggleCableLayoutModal() {
     modal.classList.add("hidden");
     isDraggingPhysNode = false;
     isDraggingPhysWaypoint = false;
+    isDraggingFovHandle = false;
     isPhysViewportPanning = false;
     draggedPhysNode = null;
     draggedPhysWaypoint = null;
+    draggedFovNode = null;
     const searchPopup = document.getElementById("physQuickSearchResults");
     if (searchPopup) searchPopup.classList.add("hidden");
   }
 }
 
 // -----------------------------------------------------------
-// Project-Scoped Persistence (Debounced to protect 60fps canvas)
+// Project-Scoped Persistence (Debounced + IndexedDB Blueprint Offloading)
 // -----------------------------------------------------------
 let _facilitySaveTimer = null;
 function saveFacilityState(immediate = false) {
@@ -391,13 +656,21 @@ function _doSaveFacilityState() {
   try {
     const projId = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
       ? FacilityStore.getProjectId() : "default";
+    const compactFloors = (typeof StorageService !== "undefined" && typeof StorageService.offloadFloorBlueprints === "function")
+      ? StorageService.offloadFloorBlueprints(facilityFloors)
+      : facilityFloors;
     const data = {
       activeFloorId,
       activeCableSku,
       useOrthogonalRouting,
-      facilityFloors
+      facilityFloors: compactFloors
     };
-    localStorage.setItem(`netselect_facility_${projId}`, JSON.stringify(data));
+    const json = JSON.stringify(data);
+    if (typeof StorageService !== "undefined" && typeof StorageService.safeSetItem === "function") {
+      StorageService.safeSetItem(`netselect_facility_${projId}`, json);
+    } else {
+      localStorage.setItem(`netselect_facility_${projId}`, json);
+    }
   } catch (e) {}
 }
 
@@ -432,6 +705,13 @@ function loadFacilityState() {
     const data = JSON.parse(raw);
     if (Array.isArray(data.facilityFloors)) {
       facilityFloors = data.facilityFloors;
+      if (typeof StorageService !== "undefined" && typeof StorageService.hydrateFloorBlueprints === "function") {
+        StorageService.hydrateFloorBlueprints(facilityFloors, () => {
+          if (typeof isPhysCanvasVisible === "function" && isPhysCanvasVisible()) {
+            renderCableCanvas();
+          }
+        });
+      }
     } else {
       facilityFloors = [];
     }
@@ -478,6 +758,22 @@ function handlePhysKeyDown(e) {
   if (!isPhysCanvasVisible()) return;
   const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : "";
   if (activeTag === "input" || activeTag === "textarea" || activeTag === "select" || document.activeElement?.isContentEditable) {
+    return;
+  }
+
+  // Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z Granular Canvas Undo & Redo
+  if (e.ctrlKey || e.metaKey) {
+    const k = e.key.toLowerCase();
+    if (k === "z" && !e.shiftKey) {
+      e.preventDefault();
+      CanvasHistory.undo();
+      return;
+    }
+    if (k === "y" || (k === "z" && e.shiftKey)) {
+      e.preventDefault();
+      CanvasHistory.redo();
+      return;
+    }
     return;
   }
 
@@ -614,6 +910,24 @@ function handlePhysMouseDown(e) {
   const floor = getActiveFloor();
   if (!floor) return;
 
+  // 0. Interactive Camera FOV Aim / Range Grip Handle
+  const fovHandleEl = e.target.closest(".draggable-fov-handle");
+  if (fovHandleEl) {
+    const nodeId = fovHandleEl.getAttribute("data-node-id");
+    const camNode = (floor.nodes || []).find(n => n.id === nodeId);
+    if (camNode) {
+      CanvasHistory.pushState("Aim Camera FOV");
+      selectedNodeId = camNode.id;
+      selectedNodeIds.clear();
+      selectedNodeIds.add(camNode.id);
+      isDraggingFovHandle = true;
+      draggedFovNode = camNode;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+  }
+
   // 1. Fiber Backbone Tool
   if (activeCableTool === "fiber") {
     const closetEl = e.target.closest(".draggable-canvas-node");
@@ -627,6 +941,7 @@ function handlePhysMouseDown(e) {
             showToast(`Selected ${closetNode.name}. Now click target closet.`);
           }
         } else if (fiberFirstClosetId !== closetNode.id) {
+          CanvasHistory.pushState("Link Fiber Backbone");
           const projFiber = (typeof getProjectFiberType === "function") ? getProjectFiberType() : "mmf";
           const newFb = {
             id: `fiber-${Date.now()}`,
@@ -687,6 +1002,7 @@ function handlePhysMouseDown(e) {
       if (input !== null) {
         const realFeet = parseFloat(input);
         if (realFeet > 0) {
+          CanvasHistory.pushState("Calibrate Floor Scale");
           const scaleFtFor100Px = (realFeet / distPx) * 100;
           floor.scaleFt = Math.round(scaleFtFor100Px * 10) / 10;
           const scaleInput = document.getElementById("cableScaleFt");
@@ -711,6 +1027,7 @@ function handlePhysMouseDown(e) {
   if (activeCableTool === "pathway") {
     floor.pathwayTrunks = floor.pathwayTrunks || [];
     if (!activeDrawingPathwayId) {
+      CanvasHistory.pushState("Draw Pathway Trunk");
       const newTrunk = {
         id: `pathway-${Date.now()}`,
         name: `Corridor Trunk #${floor.pathwayTrunks.length + 1}`,
@@ -733,6 +1050,7 @@ function handlePhysMouseDown(e) {
     } else {
       const trunk = floor.pathwayTrunks.find(t => t.id === activeDrawingPathwayId);
       if (trunk) {
+        CanvasHistory.pushState("Extend Pathway Trunk");
         trunk.points.push({ x: pos.x, y: pos.y });
         selectedPathwayTrunkId = trunk.id;
         recalculateCurrentFloorCables();
@@ -751,6 +1069,7 @@ function handlePhysMouseDown(e) {
     const jIdx = parseInt(jointEl.getAttribute("data-joint-idx"), 10);
     const trunk = (floor.pathwayTrunks || []).find(t => t.id === pId);
     if (trunk && trunk.points && trunk.points[jIdx]) {
+      CanvasHistory.pushState("Modify Pathway Trunk");
       if (e.altKey && trunk.points.length > 2) {
         trunk.points.splice(jIdx, 1);
         recalculateCurrentFloorCables();
@@ -788,6 +1107,7 @@ function handlePhysMouseDown(e) {
 
   // 2. Add Drop
   if (activeCableTool === "device") {
+    CanvasHistory.pushState("Place Drop");
     const allClosets = getAllClosetsAcrossFacility();
     const newDrop = {
       id: `drop-${Date.now()}`,
@@ -814,6 +1134,7 @@ function handlePhysMouseDown(e) {
 
   // 3. Add Closet
   if (activeCableTool === "mdf") {
+    CanvasHistory.pushState("Place Closet");
     const allClosets = getAllClosetsAcrossFacility();
     const newClosetName = `IDF-${allClosets.length + 1} • Wallbox`;
     FacilityStore.addLocation(newClosetName);
@@ -846,6 +1167,7 @@ function handlePhysMouseDown(e) {
     const drop = floor.nodes.find(n => n.id === dropId);
 
     if (drop && drop.waypoints && drop.waypoints[wpIdx]) {
+      CanvasHistory.pushState("Adjust Cable Bend");
       if (e.altKey) {
         drop.waypoints.splice(wpIdx, 1);
         recalculateCurrentFloorCables();
@@ -871,6 +1193,7 @@ function handlePhysMouseDown(e) {
     const dropId = lineTarget.getAttribute("data-drop-id");
     const drop = floor.nodes.find(n => n.id === dropId);
     if (drop) {
+      CanvasHistory.pushState("Insert Cable Bend");
       if (!drop.waypoints) drop.waypoints = [];
       const newWp = { x: pos.x, y: pos.y };
       drop.waypoints.push(newWp);
@@ -897,6 +1220,7 @@ function handlePhysMouseDown(e) {
     if (fiberId) {
       e.preventDefault();
       e.stopPropagation();
+      CanvasHistory.pushState("Delete Fiber Backbone");
       deleteFiberBackbone(fiberId, e);
       return;
     }
@@ -947,6 +1271,7 @@ function handlePhysMouseDown(e) {
         }
       }
 
+      CanvasHistory.pushState(`Move ${node.name || "Node"}`);
       isDraggingPhysNode = true;
       draggedPhysNode = node;
       physDragOffset.x = pos.x - node.x;
@@ -1020,6 +1345,97 @@ function requestPhysCanvasRedraw() {
   });
 }
 
+/**
+ * 4.2 Performance Optimization: 60 FPS Fast-Path DOM Updater during Active Node Dragging.
+ * Updates node transforms, FOV cones, and affected cable run SVG groups in-place without
+ * destroying and recreating the entire 2,000+ element `#cableSvgCanvas` on every mousemove frame.
+ */
+let _physFastDragRaf = false;
+function requestPhysDragFastUpdate() {
+  if (_physFastDragRaf) return;
+  _physFastDragRaf = true;
+  requestAnimationFrame(() => {
+    _physFastDragRaf = false;
+    const floor = getActiveFloor();
+    const svg = document.getElementById("cableSvgCanvas");
+    if (!floor || !svg) return;
+
+    recalculateCurrentFloorCables();
+
+    const movedIds = (selectedNodeIds && selectedNodeIds.size > 0)
+      ? Array.from(selectedNodeIds)
+      : (draggedPhysNode ? [draggedPhysNode.id] : []);
+
+    const movedSet = new Set(movedIds);
+    const allClosets = getAllClosetsAcrossFacility();
+
+    // 1. Update moved node <g> and FOV <g> transforms in-place
+    movedIds.forEach(id => {
+      const n = floor.nodes.find(x => x.id === id);
+      if (!n) return;
+      const nodeG = svg.querySelector(`.draggable-canvas-node[data-node-id="${id}"]`);
+      if (nodeG) {
+        nodeG.setAttribute("transform", `translate(${n.x}, ${n.y})`);
+      }
+      const fovG = svg.querySelector(`.camera-fov-cone-group[data-fov-node-id="${id}"]`);
+      if (fovG) {
+        fovG.setAttribute("transform", `translate(${n.x}, ${n.y})`);
+      }
+    });
+
+    // 2. Update affected horizontal cable groups in-place
+    floor.nodes.filter(n => n.type === "device").forEach(dev => {
+      if (!movedSet.has(dev.id) && !movedSet.has(dev.assignedClosetId)) return;
+      const runG = svg.querySelector(`.device-cable-run-group[data-cable-group-id="${dev.id}"]`);
+      if (!runG || !dev.calculatedRun) return;
+
+      const run = dev.calculatedRun;
+      const pts = run.points || [];
+      const lines = runG.querySelectorAll(".cable-path-line");
+
+      // If segment count matches, update line coordinates directly; otherwise rebuild only this single cable group
+      if (lines.length === pts.length - 1) {
+        for (let i = 0; i < pts.length - 1; i++) {
+          lines[i].setAttribute("x1", pts[i].x);
+          lines[i].setAttribute("y1", pts[i].y);
+          lines[i].setAttribute("x2", pts[i + 1].x);
+          lines[i].setAttribute("y2", pts[i + 1].y);
+        }
+      } else {
+        const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+        const runStd = (typeof getProjectCablingStandard === "function") ? getProjectCablingStandard(bomItem || dev, "run") : { hex: "#eab308" };
+        const cableColorHex = runStd.hex || "#eab308";
+        lines.forEach(l => l.remove());
+        for (let i = pts.length - 2; i >= 0; i--) {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("class", "cable-path-line cursor-pointer");
+          line.setAttribute("data-drop-id", dev.id);
+          line.setAttribute("x1", pts[i].x);
+          line.setAttribute("y1", pts[i].y);
+          line.setAttribute("x2", pts[i + 1].x);
+          line.setAttribute("y2", pts[i + 1].y);
+          line.setAttribute("stroke", run.isExceeded ? "#f43f5e" : "#a855f7");
+          line.setAttribute("stroke-width", "4");
+          runG.insertBefore(line, runG.firstChild);
+        }
+      }
+
+      const tag = runG.querySelector(".cable-footage-tag");
+      if (tag && pts.length >= 2) {
+        const midIdx = Math.floor(pts.length / 2);
+        const midX = (pts[midIdx - 1].x + pts[midIdx].x) / 2;
+        const midY = (pts[midIdx - 1].y + pts[midIdx].y) / 2;
+        let closet = allClosets.find(c => c.id === dev.assignedClosetId) || allClosets[0];
+        const isCrossFloor = closet && closet.floorId !== floor.id;
+        const snappedCount = (run.traversedTrunks && run.traversedTrunks.length) ? ` [Tray]` : "";
+        tag.setAttribute("x", midX);
+        tag.setAttribute("y", midY - 6);
+        tag.textContent = `${run.totalFt} ft ${isCrossFloor ? `(Riser)` : ''}${snappedCount}`;
+      }
+    });
+  });
+}
+
 function handlePhysMouseMove(e) {
   if (!isPhysCanvasVisible()) return;
 
@@ -1028,6 +1444,33 @@ function handlePhysMouseMove(e) {
     if (viewport) {
       viewport.scrollLeft = physPanStart.scrollLeft - (e.clientX - physPanStart.x);
       viewport.scrollTop = physPanStart.scrollTop - (e.clientY - physPanStart.y);
+    }
+    return;
+  }
+
+  // Interactive Camera FOV Aim & Range Handle Dragging (60 FPS in-place update)
+  if (isDraggingFovHandle && draggedFovNode) {
+    const pos = getCanvasCoordinates(e);
+    const floor = getActiveFloor();
+    const dx = pos.x - draggedFovNode.x;
+    const dy = pos.y - draggedFovNode.y;
+    const angleDeg = ((Math.round((Math.atan2(dy, dx) * 180) / Math.PI) % 360) + 360) % 360;
+    const distPx = Math.max(24, Math.hypot(dx, dy));
+    const fPxToFt = ((floor && floor.scaleFt) ? floor.scaleFt : 25) / 100;
+    const distFt = Math.max(10, Math.min(300, Math.round(distPx * fPxToFt)));
+
+    draggedFovNode.fovAngleDeg = angleDeg;
+    draggedFovNode.fovDistanceFt = distFt;
+
+    const svg = document.getElementById("cableSvgCanvas");
+    if (svg) {
+      const fovG = svg.querySelector(`.camera-fov-cone-group[data-fov-node-id="${draggedFovNode.id}"]`);
+      if (fovG) {
+        const bomItem = (typeof projectBOM !== "undefined" && draggedFovNode.instanceId)
+          ? projectBOM.find(i => i.instanceId === draggedFovNode.instanceId)
+          : null;
+        renderCameraFovGroupContent(fovG, draggedFovNode, bomItem, floor, true);
+      }
     }
     return;
   }
@@ -1084,13 +1527,23 @@ function handlePhysMouseMove(e) {
           n.y = Math.max(30, multiDragInitialPos[id].y + dy);
         }
       });
-      requestPhysCanvasRedraw();
+      // If any closet is being dragged, use full redraw; otherwise 60fps fast-path
+      const hasCloset = Array.from(selectedNodeIds).some(id => {
+        const n = floor.nodes.find(x => x.id === id);
+        return n && n.type === "closet";
+      });
+      if (hasCloset) requestPhysCanvasRedraw();
+      else requestPhysDragFastUpdate();
       return;
     }
 
     draggedPhysNode.x = Math.max(30, pos.x - physDragOffset.x);
     draggedPhysNode.y = Math.max(30, pos.y - physDragOffset.y);
-    requestPhysCanvasRedraw();
+    if (draggedPhysNode.type === "closet") {
+      requestPhysCanvasRedraw();
+    } else {
+      requestPhysDragFastUpdate();
+    }
   }
 }
 
@@ -1099,6 +1552,15 @@ function handlePhysMouseUp() {
     isPhysViewportPanning = false;
     const viewport = document.getElementById("cableCanvasViewport");
     if (viewport) viewport.style.cursor = isPhysSpacebarDown ? "grab" : "default";
+  }
+
+  if (isDraggingFovHandle) {
+    isDraggingFovHandle = false;
+    draggedFovNode = null;
+    renderCableCanvas();
+    renderInspector();
+    saveFacilityState(true);
+    return;
   }
 
   if (isMarqueeSelecting) {
@@ -1134,6 +1596,8 @@ function handlePhysMouseUp() {
     multiDragInitialPos = {};
     recalculateCurrentFloorCables();
     renderCableCanvas();
+    renderInspector();
+    renderSidebarTabContent();
     saveFacilityState(true);
   }
 }
@@ -1368,6 +1832,295 @@ function syncFloorControlInputs() {
   if (cableSelect) cableSelect.value = activeCableSku;
 }
 
+/**
+ * Downscales a canvas if its longest edge exceeds maxEdge (default 3840px 4K)
+ * and encodes to compressed WebP (0.82 quality) to prevent 15MB PNG localStorage blowouts.
+ */
+function compressCanvasToWebpDataUrl(sourceCanvas, maxEdge = 3840, quality = 0.82) {
+  let targetCanvas = sourceCanvas;
+  const w = sourceCanvas.width || 1;
+  const h = sourceCanvas.height || 1;
+  const longest = Math.max(w, h);
+
+  if (longest > maxEdge) {
+    const ratio = maxEdge / longest;
+    targetCanvas = document.createElement("canvas");
+    targetCanvas.width = Math.round(w * ratio);
+    targetCanvas.height = Math.round(h * ratio);
+    const tCtx = targetCanvas.getContext("2d");
+    tCtx.imageSmoothingEnabled = true;
+    tCtx.imageSmoothingQuality = "high";
+    tCtx.drawImage(sourceCanvas, 0, 0, targetCanvas.width, targetCanvas.height);
+  }
+
+  let dataUrl = targetCanvas.toDataURL("image/webp", quality);
+  if (!dataUrl || !dataUrl.startsWith("data:image/webp")) {
+    dataUrl = targetCanvas.toDataURL("image/jpeg", quality);
+  }
+  return dataUrl;
+}
+
+/**
+ * Compresses an uploaded raster image file (PNG/JPG/WebP) to WebP (0.82, max 3840px).
+ */
+function compressImageFileToWebpDataUrl(file, maxEdge = 3840, quality = 0.82) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read image file"));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => resolve(e.target.result);
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth || img.width || 1920;
+          canvas.height = img.naturalHeight || img.height || 1080;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          resolve(compressCanvasToWebpDataUrl(canvas, maxEdge, quality));
+        } catch (err) {
+          resolve(e.target.result);
+        }
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Renders a specific 1-indexed page of a PDF.js document to a compressed WebP DataURL.
+ */
+async function renderPdfPageToWebp(pdf, pageNumber, renderScale = 2.0) {
+  const page = await pdf.getPage(pageNumber);
+  const viewport = page.getViewport({ scale: renderScale });
+  const offCanvas = document.createElement("canvas");
+  const ctx = offCanvas.getContext("2d");
+  offCanvas.width = viewport.width;
+  offCanvas.height = viewport.height;
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  return compressCanvasToWebpDataUrl(offCanvas, 3840, 0.82);
+}
+
+/**
+ * Interactive Multi-Page PDF Blueprint Sheet Selector Modal.
+ * Allows importing a single sheet onto the active floor or batch-creating floors from selected sheets.
+ */
+async function openPdfSheetSelectorModal(pdf, fileName) {
+  let existing = document.getElementById("pdfSheetSelectorModal");
+  if (existing) existing.remove();
+
+  const activeFloor = getActiveFloor();
+  const numPages = pdf.numPages;
+
+  const modal = document.createElement("div");
+  modal.id = "pdfSheetSelectorModal";
+  modal.className = "fixed inset-0 z-[120] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4";
+
+  const pageCardsHtml = [];
+  for (let p = 1; p <= numPages; p++) {
+    pageCardsHtml.push(`
+      <label class="group relative flex flex-col bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/80 hover:border-brand-500 rounded-xl p-2.5 cursor-pointer transition-all shadow-sm">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" class="pdf-sheet-checkbox w-4 h-4 rounded accent-indigo-500 cursor-pointer" value="${p}" ${p === 1 ? "checked" : ""} />
+            <span class="text-xs font-bold text-white font-mono">Sheet ${p} of ${numPages}</span>
+          </div>
+          <button type="button" data-single-page="${p}" class="pdf-single-import-btn px-2 py-0.5 rounded bg-brand-600/30 hover:bg-brand-600 text-brand-200 hover:text-white border border-brand-500/40 text-[10px] font-bold transition-colors cursor-pointer">
+            Use on ${escapeHTML(activeFloor ? activeFloor.name : "Current Floor")}
+          </button>
+        </div>
+        <div class="relative w-full h-36 bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-center overflow-hidden">
+          <canvas id="pdfThumbCanvas_${p}" class="max-w-full max-h-full object-contain"></canvas>
+          <span id="pdfThumbLoader_${p}" class="text-[10px] font-mono text-slate-500 animate-pulse">Rendering preview...</span>
+        </div>
+        <input type="text" id="pdfSheetFloorName_${p}" value="${escapeHTML(fileName.replace(/\.pdf$/i, ""))} - Sheet ${p}" class="mt-2 w-full bg-slate-950 border border-slate-800 focus:border-indigo-500 rounded px-2 py-1 text-[11px] text-slate-200 font-medium" placeholder="Floor name for batch import..." onclick="event.stopPropagation();" />
+      </label>
+    `);
+  }
+
+  modal.innerHTML = `
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
+      <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+            <i data-lucide="layers" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Multi-Page Architectural PDF Detected (${numPages} Sheets)</h3>
+            <p class="text-xs text-slate-400">Select a single sheet for <strong class="text-indigo-300">${escapeHTML(activeFloor ? activeFloor.name : "Active Floor")}</strong> or batch-import multiple sheets as separate floors.</p>
+          </div>
+        </div>
+        <button type="button" id="btnClosePdfSheetModal" class="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="px-5 py-2.5 bg-slate-950/40 border-b border-slate-800 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-3">
+          <button type="button" id="btnSelectAllPdfSheets" class="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer">Select All (${numPages})</button>
+          <span class="text-slate-700">|</span>
+          <button type="button" id="btnClearAllPdfSheets" class="text-slate-400 hover:text-slate-200 font-semibold cursor-pointer">Clear Selection</button>
+        </div>
+        <span class="text-[11px] font-mono text-emerald-400">WebP 0.82 Compression + IndexedDB Offload Active</span>
+      </div>
+
+      <div class="p-5 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 flex-1">
+        ${pageCardsHtml.join("")}
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3">
+        <button type="button" id="btnCancelPdfSheetModal" class="px-3.5 py-1.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer">
+          Cancel
+        </button>
+        <div class="flex items-center gap-2">
+          <button type="button" id="btnBatchImportPdfSheets" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-lg flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+            <span>Batch Import Checked Sheets as Floors</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  if (window.lucide) lucide.createIcons();
+
+  const closeModal = () => modal.remove();
+  modal.querySelector("#btnClosePdfSheetModal")?.addEventListener("click", closeModal);
+  modal.querySelector("#btnCancelPdfSheetModal")?.addEventListener("click", closeModal);
+
+  modal.querySelector("#btnSelectAllPdfSheets")?.addEventListener("click", () => {
+    modal.querySelectorAll(".pdf-sheet-checkbox").forEach(cb => { cb.checked = true; });
+  });
+  modal.querySelector("#btnClearAllPdfSheets")?.addEventListener("click", () => {
+    modal.querySelectorAll(".pdf-sheet-checkbox").forEach(cb => { cb.checked = false; });
+  });
+
+  // Single-page import buttons
+  modal.querySelectorAll(".pdf-single-import-btn").forEach(btn => {
+    btn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const pageNum = parseInt(btn.getAttribute("data-single-page"), 10);
+      if (!pageNum || !activeFloor) return;
+      const spinner = document.getElementById("pdfRenderSpinner");
+      if (spinner) spinner.classList.remove("hidden");
+      closeModal();
+      try {
+        CanvasHistory.pushState("Upload Blueprint PDF");
+        activeFloor.image = await renderPdfPageToWebp(pdf, pageNum, 2.0);
+        renderCableCanvas();
+        saveFacilityState(true);
+        if (typeof showToast === "function") {
+          showToast(`Imported Sheet ${pageNum} of ${numPages} to ${activeFloor.name}`);
+        }
+      } finally {
+        if (spinner) spinner.classList.add("hidden");
+      }
+    });
+  });
+
+  // Batch import checked sheets
+  modal.querySelector("#btnBatchImportPdfSheets")?.addEventListener("click", async () => {
+    const checkedPages = Array.from(modal.querySelectorAll(".pdf-sheet-checkbox:checked"))
+      .map(cb => parseInt(cb.value, 10))
+      .filter(n => n > 0);
+
+    if (checkedPages.length === 0) {
+      if (typeof showToast === "function") showToast("Select at least one PDF sheet to import.", "warning");
+      return;
+    }
+
+    const spinner = document.getElementById("pdfRenderSpinner");
+    if (spinner) spinner.classList.remove("hidden");
+
+    const customNames = {};
+    checkedPages.forEach(p => {
+      const inp = modal.querySelector(`#pdfSheetFloorName_${p}`);
+      customNames[p] = (inp && inp.value.trim()) ? inp.value.trim() : `Sheet ${p}`;
+    });
+
+    closeModal();
+
+    try {
+      CanvasHistory.pushState("Batch Import PDF Sheets");
+      let firstImportedFloorId = null;
+
+      for (let i = 0; i < checkedPages.length; i++) {
+        const pageNum = checkedPages[i];
+        const webpDataUrl = await renderPdfPageToWebp(pdf, pageNum, 2.0);
+
+        if (i === 0 && activeFloor && !activeFloor.image) {
+          // Populate current active floor if it doesn't have an image yet
+          activeFloor.image = webpDataUrl;
+          firstImportedFloorId = activeFloor.id;
+        } else {
+          const floorTitle = customNames[pageNum];
+          let newFloorId = `floor-pdf-${Date.now()}-${pageNum}`;
+          if (typeof FacilityStore !== "undefined" && typeof FacilityStore.addFloor === "function") {
+            const created = FacilityStore.addFloor(floorTitle, facilityFloors.length + 1, 14);
+            if (created && created.id) newFloorId = created.id;
+          }
+          let targetFl = facilityFloors.find(f => f.id === newFloorId);
+          if (!targetFl) {
+            targetFl = {
+              id: newFloorId,
+              name: floorTitle,
+              levelIndex: facilityFloors.length + 1,
+              image: webpDataUrl,
+              opacity: 0.7,
+              scaleFt: 25,
+              slackFt: 15,
+              slabFt: 14,
+              nodes: [],
+              fiberBackbones: [],
+              pathwayTrunks: []
+            };
+            facilityFloors.push(targetFl);
+          } else {
+            targetFl.image = webpDataUrl;
+          }
+          if (!firstImportedFloorId) firstImportedFloorId = targetFl.id;
+        }
+      }
+
+      if (firstImportedFloorId) {
+        activeFloorId = firstImportedFloorId;
+      }
+      renderFloorTabs();
+      syncFloorControlInputs();
+      recalculateCurrentFloorCables();
+      renderCableCanvas();
+      saveFacilityState(true);
+      if (typeof showToast === "function") {
+        showToast(`Batch imported ${checkedPages.length} blueprint sheet${checkedPages.length === 1 ? "" : "s"} (WebP compressed).`);
+      }
+    } finally {
+      if (spinner) spinner.classList.add("hidden");
+    }
+  });
+
+  // Render lightweight thumbnails asynchronously for each sheet
+  for (let p = 1; p <= Math.min(numPages, 24); p++) {
+    (async (pageIdx) => {
+      try {
+        const page = await pdf.getPage(pageIdx);
+        const vp = page.getViewport({ scale: 0.35 });
+        const thumbCanvas = document.getElementById(`pdfThumbCanvas_${pageIdx}`);
+        const loader = document.getElementById(`pdfThumbLoader_${pageIdx}`);
+        if (!thumbCanvas) return;
+        thumbCanvas.width = vp.width;
+        thumbCanvas.height = vp.height;
+        await page.render({ canvasContext: thumbCanvas.getContext("2d"), viewport: vp }).promise;
+        if (loader) loader.remove();
+      } catch (e) {
+        // Ignore thumbnail error if modal closed early
+      }
+    })(p);
+  }
+}
+
 async function handleUniversalPlanUpload(event) {
   const file = event.target?.files?.[0];
   if (!file) return;
@@ -1386,40 +2139,45 @@ async function handleUniversalPlanUpload(event) {
       if (typeof pdfjsLib === "undefined") throw new Error("PDF.js library is not loaded.");
       const fileData = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({ data: fileData }).promise;
-      const page = await pdf.getPage(1);
-      const viewport = page.getViewport({ scale: 2.0 });
 
-      const offCanvas = document.createElement("canvas");
-      const ctx = offCanvas.getContext("2d");
-      offCanvas.width = viewport.width;
-      offCanvas.height = viewport.height;
+      if (pdf.numPages > 1) {
+        if (spinner) spinner.classList.add("hidden");
+        await openPdfSheetSelectorModal(pdf, file.name || "Blueprint.pdf");
+        event.target.value = "";
+        return;
+      }
 
-      await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-
-      floor.image = offCanvas.toDataURL("image/png");
+      CanvasHistory.pushState("Upload Blueprint PDF");
+      floor.image = await renderPdfPageToWebp(pdf, 1, 2.0);
       if (spinner) spinner.classList.add("hidden");
 
       renderCableCanvas();
-      saveFacilityState();
+      saveFacilityState(true);
       if (typeof showToast === "function") {
-        showToast(`Rendered PDF blueprint to ${floor.name}`);
+        showToast(`Rendered PDF blueprint to ${floor.name} (WebP optimized)`);
       }
     } catch (err) {
       if (spinner) spinner.classList.add("hidden");
       alert("Could not render PDF blueprint. Ensure file is a valid document.");
     }
   } else {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      floor.image = e.target.result;
+    const spinner = document.getElementById("pdfRenderSpinner");
+    if (spinner) spinner.classList.remove("hidden");
+    try {
+      CanvasHistory.pushState("Upload Blueprint Image");
+      floor.image = await compressImageFileToWebpDataUrl(file, 3840, 0.82);
       renderCableCanvas();
-      saveFacilityState();
+      saveFacilityState(true);
       if (typeof showToast === "function") {
-        showToast(`Uploaded blueprint to ${floor.name}`);
+        showToast(`Uploaded & compressed blueprint to ${floor.name}`);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.warn("[PhysicalLayout] Image compression fallback:", err);
+    } finally {
+      if (spinner) spinner.classList.add("hidden");
+    }
   }
+  event.target.value = "";
 }
 
 // -----------------------------------------------------------
@@ -1831,6 +2589,249 @@ function getAllClosetsAcrossFacility() {
   return closets;
 }
 
+/**
+ * Renders the SVG child elements of a Camera FOV & DORI cone group in-place.
+ * Supports both standard directional wedges (<360°) and full 360° fisheye/panoramic domes.
+ */
+function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
+  if (!fovG || !dev) return;
+  fovG.innerHTML = "";
+
+  const telem = computeCameraDoriTelemetry(dev, bomItem);
+  const radiusPx = Math.max(28, telem.radiusPx);
+  const angleDeg = dev.fovAngleDeg || 0;
+  const apertureDeg = dev.fovApertureDeg || 90;
+  const doriColor = telem.doriHex || "#10b981";
+
+  const rad = (deg) => (deg * Math.PI) / 180;
+
+  if (apertureDeg >= 359) {
+    // 360° Fisheye / Multi-Sensor Dome Coverage Circle
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute("cx", "0");
+    circle.setAttribute("cy", "0");
+    circle.setAttribute("r", radiusPx);
+    circle.setAttribute("fill", doriColor);
+    circle.setAttribute("fill-opacity", isSelected ? "0.22" : "0.13");
+    circle.setAttribute("stroke", doriColor);
+    circle.setAttribute("stroke-width", isSelected ? "2" : "1.25");
+    circle.setAttribute("stroke-dasharray", "6 4");
+    circle.style.pointerEvents = "none";
+    fovG.appendChild(circle);
+
+    const midRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    midRing.setAttribute("cx", "0");
+    midRing.setAttribute("cy", "0");
+    midRing.setAttribute("r", Math.round(radiusPx * 0.5));
+    midRing.setAttribute("fill", "none");
+    midRing.setAttribute("stroke", doriColor);
+    midRing.setAttribute("stroke-width", "1");
+    midRing.setAttribute("stroke-dasharray", "3 3");
+    midRing.setAttribute("opacity", "0.45");
+    midRing.style.pointerEvents = "none";
+    fovG.appendChild(midRing);
+  } else {
+    // Directional Wedge Sector
+    const startAngle = angleDeg - apertureDeg / 2;
+    const endAngle = angleDeg + apertureDeg / 2;
+    const x1 = radiusPx * Math.cos(rad(startAngle));
+    const y1 = radiusPx * Math.sin(rad(startAngle));
+    const x2 = radiusPx * Math.cos(rad(endAngle));
+    const y2 = radiusPx * Math.sin(rad(endAngle));
+    const largeArc = apertureDeg > 180 ? 1 : 0;
+
+    const pathData = `M 0 0 L ${x1.toFixed(1)} ${y1.toFixed(1)} A ${radiusPx.toFixed(1)} ${radiusPx.toFixed(1)} 0 ${largeArc} 1 ${x2.toFixed(1)} ${y2.toFixed(1)} Z`;
+    const wedge = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    wedge.setAttribute("d", pathData);
+    wedge.setAttribute("fill", doriColor);
+    wedge.setAttribute("fill-opacity", isSelected ? "0.24" : "0.14");
+    wedge.setAttribute("stroke", doriColor);
+    wedge.setAttribute("stroke-width", isSelected ? "2" : "1.25");
+    wedge.style.pointerEvents = "none";
+    fovG.appendChild(wedge);
+
+    // 50% Range Sub-Arc (Higher PPF zone indicator)
+    const halfR = radiusPx * 0.5;
+    const hx1 = halfR * Math.cos(rad(startAngle));
+    const hy1 = halfR * Math.sin(rad(startAngle));
+    const hx2 = halfR * Math.cos(rad(endAngle));
+    const hy2 = halfR * Math.sin(rad(endAngle));
+    const subArc = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    subArc.setAttribute("d", `M ${hx1.toFixed(1)} ${hy1.toFixed(1)} A ${halfR.toFixed(1)} ${halfR.toFixed(1)} 0 ${largeArc} 1 ${hx2.toFixed(1)} ${hy2.toFixed(1)}`);
+    subArc.setAttribute("fill", "none");
+    subArc.setAttribute("stroke", doriColor);
+    subArc.setAttribute("stroke-width", "1");
+    subArc.setAttribute("stroke-dasharray", "3 3");
+    subArc.setAttribute("opacity", "0.55");
+    subArc.style.pointerEvents = "none";
+    fovG.appendChild(subArc);
+  }
+
+  // Center Aim Axis Ray & Interactive Aim/Range Handle
+  const handleX = radiusPx * Math.cos(rad(angleDeg));
+  const handleY = radiusPx * Math.sin(rad(angleDeg));
+
+  const axisLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+  axisLine.setAttribute("x1", "0");
+  axisLine.setAttribute("y1", "0");
+  axisLine.setAttribute("x2", handleX.toFixed(1));
+  axisLine.setAttribute("y2", handleY.toFixed(1));
+  axisLine.setAttribute("stroke", doriColor);
+  axisLine.setAttribute("stroke-width", "1.25");
+  axisLine.setAttribute("stroke-dasharray", "4 3");
+  axisLine.setAttribute("opacity", isSelected ? "0.9" : "0.55");
+  axisLine.style.pointerEvents = "none";
+  fovG.appendChild(axisLine);
+
+  // Telemetry Pill along the outer arc
+  const labelDist = Math.max(38, radiusPx * 0.68);
+  const lx = labelDist * Math.cos(rad(angleDeg));
+  const ly = labelDist * Math.sin(rad(angleDeg));
+  const pillW = 92;
+  const pillH = 16;
+
+  const pillBg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  pillBg.setAttribute("x", (lx - pillW / 2).toFixed(1));
+  pillBg.setAttribute("y", (ly - pillH / 2).toFixed(1));
+  pillBg.setAttribute("width", pillW);
+  pillBg.setAttribute("height", pillH);
+  pillBg.setAttribute("rx", "6");
+  pillBg.setAttribute("fill", "#0f172a");
+  pillBg.setAttribute("fill-opacity", "0.88");
+  pillBg.setAttribute("stroke", doriColor);
+  pillBg.setAttribute("stroke-width", "1");
+  pillBg.style.pointerEvents = "none";
+  fovG.appendChild(pillBg);
+
+  const pillTxt = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  pillTxt.setAttribute("x", lx.toFixed(1));
+  pillTxt.setAttribute("y", (ly + 3.5).toFixed(1));
+  pillTxt.setAttribute("text-anchor", "middle");
+  pillTxt.setAttribute("fill", doriColor);
+  pillTxt.setAttribute("font-size", "8.5");
+  pillTxt.setAttribute("font-family", "monospace");
+  pillTxt.setAttribute("font-weight", "bold");
+  pillTxt.style.pointerEvents = "none";
+  pillTxt.textContent = `${telem.ppf} PPF • ${dev.fovDistanceFt}'`;
+  fovG.appendChild(pillTxt);
+
+  // Interactive Drag Handle at tip of FOV cone to aim & resize range
+  const grip = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+  grip.setAttribute("class", "draggable-fov-handle cursor-grab");
+  grip.setAttribute("data-node-id", dev.id);
+  grip.setAttribute("cx", handleX.toFixed(1));
+  grip.setAttribute("cy", handleY.toFixed(1));
+  grip.setAttribute("r", isSelected ? "7.5" : "6");
+  grip.setAttribute("fill", doriColor);
+  grip.setAttribute("stroke", "#ffffff");
+  grip.setAttribute("stroke-width", "2");
+  fovG.appendChild(grip);
+}
+window.renderCameraFovGroupContent = renderCameraFovGroupContent;
+
+/**
+ * Projects a point P onto segment A->B and returns the closest point and distance.
+ */
+function _projectPointToSegment(p, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lenSq = dx * dx + dy * dy;
+  if (lenSq === 0) return { x: a.x, y: a.y, t: 0, dist: Math.hypot(p.x - a.x, p.y - a.y) };
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / lenSq;
+  t = Math.max(0, Math.min(1, t));
+  const projX = a.x + t * dx;
+  const projY = a.y + t * dy;
+  return { x: projX, y: projY, t, dist: Math.hypot(p.x - projX, p.y - projY) };
+}
+
+/**
+ * Computes automatic horizontal cable routing along drawn Pathway Trunks when a device has no manual waypoints.
+ * Returns { points: Array<{x,y}>, traversedTrunks: Array<string> }
+ */
+function computePathwayTrunkRoute(closetPt, devPt, floorTrunks, useOrtho) {
+  const traversedTrunks = [];
+  if (Array.isArray(floorTrunks) && floorTrunks.length > 0) {
+    let bestTrunk = null;
+    let bestDevProj = null;
+    let bestClosetProj = null;
+    let bestScore = Infinity;
+
+    floorTrunks.forEach(trunk => {
+      if (!trunk.points || trunk.points.length < 2) return;
+      let minDev = null;
+      let minCloset = null;
+
+      for (let i = 0; i < trunk.points.length - 1; i++) {
+        const a = trunk.points[i];
+        const b = trunk.points[i + 1];
+        const dp = _projectPointToSegment(devPt, a, b);
+        if (!minDev || dp.dist < minDev.dist) {
+          minDev = { ...dp, segIdx: i, posAlong: i + dp.t };
+        }
+        const cp = _projectPointToSegment(closetPt, a, b);
+        if (!minCloset || cp.dist < minCloset.dist) {
+          minCloset = { ...cp, segIdx: i, posAlong: i + cp.t };
+        }
+      }
+
+      // Snap to trunk if device is within 260px of the trunk corridor and routing via trunk is reasonable
+      if (minDev && minCloset && minDev.dist <= 260 && minCloset.dist <= 420) {
+        const score = minDev.dist + minCloset.dist * 0.6;
+        if (score < bestScore) {
+          bestScore = score;
+          bestTrunk = trunk;
+          bestDevProj = minDev;
+          bestClosetProj = minCloset;
+        }
+      }
+    });
+
+    if (bestTrunk && bestDevProj && bestClosetProj) {
+      traversedTrunks.push(bestTrunk.id);
+      const pts = [{ x: closetPt.x, y: closetPt.y }];
+
+      // Orthogonal dogleg from closet onto trunk entry point if orthogonal mode is active
+      const entryPt = { x: Math.round(bestClosetProj.x), y: Math.round(bestClosetProj.y) };
+      const exitPt = { x: Math.round(bestDevProj.x), y: Math.round(bestDevProj.y) };
+
+      if (Math.hypot(entryPt.x - closetPt.x, entryPt.y - closetPt.y) > 8) {
+        if (useOrtho && entryPt.x !== closetPt.x && entryPt.y !== closetPt.y) {
+          pts.push({ x: entryPt.x, y: closetPt.y });
+        }
+        pts.push(entryPt);
+      }
+
+      // Follow intermediate trunk vertices between closet projection and device projection
+      if (bestClosetProj.posAlong <= bestDevProj.posAlong) {
+        for (let k = bestClosetProj.segIdx + 1; k <= bestDevProj.segIdx; k++) {
+          pts.push({ x: bestTrunk.points[k].x, y: bestTrunk.points[k].y });
+        }
+      } else {
+        for (let k = bestClosetProj.segIdx; k > bestDevProj.segIdx; k--) {
+          pts.push({ x: bestTrunk.points[k].x, y: bestTrunk.points[k].y });
+        }
+      }
+
+      if (Math.hypot(exitPt.x - entryPt.x, exitPt.y - entryPt.y) > 6) {
+        pts.push(exitPt);
+      }
+      if (useOrtho && exitPt.x !== devPt.x && exitPt.y !== devPt.y) {
+        pts.push({ x: devPt.x, y: exitPt.y });
+      }
+      pts.push({ x: devPt.x, y: devPt.y });
+      return { points: pts, traversedTrunks };
+    }
+  }
+
+  // Fallback: direct or 90° orthogonal path
+  const pts = [{ x: closetPt.x, y: closetPt.y }];
+  if (useOrtho) {
+    pts.push({ x: devPt.x, y: closetPt.y });
+  }
+  pts.push({ x: devPt.x, y: devPt.y });
+  return { points: pts, traversedTrunks };
+}
+
 function recalculateCurrentFloorCables() {
   const floor = getActiveFloor();
   const scaleInput = document.getElementById("cableScaleFt");
@@ -1868,14 +2869,23 @@ function recalculateCurrentFloorCables() {
 
       if (closet) {
         let horizontalPixelDist = 0;
-        const pts = [{ x: closet.x, y: closet.y }];
+        let pts = [];
+        let traversedTrunks = [];
 
         if (dev.waypoints && dev.waypoints.length > 0) {
+          pts = [{ x: closet.x, y: closet.y }];
           dev.waypoints.forEach(wp => pts.push(wp));
-        } else if (useOrthogonalRouting) {
-          pts.push({ x: dev.x, y: closet.y });
+          pts.push({ x: dev.x, y: dev.y });
+        } else {
+          const routed = computePathwayTrunkRoute(
+            { x: closet.x, y: closet.y },
+            { x: dev.x, y: dev.y },
+            fl.pathwayTrunks || [],
+            useOrthogonalRouting
+          );
+          pts = routed.points;
+          traversedTrunks = routed.traversedTrunks;
         }
-        pts.push({ x: dev.x, y: dev.y });
 
         for (let i = 0; i < pts.length - 1; i++) {
           horizontalPixelDist += Math.hypot(pts[i + 1].x - pts[i].x, pts[i + 1].y - pts[i].y);
@@ -1897,7 +2907,8 @@ function recalculateCurrentFloorCables() {
           closetName: closet.name,
           closetFloorName: closet.floorName,
           isExceeded: totalRunMeters > 90,
-          points: pts
+          points: pts,
+          traversedTrunks
         };
 
         globalFootage += totalRunFt;
@@ -3032,14 +4043,16 @@ function renderInspector() {
     if (trunk) {
       let routedCount = 0;
       floor.nodes.filter(n => n.type === "device").forEach(d => {
-        if (d.calculatedRun && d.calculatedRun.points) {
-          const isNear = d.calculatedRun.points.some(p => trunk.points.some(tp => Math.hypot(p.x - tp.x, p.y - tp.y) < 45));
-          if (isNear) routedCount++;
+        if (d.calculatedRun) {
+          const snapped = Array.isArray(d.calculatedRun.traversedTrunks) && d.calculatedRun.traversedTrunks.includes(trunk.id);
+          const isNear = !snapped && d.calculatedRun.points && d.calculatedRun.points.some(p => trunk.points.some(tp => Math.hypot(p.x - tp.x, p.y - tp.y) < 45));
+          if (snapped || isNear) routedCount++;
         }
       });
       const capacity = trunk.capacity || 80;
       const fillPct = Math.round((routedCount / capacity) * 100);
-      const isOverfilled = fillPct > 50;
+      const maxFillPct = trunk.type === "conduit" ? 40 : 50;
+      const isOverfilled = fillPct > maxFillPct;
 
       container.innerHTML = `
         <div class="space-y-4">
@@ -3054,7 +4067,7 @@ function renderInspector() {
               </div>
             </div>
             <div class="flex items-center gap-1.5">
-              <button onclick="deletePathwayTrunk('${trunk.id}')" class="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm">
+              <button onclick="deletePathwayTrunk('${escapeJSAttr(trunk.id)}')" class="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm">
                 <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
               </button>
               <button onclick="deselectPathwayTrunk()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors">
@@ -3066,13 +4079,13 @@ function renderInspector() {
           <!-- Name -->
           <div>
             <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Corridor Name / Label</label>
-            <input type="text" value="${escapeHTML(trunk.name)}" onchange="updatePathwayTrunkName('${trunk.id}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-amber-500" />
+            <input type="text" value="${escapeHTML(trunk.name)}" onchange="updatePathwayTrunkName('${escapeJSAttr(trunk.id)}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-amber-500" />
           </div>
 
           <!-- Type -->
           <div>
             <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Pathway Infrastructure Type</label>
-            <select onchange="updatePathwayTrunkType('${trunk.id}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-amber-500">
+            <select onchange="updatePathwayTrunkType('${escapeJSAttr(trunk.id)}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-medium focus:border-amber-500">
               <option value="tray" ${trunk.type === 'tray' ? 'selected' : ''}>Cable Tray (12" Wire Mesh Basket - 100 Cables)</option>
               <option value="ladder" ${trunk.type === 'ladder' ? 'selected' : ''}>Cable Runway / Ladder Rack (160 Cables)</option>
               <option value="jhook" ${trunk.type === 'jhook' ? 'selected' : ''}>J-Hook Tree Pathway (40 Cables)</option>
@@ -3084,7 +4097,7 @@ function renderInspector() {
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
               <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Rated Capacity</label>
-              <input type="number" min="10" max="500" step="10" value="${capacity}" onchange="updatePathwayTrunkCapacity('${trunk.id}', parseInt(this.value))" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold focus:border-amber-500" />
+              <input type="number" min="10" max="500" step="10" value="${capacity}" onchange="updatePathwayTrunkCapacity('${escapeJSAttr(trunk.id)}', parseInt(this.value))" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold focus:border-amber-500" />
             </div>
             <div>
               <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Routed Cables</label>
@@ -3094,19 +4107,19 @@ function renderInspector() {
             </div>
           </div>
 
-          <!-- NEC 392 Fill Status -->
+          <!-- NEC 392 / Chapter 9 Fill Status -->
           <div class="p-2.5 rounded-xl border ${isOverfilled ? 'bg-rose-950/40 border-rose-600/50 text-rose-300' : 'bg-slate-950 border-slate-800 text-slate-300'} text-xs">
             <div class="flex items-center justify-between font-bold mb-1">
-              <span>NEC 392 / TIA-569 Fill:</span>
-              <span class="font-mono text-[11px] ${isOverfilled ? 'text-rose-400' : 'text-emerald-400'}">${isOverfilled ? 'WARNING: OVERFILLED' : 'COMPLIANT (≤50%)'}</span>
+              <span>${trunk.type === 'conduit' ? 'NEC Ch. 9 Conduit Fill:' : 'NEC 392 / TIA-569 Fill:'}</span>
+              <span class="font-mono text-[11px] ${isOverfilled ? 'text-rose-400' : 'text-emerald-400'}">${isOverfilled ? `WARNING: OVERFILLED (>${maxFillPct}%)` : `COMPLIANT (≤${maxFillPct}%)`}</span>
             </div>
             <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-300 ${isOverfilled ? 'bg-rose-500' : (fillPct > 35 ? 'bg-amber-500' : 'bg-emerald-500')}" style="width: ${Math.min(100, fillPct)}%"></div>
+              <div class="h-full rounded-full transition-all duration-300 ${isOverfilled ? 'bg-rose-500' : (fillPct > (maxFillPct - 10) ? 'bg-amber-500' : 'bg-emerald-500')}" style="width: ${Math.min(100, fillPct)}%"></div>
             </div>
             <p class="text-[10px] opacity-80 mt-1.5">
               ${isOverfilled 
-                ? 'Pathway exceeds the 50% cable tray fill limit established by NEC Article 392 for data cables. Upgrade to wider tray or divide runs.'
-                : 'Maintains compliant cross-sectional area for heat dissipation and future cabling capacity.'}
+                ? `Pathway exceeds the ${maxFillPct}% ${trunk.type === 'conduit' ? 'NEC Chapter 9 Table 1 conduit' : 'NEC Article 392 cable tray'} fill limit for data cables. Upgrade size or divide runs.`
+                : `Drops within 260px automatically snap to this trunk spine. Maintains compliant ≤${maxFillPct}% cross-sectional fill.`}
             </p>
           </div>
         </div>
@@ -3153,7 +4166,7 @@ function renderInspector() {
               </div>
             </div>
             <div class="flex items-center gap-1.5">
-              <button type="button" onclick="deleteFiberBackbone('${fb.id}', event)" class="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm" title="Delete this fiber backbone">
+              <button type="button" onclick="deleteFiberBackbone('${escapeJSAttr(fb.id)}', event)" class="px-2 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-700/60 rounded text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm" title="Delete this fiber backbone">
                 <i data-lucide="trash-2" class="w-3 h-3"></i> Delete
               </button>
               <button onclick="deselectFiberBackbone()" class="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors cursor-pointer" title="Deselect">
@@ -3175,7 +4188,7 @@ function renderInspector() {
           <!-- Optical Medium / Fiber Type -->
           <div>
             <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Optical Fiber Medium</label>
-            <select onchange="updateFiberBackbone('${fb.id}', 'fiberType', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500 font-medium cursor-pointer">
+            <select onchange="updateFiberBackbone('${escapeJSAttr(fb.id)}', 'fiberType', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-amber-500 font-medium cursor-pointer">
               <option value="smf" ${fType === 'smf' ? 'selected' : ''}>OS2 Single-Mode (9/125&mu;m &bull; Yellow Jacket &bull; 1310/1550nm LR)</option>
               <option value="mmf" ${fType === 'mmf' ? 'selected' : ''}>OM4 Multi-Mode (50/125&mu;m &bull; Aqua Jacket &bull; 850nm SR)</option>
               <option value="om3" ${fType === 'om3' ? 'selected' : ''}>OM3 Multi-Mode (50/125&mu;m &bull; Aqua Jacket &bull; 850nm SR)</option>
@@ -3185,7 +4198,7 @@ function renderInspector() {
           <!-- Strand Count -->
           <div>
             <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Strand Count / Core Capacity</label>
-            <select onchange="updateFiberBackbone('${fb.id}', 'strandCount', parseInt(this.value))" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
+            <select onchange="updateFiberBackbone('${escapeJSAttr(fb.id)}', 'strandCount', parseInt(this.value))" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
               <option value="6" ${strands === 6 ? 'selected' : ''}>6-Strand (3 Duplex Pairs)</option>
               <option value="12" ${strands === 12 ? 'selected' : ''}>12-Strand (6 Duplex Pairs &bull; Standard)</option>
               <option value="24" ${strands === 24 ? 'selected' : ''}>24-Strand (12 Duplex Pairs &bull; High-Density)</option>
@@ -3196,7 +4209,7 @@ function renderInspector() {
           <!-- Jacket Fire Rating -->
           <div>
             <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Jacket Fire Rating / Environment</label>
-            <select onchange="updateFiberBackbone('${fb.id}', 'rating', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
+            <select onchange="updateFiberBackbone('${escapeJSAttr(fb.id)}', 'rating', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
               <option value="plenum" ${rating === 'plenum' ? 'selected' : ''}>OFNP - Plenum Rated (Air Return / Ceiling Plenums)</option>
               <option value="riser" ${rating === 'riser' ? 'selected' : ''}>OFNR - Riser Rated (Vertical Shafts / Conduits)</option>
               <option value="armored" ${rating === 'armored' ? 'selected' : ''}>Armored / OSP (Indoor/Outdoor Inter-Locking Armor)</option>
@@ -3206,7 +4219,7 @@ function renderInspector() {
           <!-- Connector Termination -->
           <div>
             <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Pre-Terminated Connector End</label>
-            <select onchange="updateFiberBackbone('${fb.id}', 'connectorType', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
+            <select onchange="updateFiberBackbone('${escapeJSAttr(fb.id)}', 'connectorType', this.value)" class="w-full bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-indigo-500 font-medium cursor-pointer">
               <option value="lc" ${conn === 'lc' ? 'selected' : ''}>LC Duplex (Staggered Breakout Kits)</option>
               <option value="sc" ${conn === 'sc' ? 'selected' : ''}>SC Duplex</option>
               <option value="mpo" ${conn === 'mpo' ? 'selected' : ''}>MTP / MPO High-Density Cassette</option>
@@ -3224,7 +4237,7 @@ function renderInspector() {
               <div>
                 <span class="text-slate-500 block text-[10px]">Service Loops:</span>
                 <div class="flex items-center gap-1">
-                  <input type="number" min="0" max="200" step="5" value="${slack}" onchange="updateFiberBackbone('${fb.id}', 'slackFt', parseFloat(this.value) || 0)" class="w-16 bg-slate-900 border border-slate-700 text-white text-xs px-1.5 py-0.5 rounded font-mono focus:border-indigo-500" />
+                  <input type="number" min="0" max="200" step="5" value="${slack}" onchange="updateFiberBackbone('${escapeJSAttr(fb.id)}', 'slackFt', parseFloat(this.value) || 0)" class="w-16 bg-slate-900 border border-slate-700 text-white text-xs px-1.5 py-0.5 rounded font-mono focus:border-indigo-500" />
                   <span class="text-[10px] text-slate-400">ft</span>
                 </div>
               </div>
@@ -3242,12 +4255,12 @@ function renderInspector() {
               <span class="font-mono font-bold text-emerald-400">$${estPrice.toLocaleString()} MSRP</span>
             </div>
             <p class="font-semibold text-white leading-tight text-xs">${strands}-Strand ${fType === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'} Pre-Term Trunk</p>
-            <p class="text-[10px] font-mono text-slate-400">${trunkItem.sku} &bull; ${fromName} &rarr; ${toName}</p>
+            <p class="text-[10px] font-mono text-slate-400">${trunkItem.sku} &bull; ${escapeHTML(fromName)} &rarr; ${escapeHTML(toName)}</p>
           </div>
 
           <!-- Actions -->
           <div class="pt-2 flex items-center gap-2">
-            <button onclick="deleteFiberBackbone('${fb.id}', event)" class="flex-1 py-1.5 px-3 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
+            <button onclick="deleteFiberBackbone('${escapeJSAttr(fb.id)}', event)" class="flex-1 py-1.5 px-3 bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete Fiber Link
             </button>
           </div>
@@ -3287,14 +4300,14 @@ function renderInspector() {
       <div class="space-y-3">
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Cabinet Name:</label>
-          <input type="text" value="${node.name}" onchange="updateNodeName('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
+          <input type="text" value="${escapeHTML(node.name)}" onchange="updateNodeName('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
         </div>
 
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Assigned Floor/Building:</label>
-          <select onchange="moveClosetToFloor('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-semibold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-amber-500">
+          <select onchange="moveClosetToFloor('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-semibold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-amber-500">
             ${facilityFloors.map(f => `
-              <option value="${f.id}" ${f.id === node.floorId ? 'selected' : ''}>${f.name}</option>
+              <option value="${f.id}" ${f.id === node.floorId ? 'selected' : ''}>${escapeHTML(f.name)}</option>
             `).join('')}
           </select>
         </div>
@@ -3367,16 +4380,16 @@ function renderInspector() {
         </div>
 
         <div class="flex items-center justify-between gap-1.5 pt-1 border-t border-slate-800 flex-wrap">
-          <button onclick="deepLinkToRackElevation('${node.name}')" class="flex-1 min-w-[90px] py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer" title="Open Elevation Visualizer">
+          <button onclick="deepLinkToRackElevation('${escapeJSAttr(node.name)}')" class="flex-1 min-w-[90px] py-1.5 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer" title="Open Elevation Visualizer">
             <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Elevation
           </button>
-          <button onclick="jumpToFacilitySpace('${node.name}')" class="flex-1 min-w-[80px] py-1.5 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer" title="Open Space in Facility Manager">
+          <button onclick="jumpToFacilitySpace('${escapeJSAttr(node.name)}')" class="flex-1 min-w-[80px] py-1.5 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer" title="Open Space in Facility Manager">
             <i data-lucide="building-2" class="w-3.5 h-3.5 text-cyan-400"></i> Space
           </button>
-          <button onclick="jumpToTopologyTarget('loc:${node.name}')" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer" title="View in Topology">
+          <button onclick="jumpToTopologyTarget('loc:${escapeJSAttr(node.name)}')" class="py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1 transition-colors cursor-pointer" title="View in Topology">
             <i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i>
           </button>
-          <button onclick="deleteClosetWithReassignment('${node.id}')" class="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/60 rounded-lg cursor-pointer" title="Delete Closet">
+          <button onclick="deleteClosetWithReassignment('${escapeJSAttr(node.id)}')" class="p-1.5 bg-rose-950/40 hover:bg-rose-900/60 text-rose-400 border border-rose-800/60 rounded-lg cursor-pointer" title="Delete Closet">
             <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           </button>
         </div>
@@ -3400,29 +4413,79 @@ function renderInspector() {
     const hostSwitchPorts = (hostSwitch && typeof PortEngine !== "undefined") ? PortEngine.initSwitchPorts(hostSwitch) : [];
     const pwrBadge = (item && typeof PortEngine !== "undefined") ? PortEngine.getPowerBadge(item) : { label: "PoE", badgeLabel: "PoE", isExternal: false };
     const pwrWatts = item ? (parseFloat(item.powerConsumptionWatts || item.maxPowerWatts || 15.0) * (parseInt(item.qty, 10) || 1)) : 15.0;
+    const isCameraNode = getDeviceLayerType(item || node) === "cameras";
+    const doriTelem = isCameraNode ? computeCameraDoriTelemetry(node, item) : null;
 
     container.innerHTML = `
       <div class="space-y-2.5">
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Device Label:</label>
-          <input type="text" value="${escapeHTML(node.name)}" onchange="updateNodeName('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
+          <input type="text" value="${escapeHTML(node.name)}" onchange="updateNodeName('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
         </div>
 
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Terminating Enclosure / Space:</label>
-          <select onchange="updateNodeCloset('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
+          <select onchange="updateNodeCloset('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
             <optgroup label="Spaces & Zones (Field / Unenclosed)">
               ${allClosets.filter(c => c.name.endsWith(' • Field')).map(c => `
-                <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${c.name.replace(' • Field', '')} [Field Drop] (${c.floorName})</option>
+                <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${escapeHTML(c.name.replace(' • Field', ''))} [Field Drop] (${escapeHTML(c.floorName)})</option>
               `).join('')}
             </optgroup>
             <optgroup label="Racks & Enclosures">
               ${allClosets.filter(c => !c.name.endsWith(' • Field')).map(c => `
-                <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${c.name} (${c.floorName})</option>
+                <option value="${c.id}" ${node.assignedClosetId === c.id ? 'selected' : ''}>${escapeHTML(c.name)} (${escapeHTML(c.floorName)})</option>
               `).join('')}
             </optgroup>
           </select>
         </div>
+
+        ${isCameraNode && doriTelem ? `
+          <!-- Camera Optical FOV & DORI / PPF Coverage Card -->
+          <div class="bg-slate-950 p-2.5 rounded-xl border border-emerald-500/40 space-y-2 shadow-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1 font-mono">
+                <i data-lucide="eye" class="w-3 h-3 text-emerald-400"></i> Optical FOV &amp; DORI
+              </span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border" style="color:${doriTelem.doriHex}; border-color:${doriTelem.doriHex}66; background:${doriTelem.doriHex}1a;">
+                ${doriTelem.doriClass} &bull; ${doriTelem.ppf} PPF
+              </span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+              <div>
+                <label class="text-[9px] uppercase font-mono text-slate-400 block mb-0.5">Aim Angle (&deg;)</label>
+                <input type="number" min="0" max="359" step="5" value="${node.fovAngleDeg}" onchange="updateNodeFovSetting('${escapeJSAttr(node.id)}', 'fovAngleDeg', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded px-2 py-1 text-xs font-mono focus:border-emerald-500" />
+              </div>
+              <div>
+                <label class="text-[9px] uppercase font-mono text-slate-400 block mb-0.5">Target Range (ft)</label>
+                <input type="number" min="10" max="300" step="5" value="${node.fovDistanceFt}" onchange="updateNodeFovSetting('${escapeJSAttr(node.id)}', 'fovDistanceFt', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded px-2 py-1 text-xs font-mono focus:border-emerald-500" />
+              </div>
+              <div>
+                <label class="text-[9px] uppercase font-mono text-slate-400 block mb-0.5">HFOV Aperture</label>
+                <select onchange="updateNodeFovSetting('${escapeJSAttr(node.id)}', 'fovApertureDeg', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded px-1.5 py-1 text-[11px] font-mono focus:border-emerald-500">
+                  ${[30, 45, 60, 75, 90, 102, 110, 120, 180, 270, 360].map(ap => `
+                    <option value="${ap}" ${node.fovApertureDeg === ap ? 'selected' : ''}>${ap}&deg; ${ap === 360 ? '(Fisheye)' : (ap === 180 ? '(Pano)' : (ap <= 45 ? '(Tele)' : '(Wide)'))}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div>
+                <label class="text-[9px] uppercase font-mono text-slate-400 block mb-0.5">Sensor MP</label>
+                <select onchange="updateNodeFovSetting('${escapeJSAttr(node.id)}', 'resolutionMP', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded px-1.5 py-1 text-[11px] font-mono focus:border-emerald-500">
+                  ${[2, 4, 5, 6, 8, 12, 16, 20, 32].map(mp => `
+                    <option value="${mp}" ${node.resolutionMP === mp ? 'selected' : ''}>${mp}MP ${mp === 8 ? '(4K)' : (mp === 2 ? '(1080p)' : '')}</option>
+                  `).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400">
+              <span>Scene Width @ ${node.fovDistanceFt}': <strong class="text-slate-200">${doriTelem.sceneWidthFt} ft</strong></span>
+              ${!showCameraFovCones ? `
+                <button type="button" onclick="toggleCameraFovCones()" class="text-emerald-400 hover:text-emerald-300 underline cursor-pointer font-bold">Show Cone</button>
+              ` : `<span class="text-emerald-400/90">Drag grip to aim</span>`}
+            </div>
+          </div>
+        ` : ''}
 
         <!-- Host Switch & Port Assignment Card -->
         <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-2">
@@ -3431,7 +4494,7 @@ function renderInspector() {
               <i data-lucide="network" class="w-3 h-3 text-sky-400"></i> Host Switch & Port
             </span>
             ${hostSwitch ? `
-              <button type="button" onclick="openPortMatrixStudio('${hostSwitch.instanceId}')" class="text-[9px] font-mono text-amber-400 hover:text-amber-300 underline cursor-pointer flex items-center gap-1" title="Open Port Matrix Studio">
+              <button type="button" onclick="openPortMatrixStudio('${escapeJSAttr(hostSwitch.instanceId)}')" class="text-[9px] font-mono text-amber-400 hover:text-amber-300 underline cursor-pointer flex items-center gap-1" title="Open Port Matrix Studio">
                 <i data-lucide="grid" class="w-2.5 h-2.5"></i> Matrix
               </button>
             ` : ''}
@@ -3440,7 +4503,7 @@ function renderInspector() {
           <!-- Switch Select -->
           <div>
             <label class="text-[9px] uppercase font-mono text-slate-400 block mb-0.5">Switch</label>
-            <select onchange="updateNodeHostSwitch('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
+            <select onchange="updateNodeHostSwitch('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
               <option value="">-- No Switch Assigned --</option>
               ${allSwitches.map(sw => {
                 const swLoc = sw.closetName || sw.rackId || "Rack";
@@ -3457,7 +4520,7 @@ function renderInspector() {
                 <label class="text-[9px] uppercase font-mono text-slate-400">Switch Port</label>
                 <span class="text-[9px] font-mono ${pwrBadge.isExternal ? 'text-amber-400' : 'text-emerald-400'}">${pwrBadge.badgeLabel || 'PoE'} (${pwrWatts}W)</span>
               </div>
-              <select onchange="updateNodeSwitchPort('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
+              <select onchange="updateNodeSwitchPort('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-brand-500 font-mono">
                 ${hostSwitchPorts.filter(p => p.role === "access" && !p.isUplink).map(p => {
                   const isCurPort = (item && item.assignedSwitchPort === p.portNumber);
                   const isOcc = p.connectedDeviceId && !isCurPort;
@@ -3479,7 +4542,7 @@ function renderInspector() {
 
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Mounting Architecture:</label>
-          <select onchange="updateNodeMountMethod('${node.id}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-brand-500">
+          <select onchange="updateNodeMountMethod('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-xs rounded-lg px-2.5 py-1 focus:outline-none focus:border-brand-500">
             <option value="wall" ${(!node.mountMethod || node.mountMethod === 'wall') ? 'selected' : ''}>Wall Mount (Façade / Surface)</option>
             <option value="ceiling" ${node.mountMethod === 'ceiling' ? 'selected' : ''}>Ceiling / Soffit Mount</option>
             <option value="pole" ${node.mountMethod === 'pole' ? 'selected' : ''}>Pole / Mast Mount</option>
@@ -3494,7 +4557,7 @@ function renderInspector() {
             <span class="font-mono font-bold text-blue-400 uppercase flex items-center gap-1">
               <i data-lucide="tag" class="w-3 h-3 text-blue-400"></i> TIA-606-C Cable ID
             </span>
-            <button type="button" onclick="openCablePullScheduleModal('${node.instanceId || node.id}')" class="text-[9px] font-mono text-blue-300 hover:text-white underline flex items-center gap-1 cursor-pointer">
+            <button type="button" onclick="openCablePullScheduleModal('${escapeJSAttr(node.instanceId || node.id)}')" class="text-[9px] font-mono text-blue-300 hover:text-white underline flex items-center gap-1 cursor-pointer">
               <i data-lucide="file-spreadsheet" class="w-2.5 h-2.5"></i> Pull Schedule
             </button>
           </div>
@@ -3511,6 +4574,7 @@ function renderInspector() {
               <span class="font-bold ${run.totalFt > 328 ? 'text-rose-400 animate-pulse' : (run.totalFt > 295 ? 'text-amber-400' : 'text-emerald-300')}">${run.totalFt} ft (${run.totalMeters}m)</span>
             </div>
             ${run.riserFt > 0 ? `<div class="flex justify-between text-[10px] text-sky-400"><span>Vertical Riser:</span><span>+${run.riserFt} ft</span></div>` : ''}
+            ${run.traversedTrunks && run.traversedTrunks.length > 0 ? `<div class="flex justify-between text-[10px] text-amber-300"><span>Pathway Trunk:</span><span>Snapped (${run.traversedTrunks.length})</span></div>` : ''}
             <div class="flex justify-between text-[10px] text-slate-400 border-t border-slate-800/60 pt-1">
               <span>Service Loops (+25'):</span>
               <span class="text-slate-300">${run.totalFt + 25} ft Cut Length</span>
@@ -3541,7 +4605,7 @@ function renderInspector() {
         <div class="pt-1 flex items-center gap-1.5 flex-wrap">
           <button 
             type="button" 
-            onclick="jumpToTopologyTarget('node:${node.instanceId || node.id}')"
+            onclick="jumpToTopologyTarget('node:${escapeJSAttr(node.instanceId || node.id)}')"
             class="flex-1 min-w-[65px] py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Inspect logical port and link status in Topology"
           >
@@ -3549,7 +4613,7 @@ function renderInspector() {
           </button>
           <button 
             type="button" 
-            onclick="if ('${hostSwitch ? hostSwitch.instanceId : ''}') openPortMatrixStudio('${hostSwitch ? hostSwitch.instanceId : ''}'); else showToast('Assign a host switch first', 'warning');"
+            onclick="if ('${escapeJSAttr(hostSwitch ? hostSwitch.instanceId : '')}') openPortMatrixStudio('${escapeJSAttr(hostSwitch ? hostSwitch.instanceId : '')}'); else showToast('Assign a host switch first', 'warning');"
             class="flex-1 min-w-[65px] py-1 bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Open Port Matrix Studio for this switch"
           >
@@ -3557,7 +4621,7 @@ function renderInspector() {
           </button>
           <button 
             type="button" 
-            onclick="jumpToBomTarget('${node.instanceId || node.id}')"
+            onclick="jumpToBomTarget('${escapeJSAttr(node.instanceId || node.id)}')"
             class="flex-1 min-w-[65px] py-1 bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Inspect line item in BOM Drawer"
           >
@@ -3565,7 +4629,7 @@ function renderInspector() {
           </button>
           <button 
             type="button" 
-            onclick="const cl = allClosets.find(c => c.id === '${node.assignedClosetId}'); if (cl) deepLinkToRackElevation(cl.name);"
+            onclick="const cl = getAllClosetsAcrossFacility().find(c => c.id === '${escapeJSAttr(node.assignedClosetId || '')}'); if (cl) deepLinkToRackElevation(cl.name);"
             class="flex-1 min-w-[65px] py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
             title="Open Terminating Enclosure"
           >
@@ -3574,14 +4638,14 @@ function renderInspector() {
         </div>
 
         <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800">
-          <button onclick="clearNodeWaypoints('${node.id}')" class="px-2 py-1 bg-slate-800 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px]">
+          <button onclick="clearNodeWaypoints('${escapeJSAttr(node.id)}')" class="px-2 py-1 bg-slate-800 text-slate-300 hover:text-white rounded border border-slate-700 text-[10px]">
             Reset Bends
           </button>
           <div class="flex items-center gap-1.5">
-            <button onclick="deleteNode('${node.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Remove drop from canvas only">
+            <button onclick="deleteNode('${escapeJSAttr(node.id)}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 cursor-pointer" title="Remove drop from canvas only">
               <span>Delete Drop</span>
             </button>
-            <button onclick="deleteDropFromBOM('${node.id}')" class="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-700/80 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Delete device from Quote BOM and canvas">
+            <button onclick="deleteDropFromBOM('${escapeJSAttr(node.id)}')" class="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-700/80 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer" title="Delete device from Quote BOM and canvas">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Delete from BOM
             </button>
           </div>
@@ -4116,17 +5180,19 @@ function renderCableCanvas() {
       g.setAttribute("class", "pathway-corridor-interactive cursor-pointer group");
       g.setAttribute("data-pathway-id", trunk.id);
 
-      // Count cables running near or through this pathway trunk
+      // Count cables running near or snapped through this pathway trunk
       let routedCablesCount = 0;
       floor.nodes.filter(n => n.type === "device").forEach(d => {
-        if (d.calculatedRun && d.calculatedRun.points) {
-          const isNear = d.calculatedRun.points.some(p => pts.some(tp => Math.hypot(p.x - tp.x, p.y - tp.y) < 45));
-          if (isNear) routedCablesCount++;
+        if (d.calculatedRun) {
+          const snapped = Array.isArray(d.calculatedRun.traversedTrunks) && d.calculatedRun.traversedTrunks.includes(trunk.id);
+          const isNear = !snapped && d.calculatedRun.points && d.calculatedRun.points.some(p => pts.some(tp => Math.hypot(p.x - tp.x, p.y - tp.y) < 45));
+          if (snapped || isNear) routedCablesCount++;
         }
       });
       const capacity = trunk.capacity || 80;
       const fillPct = Math.round((routedCablesCount / capacity) * 100);
-      const isOverfilled = fillPct > 50;
+      const maxFillPct = trunk.type === "conduit" ? 40 : 50;
+      const isOverfilled = fillPct > maxFillPct;
 
       let trunkColor = "#f59e0b"; // Amber for tray
       let strokeDash = "none";
@@ -4207,7 +5273,7 @@ function renderCableCanvas() {
       const midX = (pts[midIdx - 1].x + pts[midIdx].x) / 2;
       const midY = (pts[midIdx - 1].y + pts[midIdx].y) / 2;
 
-      const badgeW = 150;
+      const badgeW = 158;
       const badgeH = 22;
       const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       bgRect.setAttribute("x", midX - (badgeW / 2));
@@ -4248,60 +5314,85 @@ function renderCableCanvas() {
       if (!closet) return;
 
       const run = dev.calculatedRun || { totalFt: 0, points: [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }] };
-    const isSelected = dev.id === selectedNodeId || closet.id === selectedNodeId || (selectedNodeIds && (selectedNodeIds.has(dev.id) || selectedNodeIds.has(closet.id)));
-    const isCrossFloor = closet.floorId !== floor.id;
-    const pts = run.points || [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }];
+      const isSelected = dev.id === selectedNodeId || closet.id === selectedNodeId || (selectedNodeIds && (selectedNodeIds.has(dev.id) || selectedNodeIds.has(closet.id)));
+      const isCrossFloor = closet.floorId !== floor.id;
+      const pts = run.points || [{ x: closet.x, y: closet.y }, { x: dev.x, y: dev.y }];
 
-    const runStd = (typeof getProjectCablingStandard === "function")
-      ? getProjectCablingStandard(bomItem || dev, "run")
-      : { color: "Yellow", hex: "#eab308" };
-    const cableColorHex = runStd.hex || "#eab308";
+      const runStd = (typeof getProjectCablingStandard === "function")
+        ? getProjectCablingStandard(bomItem || dev, "run")
+        : { color: "Yellow", hex: "#eab308" };
+      const cableColorHex = runStd.hex || "#eab308";
 
-    for (let i = 0; i < pts.length - 1; i++) {
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("class", "cable-path-line cursor-pointer");
-      line.setAttribute("data-drop-id", dev.id);
-      line.setAttribute("x1", pts[i].x);
-      line.setAttribute("y1", pts[i].y);
-      line.setAttribute("x2", pts[i + 1].x);
-      line.setAttribute("y2", pts[i + 1].y);
-      line.setAttribute("stroke", run.isExceeded ? "#f43f5e" : isCrossFloor ? "#38bdf8" : isSelected ? "#a855f7" : cableColorHex);
-      line.setAttribute("stroke-width", isSelected ? "4" : "2.5");
-      line.setAttribute("stroke-dasharray", isCrossFloor ? "4,4" : run.isExceeded ? "6,4" : "none");
-      line.setAttribute("opacity", isSelected ? "1.0" : "0.75");
-      svg.appendChild(line);
-    }
+      const runG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      runG.setAttribute("class", "device-cable-run-group");
+      runG.setAttribute("data-cable-group-id", dev.id);
 
-    if (dev.waypoints && dev.waypoints.length > 0) {
-      dev.waypoints.forEach((wp, idx) => {
-        const wpCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        wpCircle.setAttribute("class", "draggable-waypoint-handle cursor-move");
-        wpCircle.setAttribute("data-drop-id", dev.id);
-        wpCircle.setAttribute("data-waypoint-idx", idx);
-        wpCircle.setAttribute("cx", wp.x);
-        wpCircle.setAttribute("cy", wp.y);
-        wpCircle.setAttribute("r", 7);
-        wpCircle.setAttribute("fill", cableColorHex);
-        wpCircle.setAttribute("stroke", "#ffffff");
-        wpCircle.setAttribute("stroke-width", "2");
-        svg.appendChild(wpCircle);
-      });
-    }
+      for (let i = 0; i < pts.length - 1; i++) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("class", "cable-path-line cursor-pointer");
+        line.setAttribute("data-drop-id", dev.id);
+        line.setAttribute("x1", pts[i].x);
+        line.setAttribute("y1", pts[i].y);
+        line.setAttribute("x2", pts[i + 1].x);
+        line.setAttribute("y2", pts[i + 1].y);
+        line.setAttribute("stroke", run.isExceeded ? "#f43f5e" : isCrossFloor ? "#38bdf8" : isSelected ? "#a855f7" : cableColorHex);
+        line.setAttribute("stroke-width", isSelected ? "4" : "2.5");
+        line.setAttribute("stroke-dasharray", isCrossFloor ? "4,4" : run.isExceeded ? "6,4" : "none");
+        line.setAttribute("opacity", isSelected ? "1.0" : "0.75");
+        runG.appendChild(line);
+      }
 
-    const midIdx = Math.floor(pts.length / 2);
-    const midX = (pts[midIdx - 1].x + pts[midIdx].x) / 2;
-    const midY = (pts[midIdx - 1].y + pts[midIdx].y) / 2;
+      if (dev.waypoints && dev.waypoints.length > 0) {
+        dev.waypoints.forEach((wp, idx) => {
+          const wpCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          wpCircle.setAttribute("class", "draggable-waypoint-handle cursor-move");
+          wpCircle.setAttribute("data-drop-id", dev.id);
+          wpCircle.setAttribute("data-waypoint-idx", idx);
+          wpCircle.setAttribute("cx", wp.x);
+          wpCircle.setAttribute("cy", wp.y);
+          wpCircle.setAttribute("r", 7);
+          wpCircle.setAttribute("fill", cableColorHex);
+          wpCircle.setAttribute("stroke", "#ffffff");
+          wpCircle.setAttribute("stroke-width", "2");
+          runG.appendChild(wpCircle);
+        });
+      }
 
-    const tag = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    tag.setAttribute("x", midX);
-    tag.setAttribute("y", midY - 6);
-    tag.setAttribute("text-anchor", "middle");
-    tag.setAttribute("fill", run.isExceeded ? "#fb7185" : isCrossFloor ? "#7dd3fc" : "#cbd5e1");
-    tag.setAttribute("font-size", "10");
-    tag.setAttribute("font-family", "monospace");
-    tag.setAttribute("font-weight", "bold");
-    tag.textContent = `${run.totalFt} ft ${isCrossFloor ? `(Riser)` : ''}`;
-    svg.appendChild(tag);
+      const midIdx = Math.floor(pts.length / 2);
+      const midX = (pts[midIdx - 1].x + pts[midIdx].x) / 2;
+      const midY = (pts[midIdx - 1].y + pts[midIdx].y) / 2;
+
+      const tag = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      tag.setAttribute("class", "cable-footage-tag");
+      tag.setAttribute("x", midX);
+      tag.setAttribute("y", midY - 6);
+      tag.setAttribute("text-anchor", "middle");
+      tag.setAttribute("fill", run.isExceeded ? "#fb7185" : isCrossFloor ? "#7dd3fc" : "#cbd5e1");
+      tag.setAttribute("font-size", "10");
+      tag.setAttribute("font-family", "monospace");
+      tag.setAttribute("font-weight", "bold");
+      const snappedCount = (run.traversedTrunks && run.traversedTrunks.length) ? ` [Tray]` : "";
+      tag.textContent = `${run.totalFt} ft ${isCrossFloor ? `(Riser)` : ''}${snappedCount}`;
+      runG.appendChild(tag);
+
+      svg.appendChild(runG);
+    });
+  }
+
+  // 2b. Interactive Camera FOV & DORI / PPF Spatial Cones
+  if (showCameraFovCones && physicalLayerFilters.cameras) {
+    floor.nodes.filter(n => n.type === "device").forEach(dev => {
+      const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+      const layerType = getDeviceLayerType(bomItem || dev);
+      if (layerType !== "cameras") return;
+
+      const isSelected = (dev.id === selectedNodeId) || (selectedNodeIds && selectedNodeIds.has(dev.id));
+      const fovG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      fovG.setAttribute("class", "camera-fov-cone-group");
+      fovG.setAttribute("data-fov-node-id", dev.id);
+      fovG.setAttribute("transform", `translate(${dev.x}, ${dev.y})`);
+      renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected);
+      svg.appendChild(fovG);
     });
   }
 

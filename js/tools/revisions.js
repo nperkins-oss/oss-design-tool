@@ -43,9 +43,12 @@ const RevisionEngine = {
       ? JSON.parse(JSON.stringify(projectBOM))
       : [];
 
-    const floorsCopy = (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors))
+    const rawFloors = (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors))
       ? JSON.parse(JSON.stringify(facilityFloors))
       : [];
+    const floorsCopy = (typeof StorageService !== "undefined" && typeof StorageService.offloadFloorBlueprints === "function")
+      ? StorageService.offloadFloorBlueprints(rawFloors)
+      : rawFloors;
 
     const linksCopy = (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks))
       ? JSON.parse(JSON.stringify(topologyLinks))
@@ -58,7 +61,7 @@ const RevisionEngine = {
     let switchPortCount = 0;
 
     bomCopy.forEach(item => {
-      const qty = Number(item.quantity || 1);
+      const qty = Number(item.qty ?? item.quantity ?? 1);
       const price = Number(item.unitMSRP || item.msrp || item.unitPrice || 0);
       totalMSRP += qty * price;
 
@@ -92,7 +95,7 @@ const RevisionEngine = {
       dateFormatted: new Date().toLocaleString(),
       metrics: {
         totalMSRP: Math.round(totalMSRP),
-        itemCount: bomCopy.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0),
+        itemCount: bomCopy.reduce((sum, i) => sum + (Number(i.qty ?? i.quantity) || 1), 0),
         cameraCount,
         readerCount,
         switchPortCount,
@@ -129,7 +132,13 @@ const RevisionEngine = {
 
     if (Array.isArray(target.data.facilityFloors) && typeof facilityFloors !== "undefined") {
       facilityFloors.length = 0;
-      facilityFloors.push(...JSON.parse(JSON.stringify(target.data.facilityFloors)));
+      const restoredFloors = JSON.parse(JSON.stringify(target.data.facilityFloors));
+      if (typeof StorageService !== "undefined" && typeof StorageService.hydrateFloorBlueprints === "function") {
+        StorageService.hydrateFloorBlueprints(restoredFloors, () => {
+          if (typeof renderCableCanvas === "function") renderCableCanvas();
+        });
+      }
+      facilityFloors.push(...restoredFloors);
     }
 
     if (Array.isArray(target.data.topologyLinks) && typeof topologyLinks !== "undefined") {
@@ -160,7 +169,7 @@ const RevisionEngine = {
 
     let totalMSRP = 0;
     bomCopy.forEach(item => {
-      const qty = Number(item.quantity || 1);
+      const qty = Number(item.qty ?? item.quantity ?? 1);
       const price = Number(item.unitMSRP || item.msrp || item.unitPrice || 0);
       totalMSRP += qty * price;
     });
@@ -182,7 +191,7 @@ const RevisionEngine = {
       dateFormatted: "Current Working State",
       metrics: {
         totalMSRP: Math.round(totalMSRP),
-        itemCount: bomCopy.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0),
+        itemCount: bomCopy.reduce((sum, i) => sum + (Number(i.qty ?? i.quantity) || 1), 0),
         totalFootage: Math.round(totalFootage)
       },
       data: {
@@ -208,7 +217,7 @@ const RevisionEngine = {
       if (!mapBase.has(key)) {
         mapBase.set(key, { ...item, quantity: 0 });
       }
-      mapBase.get(key).quantity += (Number(item.quantity) || 1);
+      mapBase.get(key).quantity += (Number(item.qty ?? item.quantity) || 1);
     });
 
     const mapComp = new Map();
@@ -217,7 +226,7 @@ const RevisionEngine = {
       if (!mapComp.has(key)) {
         mapComp.set(key, { ...item, quantity: 0 });
       }
-      mapComp.get(key).quantity += (Number(item.quantity) || 1);
+      mapComp.get(key).quantity += (Number(item.qty ?? item.quantity) || 1);
     });
 
     const added = [];
@@ -293,8 +302,8 @@ const RevisionEngine = {
     const removedCost = removed.reduce((sum, i) => sum + i.costDelta, 0);
     const netMSRPDelta = addedCost + modifiedCost + removedCost;
 
-    const baseTotalMSRP = baseRev?.metrics?.totalMSRP || baseBOM.reduce((sum, i) => sum + ((Number(i.quantity) || 1) * Number(i.unitMSRP || i.msrp || 0)), 0);
-    const compTotalMSRP = compareRev?.metrics?.totalMSRP || compBOM.reduce((sum, i) => sum + ((Number(i.quantity) || 1) * Number(i.unitMSRP || i.msrp || 0)), 0);
+    const baseTotalMSRP = baseRev?.metrics?.totalMSRP || baseBOM.reduce((sum, i) => sum + ((Number(i.qty ?? i.quantity) || 1) * Number(i.unitMSRP || i.msrp || 0)), 0);
+    const compTotalMSRP = compareRev?.metrics?.totalMSRP || compBOM.reduce((sum, i) => sum + ((Number(i.qty ?? i.quantity) || 1) * Number(i.unitMSRP || i.msrp || 0)), 0);
 
     const baseFt = baseRev?.metrics?.totalFootage || 0;
     const compFt = compareRev?.metrics?.totalFootage || 0;

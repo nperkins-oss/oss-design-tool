@@ -28,6 +28,23 @@ function auditProjectHealth() {
     return { isHealthy: true, issueCount: 0, criticalCount: 0, warningCount: 0, issues: [], stats };
   }
 
+  // O(1) lookup index for BOM instances (eliminates O(N^2) scans across unbundled cameras/ports)
+  const bomById = new Map();
+  projectBOM.forEach(it => {
+    if (it && it.instanceId) bomById.set(it.instanceId, it);
+  });
+
+  const safeJsArg = (val) => {
+    if (typeof window.escapeJSAttr === "function") return window.escapeJSAttr(val);
+    return String(val ?? "")
+      .replace(/\\/g, "\\x5c")
+      .replace(/'/g, "\\x27")
+      .replace(/"/g, "\\x22")
+      .replace(/</g, "\\x3c")
+      .replace(/>/g, "\\x3e")
+      .replace(/\r?\n/g, " ");
+  };
+
   // =========================================================================
   // RULE 1: ETHERNET HORIZONTAL & CHANNEL DISTANCE LIMITS (TIA-568)
   // =========================================================================
@@ -47,9 +64,7 @@ function auditProjectHealth() {
         if (totalFt > 295) {
           stats.distanceViolations++;
           const isChannelExceeded = totalFt > 328;
-          const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId)
-            ? projectBOM.find(i => i.instanceId === dev.instanceId)
-            : null;
+          const bomItem = dev.instanceId ? bomById.get(dev.instanceId) : null;
           const devName = bomItem ? (bomItem.friendlyName || bomItem.model) : (dev.label || dev.name || "Field Device");
           const closetName = closet ? closet.name : "Unassigned Closet";
 
@@ -67,7 +82,7 @@ function auditProjectHealth() {
               ? `Exceeds the 100-meter (328 ft) maximum TIA-568 channel limit by ${totalFt - 328} ft. Signal attenuation, high packet loss, and severe PoE voltage drop will cause intermittent camera disconnects or failure to boot. Relocate drop to a closer IDF, deploy an intermediate fiber media converter, or install a PoE extender.`
               : `Exceeds the 90-meter (295 ft) horizontal permanent link recommendation by ${totalFt - 295} ft. Once 10-meter patch cords are included at the rack and wall drop, the total channel will exceed certification limits.`,
             actionLabel: `Locate Drop on Floorplan`,
-            actionFn: `jumpToPhysicalLayoutFromHealth('${dev.instanceId || dev.id}')`,
+            actionFn: `jumpToPhysicalLayoutFromHealth('${safeJsArg(dev.instanceId || dev.id)}')`,
             badgeText: `${totalFt} FT RUN`
           });
         }
@@ -114,7 +129,7 @@ function auditProjectHealth() {
       summary: `Total PoE Demand (${activeConnectedPoE}W) exceeds Total Switch Supply (${totalPoEAvailable}W) by ${deficitWatts}W`,
       details: `Active edge devices require ${activeConnectedPoE}W of PoE power, but total quoted switch PoE capacity is only ${totalPoEAvailable}W (${deficitWatts}W shortfall). Connected field hardware will suffer brownouts during high demand or IR activation.`,
       actionLabel: `+ Add ${poeRec.switchItem.vendor} ${poeRec.switchItem.sku} (${poeRec.switchItem.poeBudget}W) to ${closetShort}`,
-      actionFn: "autoAddPoeSupplyOrSwitch",
+      actionFn: "autoAddPoeSupplyOrSwitch()",
       badgeText: `-${deficitWatts}W SHORTFALL`
     });
   } else if (totalPoEAvailable > 0 && activeConnectedPoE > (totalPoEAvailable * 0.9)) {
@@ -141,7 +156,7 @@ function auditProjectHealth() {
     let swActiveDraw = 0;
     ports.forEach(p => {
       if (!p.connectedDeviceId) return;
-      const targetDev = projectBOM.find(i => i.instanceId === p.connectedDeviceId);
+      const targetDev = bomById.get(p.connectedDeviceId);
       if (!targetDev) return;
 
       const devPwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(targetDev) : "poe_switch";
@@ -162,7 +177,7 @@ function auditProjectHealth() {
           summary: `${targetDev.friendlyName || targetDev.model} requires 802.3bt (${devWatts}W) but Port ${p.portNumber} on ${sw.friendlyName || sw.model} delivers max ${portMaxWatts}W (802.3at)`,
           details: `High-power field hardware (${targetDev.model}) connected to Port ${p.portNumber} on ${sw.friendlyName || sw.model} will fail to boot or power cycle during PTZ motor or IR heater operation. Connect to an 802.3bt (60W/90W) multi-gig port or insert a dedicated midspan injector.`,
           actionLabel: `Open Port Matrix (${sw.model})`,
-          actionFn: `openPortMatrixFromHealth('${sw.instanceId}')`,
+          actionFn: `openPortMatrixFromHealth('${safeJsArg(sw.instanceId)}')`,
           badgeText: `PORT ${p.portNumber} MISMATCH`
         });
       }
@@ -177,7 +192,7 @@ function auditProjectHealth() {
         summary: `Connected ports draw ${swActiveDraw}W, exceeding switch hardware capacity of ${sw.poeBudget}W (${swActiveDraw - sw.poeBudget}W over)`,
         details: `Switch at ${(sw.closetName || sw.rackId || 'Closet')} is exceeding its internal PoE power supply budget. Field ports will shut down due to hardware power policing under full load.`,
         actionLabel: `Inspect in Port Matrix`,
-        actionFn: `openPortMatrixFromHealth('${sw.instanceId}')`,
+        actionFn: `openPortMatrixFromHealth('${safeJsArg(sw.instanceId)}')`,
         badgeText: `-${swActiveDraw - sw.poeBudget}W OVER`
       });
     }
@@ -248,7 +263,7 @@ function auditProjectHealth() {
             summary: `${totalDrops} field drops homered to ${loc}, but only ${totalSwitchPorts} switch ports quoted (${deficit} unpatched drops)`,
             details: `The quoted network switches in ${loc} do not have enough physical RJ-45 ports to terminate all homered edge devices. Field devices will be left unpatched without an additional switch or stack unit.`,
             actionLabel: `+ Add 24-Port Switch to ${loc}`,
-            actionFn: `quickAddSwitchToCloset('${escapeHTML(loc)}')`,
+            actionFn: `quickAddSwitchToCloset('${safeJsArg(loc)}')`,
             badgeText: `${deficit} PORTS SHORT`
           });
         }
@@ -263,7 +278,7 @@ function auditProjectHealth() {
             summary: `${totalDrops} horizontal cable runs homered to ${loc}, but only ${totalPanelPorts} panel ports quoted (${panelDeficit} missing)`,
             details: `Building code and structured cabling standards require bulk cable runs to terminate on a modular patch panel before patching to switches. Quote additional patch panels to support all field runs.`,
             actionLabel: `+ Add 24-Port Patch Panel to ${loc}`,
-            actionFn: `quickAddPatchPanelToCloset('${escapeHTML(loc)}')`,
+            actionFn: `quickAddPatchPanelToCloset('${safeJsArg(loc)}')`,
             badgeText: `${panelDeficit} PORTS SHORT`
           });
         }
@@ -291,7 +306,7 @@ function auditProjectHealth() {
       summary: `${totalQty} device${totalQty === 1 ? '' : 's'} staged without assigned Facility Space, Floor, or Rack`,
       details: `${unassignedBOM.map(i => `${i.qty || 1}x ${i.model}`).join(', ')} currently have no mounting host assigned and cannot be routed or scheduled.`,
       actionLabel: "Auto-Assign All to MDF • Rack-1",
-      actionFn: "autoFixUnassignedGear",
+      actionFn: "autoFixUnassignedGear()",
       badgeText: `${totalQty} UNASSIGNED`
     });
   }
@@ -312,7 +327,7 @@ function auditProjectHealth() {
             summary: `Device on ${fl.name || 'Floor'} has no assigned telecom closet or pathway`,
             details: `This field device is placed on the floor plan but has not been connected to an IDF/MDF closet enclosure. Pathway distance and patch cords cannot be determined.`,
             actionLabel: `Assign to Nearest Closet`,
-            actionFn: `autoAssignFloorDropToNearestCloset('${fl.id}', '${dev.id}')`,
+            actionFn: `autoAssignFloorDropToNearestCloset('${safeJsArg(fl.id)}', '${safeJsArg(dev.id)}')`,
             badgeText: `NO CLOSET`
           });
         }
@@ -341,7 +356,7 @@ function auditProjectHealth() {
       summary: `${missingDAC} Stacking DAC Cable${missingDAC === 1 ? '' : 's'} required for physical stacking ring`,
       details: `${stackedSwitches.map(s => `${s.model} (${s.stackedUnits}-unit stack)`).join(', ')} require dedicated direct-attach copper cables to form a resilient virtual stack ring.`,
       actionLabel: `+ Add ${missingDAC} Stacking DAC Cable${missingDAC === 1 ? '' : 's'}`,
-      actionFn: "autoAddMissingDACCables",
+      actionFn: "autoAddMissingDACCables()",
       badgeText: `${missingDAC} CABLES MISSING`
     });
   }
@@ -372,7 +387,7 @@ function auditProjectHealth() {
       summary: `${missingLic} Camera${missingLic === 1 ? '' : 's'} without VMS Core Channel Recording Licenses`,
       details: `Project contains ${totalCameras} IP camera(s) but only ${totalLicenses} VMS recording license(s) have been added to the BOM. Cameras cannot record without valid channel keys.`,
       actionLabel: `+ Add ${missingLic} Missing VMS License${missingLic === 1 ? '' : 's'}`,
-      actionFn: "autoAddMissingLicenses",
+      actionFn: "autoAddMissingLicenses()",
       badgeText: `${missingLic} LICENSES MISSING`
     });
   }
@@ -398,7 +413,7 @@ function auditProjectHealth() {
             summary: `${totalCameras} Camera(s) in scope, but no VMS Recording Server or NVR has been quoted`,
             details: `Video surveillance is in-scope with ${totalCameras} IP camera(s), but no enterprise server appliance, storage array, or NVR has been added to the BOM to record camera streams.`,
             actionLabel: "+ Add 2U NVR Recording Server",
-            actionFn: "quickAddDefaultNvrServer",
+            actionFn: "quickAddDefaultNvrServer()",
             badgeText: "NO SERVER"
           });
         }
@@ -424,7 +439,7 @@ function auditProjectHealth() {
             summary: `${readerCount} Door Reader(s) in scope, but no Door Controller or Enclosure is quoted`,
             details: `Access Control is in-scope with ${readerCount} card reader(s), but no Mercury/Synergis/Lenel intelligent door controller or power enclosure has been added to drive door strikes and monitor reader inputs.`,
             actionLabel: "+ Add 8-Door Access Controller",
-            actionFn: "quickAddDefaultAcsController",
+            actionFn: "quickAddDefaultAcsController()",
             badgeText: "NO CONTROLLER"
           });
         }
@@ -483,7 +498,7 @@ function auditProjectHealth() {
               summary: `Commercial 120V rackmount UPS (${upsItem.model}) assigned to sealed outdoor NEMA enclosure`,
               details: `Standard commercial VRLA (lead-acid) UPS units cannot operate in sealed outdoor NEMA enclosures. Ambient solar heating degrades battery life rapidly, and charging lead-acid cells releases flammable hydrogen gas that accumulates without UL Type 4X breather vents. Replace with an industrial temperature-hardened DIN-Rail DC-UPS (e.g., Altronix NetWay / Phoenix Contact) or wide-temp LiFePO4 battery system.`,
               actionLabel: `View Enclosure in Rack Studio`,
-              actionFn: `openRackFromHealth('${escapeHTML(normLoc)}')`,
+              actionFn: `openRackFromHealth('${safeJsArg(normLoc)}')`,
               badgeText: "THERMAL/GAS HAZARD"
             });
           }
@@ -497,7 +512,7 @@ function auditProjectHealth() {
             summary: `Active hardware in outdoor NEMA enclosure has no auxiliary DC-UPS or battery backup`,
             details: `Network switches/cameras in ${normLoc} will drop offline instantly upon utility loss. If continuous uptime is required at this field/pole location, specify an industrial wide-temperature DIN-Rail DC-UPS with external weatherproof venting. (Do not install standard indoor 19" rackmount UPS units).`,
             actionLabel: `View Enclosure in Rack Studio`,
-            actionFn: `openRackFromHealth('${escapeHTML(normLoc)}')`,
+            actionFn: `openRackFromHealth('${safeJsArg(normLoc)}')`,
             badgeText: "NEMA STANDBY ADVISORY"
           });
         }
@@ -512,7 +527,7 @@ function auditProjectHealth() {
             summary: `${normLoc} hosts ${activeElectronics.length} active network/server unit${activeElectronics.length === 1 ? '' : 's'} (${Math.round(activeWatts)}W) with NO battery backup quoted`,
             details: `Active core/access switches and headend servers in ${normLoc} will drop offline immediately during commercial power fluctuations or momentary outages without dedicated rackmount battery backup (UPS).`,
             actionLabel: `+ Add 2200VA UPS to ${normLoc}`,
-            actionFn: `quickAddUpsToCloset('${escapeHTML(normLoc)}')`,
+            actionFn: `quickAddUpsToCloset('${safeJsArg(normLoc)}')`,
             badgeText: "NO UPS BACKUP"
           });
         } else {
@@ -529,7 +544,7 @@ function auditProjectHealth() {
                 summary: `Access control equipment in ${normLoc} requires 4.0 hours continuous standby backup per UL 294 / NFPA 731`,
                 details: `Electronic life-safety and card access hardware in ${normLoc} requires 4 hours of reserve battery standby under power loss conditions. Quoted UPS without external battery packs will only provide standard 15-30 minute runtime.`,
                 actionLabel: `+ Add External Battery Pack to ${normLoc}`,
-                actionFn: `quickAddEbpToCloset('${escapeHTML(normLoc)}', 1)`,
+                actionFn: `quickAddEbpToCloset('${safeJsArg(normLoc)}', 1)`,
                 badgeText: "UL 294 STANDBY DEFICIT"
               });
             }
@@ -560,7 +575,7 @@ function auditProjectHealth() {
           summary: `UPS in ${normLoc} requires a dedicated 30A locking wall receptacle (${expectedPlug})`,
           details: `High-capacity 3000VA+ UPS units cannot plug into standard 15A/20A commercial convenience outlets (NEMA 5-15R / 5-20R). Coordinate with the Electrical Contractor to rough-in a dedicated 30A branch circuit and matching locking receptacle.`,
           actionLabel: `View Electrical Specs in Rack Studio`,
-          actionFn: `openRackFromHealth('${escapeHTML(normLoc)}')`,
+          actionFn: `openRackFromHealth('${safeJsArg(normLoc)}')`,
           badgeText: "30A CIRCUIT REQ"
         });
       }
@@ -586,7 +601,7 @@ function auditProjectHealth() {
               summary: `Quoted PDU operates at ${isPdu208V ? '208V' : '120V'}, but quoted UPS supplies ${isUps208V ? '208V' : '120V'}!`,
               details: `Connecting a ${isPdu208V ? '208V' : '120V'} PDU (${pdu.model}) into a ${isUps208V ? '208V' : '120V'} UPS (${ups.model}) will cause severe electrical fault, component damage, or undervoltage failure. Ensure both UPS and PDU share the same nominal voltage.`,
               actionLabel: `Fix in Rack Studio`,
-              actionFn: `openRackFromHealth('${escapeHTML(normLoc)}')`,
+              actionFn: `openRackFromHealth('${safeJsArg(normLoc)}')`,
               badgeText: "VOLTAGE MISMATCH"
             });
           }
@@ -604,7 +619,7 @@ function auditProjectHealth() {
               summary: `30A Locking PDU (${pdu.model}) cannot plug into standard 15A/20A UPS (${ups.model})`,
               details: `The quoted PDU requires a 30A twist-lock receptacle (NEMA L5-30R / L6-30R), but the quoted UPS only provides standard straight-blade 15A/20A outlets. Upsize the UPS to a 3000VA unit with 30A locking output or select a 15A/20A straight-blade PDU.`,
               actionLabel: `Fix in Rack Studio`,
-              actionFn: `openRackFromHealth('${escapeHTML(normLoc)}')`,
+              actionFn: `openRackFromHealth('${safeJsArg(normLoc)}')`,
               badgeText: "PLUG MISMATCH"
             });
           }
@@ -640,7 +655,7 @@ function auditProjectHealth() {
           summary: `${requiredPowerCords} power supply cords needed, but quoted PDU only provides ${totalOutletsAvailable} outlets`,
           details: `Active equipment in ${normLoc} requires ${requiredPowerCords} AC power cords. Add a secondary rack PDU (recommended for A/B redundant feed) or select a higher-density Zero-U vertical PDU.`,
           actionLabel: `+ Add Secondary PDU to ${normLoc}`,
-          actionFn: `openRackFromHealth('${escapeHTML(normLoc)}')`,
+          actionFn: `openRackFromHealth('${safeJsArg(normLoc)}')`,
           badgeText: `${requiredPowerCords - totalOutletsAvailable} OUTLETS SHORT`
         });
       }
@@ -660,9 +675,7 @@ function auditProjectHealth() {
       const isOutdoorFloor = flLower.includes("outdoor") || flLower.includes("exterior") || flLower.includes("perimeter") || flLower.includes("yard") || flLower.includes("roof") || flLower.includes("pole") || flLower.includes("parking");
 
       fl.nodes.filter(n => n.type === "device").forEach(dev => {
-        const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId)
-          ? projectBOM.find(i => i.instanceId === dev.instanceId)
-          : null;
+        const bomItem = dev.instanceId ? bomById.get(dev.instanceId) : null;
         const targetDev = bomItem || dev || {};
         const devName = bomItem ? (bomItem.friendlyName || bomItem.model) : (dev.label || dev.name || "Field Device");
         const devLocLower = ((dev.spaceName || "") + " " + (dev.label || "") + " " + (dev.name || "") + " " + (targetDev.model || "")).toLowerCase();
@@ -700,7 +713,7 @@ function auditProjectHealth() {
               details: `Underground conduits and outdoor pathways are classified as wet locations under NEC 300.9. TOW Structured Cabling Standards (p. 1) explicitly state: 'At no time should plenum cable be used in outdoor locations exposed to the environment. Plenum cable should never be used in buried conduit. Moisture will penetrate the jacket and short the conductors.' Convert drop to CMX-Outdoor or Direct-Burial Gel-Filled PE jacket (C6A-OUTDOOR-1K).`,
               conflictDetails: `Industry Norm Shortcut: Installers commonly pull indoor Plenum (CMP) cable through underground PVC conduit or along building exteriors to avoid dedicated outdoor spools. However, underground conduit is defined by NEC 300.9 as a wet location. TOW Cabling Standards strictly prohibit CMP in buried conduit or outdoor locations due to moisture wicking.`,
               actionLabel: `Quick-Convert to Cat6A OSP Outdoor Cable`,
-              actionFn: `quickConvertToOutdoorCable('${dev.id || (bomItem && bomItem.instanceId)}')`,
+              actionFn: `quickConvertToOutdoorCable('${safeJsArg(dev.id || (bomItem && bomItem.instanceId))}')`,
               badgeText: "WET CONDUIT / CMP HAZARD"
             });
           }
@@ -790,7 +803,7 @@ function auditProjectHealth() {
         details: `TOW Fire Alarm Connections and Egress Standards (p. 2-3) strictly state: 'Hardware: Fail-secure strikes, bolts, or mortise only. Maglocks prohibited on Level 3 — they cannot fail secure.' Maglocks are inherently fail-safe and drop unlocked during power loss or fire alarm activation. High-security Level 3 openings must remain locked (fail-secure) through power outage and fire alarm. Replace with heavy-duty fail-secure electric strike or mortise lock with key override.`,
         conflictDetails: `Manufacturer Catalog Conflict: Hardware vendors frequently market electromagnetic locks as high-holding-force locks suitable for perimeter and security doors. However, per NFPA 101 and TOW Standards, maglocks cannot fail secure. Installing a maglock on a Level 3 opening compromises perimeter integrity during utility failure or alarm drop.`,
         actionLabel: `Switch to Fail-Secure Mortise Lock / Strike`,
-        actionFn: `quickSwitchToFailSecureLock('${item.instanceId}')`,
+        actionFn: `quickSwitchToFailSecureLock('${safeJsArg(item.instanceId)}')`,
         badgeText: "PROHIBITED ON LEVEL 3"
       });
     }
@@ -820,7 +833,7 @@ function auditProjectHealth() {
             details: `Maglocks are strictly prohibited on Level 3 openings per TOW Fire Alarm Standards (p. 2-3) because maglocks drop open when power is lost. Level 3 openings must remain fail-secure through power outage. Replace with a heavy-duty fail-secure strike or mortise lock with key override.`,
             conflictDetails: `Manufacturer / Industry Norm Conflict: Lock catalogs promote maglocks for perimeter doors, but maglocks cannot fail secure on FAI drop or power loss.`,
             actionLabel: `Switch to Fail-Secure Mortise Lock`,
-            actionFn: `quickSwitchToFailSecureLock('${dev.id}')`,
+            actionFn: `quickSwitchToFailSecureLock('${safeJsArg(dev.id)}')`,
             badgeText: "PROHIBITED ON LEVEL 3"
           });
         }
@@ -841,9 +854,7 @@ function auditProjectHealth() {
       const isOutdoorFloor = flLower.includes("outdoor") || flLower.includes("exterior") || flLower.includes("perimeter") || flLower.includes("roof") || flLower.includes("pole");
 
       fl.nodes.filter(n => n.type === "device").forEach(dev => {
-        const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId)
-          ? projectBOM.find(i => i.instanceId === dev.instanceId)
-          : null;
+        const bomItem = dev.instanceId ? bomById.get(dev.instanceId) : null;
         const target = bomItem || dev || {};
         const locLower = ((dev.spaceName || '') + ' ' + (dev.label || '') + ' ' + (target.model || '')).toLowerCase();
         const isOutdoor = isOutdoorFloor || target.outdoor || target.isOutdoor || locLower.includes("outdoor") || locLower.includes("pole") || locLower.includes("exterior");
@@ -898,7 +909,7 @@ function auditProjectHealth() {
         details: `Per TOW Camera Installation Standards (p. 7) and TOW Structured Cabling Standards (p. 5), all external copper communication cables entering or leaving a building must pass through surge protection bonded to #10 AWG copper ground. For high-power PTZ and multi-sensor cameras drawing 60W-90W (802.3bt 4-pair), surge suppressors must be certified for 802.3bt power delivery. Standard 15W/30W suppressors falsely clamp voltages under 4-pair 54V-57V load, burning out suppressor diodes and causing cameras to power-cycle during PTZ motor or IR heater activation.`,
         conflictDetails: `Industry Norm Shortcut: Installers routinely deploy standard 30W PoE surge protectors on all outdoor drops. On 802.3bt high-power cameras, standard protectors clamp prematurely, causing intermittent reboot cycles or thermal burnout. Deploy an 802.3bt-certified surge suppressor (DITEK SURGE-POE-BT90).`,
         actionLabel: `+ Add 802.3bt 90W Outdoor Surge Protector`,
-        actionFn: `quickAdd8023btSurgeProtector('${topDev.dev ? topDev.dev.id : (topDev.bomItem ? topDev.bomItem.instanceId : '')}')`,
+        actionFn: `quickAdd8023btSurgeProtector('${safeJsArg(topDev.dev ? topDev.dev.id : (topDev.bomItem ? topDev.bomItem.instanceId : ''))}')`,
         badgeText: "802.3bt SURGE REQ"
       });
     }
@@ -934,7 +945,7 @@ function auditProjectHealth() {
         details: `TOW Switch Install and Configuration Guide (p. 5) and TOW Structured Cabling Standards (p. 5) explicitly state: 'Category: Cat6 minimum. Cat6A for 10GBASE-T. Cat5e not permitted on new installs.' While standard Cat6 may run short distances in unbundled tests, real-world security conduit bundles induce heavy alien crosstalk (ANEXT), causing packet drops and CRC errors on high-bandwidth switch uplinks and VMS server streams. Upgrade to Cat6A F/UTP or 10G SFP+ DAC.`,
         conflictDetails: `Industry Norm Conflict: While commercial TIA standards allow short unbundled Cat6 runs (up to 37-55m) for 10Gbps, Orion Standards strictly prohibit Cat6 for 10G links because bundled cables in real-world security installations suffer catastrophic packet drops. Cat6A is mandatory.`,
         actionLabel: `Upgrade Link to Cat6A (10G Certified)`,
-        actionFn: `quickUpgradeToCat6A('${item.instanceId}')`,
+        actionFn: `quickUpgradeToCat6A('${safeJsArg(item.instanceId)}')`,
         badgeText: "CAT6A MANDATORY ON 10G"
       });
     }
@@ -970,7 +981,7 @@ function auditProjectHealth() {
           details: `TOW - OSS Switch Install and Configuration Guide (p. 2) mandates: 'Equipped with optional redundant power supplies (dual AC or DC inputs). OSS Technical Standards: Connect each power supply to a separate, independent power source when available (Circuit A / UPS A and Circuit B / UPS B).' Connecting both power supplies to the same single PDU defeats hardware redundancy and creates a single point of failure.`,
           conflictDetails: `Industry Shortcut: Installers routinely plug both power cords of redundant-supply switches into the same PDU strip. Adding a secondary PDU (Circuit B / UPS B) guarantees uninterrupted operation during branch circuit trips or PDU maintenance.`,
           actionLabel: `+ Add Secondary PDU (Circuit B) to ${normLoc}`,
-          actionFn: `quickAddSecondaryPdu('${escapeHTML(normLoc)}')`,
+          actionFn: `quickAddSecondaryPdu('${safeJsArg(normLoc)}')`,
           badgeText: "A/B POWER REQ"
         });
       }

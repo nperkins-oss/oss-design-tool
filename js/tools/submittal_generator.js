@@ -74,13 +74,13 @@ const SubmittalGenerator = {
     let totalSwitchPorts = 0;
 
     bom.forEach(item => {
-      const qty = Number(item.quantity || 1);
+      const qty = Number(item.qty ?? item.quantity ?? 1);
       const price = Number(item.unitMSRP || item.msrp || item.unitPrice || 0);
       totalMSRP += qty * price;
 
       const sub = (item.subsystem || item.category || "").toLowerCase();
       const model = (item.model || "").toLowerCase();
-      const watts = Number(item.poeWatts || item.watts || item.powerWatts || 0);
+      const watts = Number(item.poeWattsDrawn || item.powerConsumptionWatts || item.poeWatts || item.watts || item.powerWatts || 0);
       totalPoEWatts += (watts * qty);
 
       if (sub.includes("video") || sub.includes("camera") || model.includes("cam") || model.includes("nvr")) {
@@ -150,11 +150,11 @@ const SubmittalGenerator = {
       });
 
       const upsItem = clItems.find(i => (i.role || "").toLowerCase() === "ups" || (i.category || "").toLowerCase() === "ups" || (i.type || "").toLowerCase() === "ups");
-      const ebpCount = clItems.filter(i => (i.role || "").toLowerCase().includes("battery") || (i.type || "").toLowerCase() === "ebp" || i.isEbp).reduce((sum, e) => sum + (Number(e.quantity) || 1), 0);
+      const ebpCount = clItems.filter(i => (i.role || "").toLowerCase().includes("battery") || (i.type || "").toLowerCase() === "ebp" || i.isEbp).reduce((sum, e) => sum + (Number(e.qty ?? e.quantity) || 1), 0);
 
       let headendWatts = 0;
       activeItems.forEach(i => {
-        headendWatts += (Number(i.powerWatts || i.baseWatts || 45)) * (Number(i.quantity) || 1);
+        headendWatts += (Number(i.powerWatts || i.baseWatts || 45)) * (Number(i.qty ?? i.quantity) || 1);
       });
 
       let homeredPoE = 0;
@@ -212,7 +212,7 @@ const SubmittalGenerator = {
       activeRevCode,
       metrics: {
         totalMSRP: Math.round(totalMSRP),
-        totalItems: bom.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0),
+        totalItems: bom.reduce((sum, i) => sum + (Number(i.qty ?? i.quantity) || 1), 0),
         totalDrops: totalDropCount,
         totalLinearFt: Math.round(totalLinearFt),
         maxRunFt: Math.round(maxRunFt),
@@ -439,7 +439,7 @@ function printSubmittalPackage() {
 
   // BOM Rows
   const bomRows = data.bom.map(i => {
-    const qty = Number(i.quantity) || 1;
+    const qty = Number(i.qty ?? i.quantity) || 1;
     const unitPrice = Number(i.unitMSRP || i.msrp || i.unitPrice || 0);
     const extPrice = unitPrice * qty;
 
@@ -448,7 +448,7 @@ function printSubmittalPackage() {
         <tr>
           <td style="padding: 5px; border: 1px solid #ddd; font-family: monospace; font-size: 8.5pt;">${escapeHTML(i.sku || i.model || '')}</td>
           <td style="padding: 5px; border: 1px solid #ddd; font-weight: bold; font-size: 8.5pt;">${escapeHTML(i.model || i.sku || '')}</td>
-          <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.category || i.subsystem || 'Hardware')}</td>
+          <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.category || i.subsystem || i.role || 'Hardware')}</td>
           <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.closetName || i.rackId || 'General')}</td>
           <td style="padding: 5px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 8.5pt;">${qty}</td>
           <td style="padding: 5px; border: 1px solid #ddd; text-align: right; font-family: monospace; font-size: 8.5pt;">$${unitPrice.toLocaleString()}</td>
@@ -460,7 +460,7 @@ function printSubmittalPackage() {
         <tr>
           <td style="padding: 5px; border: 1px solid #ddd; font-family: monospace; font-size: 8.5pt;">${escapeHTML(i.sku || i.model || '')}</td>
           <td style="padding: 5px; border: 1px solid #ddd; font-weight: bold; font-size: 8.5pt;">${escapeHTML(i.model || i.sku || '')}</td>
-          <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.category || i.subsystem || 'Hardware')}</td>
+          <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.category || i.subsystem || i.role || 'Hardware')}</td>
           <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.closetName || i.rackId || 'General')}</td>
           <td style="padding: 5px; border: 1px solid #ddd; text-align: center; font-weight: bold; font-size: 8.5pt;">${qty}</td>
           <td style="padding: 5px; border: 1px solid #ddd; font-size: 8.5pt;">${escapeHTML(i.mounting || 'Standard Rack / Surface')}</td>
@@ -480,18 +480,28 @@ function printSubmittalPackage() {
     </tr>
   `).join('');
 
-  // Cable Schedule Rows (TIA-606-C)
-  const cableRows = (data.cableSchedule || []).map(r => `
-    <tr>
-      <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace; font-weight: bold; color: #2b6cb0;">${escapeHTML(r.cableId)}</td>
-      <td style="padding: 4px; border: 1px solid #ddd;">${escapeHTML(r.deviceName)}</td>
-      <td style="padding: 4px; border: 1px solid #ddd;">${escapeHTML(r.fieldLocation)}</td>
-      <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace;">${escapeHTML(r.closetName)} &bull; ${escapeHTML(r.patchPanelCode)}-${r.patchPanelPort}</td>
-      <td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${r.runFootage} ft</td>
-      <td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace; font-weight: bold;">${r.totalCutLength} ft</td>
-      <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 8pt;">${escapeHTML(r.switchPort || 'Unassigned')}</td>
-    </tr>
-  `).join('');
+  // Cable Schedule Rows (TIA-606-C — mapped to generateCableScheduleData fields)
+  const cableRows = (data.cableSchedule || []).map(r => {
+    const devLabel = r.deviceTag ? `${r.deviceTag} (${r.deviceName || r.deviceModel || 'Endpoint'})` : (r.deviceName || 'Field Endpoint');
+    const fieldLoc = r.roomName || r.fieldLocation || r.floorName || 'Field Drop';
+    const panelCode = r.panelTag || r.patchPanelCode || 'PP01';
+    const panelPort = r.panelPort ?? r.patchPanelPort ?? '01';
+    const runFt = r.measuredFt ?? r.runFootage ?? 0;
+    const cutFt = r.cutLengthFt ?? r.totalCutLength ?? (runFt + (r.serviceLoopFt || 25));
+    const swPort = r.switchPortTag || r.switchPort || 'Unassigned';
+
+    return `
+      <tr>
+        <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace; font-weight: bold; color: #2b6cb0;">${escapeHTML(r.cableId)}</td>
+        <td style="padding: 4px; border: 1px solid #ddd;">${escapeHTML(devLabel)}</td>
+        <td style="padding: 4px; border: 1px solid #ddd;">${escapeHTML(fieldLoc)}</td>
+        <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace;">${escapeHTML(r.closetName)} &bull; ${escapeHTML(panelCode)}-P${escapeHTML(String(panelPort))}</td>
+        <td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${runFt} ft</td>
+        <td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace; font-weight: bold;">${cutFt} ft</td>
+        <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 8pt;">${escapeHTML(swPort)}</td>
+      </tr>
+    `;
+  }).join('');
 
   // UPS Power Standby Rows
   const upsRows = (data.upsSummary || []).map(u => `
@@ -507,6 +517,10 @@ function printSubmittalPackage() {
       </td>
     </tr>
   `).join('');
+
+  const verStamp = (typeof window !== "undefined" && window.APP_VERSION)
+    ? `v${window.APP_VERSION}${window.BUILD_NUMBER ? ' • Build ' + window.BUILD_NUMBER : ''}`
+    : "v0.11.0-beta.1";
 
   w.document.write(`
     <!DOCTYPE html>
@@ -573,7 +587,7 @@ function printSubmittalPackage() {
                 Project: <strong>${escapeHTML(data.projName)}</strong>
               </div>
               <div style="display: inline-block; padding: 4px 12px; background: #edf2f7; border: 1px solid #cbd5e0; font-weight: bold; border-radius: 4px;">
-                Issue: ${escapeHTML(rev)}
+                Issue: ${escapeHTML(rev)} &bull; Engine: ${escapeHTML(verStamp)}
               </div>
             </div>
 

@@ -192,10 +192,10 @@ const EngineeringWorkbookExporter = {
     let totalWatts = 0;
 
     bom.forEach((item, idx) => {
-      const qty = parseInt(item.quantity, 10) || 1;
+      const qty = parseInt(item.qty ?? item.quantity, 10) || 1;
       const unitPrice = parseFloat(item.unitMSRP || item.msrp || item.unitPrice || 0);
       const extPrice = qty * unitPrice;
-      const watts = (parseFloat(item.poeBudget) || 0) + (parseFloat(item.baseWatts || item.powerWatts) || 0);
+      const watts = (parseFloat(item.poeBudget) || 0) + (parseFloat(item.baseWatts || item.powerWatts || item.powerConsumptionWatts) || 0);
 
       totalMSRP += extPrice;
       totalQty += qty;
@@ -230,6 +230,8 @@ const EngineeringWorkbookExporter = {
       `;
     });
 
+    const verStamp = typeof window !== "undefined" && window.APP_VERSION ? `v${window.APP_VERSION} (${window.BUILD_NUMBER || ""})` : "v0.11.0-beta.1";
+
     return `
   <Worksheet ss:Name="1. Bill of Materials (BOM)">
     <Table ss:DefaultColumnWidth="75" ss:DefaultRowHeight="18">
@@ -254,7 +256,7 @@ const EngineeringWorkbookExporter = {
       </Row>
       <Row ss:Height="18">
         <Cell ss:MergeAcross="12" ss:StyleID="MetaSubtitle">
-          <Data ss:Type="String">  Project: ${this.xmlEscape(projName)}  |  Generated: ${new Date().toLocaleDateString()}  |  Engineered per Orion Standards</Data>
+          <Data ss:Type="String">  Project: ${this.xmlEscape(projName)}  |  Generated: ${new Date().toLocaleDateString()}  |  Tool Build: ${this.xmlEscape(verStamp)}</Data>
         </Cell>
       </Row>
       <Row ss:Height="10"/>
@@ -305,27 +307,38 @@ const EngineeringWorkbookExporter = {
       }
     }
 
-    let totalFt = 0;
+    let totalCutFt = 0;
 
     sched.forEach((row, idx) => {
-      const dropFt = parseInt(row.totalFt || row.calculatedTotalFt || 120, 10);
-      const slackFt = parseInt(row.slackFt || 15, 10);
-      totalFt += dropFt;
+      const measuredFt = parseInt(row.measuredFt ?? row.runFootage ?? row.totalFt ?? row.calculatedTotalFt ?? 0, 10);
+      const slackFt = parseInt(row.serviceLoopFt ?? row.slackFt ?? 25, 10);
+      const cutFt = parseInt(row.cutLengthFt ?? row.totalCutLength ?? (measuredFt + slackFt), 10);
+      totalCutFt += cutFt;
 
       const cableId = row.cableId || `CBL-${String(idx + 1).padStart(3, '0')}`;
       const closet = row.closetName || "MDF • Main Telecom";
-      const ppPort = row.patchPanelPort || `PP01-P${String((idx % 24) + 1).padStart(2, '0')}`;
-      const dropName = row.deviceName || row.name || `Drop #${idx + 1}`;
-      const floor = row.floorName || "Floor 1";
+      const ppPort = (row.panelTag && row.panelPort)
+        ? `${row.panelTag}-P${row.panelPort}`
+        : (row.patchPanelPort || `PP01-P${String((idx % 24) + 1).padStart(2, '0')}`);
+      const dropName = row.deviceTag
+        ? `${row.deviceTag} (${row.deviceName || row.deviceModel || 'Endpoint'})`
+        : (row.deviceName || row.name || `Drop #${idx + 1}`);
+      const floorZone = row.roomName || row.floorName || "Floor 1";
       const subsystem = row.subsystem || row.role || "Video Surveillance";
-      const spec = row.cableSku || "C6A-CMP-1K-BL (Cat6A Plenum)";
-      const drcStatus = dropFt > 328 ? "CRITICAL VIOLATION (>328')" : (dropFt > 295 ? "CAUTION (>295')" : "TIA-568 PASS (<295')");
+      const spec = row.runCategory
+        ? `${row.runCategory}${row.runColor ? ' (' + row.runColor + ')' : ''}`
+        : (row.cableSku || "C6A-CMP-1K-BL (Cat6A Plenum)");
+      const drcStatus = measuredFt > 328
+        ? "CRITICAL VIOLATION (>328')"
+        : (measuredFt > 295 ? "CAUTION (>295')" : "TIA-568 PASS (<295')");
 
-      // Orion 2-Line Label Standard
-      const line1Switch = `FROM: ${closet} / ${ppPort}`;
-      const line2Switch = `TO: ${dropName} (${floor})`;
-      const line1Device = `ID: ${cableId} • ${subsystem}`;
-      const line2Device = `FED: ${closet} • ${ppPort}`;
+      // Orion 2-Line Label Standard from generateCableScheduleData
+      const headendLabel = (row.headendLabelLine1 && row.headendLabelLine2)
+        ? `${row.headendLabelLine1} | ${row.headendLabelLine2}`
+        : `FROM: ${closet} / ${ppPort} | TO: ${dropName} (${floorZone})`;
+      const fieldLabel = (row.fieldLabelLine1 && row.fieldLabelLine2)
+        ? `${row.fieldLabelLine1} | ${row.fieldLabelLine2}`
+        : `ID: ${cableId} • ${subsystem} | FED: ${closet} • ${ppPort}`;
 
       rowsXml += `
         <Row ss:Height="20">
@@ -333,14 +346,14 @@ const EngineeringWorkbookExporter = {
           <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(closet)}</Data></Cell>
           <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(ppPort)}</Data></Cell>
           <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(dropName)}</Data></Cell>
-          <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(floor)}</Data></Cell>
+          <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(floorZone)}</Data></Cell>
           <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(subsystem)}</Data></Cell>
           <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(spec)}</Data></Cell>
-          <Cell ss:StyleID="CellInteger"><Data ss:Type="Number">${dropFt}</Data></Cell>
-          <Cell ss:StyleID="CellInteger"><Data ss:Type="Number">${slackFt}</Data></Cell>
+          <Cell ss:StyleID="CellInteger"><Data ss:Type="Number">${measuredFt}</Data></Cell>
+          <Cell ss:StyleID="CellInteger"><Data ss:Type="Number">${cutFt}</Data></Cell>
           <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(drcStatus)}</Data></Cell>
-          <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(line1Switch)} | ${this.xmlEscape(line2Switch)}</Data></Cell>
-          <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(line1Device)} | ${this.xmlEscape(line2Device)}</Data></Cell>
+          <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(headendLabel)}</Data></Cell>
+          <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(fieldLabel)}</Data></Cell>
         </Row>
       `;
     });
@@ -356,7 +369,7 @@ const EngineeringWorkbookExporter = {
       <Column ss:Width="110"/>
       <Column ss:Width="150"/>
       <Column ss:Width="65"/>
-      <Column ss:Width="60"/>
+      <Column ss:Width="65"/>
       <Column ss:Width="140"/>
       <Column ss:Width="180"/>
       <Column ss:Width="180"/>
@@ -368,7 +381,7 @@ const EngineeringWorkbookExporter = {
       </Row>
       <Row ss:Height="18">
         <Cell ss:MergeAcross="11" ss:StyleID="MetaSubtitle">
-          <Data ss:Type="String">  T568-B Termination Standard  |  Max 295ft Horizontal + 33ft Patch  |  Orion 2-Line Heat Shrink Labels</Data>
+          <Data ss:Type="String">  T568-B Termination Standard  |  Max 295ft Horizontal + 25ft Service Loop  |  Orion 2-Line Brady Labels</Data>
         </Cell>
       </Row>
       <Row ss:Height="10"/>
@@ -382,8 +395,8 @@ const EngineeringWorkbookExporter = {
         <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Floor / Zone</Data></Cell>
         <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Subsystem</Data></Cell>
         <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Cable Specification</Data></Cell>
-        <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Length (ft)</Data></Cell>
-        <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Slack (ft)</Data></Cell>
+        <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Run (ft)</Data></Cell>
+        <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Cut Len (ft)</Data></Cell>
         <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">TIA-568 Status</Data></Cell>
         <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Switch End Label Text</Data></Cell>
         <Cell ss:StyleID="HeaderEmerald"><Data ss:Type="String">Device End Label Text</Data></Cell>
@@ -393,67 +406,117 @@ const EngineeringWorkbookExporter = {
 
       <!-- Total Row -->
       <Row ss:Height="24">
-        <Cell ss:MergeAcross="6" ss:StyleID="RowTotal"><Data ss:Type="String">TOTAL CABLING REQUIREMENTS (${sched.length} Total Field Pulls)</Data></Cell>
-        <Cell ss:StyleID="RowTotal"><Data ss:Type="Number">${totalFt}</Data></Cell>
-        <Cell ss:StyleID="RowTotal"><Data ss:Type="String">${Math.ceil(totalFt / 1000)} Spools</Data></Cell>
-        <Cell ss:MergeAcross="2" ss:StyleID="RowTotal"><Data ss:Type="String">1,000 ft Reelex Spool Calculation</Data></Cell>
+        <Cell ss:MergeAcross="7" ss:StyleID="RowTotal"><Data ss:Type="String">TOTAL CABLING REQUIREMENTS (${sched.length} Total Field Pulls)</Data></Cell>
+        <Cell ss:StyleID="RowTotal"><Data ss:Type="Number">${totalCutFt}</Data></Cell>
+        <Cell ss:StyleID="RowTotal"><Data ss:Type="String">${Math.ceil(totalCutFt / 1000)} Spools</Data></Cell>
+        <Cell ss:MergeAcross="1" ss:StyleID="RowTotal"><Data ss:Type="String">1,000 ft Reelex Spool Calculation</Data></Cell>
       </Row>
     </Table>
   </Worksheet>`;
   },
 
   /**
-   * Tab 3: Switch Port Matrix & VLAN Schedule
+   * Tab 3: Switch Port Matrix & VLAN Schedule (Live PortEngine Integration)
    */
   generatePortMatrixWorksheetXml(bom) {
     let rowsXml = "";
-    const switches = bom.filter(i => {
-      const role = (i.role || "").toLowerCase();
-      return role === "access" || role === "core" || role === "aggregation" || (i.category || "").toLowerCase().includes("switch") || (i.model || "").toLowerCase().includes("switch");
+    if (typeof PortEngine !== "undefined" && typeof PortEngine.autoSyncAllSwitchPorts === "function") {
+      try {
+        PortEngine.autoSyncAllSwitchPorts();
+      } catch (e) {
+        console.warn("[WorkbookExport] PortEngine sync warning:", e);
+      }
+    }
+
+    const bomById = new Map();
+    bom.forEach(item => {
+      if (item && item.instanceId) bomById.set(item.instanceId, item);
     });
 
-    let portCounter = 0;
+    const switches = bom.filter(i => {
+      if (!i || i.parentInstanceId) return false;
+      if (typeof isNetworkSwitchItem === "function") return isNetworkSwitchItem(i);
+      const role = (i.role || "").toLowerCase();
+      return role === "access" || role === "core" || role === "aggregation" || role.includes("switch") || (i.category || "").toLowerCase().includes("switch") || (i.model || "").toLowerCase().includes("switch");
+    });
+
+    let totalPortsExported = 0;
+    let totalActivePorts = 0;
+    let totalPoeWattsAllocated = 0;
+
     switches.forEach((sw, sIdx) => {
-      const portsCount = parseInt(sw.ports || sw.rj45Ports || 24, 10);
       const swName = sw.friendlyName || sw.model || `SW-${sIdx + 1}`;
       const closet = sw.closetName || sw.rackId || "MDF";
-      const uSlot = sw.rackSlot ? `U${sw.rackSlot}` : "U10";
+      const uSlot = sw.rackSlot ? `U${sw.rackSlot}` : "Rack";
+      const ports = (typeof PortEngine !== "undefined" && typeof PortEngine.initSwitchPorts === "function")
+        ? PortEngine.initSwitchPorts(sw)
+        : (Array.isArray(sw.portsList) ? sw.portsList : []);
 
-      for (let p = 1; p <= portsCount; p++) {
-        portCounter++;
-        let vlan = 10;
-        let vlanName = "Corporate Data";
-        let role = "Access Port";
+      ports.forEach((portObj, pIdx) => {
+        totalPortsExported++;
+        const pNum = portObj.portNumber || (pIdx + 1);
+        const isUplink = Boolean(portObj.isUplink || portObj.type === "uplink" || (portObj.media && String(portObj.media).toLowerCase().includes("sfp")));
+        const ifaceLabel = portObj.label || (isUplink ? `Te 1/1/${pNum}` : `Gi 1/0/${pNum}`);
+        const speedStr = portObj.speed || (isUplink ? (sw.uplinkSpeed || "10 Gbps") : "1 Gbps");
+        const targetDev = portObj.connectedDeviceId ? bomById.get(portObj.connectedDeviceId) : null;
+
+        let vlan = parseInt(portObj.vlan, 10) || (isUplink ? 1 : 10);
+        let vlanName = isUplink ? "802.1Q Trunk" : "Unused / Parking";
+        let role = isUplink ? "Spare Uplink" : "Spare Access Port";
         let poeAlloc = 0;
         let connectedDrop = "Spare Available";
 
-        if (p <= 12) {
-          vlan = 30;
-          vlanName = "Surveillance (CCTV)";
-          role = "IP Security Camera";
-          poeAlloc = 15.4;
-          connectedDrop = `CAM-${String(p).padStart(2, '0')}`;
-        } else if (p <= 16) {
-          vlan = 40;
-          vlanName = "Access Control (EAC)";
-          role = "Card Reader Door Controller";
-          poeAlloc = 25.5;
-          connectedDrop = `DR-CTRL-${String(p - 12).padStart(2, '0')}`;
-        } else if (p <= 20) {
-          vlan = 50;
-          vlanName = "Wireless (WLAN)";
-          role = "Wi-Fi 6 Access Point";
-          poeAlloc = 30.0;
-          connectedDrop = `AP-${String(p - 16).padStart(2, '0')}`;
+        if (targetDev) {
+          totalActivePorts++;
+          const tagPrefix = targetDev.deviceNumber ? `${targetDev.deviceNumber} — ` : "";
+          connectedDrop = `${tagPrefix}${targetDev.friendlyName || targetDev.model || "Endpoint"}`;
+          role = targetDev.role || targetDev.category || "Connected Endpoint";
+
+          const catStr = `${targetDev.category || ""} ${targetDev.role || ""} ${targetDev.model || ""}`.toLowerCase();
+          if (isUplink || catStr.includes("switch") || catStr.includes("firewall") || catStr.includes("core")) {
+            vlan = parseInt(portObj.vlan, 10) || 1;
+            vlanName = "802.1Q Infrastructure Trunk";
+          } else if (catStr.includes("camera") || catStr.includes("video") || catStr.includes("cctv")) {
+            vlan = parseInt(portObj.vlan, 10) || 30;
+            vlanName = "Surveillance (CCTV)";
+          } else if (catStr.includes("access") || catStr.includes("door") || catStr.includes("reader") || catStr.includes("intercom")) {
+            vlan = parseInt(portObj.vlan, 10) || 40;
+            vlanName = "Access Control (EAC)";
+          } else if (catStr.includes("wireless") || catStr.includes("wifi") || catStr.includes("radio") || catStr.includes("bridge")) {
+            vlan = parseInt(portObj.vlan, 10) || 50;
+            vlanName = "Wireless (WLAN)";
+          } else if (catStr.includes("server") || catStr.includes("nvr") || catStr.includes("storage")) {
+            vlan = parseInt(portObj.vlan, 10) || 20;
+            vlanName = "Security Compute / VMS";
+          } else {
+            vlan = parseInt(portObj.vlan, 10) || 10;
+            vlanName = "Corporate Data";
+          }
+
+          const pwrSource = (typeof PortEngine !== "undefined" && typeof PortEngine.getDevicePowerSource === "function")
+            ? PortEngine.getDevicePowerSource(targetDev)
+            : (targetDev.powerSource || "poe_switch");
+          if (!isUplink && pwrSource === "poe_switch") {
+            poeAlloc = parseFloat(portObj.poeOutputWatts || targetDev.poeWattsDrawn || targetDev.powerConsumptionWatts || targetDev.baseWatts || 15.4) || 0;
+          }
+        } else if (portObj.status === "occupied" || portObj.connectedDeviceName) {
+          totalActivePorts++;
+          connectedDrop = portObj.connectedDeviceName || "Patched Endpoint";
+          role = portObj.role || (isUplink ? "Uplink Trunk" : "Patched Port");
+          vlan = parseInt(portObj.vlan, 10) || (isUplink ? 1 : 10);
+          vlanName = isUplink ? "802.1Q Infrastructure Trunk" : "Assigned Segment";
+          poeAlloc = parseFloat(portObj.poeOutputWatts || 0) || 0;
         }
+
+        totalPoeWattsAllocated += poeAlloc;
 
         rowsXml += `
           <Row ss:Height="19">
             <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(swName)}</Data></Cell>
             <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(closet)} (${uSlot})</Data></Cell>
             <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(sw.sku || sw.model)}</Data></Cell>
-            <Cell ss:StyleID="CellCode"><Data ss:Type="String">GigE 1/0/${p}</Data></Cell>
-            <Cell ss:StyleID="CellCenter"><Data ss:Type="String">1 Gbps</Data></Cell>
+            <Cell ss:StyleID="CellCode"><Data ss:Type="String">${this.xmlEscape(ifaceLabel)}</Data></Cell>
+            <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(speedStr)}</Data></Cell>
             <Cell ss:StyleID="CellInteger"><Data ss:Type="Number">${vlan}</Data></Cell>
             <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(vlanName)}</Data></Cell>
             <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(connectedDrop)}</Data></Cell>
@@ -461,7 +524,7 @@ const EngineeringWorkbookExporter = {
             <Cell ss:StyleID="CellRight"><Data ss:Type="Number">${poeAlloc.toFixed(1)}</Data></Cell>
           </Row>
         `;
-      }
+      });
     });
 
     return `
@@ -485,7 +548,7 @@ const EngineeringWorkbookExporter = {
       </Row>
       <Row ss:Height="18">
         <Cell ss:MergeAcross="9" ss:StyleID="MetaSubtitle">
-          <Data ss:Type="String">  802.1Q VLAN Segregation  |  802.3af/at/bt PoE Allocations  |  Switch Interfaces</Data>
+          <Data ss:Type="String">  802.1Q VLAN Segregation  |  802.3af/at/bt PoE Allocations  |  Live PortEngine Schedule (${totalActivePorts}/${totalPortsExported} Ports Patched)</Data>
         </Cell>
       </Row>
       <Row ss:Height="10"/>
@@ -505,6 +568,13 @@ const EngineeringWorkbookExporter = {
       </Row>
 
       ${rowsXml}
+
+      <!-- Total Row -->
+      <Row ss:Height="24">
+        <Cell ss:MergeAcross="6" ss:StyleID="RowTotal"><Data ss:Type="String">PORT MATRIX TOTALS (${switches.length} Switches | ${totalActivePorts} Active / ${totalPortsExported - totalActivePorts} Spare Ports)</Data></Cell>
+        <Cell ss:MergeAcross="1" ss:StyleID="RowTotal"><Data ss:Type="String">Total Active PoE Draw:</Data></Cell>
+        <Cell ss:StyleID="RowTotal"><Data ss:Type="Number">${totalPoeWattsAllocated.toFixed(1)}</Data></Cell>
+      </Row>
     </Table>
   </Worksheet>`;
   },

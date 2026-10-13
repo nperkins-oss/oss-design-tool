@@ -659,7 +659,14 @@ const WalkReconciliationEngine = {
                     <!-- Actions -->
                     <td class="py-3 px-4 align-top text-right">
                       ${r.status === 'unmapped' ? `
-                        <button onclick="WalkReconciliationEngine.addUnmappedToBOM('${escapeHTML(r.walkTag)}', '${escapeHTML(r.walkModel)}', '${escapeHTML(r.walkNotes)}')" class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] transition-all cursor-pointer" title="Add this discovered camera to project BOM">
+                        <button
+                          data-walk-tag="${escapeHTML(r.walkTag)}"
+                          data-walk-model="${escapeHTML(r.walkModel)}"
+                          data-walk-notes="${escapeHTML(r.walkNotes)}"
+                          onclick="WalkReconciliationEngine.addUnmappedToBOM(this.dataset.walkTag, this.dataset.walkModel, this.dataset.walkNotes)"
+                          class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] transition-all cursor-pointer"
+                          title="Add this discovered camera to project BOM"
+                        >
                           + Add to BOM
                         </button>
                       ` : (r.designDrop && r.designDrop.nodeId ? `
