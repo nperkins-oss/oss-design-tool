@@ -219,16 +219,32 @@ let selectedCordColor = "all";
 let selectedCordGauge = "all";
 let requireCordLocking = false;
 
-// 6. Camera Filters
-let selectedCameraVendors = [];
-let selectedCameraFormFactors = [];
-let selectedCameraResolutions = [];
-let requireCameraIR = false;
-let requireCameraAudio = false;
+// 6. Camera Filters & Video Storage Sizer State
+let selectedCamVendors = [];
+let selectedCamFormFactors = [];
+let selectedCamResolutions = [];
+let requireCamAnalytics = false;
+let requireCamVandal = false;
+let requireCamTaa = false;
+let videoRetentionDays = 30;
+let videoCodec = "H.265";
+let videoFps = 15;
+let videoMotionDuty = 0.5;
+let videoRaidType = "RAID6";
 
-// 7. Access Control Filters
-let selectedAccessVendors = [];
-let selectedDoorCounts = [];
+// 7. Access Control Filters & Door Package Builder State
+let selectedAcsVendors = [];
+let selectedAcsControllerTypes = [];
+let selectedAcsPowerSource = "all";
+let requireAcsOsdp = false;
+let doorPkgPreset = "standard_strike";
+let doorPkgQty = 2;
+
+// 8. Compute, Servers & Storage Filters
+let selectedSrvVendors = [];
+let selectedSrvRackUnits = [];
+let minSrvStorageTb = 0;
+let requireSrvDualPsu = false;
 
 // -----------------------------------------------------------
 // Central Application State Store
@@ -495,14 +511,22 @@ function resetCurrentFilters(silent = false) {
   selectedCordGauge = "all";
   requireCordLocking = false;
 
-  selectedCameraVendors = [];
-  selectedCameraFormFactors = [];
-  selectedCameraResolutions = [];
-  requireCameraIR = false;
-  requireCameraAudio = false;
+  selectedCamVendors = [];
+  selectedCamFormFactors = [];
+  selectedCamResolutions = [];
+  requireCamAnalytics = false;
+  requireCamVandal = false;
+  requireCamTaa = false;
 
-  selectedAccessVendors = [];
-  selectedDoorCounts = [];
+  selectedAcsVendors = [];
+  selectedAcsControllerTypes = [];
+  selectedAcsPowerSource = "all";
+  requireAcsOsdp = false;
+
+  selectedSrvVendors = [];
+  selectedSrvRackUnits = [];
+  minSrvStorageTb = 0;
+  requireSrvDualPsu = false;
 
   activeSearchQuery = "";
   const searchInput = document.getElementById("filterSearch");
@@ -1088,8 +1112,151 @@ function buildCalculatorStrip() {
         </div>
       </div>
     `;
+  } else if (currentMode === "cameras" || currentMode === "servers" || currentMode === "storage") {
+    // Phase B.2: Interactive Video Retention, Bitrate & RAID Storage Sizer Strip
+    container.classList.remove("hidden");
+    const vCalc = (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function")
+      ? VideoStorageSizer.calculateFromBOM(projectBOM, {
+          retentionDays: videoRetentionDays,
+          codec: videoCodec,
+          fps: videoFps,
+          motionDutyCycle: videoMotionDuty,
+          raidType: videoRaidType
+        })
+      : { totalCameras: 0, totalSensors: 0, totalBandwidthMbps: 0, requiredUsableTB: 0, requiredRawTB: 0 };
+
+    // Calculate currently quoted NVR usable TB in BOM
+    const quotedNvrs = (projectBOM || []).filter(i => {
+      const r = (i.role || "").toLowerCase();
+      const c = (i.category || "").toLowerCase();
+      return r.includes("nvr") || r.includes("recorder") || r.includes("server") || c === "servers" || c === "storage";
+    });
+    const quotedUsableTB = quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTB ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0);
+    const isStorageHealthy = vCalc.requiredUsableTB === 0 || quotedUsableTB >= vCalc.requiredUsableTB;
+
+    container.innerHTML = `
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400 shrink-0">
+            <i data-lucide="hard-drive" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Video Retention, Bitrate & RAID Sizer</h4>
+              <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300">${vCalc.totalCameras} Cam (${vCalc.totalSensors} Streams)</span>
+            </div>
+            <p class="text-[11px] text-slate-400">Live VMS storage & throughput sizing from BOM cameras (Modular formula in <code class="text-sky-400">VideoStorageSizer</code>).</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Retention:</span>
+            <select onchange="setVideoSizerParam('retentionDays', Number(this.value))" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+              ${[15, 30, 60, 90, 180].map(d => `<option value="${d}" class="bg-slate-900" ${videoRetentionDays === d ? 'selected' : ''}>${d} Days</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Codec:</span>
+            <select onchange="setVideoSizerParam('codec', this.value)" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="H.265" class="bg-slate-900" ${videoCodec === 'H.265' ? 'selected' : ''}>H.265 (HEVC)</option>
+              <option value="H.264" class="bg-slate-900" ${videoCodec === 'H.264' ? 'selected' : ''}>H.264 (AVC)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">FPS:</span>
+            <select onchange="setVideoSizerParam('fps', Number(this.value))" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+              ${[15, 20, 24, 30].map(f => `<option value="${f}" class="bg-slate-900" ${videoFps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Duty:</span>
+            <select onchange="setVideoSizerParam('motionDuty', Number(this.value))" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="0.5" class="bg-slate-900" ${videoMotionDuty === 0.5 ? 'selected' : ''}>50% Motion</option>
+              <option value="0.7" class="bg-slate-900" ${videoMotionDuty === 0.7 ? 'selected' : ''}>70% Motion</option>
+              <option value="1" class="bg-slate-900" ${videoMotionDuty === 1 ? 'selected' : ''}>100% Continuous (24/7)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">RAID:</span>
+            <select onchange="setVideoSizerParam('raidType', this.value)" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="RAID 5" class="bg-slate-900" ${videoRaidType === 'RAID 5' ? 'selected' : ''}>RAID 5 (~83%)</option>
+              <option value="RAID 6" class="bg-slate-900" ${videoRaidType === 'RAID 6' ? 'selected' : ''}>RAID 6 (~75%)</option>
+              <option value="RAID 10" class="bg-slate-900" ${videoRaidType === 'RAID 10' ? 'selected' : ''}>RAID 10 (50%)</option>
+              <option value="JBOD" class="bg-slate-900" ${videoRaidType === 'JBOD' ? 'selected' : ''}>JBOD (100%)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${isStorageHealthy ? 'border-emerald-800/60' : 'border-amber-600/70'}">
+            <div>
+              <div class="text-[10px] uppercase font-bold text-slate-400">Bitrate</div>
+              <div class="text-xs font-mono font-bold text-sky-400">${vCalc.totalBandwidthMbps} Mbps</div>
+            </div>
+            <div class="h-6 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[10px] uppercase font-bold text-slate-400">Usable / Raw Req</div>
+              <div class="text-xs font-mono font-bold ${isStorageHealthy ? 'text-emerald-400' : 'text-amber-400'}">${vCalc.requiredUsableTB} TB / ${vCalc.requiredRawTB} TB</div>
+            </div>
+            <div class="h-6 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[10px] uppercase font-bold text-slate-400">Quoted NVR</div>
+              <div class="text-xs font-mono font-bold ${isStorageHealthy ? 'text-emerald-400' : 'text-rose-400'}">${quotedUsableTB} TB</div>
+            </div>
+          </div>
+
+          <button onclick="autoFitNvrToBom()" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+            <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+            <span>Auto-Fit NVR</span>
+          </button>
+        </div>
+      </div>
+    `;
+  } else if (currentMode === "access_control") {
+    // Phase B.3: Interactive Access Control Door Package Builder Strip
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="door-closed" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Access Control Door Package Builder</h4>
+            <p class="text-[11px] text-slate-400">1-Click complete door kit assembly (Controller + OSDP Reader + Lock + REX + Door Contact).</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Door Type:</span>
+            <select onchange="window.doorPkgPreset = this.value; doorPkgPreset = this.value;" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="standard_strike" class="bg-slate-900" ${doorPkgPreset === 'standard_strike' ? 'selected' : ''}>Standard Interior/Mortise Door (Mercury LP1502 + HID Signo 40 + HES 1006 + DS160 REX + 180-12 DPS)</option>
+              <option value="rim_exit_strike" class="bg-slate-900" ${doorPkgPreset === 'rim_exit_strike' ? 'selected' : ''}>Crash-Bar Rim Exit Door (Mercury LP1502 + HID Signo 40 + HES 9600 Surface Strike + DS160 REX + 180-12 DPS)</option>
+              <option value="perimeter_maglock" class="bg-slate-900" ${doorPkgPreset === 'perimeter_maglock' ? 'selected' : ''}>Perimeter / Gate Maglock Door (Mercury LP1502 + HID Signo 40 + Securitron M62 + DS160 REX + 1078C Armored DPS)</option>
+              <option value="ip_edge_door" class="bg-slate-900" ${doorPkgPreset === 'ip_edge_door' ? 'selected' : ''}>Single-Door PoE+ Edge Kit (Axis A1001 PoE+ Controller + HID Signo 40 + HES 1006 + DS160 REX + 180-12 DPS)</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-400">Door Qty:</span>
+            <input type="number" min="1" max="64" value="${doorPkgQty || 1}" onchange="window.doorPkgQty = Math.max(1, parseInt(this.value, 10) || 1); doorPkgQty = window.doorPkgQty;" class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center text-xs font-bold text-white focus:outline-none" />
+          </div>
+
+          <button onclick="addDoorPackageToBom()" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+            <i data-lucide="package-plus" class="w-4 h-4"></i>
+            <span>+ Add Door Package to BOM</span>
+          </button>
+        </div>
+      </div>
+    `;
   } else {
-    // Sizer placeholder for emerging domains (Cameras, Access, Servers, etc.)
+    // Sizer placeholder for emerging domains
     container.classList.remove("hidden");
     container.innerHTML = `
       <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-4 shadow-md">
@@ -1111,6 +1278,90 @@ function buildCalculatorStrip() {
   const calcContainer = document.getElementById("calculatorStripContainer");
   if (calcContainer) safeCreateIcons(calcContainer);
 }
+
+function setVideoSizerParam(key, val) {
+  if (key === "retentionDays") { videoRetentionDays = val; window.videoRetentionDays = val; }
+  else if (key === "codec") { videoCodec = val; window.videoCodec = val; }
+  else if (key === "fps") { videoFps = val; window.videoFps = val; }
+  else if (key === "motionDuty") { videoMotionDuty = val; window.videoMotionDuty = val; }
+  else if (key === "raidType") { videoRaidType = val; window.videoRaidType = val; }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.setVideoSizerParam = setVideoSizerParam;
+
+function autoFitNvrToBom() {
+  if (typeof VideoStorageSizer === "undefined") return;
+  const vCalc = VideoStorageSizer.calculateFromBOM(projectBOM, {
+    retentionDays: videoRetentionDays,
+    codec: videoCodec,
+    fps: videoFps,
+    motionDutyCycle: videoMotionDuty,
+    raidType: videoRaidType
+  });
+  const targetTB = Math.max(16, vCalc.requiredUsableTB || 16);
+  const servers = (typeof SERVERS_DATABASE !== "undefined") ? SERVERS_DATABASE : [];
+  if (servers.length === 0) return;
+
+  // Sort NVRs ascending by usableStorageTB
+  const sorted = [...servers].sort((a, b) => (a.usableStorageTB || a.rawStorageTB || 0) - (b.usableStorageTB || b.rawStorageTB || 0));
+  const singleFit = sorted.find(s => (s.usableStorageTB || s.rawStorageTB || 0) >= targetTB);
+
+  if (singleFit && typeof addToBOM === "function") {
+    addToBOM(singleFit.id || singleFit.sku, 1);
+    if (typeof showToast === "function") {
+      showToast(`Auto-Fitted 1x ${singleFit.model} (${singleFit.usableStorageTB || singleFit.rawStorageTB} TB Usable) for ${vCalc.requiredUsableTB} TB target.`, "success");
+    }
+  } else if (sorted.length > 0 && typeof addToBOM === "function") {
+    const largest = sorted[sorted.length - 1];
+    const cap = largest.usableStorageTB || largest.rawStorageTB || 32;
+    const qtyNeeded = Math.max(1, Math.ceil(targetTB / cap));
+    addToBOM(largest.id || largest.sku, qtyNeeded);
+    if (typeof showToast === "function") {
+      showToast(`Auto-Fitted ${qtyNeeded}x ${largest.model} (${cap * qtyNeeded} TB Total Usable) for ${vCalc.requiredUsableTB} TB target.`, "success");
+    }
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.autoFitNvrToBom = autoFitNvrToBom;
+
+function addDoorPackageToBom() {
+  const doors = Math.max(1, parseInt(doorPkgQty, 10) || 1);
+  const preset = doorPkgPreset || "standard_strike";
+  if (typeof addToBOM !== "function") return;
+
+  if (preset === "ip_edge_door") {
+    addToBOM("axis-a1001", doors);
+    addToBOM("hid-signo-40", doors);
+    addToBOM("hes-1006-electric-strike", doors);
+    addToBOM("bosch-ds160-rex", doors);
+    addToBOM("gri-180-12-dps", doors);
+  } else {
+    const controllersNeeded = Math.ceil(doors / 2);
+    addToBOM("mercury-lp1502", controllersNeeded);
+    if (controllersNeeded >= 2) {
+      addToBOM("altronix-trove2m2", Math.ceil(controllersNeeded / 4));
+    }
+    addToBOM("hid-signo-40", doors);
+    if (preset === "rim_exit_strike") {
+      addToBOM("hes-9600-surface-strike", doors);
+      addToBOM("gri-180-12-dps", doors);
+    } else if (preset === "perimeter_maglock") {
+      addToBOM("securitron-m62-maglock", doors);
+      addToBOM("sentrol-1078c-dps", doors);
+    } else {
+      addToBOM("hes-1006-electric-strike", doors);
+      addToBOM("gri-180-12-dps", doors);
+    }
+    addToBOM("bosch-ds160-rex", doors);
+  }
+
+  if (typeof showToast === "function") {
+    showToast(`Added ${doors}-Door Access Control Package (${preset.replace(/_/g, " ")}) to BOM.`, "success");
+  }
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.addDoorPackageToBom = addDoorPackageToBom;
 
 // -----------------------------------------------------------
 // Faceted Filter Interactions
@@ -1166,7 +1417,22 @@ function toggleFilterItem(type, val) {
     selectedAccTypes = selectedAccTypes.includes(val) ? selectedAccTypes.filter(t => t !== val) : [...selectedAccTypes, val];
   } else if (type === "cableRating") {
     selectedCableRatings = selectedCableRatings.includes(val) ? selectedCableRatings.filter(r => r !== val) : [...selectedCableRatings, val];
+  } else if (type === "camVendor") {
+    selectedCamVendors = selectedCamVendors.includes(val) ? selectedCamVendors.filter(v => v !== val) : [...selectedCamVendors, val];
+  } else if (type === "camFormFactor") {
+    selectedCamFormFactors = selectedCamFormFactors.includes(val) ? selectedCamFormFactors.filter(f => f !== val) : [...selectedCamFormFactors, val];
+  } else if (type === "camResolution") {
+    selectedCamResolutions = selectedCamResolutions.includes(val) ? selectedCamResolutions.filter(r => r !== val) : [...selectedCamResolutions, val];
+  } else if (type === "acsVendor") {
+    selectedAcsVendors = selectedAcsVendors.includes(val) ? selectedAcsVendors.filter(v => v !== val) : [...selectedAcsVendors, val];
+  } else if (type === "acsType") {
+    selectedAcsControllerTypes = selectedAcsControllerTypes.includes(val) ? selectedAcsControllerTypes.filter(t => t !== val) : [...selectedAcsControllerTypes, val];
+  } else if (type === "srvVendor") {
+    selectedSrvVendors = selectedSrvVendors.includes(val) ? selectedSrvVendors.filter(v => v !== val) : [...selectedSrvVendors, val];
+  } else if (type === "srvRackUnit") {
+    selectedSrvRackUnits = selectedSrvRackUnits.includes(val) ? selectedSrvRackUnits.filter(u => u !== val) : [...selectedSrvRackUnits, val];
   }
+  if (typeof buildSidebarFilters === "function") buildSidebarFilters();
   runActiveFilter();
 }
 
@@ -1285,7 +1551,21 @@ function runActiveFilter() {
           requireCableShielded,
           selectedDacLength,
           selectedPatchCordLength,
-          requireEtherlighting
+          requireEtherlighting,
+          selectedCamVendors,
+          selectedCamFormFactors,
+          selectedCamResolutions,
+          requireCamAnalytics,
+          requireCamVandal,
+          requireCamTaa,
+          selectedAcsVendors,
+          selectedAcsControllerTypes,
+          selectedAcsPowerSource,
+          requireAcsOsdp,
+          selectedSrvVendors,
+          selectedSrvRackUnits,
+          minSrvStorageTb,
+          requireSrvDualPsu
         })
       : (activeSearchQuery && typeof matchesSearchTokens === "function")
         ? rawDataset.filter(item => matchesSearchTokens(item, activeSearchQuery))

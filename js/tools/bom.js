@@ -336,6 +336,14 @@ function setItemLocation(instanceId, combinedKey) {
     item.rackSlot = null; // Unslot from physical rail to avoid collisions in the new rack
     item.rackU = null;
 
+    // Propagate location update to any child accessories/modules/licenses
+    projectBOM.forEach(ch => {
+      if (ch.parentInstanceId === item.instanceId) {
+        ch.closetName = normalized;
+        ch.rackId = normalized;
+      }
+    });
+
     FacilityStore.notifyWorkspaceChange();
     showToast(normalized === FacilityStore.UNASSIGNED ? `Moved ${item.model} to Unassigned Staging` : `Moved ${item.model} to ${normalized}`);
   }
@@ -543,6 +551,8 @@ function addToProjectBOM(id, targetLocation = null) {
       msrp: mod.msrp,
       poeBudget: 0,
       baseWatts: 15,
+      closetName: assignedLoc,
+      rackId: assignedLoc,
       qty: qtyToAdd
     });
   }
@@ -564,6 +574,8 @@ function addToProjectBOM(id, targetLocation = null) {
         msrp: lic.msrp,
         poeBudget: 0,
         baseWatts: 0,
+        closetName: assignedLoc,
+        rackId: assignedLoc,
         qty: qtyToAdd
       });
     }
@@ -584,6 +596,8 @@ function addToProjectBOM(id, targetLocation = null) {
       msrp: psu.msrp,
       poeBudget: 0,
       baseWatts: 0,
+      closetName: assignedLoc,
+      rackId: assignedLoc,
       qty: 1
     });
   }
@@ -605,6 +619,8 @@ function addToProjectBOM(id, targetLocation = null) {
       msrp: fan.msrp || 49,
       poeBudget: 0,
       baseWatts: 2,
+      closetName: assignedLoc,
+      rackId: assignedLoc,
       qty: 1
     });
   }
@@ -692,6 +708,8 @@ function addToProjectBOM(id, targetLocation = null) {
       msrp: psu.msrp,
       poeBudget: 0,
       baseWatts: 0,
+      closetName: assignedLoc,
+      rackId: assignedLoc,
       qty: 1
     });
   }
@@ -979,6 +997,8 @@ function applyManagementSubscription(instanceId, profileKey, term) {
         msrp: termEntry.msrp,
         poeBudget: 0,
         baseWatts: 0,
+        closetName: sw.closetName,
+        rackId: sw.rackId,
         qty: sw.qty || 1
       });
     }
@@ -1048,6 +1068,8 @@ function applyStackCabling(item) {
       baseWatts: 0,
       stackCableLength: stackCableLen,
       uDiff: stackSpanU,
+      closetName: item.closetName,
+      rackId: item.rackId,
       qty: item.stackedUnits
     });
 
@@ -1247,6 +1269,8 @@ function autoResolveUplinks() {
           msrp: dacData.msrp,
           poeBudget: 0,
           baseWatts: 0,
+          closetName: sw.closetName,
+          rackId: sw.rackId,
           qty: linksNeeded
         });
         dacCount += linksNeeded;
@@ -1268,6 +1292,8 @@ function autoResolveUplinks() {
           msrp: opticData.msrp,
           poeBudget: 0,
           baseWatts: 2,
+          closetName: sw.closetName,
+          rackId: sw.rackId,
           qty: transceiversQty
         });
         opticPairsCount += linksNeeded;
@@ -1570,10 +1596,16 @@ function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = 
   showToast(`Added ${dev.model} to quote`);
 }
 
-function addWirelessToBOM(radioId, isMatchedPair = false) {
+function addWirelessToBOM(radioId, isMatchedPair = false, targetLocation = null) {
   const radio = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(radioId) : null) ||
                 (typeof WIRELESS_DATABASE !== "undefined" ? WIRELESS_DATABASE : []).find(r => r.id === radioId || r.sku === radioId);
   if (!radio) return;
+
+  // Support legacy calls where 2nd arg was a location string
+  if (typeof isMatchedPair === "string") {
+    targetLocation = isMatchedPair;
+    isMatchedPair = false;
+  }
 
   const precChecked = document.getElementById(`wl-prec-${radio.id}`)?.checked;
   const surgeChecked = document.getElementById(`wl-surge-${radio.id}`)?.checked;
@@ -1588,6 +1620,10 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
       defaultClosetA = locs.find(l => l.includes("MDF")) || locs[0];
       defaultClosetB = locs.find(l => l.toLowerCase().includes("pole") || l.includes("IDF")) || locs[0];
     }
+  }
+  if (targetLocation && targetLocation !== "new_location") {
+    const normLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
+    defaultClosetB = normLoc;
   }
 
   const rolesToCreate = isMatchedPair 
@@ -1645,6 +1681,8 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
         msrp: acc.msrp,
         poeBudget: 0,
         baseWatts: 0,
+        closetName: roleConfig.defaultCloset,
+        rackId: roleConfig.defaultCloset,
         qty: 1
       });
     }
@@ -1662,6 +1700,8 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
         msrp: acc.msrp,
         poeBudget: 0,
         baseWatts: 0,
+        closetName: roleConfig.defaultCloset,
+        rackId: roleConfig.defaultCloset,
         qty: 1
       });
     }
@@ -1679,6 +1719,8 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
         msrp: ant.msrp,
         poeBudget: 0,
         baseWatts: 0,
+        closetName: roleConfig.defaultCloset,
+        rackId: roleConfig.defaultCloset,
         qty: 1
       });
     }
@@ -1696,6 +1738,8 @@ function addWirelessToBOM(radioId, isMatchedPair = false) {
         msrp: lic.msrp,
         poeBudget: 0,
         baseWatts: 0,
+        closetName: roleConfig.defaultCloset,
+        rackId: roleConfig.defaultCloset,
         qty: 1
       });
     }
@@ -2097,7 +2141,9 @@ function updateBOMView() {
 
   let totalUnits = 0, totalPoE = 0, totalMSRP = 0;
   projectBOM.forEach(item => {
-    totalUnits += item.qty;
+    if (!item.parentInstanceId) {
+      totalUnits += item.qty;
+    }
     totalPoE += ((item.poeBudget || 0) * item.qty);
     totalMSRP += (item.msrp * item.qty);
   });
@@ -2349,6 +2395,8 @@ function renderBomTableRow(item) {
   const otherChildItems = hasModularBay ? childItems.filter(ch => ch.role !== "Uplink Module") : childItems;
 
   const totalItemCost = (item.msrp || 0) * (item.qty || 1);
+  const childCost = childItems.reduce((sum, ch) => sum + ((ch.msrp || 0) * (ch.qty || 1)), 0);
+  const totalRowCost = totalItemCost + childCost;
   const isStackable = item.canStack || item.role === "Access" || item.role === "Aggregation";
   const isStack = isStackable && item.stackedUnits >= 2;
 
@@ -2555,8 +2603,8 @@ function renderBomTableRow(item) {
         <div class="space-y-1.5">
           <div class="flex items-center gap-3">
             <div>
-              <div class="text-sm font-mono font-bold text-emerald-400 tracking-tight">$${totalItemCost.toLocaleString()}</div>
-              <div class="text-[10px] text-slate-400 font-mono">($${(item.msrp || 0).toLocaleString()} ea)</div>
+              <div class="text-sm font-mono font-bold text-emerald-400 tracking-tight" title="${childCost > 0 ? `Hardware: $${totalItemCost.toLocaleString()} + Attached Options: $${childCost.toLocaleString()}` : ''}">$${totalRowCost.toLocaleString()}</div>
+              <div class="text-[10px] text-slate-400 font-mono">($${(item.msrp || 0).toLocaleString()} ea${childCost > 0 ? ` + $${childCost.toLocaleString()} opts` : ''})</div>
             </div>
 
             <!-- Qty Stepper -->
@@ -3445,12 +3493,22 @@ function compileProjectEngineeringData() {
   // Structured Cabling Per Space
   const cablingSchedule = [];
   const dropMap = {};
+  const footageMap = {};
+  const allFacilityClosets = (typeof getAllClosetsAcrossFacility === "function") ? getAllClosetsAcrossFacility() : [];
   if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
     facilityFloors.forEach(fl => {
+      const floorClosets = (fl.nodes || []).filter(cn => cn.type === "closet");
       (fl.nodes || []).forEach(n => {
         if (n.type !== "closet") {
-          const target = n.assignedCloset || n.closetId || "MDF";
+          let closetNode = allFacilityClosets.find(c => c.id === n.assignedClosetId) || floorClosets.find(c => c.id === n.assignedClosetId) || floorClosets[0];
+          const rawTarget = closetNode ? closetNode.name : (n.assignedCloset || n.closetId || "MDF");
+          const parsedTarget = (typeof FacilityStore !== "undefined" && typeof FacilityStore.parse === "function")
+            ? FacilityStore.parse(rawTarget).spaceName
+            : rawTarget.split("•")[0].trim();
+          const target = parsedTarget || "MDF";
           dropMap[target] = (dropMap[target] || 0) + 1;
+          const runFt = (n.calculatedRun && n.calculatedRun.totalFt) ? n.calculatedRun.totalFt : 150;
+          footageMap[target] = (footageMap[target] || 0) + runFt;
         }
       });
     });
@@ -3463,7 +3521,7 @@ function compileProjectEngineeringData() {
     const pp24 = remainder > 24 ? 0 : (remainder > 0 ? 1 : 0);
     const effectivePP48 = remainder > 24 ? pp48 + 1 : pp48;
     const totalPanels = effectivePP48 + pp24;
-    const estFootage = drops * 150;
+    const estFootage = footageMap[sp.name] || footageMap[sp.id] || (drops * 150);
 
     let fiberLinks = 0;
     if (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) {

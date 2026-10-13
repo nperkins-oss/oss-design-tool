@@ -26,6 +26,7 @@ const ACCESS_CONTROL_DATABASE = [
     supportedEngines: ["Lenel OnGuard", "Software House C•CURE", "Genetec Synergis", "Avigilon Unity", "Gallagher"],
     msrp: 1450,
     taa: true,
+    datasheetPath: "Datasheets/Access Control/Mercury/Mercury LP1502 - Datasheet.pdf",
     keyFeatures: [
       "Open-architecture intelligent controller supporting industry-standard OSDP v2 secure readers",
       "Direct PoE+ (802.3at) powered: supplies power to logic board and 2x 12VDC electric door strikes",
@@ -53,6 +54,7 @@ const ACCESS_CONTROL_DATABASE = [
     supportedEngines: ["Lenel OnGuard", "Software House C•CURE", "Genetec Synergis", "Avigilon Unity"],
     msrp: 680,
     taa: true,
+    datasheetPath: "Datasheets/Access Control/Mercury/Mercury MR52-S3 - Datasheet.pdf",
     keyFeatures: [
       "2-Door / 4-Reader expansion sub-controller connecting via multi-drop RS-485 to LP1502/LP2500 master",
       "High-security OSDP v2 encrypted reader channels eliminating card skimming vulnerabilities",
@@ -80,6 +82,7 @@ const ACCESS_CONTROL_DATABASE = [
     supportedEngines: ["Axis Camera Station Access", "Genetec Synergis", "Milestone XProtect Access"],
     msrp: 890,
     taa: true,
+    datasheetPath: "Datasheets/Access Control/Axis/Axis A1001 - Datasheet.pdf",
     keyFeatures: [
       "Native IP-to-the-door edge controller powered completely over 802.3at PoE+",
       "Direct VMS integration: links video camera recordings with door access badge events in real-time",
@@ -99,16 +102,178 @@ const ACCESS_CONTROL_DATABASE = [
     readerProtocols: ["OSDP v2 Secure Channel", "Wiegand"],
     powerSource: "controller_dc",
     powerConsumptionWatts: 2.5,
+    voltageVdc: "12VDC",
     supportedCredentials: ["iCLASS Seos", "iCLASS", "Mifare DESFire EV2/EV3", "HID Mobile Access (BLE/NFC)"],
     mounting: "Single Gang Wallbox",
     ipRating: "IP65 Weatherproof",
     msrp: 320,
     taa: true,
+    datasheetPath: "Datasheets/Access Control/HID/HID Signo 40 - Datasheet.pdf",
     keyFeatures: [
       "Universal smart card & mobile credential reader supporting Bluetooth Low Energy (BLE) and NFC",
       "Bi-directional OSDP v2 Secure Channel encryption prevents man-in-the-middle sniffing",
       "Intelligent power management saves up to 43% power during standby periods",
       "Rugged polycarbonate enclosure rated IP65 for indoor or outdoor perimeter gates"
+    ]
+  },
+  {
+    id: "hes-9600-rim-strike",
+    vendor: "HES (ASSA ABLOY)",
+    model: "HES 9600 Surface-Mounted Rim Exit Electric Strike",
+    sku: "9600-630",
+    role: "Access Control",
+    category: "access_control",
+    controllerType: "door_lock",
+    lockType: "electric_strike",
+    doorCapacity: 1,
+    powerSource: "controller_dc",
+    voltageVdc: "12/24VDC Dual Voltage",
+    currentDrawMa: "450mA @ 12VDC / 250mA @ 24VDC",
+    powerConsumptionWatts: 5.4,
+    holdingForceLbs: 2000,
+    operationMode: "Field Selectable Fail-Secure / Fail-Safe",
+    mounting: "Surface-Mount (No Frame Cutting Required)",
+    finish: "630 Satin Stainless Steel",
+    certifications: ["UL 1034 Burglary-Resistant", "UL 294 Listed", "ANSI/BHMA A156.31 Grade 1"],
+    msrp: 525,
+    taa: true,
+    datasheetPath: "Datasheets/Access Control/HES/HES 9600 - Datasheet.pdf",
+    keyFeatures: [
+      "Surface-mounted electric strike designed for rim exit crash bars up to 3/4\" throw pullman latch",
+      "Completely surface-mounted onto metal or wood jambs — zero frame cutting required",
+      "2,000 lbs static strength and 120 ft-lbs dynamic strength (ANSI/BHMA A156.31 Grade 1)",
+      "Field-selectable Fail-Secure or Fail-Safe and dual-voltage 12/24VDC (450mA @ 12VDC)"
+    ]
+  },
+  {
+    id: "hes-1006-mortise-strike",
+    vendor: "HES (ASSA ABLOY)",
+    model: "HES 1006 Series Heavy-Duty Electric Strike (Mortise/Cylindrical)",
+    sku: "1006CLB-630",
+    role: "Access Control",
+    category: "access_control",
+    controllerType: "door_lock",
+    lockType: "electric_strike",
+    doorCapacity: 1,
+    powerSource: "controller_dc",
+    voltageVdc: "12/24VDC Dual Voltage",
+    currentDrawMa: "450mA @ 12VDC / 250mA @ 24VDC",
+    powerConsumptionWatts: 5.4,
+    holdingForceLbs: 3000,
+    operationMode: "Field Selectable Fail-Secure / Fail-Safe",
+    mounting: "ANSI Hollow Metal / Wood Jamb Mortise",
+    finish: "630 Satin Stainless Steel",
+    certifications: ["UL 10C 3-Hour Fire-Rated", "UL 1034 Burglary-Resistant", "ANSI/BHMA A156.31 Grade 1"],
+    msrp: 645,
+    taa: true,
+    datasheetPath: "Datasheets/Access Control/HES/HES 1006 - Datasheet.pdf",
+    keyFeatures: [
+      "Strongest electric strike in its class: 3,000 lbs static strength (Fail-Secure) and 3-Hour UL 10C Fire Rating",
+      "Includes Complete Latchbolt & Locking Cam (CLB) faceplates for cylindrical and mortise locksets",
+      "Tested to exceed 1,000,000 cycles of continuous heavy commercial door operation",
+      "Dual-voltage 12/24VDC smart coil (450mA @ 12VDC / 250mA @ 24VDC)"
+    ]
+  },
+  {
+    id: "securitron-m62-maglock",
+    vendor: "Securitron (ASSA ABLOY)",
+    model: "Securitron M62 1,200 lb Weatherproof Magnalock",
+    sku: "M62",
+    role: "Access Control",
+    category: "access_control",
+    controllerType: "door_lock",
+    lockType: "maglock",
+    doorCapacity: 1,
+    powerSource: "external_dc",
+    voltageVdc: "12/24VDC Auto-Sensing",
+    currentDrawMa: "250mA @ 12VDC / 150mA @ 24VDC",
+    powerConsumptionWatts: 3.6,
+    holdingForceLbs: 1200,
+    operationMode: "Fail-Safe (Requires Fire Alarm Drop & REX)",
+    mounting: "Direct / Header Bracket Mount",
+    ipRating: "NEMA 4X / IP66 Weatherproof Potted",
+    certifications: ["UL 10C Fire-Rated Accessory", "UL 294 Listed", "ANSI/BHMA A156.23 Grade 1"],
+    msrp: 690,
+    taa: true,
+    datasheetPath: "Datasheets/Access Control/Securitron/Securitron M62 - Datasheet.pdf",
+    keyFeatures: [
+      "1,200 lbs holding force electromagnetic lock for perimeter gates and high-security hollow metal doors",
+      "Fully sealed weatherproof stainless steel housing (NEMA 4X) for outdoor and harsh industrial environments",
+      "Automatic dual-voltage sensing (12VDC @ 250mA or 24VDC @ 150mA) with instant release circuit (no residual magnetism)",
+      "Requires life-safety Request-to-Exit (REX) and FACP fire relay drop per IBC/NFPA 101"
+    ]
+  },
+  {
+    id: "bosch-ds160-rex-sensor",
+    vendor: "Bosch Security",
+    model: "Bosch DS160 High-Performance Request-to-Exit (REX) PIR Detector",
+    sku: "DS160",
+    role: "Access Control",
+    category: "access_control",
+    controllerType: "rex_sensor",
+    doorCapacity: 1,
+    powerSource: "controller_dc",
+    voltageVdc: "12-30VDC",
+    currentDrawMa: "39mA @ 12VDC",
+    powerConsumptionWatts: 0.5,
+    relayOutputs: 2,
+    mounting: "Header / Ceiling / Wall Mount above Door",
+    certifications: ["UL 294 Listed"],
+    msrp: 135,
+    taa: true,
+    datasheetPath: "Datasheets/Access Control/Bosch/Bosch DS160 - Datasheet.pdf",
+    keyFeatures: [
+      "Industry-standard Request-to-Exit (REX) PIR motion sensor with Sequential Logic Input (SLI) security",
+      "Wrap-around coverage pattern with precise louver mask to prevent false door-forced-open (DFO) alarms",
+      "Dual Form-C 2A latchable relays for simultaneous access control panel REX shunting and maglock release",
+      "Integrated sounder alarm for door-held-open (DHO) local audible warning"
+    ]
+  },
+  {
+    id: "gri-180-12-dps-contact",
+    vendor: "George Risk Industries (GRI)",
+    model: "GRI 180-12 3/4\" Recessed Steel Door Position Switch (DPS)",
+    sku: "180-12",
+    role: "Access Control",
+    category: "access_control",
+    controllerType: "dps_contact",
+    doorCapacity: 1,
+    powerSource: "passive",
+    powerConsumptionWatts: 0,
+    switchType: "Closed Loop (N.C. Reed Switch, 1/2\" Gap on Steel)",
+    mounting: "3/4\" Recessed Hollow Metal Frame",
+    certifications: ["UL 10C Fire-Rated", "UL 634 Listed"],
+    msrp: 28,
+    taa: true,
+    datasheetPath: "Datasheets/Access Control/GRI/GRI 180-12 - Datasheet.pdf",
+    keyFeatures: [
+      "Recessed 3/4\" diameter magnetic reed contact specifically engineered for commercial steel door frames",
+      "Maintains a wide 1/2\"+ make/break gap even in heavy ferrous steel frames without demagnetization",
+      "UL 10C Positive Pressure Fire-Rated for hollow metal fire doors",
+      "12\" #22 AWG jacketed leads with ruggedized self-locking retaining ribs"
+    ]
+  },
+  {
+    id: "sentrol-1078c-dps-contact",
+    vendor: "Interlogix / Sentrol",
+    model: "Sentrol 1078C 3/4\" Steel Door Recessed Magnetic Contact",
+    sku: "1078C-N",
+    role: "Access Control",
+    category: "access_control",
+    controllerType: "dps_contact",
+    doorCapacity: 1,
+    powerSource: "passive",
+    powerConsumptionWatts: 0,
+    switchType: "SPST Closed Loop (3/8\" Gap on Steel)",
+    mounting: "3/4\" Recessed Steel Door & Frame",
+    certifications: ["UL 634 Listed"],
+    msrp: 26,
+    taa: true,
+    datasheetPath: "Datasheets/Access Control/Sentrol/Sentrol 1078C - Datasheet.pdf",
+    keyFeatures: [
+      "Heavy-duty unibody recessed magnetic door position contact with ruggedized ribs for steel door frames",
+      "Encapsulated hermetically sealed reed switch prevents moisture and corrosion failure",
+      "Special Rare-Earth magnet design resists flux shunt on thick hollow metal frames"
     ]
   }
 ];
@@ -116,3 +281,4 @@ const ACCESS_CONTROL_DATABASE = [
 if (typeof window !== "undefined") {
   window.ACCESS_CONTROL_DATABASE = ACCESS_CONTROL_DATABASE;
 }
+

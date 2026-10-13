@@ -7,14 +7,19 @@
  * Standard Media Types & Maximum Theoretical Wire Speeds
  */
 const PORT_MEDIA_TYPES = {
+  rj45_100m: { id: "rj45_100m", label: "100M Fast Ethernet Copper", speed: "100M", speedMbps: 100, connector: "RJ-45", defaultPoe: "af" },
   rj45_1g: { id: "rj45_1g", label: "1G RJ-45 Copper", speed: "1G", speedMbps: 1000, connector: "RJ-45", defaultPoe: "at" },
+  rj45_mgig: { id: "rj45_mgig", label: "2.5G/5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
   rj45_mgeg: { id: "rj45_mgig", label: "2.5G/5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
+  "rj45_2.5g": { id: "rj45_2.5g", label: "2.5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
+  rj45_5g: { id: "rj45_5g", label: "5G Multi-Gig Copper", speed: "5G", speedMbps: 5000, connector: "RJ-45", defaultPoe: "bt60" },
   rj45_10g: { id: "rj45_10g", label: "10G RJ-45 Copper", speed: "10G", speedMbps: 10000, connector: "RJ-45", defaultPoe: "bt90" },
   sfp_1g: { id: "sfp_1g", label: "1G SFP Optical Cage", speed: "1G", speedMbps: 1000, connector: "SFP", defaultPoe: null },
   sfp_plus_10g: { id: "sfp_plus_10g", label: "10G SFP+ Optical Cage", speed: "10G", speedMbps: 10000, connector: "SFP+", defaultPoe: null },
   sfp28_25g: { id: "sfp28_25g", label: "25G SFP28 Optical Cage", speed: "25G", speedMbps: 25000, connector: "SFP28", defaultPoe: null },
   qsfp_plus_40g: { id: "qsfp_plus_40g", label: "40G QSFP+ Optical Cage", speed: "40G", speedMbps: 40000, connector: "QSFP+", defaultPoe: null },
   qsfp28_100g: { id: "qsfp28_100g", label: "100G QSFP28 Optical Cage", speed: "100G", speedMbps: 100000, connector: "QSFP28", defaultPoe: null },
+  dac_copper: { id: "dac_copper", label: "Direct Attach Copper (DAC)", speed: "10G", speedMbps: 10000, connector: "SFP+ DAC", defaultPoe: null },
   terminal_block: { id: "terminal_block", label: "DC Terminal Block", speed: "0G", speedMbps: 0, connector: "Terminal", defaultPoe: null }
 };
 
@@ -950,11 +955,13 @@ const PortEngine = {
       }
     }
 
-    // If PoE is needed, filter for ports with PoE capability
+    // If PoE is needed, filter for ports with PoE capability and prioritize ports meeting device wattage demand
     if (needsPoe) {
       const poeCandidates = candidates.filter(p => p.poeStandard !== null);
       if (poeCandidates.length > 0) {
-        candidates = poeCandidates;
+        const devWatts = parseFloat(deviceItem.powerConsumptionWatts || deviceItem.poeWattsDrawn || deviceItem.maxPowerWatts || 15.0);
+        const sufficientPoeCandidates = poeCandidates.filter(p => (p.maxPoeWatts || 30) >= devWatts);
+        candidates = sufficientPoeCandidates.length > 0 ? sufficientPoeCandidates : poeCandidates;
       }
     }
 

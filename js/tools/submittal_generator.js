@@ -486,6 +486,7 @@ function printSubmittalPackage() {
     const fieldLoc = r.roomName || r.fieldLocation || r.floorName || 'Field Drop';
     const panelCode = r.panelTag || r.patchPanelCode || 'PP01';
     const panelPort = r.panelPort ?? r.patchPanelPort ?? '01';
+    const panelDisplay = String(panelCode).includes('-P') ? String(panelCode) : `${panelCode}-P${String(panelPort)}`;
     const runFt = r.measuredFt ?? r.runFootage ?? 0;
     const cutFt = r.cutLengthFt ?? r.totalCutLength ?? (runFt + (r.serviceLoopFt || 25));
     const swPort = r.switchPortTag || r.switchPort || 'Unassigned';
@@ -495,7 +496,7 @@ function printSubmittalPackage() {
         <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace; font-weight: bold; color: #2b6cb0;">${escapeHTML(r.cableId)}</td>
         <td style="padding: 4px; border: 1px solid #ddd;">${escapeHTML(devLabel)}</td>
         <td style="padding: 4px; border: 1px solid #ddd;">${escapeHTML(fieldLoc)}</td>
-        <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace;">${escapeHTML(r.closetName)} &bull; ${escapeHTML(panelCode)}-P${escapeHTML(String(panelPort))}</td>
+        <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace;">${escapeHTML(r.closetName)} &bull; ${escapeHTML(panelDisplay)}</td>
         <td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace;">${runFt} ft</td>
         <td style="padding: 4px; border: 1px solid #ddd; text-align: right; font-family: monospace; font-weight: bold;">${cutFt} ft</td>
         <td style="padding: 4px; border: 1px solid #ddd; font-family: monospace; font-size: 8pt;">${escapeHTML(swPort)}</td>

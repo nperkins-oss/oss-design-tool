@@ -509,11 +509,15 @@ const FacilityStore = {
 
     // Delete or reassign enclosures belonging to this space
     let encs = this.getEnclosures();
+    const deletedEncIds = new Set();
     if (fallbackSpaceId) {
       encs.forEach(e => {
         if (e.spaceId === spaceId) e.spaceId = fallbackSpaceId;
       });
     } else {
+      encs.forEach(e => {
+        if (e.spaceId === spaceId) deletedEncIds.add(e.id);
+      });
       encs = encs.filter(e => e.spaceId !== spaceId);
     }
     this.saveEnclosures(encs);
@@ -521,16 +525,21 @@ const FacilityStore = {
     spaces = spaces.filter(s => s.id !== spaceId);
     this.saveSpaces(spaces);
 
-    // Reassign orphan hardware in this space to Unassigned
+    // Reassign orphan hardware in this space to Unassigned and purge deleted enclosure frames
     if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
-      projectBOM.forEach(item => {
+      for (let i = projectBOM.length - 1; i >= 0; i--) {
+        const item = projectBOM[i];
         const itemLoc = this.normalize(item.closetName || item.rackId);
+        if (item.isEnclosureFrame && (deletedEncIds.has(item.enclosureId) || (!fallbackSpaceId && (itemLoc.startsWith(`${targetSpace.name} •`) || itemLoc === targetSpace.name)))) {
+          projectBOM.splice(i, 1);
+          continue;
+        }
         if (itemLoc.startsWith(`${targetSpace.name} •`) || itemLoc === targetSpace.name) {
           item.closetName = this.UNASSIGNED;
           item.rackId = this.UNASSIGNED;
           item.rackSlot = null;
         }
-      });
+      }
     }
 
     if (typeof renderBOM === "function") renderBOM();
@@ -981,19 +990,24 @@ const FacilityStore = {
     const targetEnc = encs.find(e => e.id === enclosureId);
     if (!targetEnc) return false;
 
-    // Unassign hardware located in this enclosure
+    // Unassign hardware located in this enclosure and remove the enclosure's own BOM frame
     const spaces = this.getSpaces();
     const space = spaces.find(s => s.id === targetEnc.spaceId);
     const fullLoc = space ? `${space.name} • ${targetEnc.name}` : null;
     if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
-      projectBOM.forEach(item => {
+      for (let i = projectBOM.length - 1; i >= 0; i--) {
+        const item = projectBOM[i];
         const itemLoc = this.normalize(item.closetName || item.rackId);
+        if (item.isEnclosureFrame && (item.enclosureId === enclosureId || (fullLoc && itemLoc === fullLoc))) {
+          projectBOM.splice(i, 1);
+          continue;
+        }
         if ((fullLoc && itemLoc === fullLoc) || item.rackId === enclosureId || item.rackId === targetEnc.name) {
           item.closetName = this.UNASSIGNED;
           item.rackId = this.UNASSIGNED;
           item.rackSlot = null;
         }
-      });
+      }
     }
 
     encs = encs.filter(e => e.id !== enclosureId);
@@ -1546,16 +1560,17 @@ const FacilityStore = {
 
     items.forEach(item => {
       const qty = parseInt(item.qty, 10) || 1;
-      const units = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-      const baseWatts = (parseFloat(item.baseWatts) || 0) * units;
-      const poeBudget = (parseFloat(item.poeBudget) || 0) * units;
+      const isStacked = item.stackedUnits && item.stackedUnits >= 2;
+      const effectiveUnits = isStacked ? Math.max(item.stackedUnits, qty) : qty;
+      const baseWatts = (parseFloat(item.baseWatts) || 0) * effectiveUnits;
+      const poeBudget = (parseFloat(item.poeBudget) || 0) * effectiveUnits;
       const consumedPoE = parseFloat(item.consumedPoEWatts) || 0;
-      const ru = (parseInt(item.rackUnits, 10) || 0) * units;
+      const ru = (parseInt(item.rackUnits, 10) || 0) * effectiveUnits;
 
-      totalWatts += (baseWatts + consumedPoE) * qty;
-      totalPoEBudget += poeBudget * qty;
-      totalPoEDelivered += consumedPoE * qty;
-      totalRuOccupied += ru * qty;
+      totalWatts += baseWatts + consumedPoE;
+      totalPoEBudget += poeBudget;
+      totalPoEDelivered += consumedPoE;
+      totalRuOccupied += ru;
     });
 
     const btuPerHour = Math.round(totalWatts * 3.412142);
@@ -2499,6 +2514,13 @@ function assignHardwareToLocation(instanceId, targetLoc) {
   item.rackId = normalized;
   item.rackSlot = null;
   item.rackU = null;
+
+  projectBOM.forEach(ch => {
+    if (ch.parentInstanceId === instanceId) {
+      ch.closetName = normalized;
+      ch.rackId = normalized;
+    }
+  });
 
   if (typeof autoSelectMountingForHost === "function") {
     autoSelectMountingForHost(item, normalized);

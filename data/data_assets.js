@@ -6845,6 +6845,86 @@ const CATALOG_ASSETS = {
   "AP98115": {
     "datasheetPath": "Datasheets/Infrastructure/APC/APC AP98115 - Tech Specs.pdf",
     "image": "assets/images/products/apc_ap98115.webp"
+  },
+  "mercury-lp1502-poe-controller": {
+    "datasheetPath": "Datasheets/Access Control/Mercury/Mercury LP1502 - Datasheet.pdf",
+    "image": null
+  },
+  "LP1502-POE": {
+    "datasheetPath": "Datasheets/Access Control/Mercury/Mercury LP1502 - Datasheet.pdf",
+    "image": null
+  },
+  "mercury-mr52-s3-subcontroller": {
+    "datasheetPath": "Datasheets/Access Control/Mercury/Mercury MR52-S3 - Datasheet.pdf",
+    "image": null
+  },
+  "MR52-S3": {
+    "datasheetPath": "Datasheets/Access Control/Mercury/Mercury MR52-S3 - Datasheet.pdf",
+    "image": null
+  },
+  "axis-a1001-network-controller": {
+    "datasheetPath": "Datasheets/Access Control/Axis/Axis A1001 - Datasheet.pdf",
+    "image": null
+  },
+  "0540-001": {
+    "datasheetPath": "Datasheets/Access Control/Axis/Axis A1001 - Datasheet.pdf",
+    "image": null
+  },
+  "hid-signo-40-smart-reader": {
+    "datasheetPath": "Datasheets/Access Control/HID/HID Signo 40 - Datasheet.pdf",
+    "image": null
+  },
+  "40NKS-00-000000": {
+    "datasheetPath": "Datasheets/Access Control/HID/HID Signo 40 - Datasheet.pdf",
+    "image": null
+  },
+  "hes-9600-rim-strike": {
+    "datasheetPath": "Datasheets/Access Control/HES/HES 9600 - Datasheet.pdf",
+    "image": null
+  },
+  "9600-630": {
+    "datasheetPath": "Datasheets/Access Control/HES/HES 9600 - Datasheet.pdf",
+    "image": null
+  },
+  "hes-1006-mortise-strike": {
+    "datasheetPath": "Datasheets/Access Control/HES/HES 1006 - Datasheet.pdf",
+    "image": null
+  },
+  "1006CLB-630": {
+    "datasheetPath": "Datasheets/Access Control/HES/HES 1006 - Datasheet.pdf",
+    "image": null
+  },
+  "securitron-m62-maglock": {
+    "datasheetPath": "Datasheets/Access Control/Securitron/Securitron M62 - Datasheet.pdf",
+    "image": null
+  },
+  "M62": {
+    "datasheetPath": "Datasheets/Access Control/Securitron/Securitron M62 - Datasheet.pdf",
+    "image": null
+  },
+  "bosch-ds160-rex-sensor": {
+    "datasheetPath": "Datasheets/Access Control/Bosch/Bosch DS160 - Datasheet.pdf",
+    "image": null
+  },
+  "DS160": {
+    "datasheetPath": "Datasheets/Access Control/Bosch/Bosch DS160 - Datasheet.pdf",
+    "image": null
+  },
+  "gri-180-12-dps-contact": {
+    "datasheetPath": "Datasheets/Access Control/GRI/GRI 180-12 - Datasheet.pdf",
+    "image": null
+  },
+  "180-12": {
+    "datasheetPath": "Datasheets/Access Control/GRI/GRI 180-12 - Datasheet.pdf",
+    "image": null
+  },
+  "sentrol-1078c-dps-contact": {
+    "datasheetPath": "Datasheets/Access Control/Sentrol/Sentrol 1078C - Datasheet.pdf",
+    "image": null
+  },
+  "1078C-N": {
+    "datasheetPath": "Datasheets/Access Control/Sentrol/Sentrol 1078C - Datasheet.pdf",
+    "image": null
   }
 };
 

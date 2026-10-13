@@ -70,8 +70,107 @@ const DEFAULT_PROJECT_STANDARDS = {
         uplinks: { label: "Inter-Switch & Network Uplinks", runColor: "Yellow", runCategory: "C6A-CMP-1K-BL", patchColor: "Yellow", patchLength: 1.0, patchType: "slim" }
       }
     }
+  },
+  network: {
+    vlanMode: "none", // "none" (Flat / Untagged Default) | "segmented" (802.1Q Segmented VLANs)
+    cameraVlan: 20,
+    accessVlan: 30,
+    voiceVlan: 40,
+    wirelessVlan: 50,
+    dataVlan: 10,
+    mgmtVlan: 99,
+    nativeVlan: 1
   }
 };
+
+/**
+ * Resolves the structured VLAN ID and Label for a device or switch port based on project standards.
+ * By default, projects use `vlanMode: "none"` (No VLANs / Flat Untagged Network).
+ */
+function getProjectVlanDetailsForDevice(item, portObj = null, isUplink = false) {
+  if (portObj && portObj.vlan && portObj.vlan !== "auto") {
+    const rawVlan = String(portObj.vlan).trim();
+    if (rawVlan.toLowerCase() === "untagged" || rawVlan.toLowerCase() === "none" || rawVlan === "1") {
+      return { vlanId: 1, vlanName: "Untagged (Flat)", formatted: "Untagged (Flat)" };
+    }
+    if (rawVlan.toLowerCase() === "trunk") {
+      return { vlanId: 1, vlanName: "802.1Q Trunk", formatted: "802.1Q Trunk" };
+    }
+    const num = parseInt(rawVlan, 10);
+    if (!isNaN(num)) {
+      return { vlanId: num, vlanName: `Custom VLAN ${num}`, formatted: `VLAN ${num}` };
+    }
+    return { vlanId: 1, vlanName: rawVlan, formatted: rawVlan };
+  }
+
+  const defaults = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : DEFAULT_PROJECT_STANDARDS;
+  const net = defaults?.network || DEFAULT_PROJECT_STANDARDS.network;
+
+  // Default behavior: No VLANs ("none") -> Flat / Untagged Network
+  if (!net || net.vlanMode !== "segmented") {
+    return {
+      vlanId: net?.nativeVlan || 1,
+      vlanName: isUplink ? "Untagged Uplink (Flat)" : "Untagged (Flat Network)",
+      formatted: "Untagged (Flat)"
+    };
+  }
+
+  if (isUplink) {
+    return {
+      vlanId: net.nativeVlan || 1,
+      vlanName: "802.1Q Infrastructure Trunk",
+      formatted: `Trunk (Native ${net.nativeVlan || 1})`
+    };
+  }
+
+  const key = getDeviceCablingKey(item);
+  if (key === "cameras") {
+    const id = parseInt(net.cameraVlan, 10) || 20;
+    return { vlanId: id, vlanName: "Surveillance (CCTV)", formatted: `VLAN ${id} (CCTV)` };
+  }
+  if (key === "accessControl") {
+    const id = parseInt(net.accessVlan, 10) || 30;
+    return { vlanId: id, vlanName: "Access Control (ACS)", formatted: `VLAN ${id} (ACS)` };
+  }
+  if (key === "intercom") {
+    const id = parseInt(net.voiceVlan, 10) || 40;
+    return { vlanId: id, vlanName: "Intercom / SIP (VOIP)", formatted: `VLAN ${id} (SIP)` };
+  }
+  if (key === "wireless") {
+    const id = parseInt(net.wirelessVlan, 10) || 50;
+    return { vlanId: id, vlanName: "Wireless (WLAN)", formatted: `VLAN ${id} (WLAN)` };
+  }
+  if (key === "servers" || key === "uplinks") {
+    const id = parseInt(net.mgmtVlan, 10) || 99;
+    return { vlanId: id, vlanName: "Security Compute / MGMT", formatted: `VLAN ${id} (MGMT)` };
+  }
+  const id = parseInt(net.dataVlan, 10) || 10;
+  return { vlanId: id, vlanName: "Corporate Data", formatted: `VLAN ${id} (DATA)` };
+}
+
+/**
+ * Returns the formatted VLAN string for a device/port (e.g., "Untagged (Flat)" by default, or "VLAN 20 (CCTV)" when segmented)
+ */
+function getProjectVlanForDevice(item, portObj = null, isUplink = false) {
+  return getProjectVlanDetailsForDevice(item, portObj, isUplink).formatted;
+}
+
+function toggleWizardVlanConfigUI(vlanMode) {
+  const segGrid = document.getElementById("wizVlanSegmentGrid");
+  const badge = document.getElementById("wizVlanModeBadge");
+  const isSeg = vlanMode === "segmented";
+  if (segGrid) {
+    segGrid.classList.toggle("hidden", !isSeg);
+  }
+  if (badge) {
+    badge.textContent = isSeg ? "802.1Q SEGMENTED" : "NO VLANS (DEFAULT)";
+    badge.className = isSeg
+      ? "text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/30"
+      : "text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30";
+  }
+}
 
 /**
  * Maps any hardware device or taxonomy node to one of the 7 cabling subsystem keys
@@ -435,6 +534,22 @@ function populateWizardUIFromState(state) {
   const fiberEl = document.getElementById("wizFiberType");
   if (fiberEl) fiberEl.value = cabling.fiberType || "mmf";
 
+  // Network VLAN Architecture (Default: "none" / No VLANs)
+  const net = state.network || DEFAULT_PROJECT_STANDARDS.network;
+  const vlanMode = net.vlanMode || "none";
+  const vlanModeEl = document.getElementById("wizVlanMode");
+  if (vlanModeEl) vlanModeEl.value = vlanMode;
+  toggleWizardVlanConfigUI(vlanMode);
+
+  const vlanCamEl = document.getElementById("wizVlanCamera");
+  if (vlanCamEl) vlanCamEl.value = String(net.cameraVlan || 20);
+  const vlanAcsEl = document.getElementById("wizVlanAccess");
+  if (vlanAcsEl) vlanAcsEl.value = String(net.accessVlan || 30);
+  const vlanVoiceEl = document.getElementById("wizVlanVoice");
+  if (vlanVoiceEl) vlanVoiceEl.value = String(net.voiceVlan || 40);
+  const vlanMgmtEl = document.getElementById("wizVlanMgmt");
+  if (vlanMgmtEl) vlanMgmtEl.value = String(net.mgmtVlan || 99);
+
   // Per-Device Type Controls
   CABLE_DEVICE_TYPES.forEach(dt => {
     const devConf = byDev[dt.id] || {};
@@ -556,6 +671,19 @@ function updateWizardStateFromUI() {
       defaultPatchType: "slim",
       byDeviceType
     }
+  };
+
+  // Network VLAN Architecture (Default: "none" / No VLANs)
+  const vlanModeVal = document.getElementById("wizVlanMode")?.value || "none";
+  wizardDraftState.network = {
+    vlanMode: vlanModeVal,
+    cameraVlan: parseInt(document.getElementById("wizVlanCamera")?.value, 10) || 20,
+    accessVlan: parseInt(document.getElementById("wizVlanAccess")?.value, 10) || 30,
+    voiceVlan: parseInt(document.getElementById("wizVlanVoice")?.value, 10) || 40,
+    wirelessVlan: 50,
+    dataVlan: 10,
+    mgmtVlan: parseInt(document.getElementById("wizVlanMgmt")?.value, 10) || 99,
+    nativeVlan: 1
   };
 }
 
@@ -744,6 +872,7 @@ function renderProjectDefaultsSummary() {
   const vms = defaults.vms || {};
   const cabling = defaults.cabling || {};
   const lic = defaults.licensing || {};
+  const net = defaults.network || DEFAULT_PROJECT_STANDARDS.network;
 
   const acsBadge = acs.enabled !== false
     ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">ACS: ${escapeHTML(acs.engine || "Genetec")} (${escapeHTML(acs.readerProtocol?.toUpperCase() || "OSDP")})</span>`
@@ -763,6 +892,10 @@ function renderProjectDefaultsSummary() {
 
   const fiberBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">Fiber: ${cabling.fiberType === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'}</span>`;
 
+  const vlanBadge = net.vlanMode === "segmented"
+    ? `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30">VLANs: Segmented (${net.cameraVlan || 20}/${net.accessVlan || 30}/${net.voiceVlan || 40})</span>`
+    : `<span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">VLANs: None (Flat / Untagged)</span>`;
+
   container.innerHTML = `
     <div class="flex items-center justify-between pb-1.5 border-b border-slate-800/80">
       <div class="flex items-center gap-1.5">
@@ -780,6 +913,7 @@ function renderProjectDefaultsSummary() {
       ${vmsBadge}
       ${cableBadge}
       ${fiberBadge}
+      ${vlanBadge}
       <span class="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-500/10 text-purple-400 border border-purple-500/30">Term: ${escapeHTML(lic.globalSelectedTerm || "1YR")}</span>
     </div>
 
@@ -803,6 +937,9 @@ window.CABLE_DEVICE_TYPES = CABLE_DEVICE_TYPES;
 window.DEFAULT_PROJECT_STANDARDS = DEFAULT_PROJECT_STANDARDS;
 window.getDeviceCablingKey = getDeviceCablingKey;
 window.getProjectCablingStandard = getProjectCablingStandard;
+window.getProjectVlanDetailsForDevice = getProjectVlanDetailsForDevice;
+window.getProjectVlanForDevice = getProjectVlanForDevice;
+window.toggleWizardVlanConfigUI = toggleWizardVlanConfigUI;
 window.applyDefaultCableColorToAll = applyDefaultCableColorToAll;
 window.updateCableColorPreviewDot = updateCableColorPreviewDot;
 window.openProjectWizardModal = openProjectWizardModal;

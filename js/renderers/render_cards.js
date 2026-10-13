@@ -979,7 +979,7 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
     } else if (mode === "access_control") {
       if (typeof addAccessDeviceToBOM === "function") addAccessDeviceToBOM(safeId, assignedLoc);
     } else if (mode === "wireless") {
-      if (typeof addWirelessToBOM === "function") addWirelessToBOM(safeId, assignedLoc);
+      if (typeof addWirelessToBOM === "function") addWirelessToBOM(safeId, false, assignedLoc);
       else addOpticsToBOM(safeSku, safeModel, msrp, 1, safeVendor);
     } else {
       // Infrastructure & Interconnect Domain Routing
@@ -1079,13 +1079,39 @@ function renderCardByDomain(item, mode) {
       </div>
     `;
   } else if (item.category === "access_control" || item.role === "Access Control") {
-    specStripHtml = `
-      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
-        <div class="flex justify-between"><span class="text-slate-500">Door Capacity:</span><span class="text-emerald-400 font-bold">${item.doorCapacity || 2} Doors (${item.readerCapacity || 4} Readers)</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Power Delivery:</span><span class="text-amber-300 font-bold">${item.powerConsumptionWatts || 15}W (${item.powerSource === 'poe_switch' ? 'PoE+ 802.3at' : '12-24VDC'})</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Protocols:</span><span class="text-slate-200 font-bold">${(item.readerProtocols || ['OSDP v2']).join(', ')}</span></div>
-      </div>
-    `;
+    if (item.controllerType === "door_lock") {
+      specStripHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Holding Force:</span><span class="text-emerald-400 font-bold">${(item.holdingForceLbs || 2000).toLocaleString()} lbs Static</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Electrical Draw:</span><span class="text-amber-300 font-bold">${escapeHTML(item.currentDrawMa || `${item.powerConsumptionWatts || 5.4}W @ 12/24VDC`)}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Operation Mode:</span><span class="text-slate-200 font-bold truncate max-w-[180px]" title="${escapeHTML(item.operationMode || '')}">${escapeHTML(item.operationMode || 'Fail-Secure / Fail-Safe')}</span></div>
+        </div>
+      `;
+    } else if (item.controllerType === "rex_sensor" || item.controllerType === "dps_contact") {
+      specStripHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Component Role:</span><span class="text-emerald-400 font-bold">${item.controllerType === 'rex_sensor' ? 'Request-to-Exit (REX) PIR' : 'Door Position Switch (DPS)'}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Power / Loop:</span><span class="text-amber-300 font-bold">${escapeHTML(item.currentDrawMa || item.switchType || 'Passive N.C. Reed')}</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Mounting:</span><span class="text-slate-200 font-bold truncate max-w-[180px]">${escapeHTML(item.mounting || 'Door Frame')}</span></div>
+        </div>
+      `;
+    } else if (item.controllerType === "reader") {
+      specStripHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Credentials:</span><span class="text-emerald-400 font-bold">Seos / DESFire EV3 / BLE</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Power Delivery:</span><span class="text-amber-300 font-bold">${item.powerConsumptionWatts || 2.5}W (${escapeHTML(item.voltageVdc || '12VDC')})</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Protocols:</span><span class="text-slate-200 font-bold">${(item.readerProtocols || ['OSDP v2']).join(', ')}</span></div>
+        </div>
+      `;
+    } else {
+      specStripHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Door Capacity:</span><span class="text-emerald-400 font-bold">${item.doorCapacity || 2} Doors (${item.readerCapacity || 4} Readers)</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Power Delivery:</span><span class="text-amber-300 font-bold">${item.powerConsumptionWatts || 15}W (${item.powerSource === 'poe_switch' ? 'PoE+ 802.3at' : '12-24VDC'})</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Protocols:</span><span class="text-slate-200 font-bold">${(item.readerProtocols || ['OSDP v2']).join(', ')}</span></div>
+        </div>
+      `;
+    }
   } else if (mode === "racks" || item.category === "racks" || item.type === "equipment_rack") {
     const rackDesc = (item.model || '').includes('Wall') ? 'Wall-Mount Swing-Out' : ((item.model || '').includes('2-Post') || (item.model || '').includes('Relay') ? '2-Post Open Relay Frame' : 'Full-Depth Datacenter Cabinet');
     specStripHtml = `

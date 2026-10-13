@@ -238,20 +238,21 @@ const NetworkSizer = {
     rackItems.forEach(item => {
       if (!item) return;
       const qty = parseInt(item.qty, 10) || 1;
+      const isStacked = item.stackedUnits && item.stackedUnits >= 2;
+      const effectiveUnits = isStacked ? Math.max(item.stackedUnits, qty) : qty;
 
       // Track occupied RU
-      const units = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
       if (item.rackSlot) {
-        occupiedU += ((parseInt(item.rackUnits, 10) || 1) * units);
+        occupiedU += ((parseInt(item.rackUnits, 10) || 1) * effectiveUnits);
       }
 
       // Base internal chassis power draw (without PoE load)
       const base = parseFloat(item.baseWatts) || 0;
-      chassisBaseWatts += (base * units * qty);
+      chassisBaseWatts += (base * effectiveUnits);
 
       // Maximum rated PoE power supply budget
       const poeBudget = parseFloat(item.poeBudget) || 0;
-      nameplatePoEWatts += (poeBudget * units * qty);
+      nameplatePoEWatts += (poeBudget * effectiveUnits);
 
       // Connected field devices PoE draw (if populated by BOM audit)
       const connectedPoE = parseFloat(item.consumedPoEWatts) || 0;
@@ -259,11 +260,11 @@ const NetworkSizer = {
 
       // Check if manufacturer specified an explicit maximum wall power draw (AC)
       if (item.maxPowerWatts && parseFloat(item.maxPowerWatts) > 0) {
-        directAcNameplateWatts += (parseFloat(item.maxPowerWatts) * qty);
+        directAcNameplateWatts += (parseFloat(item.maxPowerWatts) * effectiveUnits);
       } else {
         // Calculate AC draw incorporating internal PSU AC-to-DC conversion loss
         const calculatedAc = base + (poeBudget / psuEfficiency);
-        directAcNameplateWatts += (calculatedAc * qty);
+        directAcNameplateWatts += (calculatedAc * effectiveUnits);
       }
     });
 
@@ -804,7 +805,166 @@ const NetworkSizer = {
   }
 };
 
+// =========================================================================
+// VIDEO RETENTION, BITRATE & RAID STORAGE SIZER ENGINE (B.2)
+// Note: Tunable math coefficients are isolated in VIDEO_STORAGE_CONSTANTS
+// so formulas, codec multipliers, and RAID overhead can be updated in one place.
+// =========================================================================
+
+const VIDEO_STORAGE_CONSTANTS = {
+  // Baseline H.265 @ 15 FPS, Medium Complexity scene bitrate (Mbps per sensor head)
+  BASE_BITRATE_MBPS_BY_MP: {
+    2: 2.2,
+    4: 3.8,
+    5: 4.5,
+    6: 5.2,
+    8: 7.0,
+    12: 9.5,
+    16: 12.5,
+    20: 15.0,
+    32: 22.0
+  },
+  // Codec compression multipliers relative to standard H.265 (1.0)
+  CODEC_MULTIPLIERS: {
+    "h265_smart": 0.65, // Zipstream / WiseStream / HDSM SmartCodec (-35%)
+    "h265": 1.00,       // Standard H.265 / HEVC
+    "h264": 1.65        // Legacy H.264 / AVC (+65%)
+  },
+  BASELINE_FPS: 15,
+  // Usable-to-Raw RAID overhead multipliers (Raw TB = Usable TB * factor)
+  RAID_RAW_MULTIPLIERS: {
+    "jbod": 1.00,
+    "raid5": 1.20,  // ~1 parity drive per 6-drive array
+    "raid6": 1.33,  // ~2 parity drives per 8-drive array
+    "raid10": 2.00  // 50% mirrored capacity
+  },
+  STORAGE_SAFETY_BUFFER: 1.10 // 10% filesystem & metadata overhead
+};
+
+const VideoStorageSizer = {
+  state: {
+    retentionDays: 30,
+    codec: "h265_smart",
+    fps: 15,
+    motionDutyPct: 70, // 70% motion recording duty cycle (100% = 24/7 continuous)
+    raidLevel: "raid6"
+  },
+
+  /**
+   * Parses sensor megapixels and sensor head count from a camera catalog/BOM item.
+   */
+  parseCameraOptics(item) {
+    if (!item) return { mpPerHead: 4, heads: 1, totalMp: 4 };
+    const resStr = String(item.resolution || item.model || "");
+    let totalMp = parseFloat(item.sensorMegapixels) || 0;
+    if (!totalMp) {
+      const m = resStr.match(/(\d+)\s*MP/i);
+      if (m) totalMp = parseInt(m[1], 10);
+      else if (/4K/i.test(resStr)) totalMp = 8;
+      else if (/1080p/i.test(resStr)) totalMp = 2;
+      else totalMp = 4;
+    }
+
+    let heads = 1;
+    if (/4x|quad|multi-sensor.*4|360.*multi/i.test(resStr + " " + (item.formFactor || ""))) heads = 4;
+    else if (/3x|triple|multi-sensor.*3/i.test(resStr + " " + (item.formFactor || ""))) heads = 3;
+    else if (/2x|dual-head|dual-sensor|bi-directional/i.test(resStr + " " + (item.formFactor || ""))) heads = 2;
+
+    const mpPerHead = heads > 1 && totalMp >= heads * 2 ? Math.round(totalMp / heads) : totalMp;
+    return { mpPerHead, heads, totalMp };
+  },
+
+  /**
+   * Calculates per-camera and total project video bandwidth & storage requirements.
+   */
+  calculateProjectVideoLoad(bomList = [], overrides = {}) {
+    const defaults = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+      ? StorageService.getProjectDefaults()
+      : null;
+
+    const retentionDays = Number(overrides.retentionDays ?? this.state.retentionDays ?? defaults?.vms?.retentionDays ?? 30) || 30;
+    const codec = overrides.codec || this.state.codec || "h265_smart";
+    const fps = Number(overrides.fps ?? this.state.fps ?? 15) || 15;
+    const motionDutyPct = Number(overrides.motionDutyPct ?? this.state.motionDutyPct ?? 70) || 70;
+    const raidLevel = overrides.raidLevel || this.state.raidLevel || "raid6";
+
+    const codecMult = VIDEO_STORAGE_CONSTANTS.CODEC_MULTIPLIERS[codec] || 1.0;
+    const fpsMult = Math.pow(fps / VIDEO_STORAGE_CONSTANTS.BASELINE_FPS, 0.78);
+    const dutyFactor = Math.max(0.1, Math.min(1.0, motionDutyPct / 100));
+    const raidMult = VIDEO_STORAGE_CONSTANTS.RAID_RAW_MULTIPLIERS[raidLevel] || 1.33;
+
+    let cameraUnits = 0;
+    let totalSensorHeads = 0;
+    let peakIngressMbps = 0;
+    let averageRecordingMbps = 0;
+
+    let quotedUsableTb = 0;
+    let quotedMaxIngestMbps = 0;
+    let serverCount = 0;
+
+    (bomList || []).forEach(item => {
+      if (!item || item.parentInstanceId) return;
+      const qty = parseInt(item.qty ?? item.quantity, 10) || 1;
+      const cat = (item.category || "").toLowerCase();
+      const role = (item.role || "").toLowerCase();
+
+      if (cat === "cameras" || role === "camera" || (typeof isCameraDevice === "function" && isCameraDevice(item))) {
+        const optics = this.parseCameraOptics(item);
+        const catalogBitrate = parseFloat(item.streamBitrateMbps);
+        const basePerHead = VIDEO_STORAGE_CONSTANTS.BASE_BITRATE_MBPS_BY_MP[optics.mpPerHead] || (optics.mpPerHead * 0.9);
+        const unitBaseMbps = catalogBitrate > 0 ? catalogBitrate : (basePerHead * optics.heads);
+
+        const unitPeakMbps = unitBaseMbps * codecMult * fpsMult;
+        const unitAvgMbps = unitPeakMbps * dutyFactor;
+
+        cameraUnits += qty;
+        totalSensorHeads += optics.heads * qty;
+        peakIngressMbps += unitPeakMbps * qty;
+        averageRecordingMbps += unitAvgMbps * qty;
+      } else if (cat === "servers" || cat === "storage" || role.includes("nvr") || role.includes("server") || role.includes("storage")) {
+        serverCount += qty;
+        const usableTb = parseFloat(item.usableStorageTb || item.storageTb || 0);
+        const maxBw = parseFloat(item.maxIngestBandwidthMbps || 600);
+        quotedUsableTb += usableTb * qty;
+        quotedMaxIngestMbps += maxBw * qty;
+      }
+    });
+
+    // Storage Formula:
+    // Usable TB = (averageRecordingMbps * 86,400 sec/day * retentionDays) / (8 bits/byte * 1,000,000 MB/TB) * SafetyBuffer
+    const rawUsableTb = (averageRecordingMbps * 86400 * retentionDays) / 8000000;
+    const requiredUsableTb = Math.round(rawUsableTb * VIDEO_STORAGE_CONSTANTS.STORAGE_SAFETY_BUFFER * 100) / 100;
+    const requiredRawTb = Math.round(requiredUsableTb * raidMult * 100) / 100;
+
+    const storageDeficitTb = Math.max(0, Math.round((requiredUsableTb - quotedUsableTb) * 10) / 10);
+    const bandwidthExceeded = serverCount > 0 && peakIngressMbps > quotedMaxIngestMbps;
+
+    return {
+      cameraUnits,
+      totalSensorHeads,
+      retentionDays,
+      codec,
+      fps,
+      motionDutyPct,
+      raidLevel,
+      peakIngressMbps: Math.round(peakIngressMbps * 10) / 10,
+      averageRecordingMbps: Math.round(averageRecordingMbps * 10) / 10,
+      requiredUsableTb,
+      requiredRawTb,
+      quotedUsableTb: Math.round(quotedUsableTb * 10) / 10,
+      quotedMaxIngestMbps: Math.round(quotedMaxIngestMbps),
+      serverCount,
+      storageDeficitTb,
+      bandwidthExceeded,
+      isCompliant: cameraUnits === 0 || (quotedUsableTb >= requiredUsableTb && !bandwidthExceeded)
+    };
+  }
+};
+
 // Global Browser Exports
 window.IEEE_POE_STANDARDS = IEEE_POE_STANDARDS;
 window.ELECTRICAL_CONSTANTS = ELECTRICAL_CONSTANTS;
 window.NetworkSizer = NetworkSizer;
+window.VIDEO_STORAGE_CONSTANTS = VIDEO_STORAGE_CONSTANTS;
+window.VideoStorageSizer = VideoStorageSizer;
+

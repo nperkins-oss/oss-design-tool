@@ -190,19 +190,25 @@ function ensureCameraFovDefaults(dev, bomItem = null) {
   if (typeof dev.fovAngleDeg !== "number" || isNaN(dev.fovAngleDeg)) dev.fovAngleDeg = 0;
 
   const text = `${bomItem?.model || ""} ${bomItem?.description || ""} ${bomItem?.category || ""} ${dev.name || ""}`.toLowerCase();
-  if (typeof dev.fovSpanDeg !== "number" || isNaN(dev.fovSpanDeg)) {
+  if ((typeof dev.fovSpanDeg !== "number" || isNaN(dev.fovSpanDeg)) && (typeof dev.fovApertureDeg !== "number" || isNaN(dev.fovApertureDeg))) {
+    let defaultSpan = 95;
     if (/fisheye|360|panoramic|multisensor|multi-sensor|quad/i.test(text)) {
-      dev.fovSpanDeg = 360;
+      defaultSpan = 360;
     } else if (/180|panoramic-180|dualsensor/i.test(text)) {
-      dev.fovSpanDeg = 180;
+      defaultSpan = 180;
     } else if (/lpr|anpr|telephoto|ptz/i.test(text)) {
-      dev.fovSpanDeg = 42;
+      defaultSpan = 42;
     } else if (/bullet|varifocal/i.test(text)) {
-      dev.fovSpanDeg = 78;
-    } else {
-      dev.fovSpanDeg = 95;
+      defaultSpan = 78;
     }
+    dev.fovSpanDeg = defaultSpan;
+    dev.fovApertureDeg = defaultSpan;
+  } else if (typeof dev.fovApertureDeg === "number" && !isNaN(dev.fovApertureDeg)) {
+    dev.fovSpanDeg = dev.fovApertureDeg;
+  } else if (typeof dev.fovSpanDeg === "number" && !isNaN(dev.fovSpanDeg)) {
+    dev.fovApertureDeg = dev.fovSpanDeg;
   }
+
   if (typeof dev.fovDistanceFt !== "number" || isNaN(dev.fovDistanceFt)) {
     if (/lpr|anpr|ptz/i.test(text)) {
       dev.fovDistanceFt = 85;
@@ -214,13 +220,32 @@ function ensureCameraFovDefaults(dev, bomItem = null) {
   }
 }
 
-function computeCameraDoriTelemetry(dev, bomItem = null) {
+function computeCameraDoriTelemetry(dev, bomItem = null, floor = null) {
   ensureCameraFovDefaults(dev, bomItem);
   const text = `${bomItem?.resolution || ""} ${bomItem?.model || ""} ${bomItem?.description || ""} ${dev.name || ""}`.toLowerCase();
 
   let horizPixels = 2560; // Default 4MP (2560x1440)
   let mpLabel = "4MP";
-  if (/12\s*mp|4000\s*x/i.test(text)) {
+  const overrideMp = Number(dev.resolutionMP);
+  if (overrideMp === 12) {
+    horizPixels = 4000;
+    mpLabel = "12MP";
+  } else if (overrideMp === 8) {
+    horizPixels = 3840;
+    mpLabel = "4K (8MP)";
+  } else if (overrideMp === 6) {
+    horizPixels = 3200;
+    mpLabel = "6MP";
+  } else if (overrideMp === 5) {
+    horizPixels = 2592;
+    mpLabel = "5MP";
+  } else if (overrideMp === 2) {
+    horizPixels = 1920;
+    mpLabel = "2MP (1080p)";
+  } else if (overrideMp === 4) {
+    horizPixels = 2560;
+    mpLabel = "4MP";
+  } else if (/12\s*mp|4000\s*x/i.test(text)) {
     horizPixels = 4000;
     mpLabel = "12MP";
   } else if (/4k|8\s*mp|3840\s*x|uhd/i.test(text)) {
@@ -238,7 +263,10 @@ function computeCameraDoriTelemetry(dev, bomItem = null) {
   }
 
   const distFt = Math.max(5, Number(dev.fovDistanceFt) || 45);
-  const spanDeg = Math.max(10, Math.min(360, Number(dev.fovSpanDeg) || 95));
+  const spanDeg = Math.max(10, Math.min(360, Number(dev.fovApertureDeg || dev.fovSpanDeg) || 95));
+  const activeFl = floor || (typeof getActiveFloor === "function" ? getActiveFloor() : null);
+  const scaleFt = (activeFl && Number(activeFl.scaleFt) > 0) ? Number(activeFl.scaleFt) : 25;
+  const radiusPx = Math.max(28, Math.round((distFt / scaleFt) * 100));
 
   // Scene horizontal width at target distance (ft)
   let sceneWidthFt;
@@ -287,7 +315,9 @@ function computeCameraDoriTelemetry(dev, bomItem = null) {
     doriClass,
     doriShort,
     strokeColor,
-    fillColor
+    doriHex: strokeColor,
+    fillColor,
+    radiusPx
   };
 }
 
@@ -301,10 +331,14 @@ function updateNodeFovSetting(nodeId, field, rawVal) {
     node.fovEnabled = Boolean(rawVal);
   } else if (field === "fovAngleDeg") {
     node.fovAngleDeg = ((parseFloat(rawVal) || 0) % 360 + 360) % 360;
-  } else if (field === "fovSpanDeg") {
-    node.fovSpanDeg = Math.max(10, Math.min(360, parseFloat(rawVal) || 90));
+  } else if (field === "fovSpanDeg" || field === "fovApertureDeg") {
+    const val = Math.max(10, Math.min(360, parseFloat(rawVal) || 90));
+    node.fovSpanDeg = val;
+    node.fovApertureDeg = val;
   } else if (field === "fovDistanceFt") {
     node.fovDistanceFt = Math.max(5, Math.min(400, parseFloat(rawVal) || 45));
+  } else if (field === "resolutionMP") {
+    node.resolutionMP = parseFloat(rawVal) || 4;
   }
   renderCableCanvas();
   renderInspector();
@@ -2088,7 +2122,7 @@ async function openPdfSheetSelectorModal(pdf, fileName) {
       if (firstImportedFloorId) {
         activeFloorId = firstImportedFloorId;
       }
-      renderFloorTabs();
+      renderFloorSelector();
       syncFloorControlInputs();
       recalculateCurrentFloorCables();
       renderCableCanvas();
@@ -2588,6 +2622,7 @@ function getAllClosetsAcrossFacility() {
   });
   return closets;
 }
+window.getAllClosetsAcrossFacility = getAllClosetsAcrossFacility;
 
 /**
  * Renders the SVG child elements of a Camera FOV & DORI cone group in-place.
@@ -2597,11 +2632,11 @@ function renderCameraFovGroupContent(fovG, dev, bomItem, floor, isSelected) {
   if (!fovG || !dev) return;
   fovG.innerHTML = "";
 
-  const telem = computeCameraDoriTelemetry(dev, bomItem);
+  const telem = computeCameraDoriTelemetry(dev, bomItem, floor);
   const radiusPx = Math.max(28, telem.radiusPx);
   const angleDeg = dev.fovAngleDeg || 0;
-  const apertureDeg = dev.fovApertureDeg || 90;
-  const doriColor = telem.doriHex || "#10b981";
+  const apertureDeg = dev.fovApertureDeg || dev.fovSpanDeg || 90;
+  const doriColor = telem.doriHex || telem.strokeColor || "#10b981";
 
   const rad = (deg) => (deg * Math.PI) / 180;
 
@@ -5683,8 +5718,9 @@ function renderCableCanvas() {
     if (activeRevisionCompareId && typeof RevisionEngine !== "undefined") {
       const revisions = RevisionEngine.getRevisions();
       const rev = revisions.find(r => r.id === activeRevisionCompareId);
-      if (rev && rev.floors) {
-        const snapFloor = rev.floors.find(f => f.id === floor.id);
+      const revFloors = (rev && rev.data && rev.data.facilityFloors) || (rev && rev.floors);
+      if (revFloors) {
+        const snapFloor = revFloors.find(f => f.id === floor.id);
         if (snapFloor && snapFloor.nodes) {
           const match = snapFloor.nodes.find(b => b.id === dev.id || (b.instanceId && b.instanceId === dev.instanceId));
           if (!match) {
@@ -5868,8 +5904,9 @@ function renderCableCanvas() {
   if (activeRevisionCompareId && typeof RevisionEngine !== "undefined") {
     const revisions = RevisionEngine.getRevisions();
     const rev = revisions.find(r => r.id === activeRevisionCompareId);
-    if (rev && rev.floors) {
-      const snapFloor = rev.floors.find(f => f.id === floor.id);
+    const revFloors = (rev && rev.data && rev.data.facilityFloors) || (rev && rev.floors);
+    if (revFloors) {
+      const snapFloor = revFloors.find(f => f.id === floor.id);
       if (snapFloor && snapFloor.nodes) {
         snapFloor.nodes.filter(n => n.type === "device").forEach(baseDev => {
           const stillExists = floor.nodes.some(cur => cur.id === baseDev.id || (cur.instanceId && cur.instanceId === baseDev.instanceId));
@@ -6586,6 +6623,9 @@ function executeBulkReassignCloset(newClosetId) {
       if (match) {
         match.closetName = targetCloset.name;
         match.rackId = targetCloset.name;
+        if (typeof PortEngine !== "undefined") {
+          PortEngine.autoAssignDeviceToClosetSwitch(match, targetCloset.name);
+        }
       }
     }
     count++;

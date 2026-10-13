@@ -204,16 +204,19 @@ function generateCableScheduleData() {
                             locLower.includes("roof") ||
                             targetDev.cableSku === "C6A-OUTDOOR-1K";
 
-      // Run Standards (Color & Category per TOW Structured Cabling: Cat6A CMP indoor, CMX/Gel-Filled outdoor)
-      let runCategory = isOutdoorDrop ? "Cat6A OSP Direct Burial (Gel-Filled)" : "Cat6A CMP Plenum";
-      let runColor = isOutdoorDrop ? "Black" : "Yellow";
-      let runHex = isOutdoorDrop ? "#1e293b" : "#eab308";
+      // Run Standards (Color & Category per TOW Structured Cabling: Cat6A CMP indoor, CMX/Gel-Filled outdoor, Composite for ACS Reader/Door)
+      const isAcsCompositeDrop = devLayer === "access" && ((targetDev.role || "").toLowerCase() === "reader" || (targetDev.connectionType || "").toUpperCase().includes("OSDP") || (targetDev.model || "").toLowerCase().includes("signo"));
+      let runCategory = isAcsCompositeDrop
+        ? (isOutdoorDrop ? "ACS Composite OSP (22/6 Shielded + 18/4 + 22/4 + 22/2)" : "ACS Composite CMP Plenum (22/3P OSDP + 18/4 Lock + 22/4 REX + 22/2 DPS)")
+        : (isOutdoorDrop ? "Cat6A OSP Direct Burial (Gel-Filled)" : "Cat6A CMP Plenum");
+      let runColor = isAcsCompositeDrop ? "Orange / Yellow" : (isOutdoorDrop ? "Black" : "Yellow");
+      let runHex = isAcsCompositeDrop ? "#f97316" : (isOutdoorDrop ? "#1e293b" : "#eab308");
 
       const runStd = (typeof getProjectCablingStandard === "function")
         ? getProjectCablingStandard(targetDev, "run")
         : null;
 
-      if (runStd && !isOutdoorDrop) {
+      if (runStd && !isOutdoorDrop && !isAcsCompositeDrop) {
         runCategory = runStd.category || runCategory;
         runColor = runStd.color || runColor;
         runHex = runStd.hex || runHex;
@@ -228,33 +231,38 @@ function generateCableScheduleData() {
       const serviceLoopFt = 25; // 10ft at drop + 15ft at telecom rack dressing
       const cutLengthFt = measuredFt > 0 ? measuredFt + serviceLoopFt : 150;
 
-      // Switch Port Termination
-      let switchName = "Unpatched";
+      // Switch Port / ACS Panel Termination
+      let switchName = isAcsCompositeDrop ? "ACS Intelligent Panel (LP1502)" : "Unpatched";
       let switchPortNumber = null;
-      let switchCode = "SW1";
-      let portVlan = "VLAN 1";
-      let portPoe = "PoE+";
+      let switchCode = isAcsCompositeDrop ? "ACP1" : "SW1";
+      let portVlan = "Untagged (Flat)";
+      let portPoe = isAcsCompositeDrop ? "12/24VDC Panel Feed + OSDP RS-485" : "PoE+";
 
       // Find switch port assignment if patched in Port Matrix
       const hostSw = projectBOM.find((sw, swIdx) => {
-        if (!sw.portsList && typeof PortEngine !== "undefined") PortEngine.initSwitchPorts(sw);
-        const ports = sw.portsList || [];
+        if (typeof isNetworkSwitchItem === "function" && !isNetworkSwitchItem(sw)) return false;
+        const ports = (typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(sw) : null) || sw.physicalPorts || sw.portsList || [];
         const foundP = ports.find(p => p.connectedDeviceId === (bom ? bom.instanceId : (dev ? dev.instanceId : null)));
         if (foundP) {
           switchPortNumber = foundP.portNumber;
           switchCode = `SW${swIdx + 1}`;
-          portVlan = foundP.vlan || (devLayer === "cameras" ? "VLAN 10 (CCTV)" : devLayer === "access" ? "VLAN 20 (ACS)" : "VLAN 1");
-          portPoe = foundP.poeOutputWatts ? `${foundP.poeOutputWatts}W (${foundP.poeType || 'at'})` : 'Data Only';
+          portVlan = foundP.vlan || (typeof getProjectVlanForDevice === "function" ? getProjectVlanForDevice(bom || dev, foundP) : "Untagged (Flat)");
+          portPoe = (foundP.poeOutputWatts || foundP.allocatedWatts) ? `${foundP.poeOutputWatts || foundP.allocatedWatts}W (${foundP.poeStandard || foundP.poeType || '802.3at'})` : 'Data Only';
           return true;
         }
         return false;
       });
+      if (!hostSw && typeof getProjectVlanForDevice === "function") {
+        portVlan = getProjectVlanForDevice(bom || dev, null);
+      }
 
       if (hostSw) {
         switchName = hostSw.friendlyName || hostSw.model;
       }
 
-      const switchPortTag = switchPortNumber ? `${switchCode}P${switchPortNumber}` : `${switchCode}P${panelPort}`;
+      const switchPortTag = isAcsCompositeDrop
+        ? `${switchCode}-DR${panelPort}`
+        : (switchPortNumber ? `${switchCode}P${switchPortNumber}` : `${switchCode}P${panelPort}`);
 
       // =========================================================================
       // OSS STANDARD CABLE LABEL LEGEND (Docx & TOW Cabling Standard)
@@ -276,7 +284,7 @@ function generateCableScheduleData() {
         dropIndex,
         panelNum,
         panelPort,
-        panelTag,
+        panelTag: isAcsCompositeDrop ? `TB${String(panelNum).padStart(2, "0")}-${String(panelPort).padStart(2, "0")}` : panelTag,
         closetName: entry.closetName,
         closetCode,
         floorName: entry.floorName,
@@ -308,12 +316,80 @@ function generateCableScheduleData() {
         fieldLabelLine2,
         labelTapePart,
         isOutdoorDrop,
-        isOverLimit: measuredFt > 295,
+        isOverLimit: !isAcsCompositeDrop && measuredFt > 295,
         instanceId: bom ? bom.instanceId : (dev ? dev.instanceId : null),
         nodeId: dev ? dev.id : null
       });
     });
   });
+
+  // 4. Append Inter-Closet Fiber Optic Backbones from facilityFloors
+  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+    let fiberSeq = 1;
+    facilityFloors.forEach(floor => {
+      if (!Array.isArray(floor.fiberBackbones) || floor.fiberBackbones.length === 0) return;
+      const closets = (floor.nodes || []).filter(n => n.type === "closet");
+      floor.fiberBackbones.forEach(fb => {
+        const fromCloset = closets.find(c => c.id === fb.fromClosetId);
+        const toCloset = closets.find(c => c.id === fb.toClosetId);
+        const fromName = fromCloset ? fromCloset.name : (fb.fromClosetName || "MDF");
+        const toName = toCloset ? toCloset.name : (fb.toClosetName || "IDF");
+        const fromCode = fromName.split(" • ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase() || "MDF";
+        const toCode = toName.split(" • ")[0].replace(/[^a-zA-Z0-9]/g, "").toUpperCase() || "IDF";
+        const fiberId = `FBR-${fromCode}-${toCode}-${String(fiberSeq).padStart(2, "0")}`;
+        const fiberType = fb.fiberType || "OM4 Multimode";
+        const strands = fb.strands || 12;
+        const isSingleMode = String(fiberType).toUpperCase().includes("OS2") || String(fiberType).toUpperCase().includes("SINGLE");
+        const measuredFt = Math.round(Number(fb.lengthFt || 250));
+        const serviceLoopFt = 50; // 25ft service coil at each LIU enclosure
+        const cutLengthFt = measuredFt + serviceLoopFt;
+
+        schedule.push({
+          cableId: fiberId,
+          cableNumber: fiberSeq,
+          dropIndex: fiberSeq,
+          panelNum: 1,
+          panelPort: fiberSeq,
+          panelTag: `LIU01-${String(fiberSeq).padStart(2, "0")}`,
+          closetName: fromName,
+          closetCode: fromCode,
+          floorName: floor.name || "Level 1",
+          roomName: `${fromName} ↔ ${toName}`,
+          deviceNum: String(fiberSeq).padStart(3, "0"),
+          deviceTag: `${toCode}-LIU`,
+          deviceName: `${strands}-Strand ${fiberType} Backbone (${fromCode} ↔ ${toCode})`,
+          deviceModel: `${strands}F ${fiberType} Armored / Plenum Trunk`,
+          subsystem: "Fiber Backbone",
+          subsystemKey: "backbone",
+          runCategory: `${strands}-Strand ${fiberType} Trunk`,
+          runColor: isSingleMode ? "Yellow (OS2)" : "Aqua (OM4)",
+          runHex: isSingleMode ? "#eab308" : "#06b6d4",
+          patchColor: isSingleMode ? "Yellow" : "Aqua",
+          patchHex: isSingleMode ? "#eab308" : "#06b6d4",
+          patchLengthFt: 3,
+          measuredFt,
+          cutLengthFt,
+          serviceLoopFt,
+          switchName: `${fromName} LIU-01`,
+          switchCode: fromCode,
+          switchPortNumber: fiberSeq,
+          switchPortTag: `${toCode}-LIU01`,
+          portVlan: "Trunk (All VLANs)",
+          portPoe: "Optical (SFP+ / SFP28)",
+          headendLabelLine1: fiberId,
+          headendLabelLine2: `${fromCode}-LIU01 → ${toCode}-LIU01`,
+          fieldLabelLine1: fiberId,
+          fieldLabelLine2: `${toCode}-LIU01 → ${fromCode}-LIU01`,
+          labelTapePart: "Brady M21-750-499 (Nylon Cloth) + Fiber Sleeve",
+          isOutdoorDrop: false,
+          isOverLimit: false,
+          instanceId: fb.id || `fiber-${fiberSeq}`,
+          nodeId: fb.id || null
+        });
+        fiberSeq++;
+      });
+    });
+  }
 
   return schedule;
 }
