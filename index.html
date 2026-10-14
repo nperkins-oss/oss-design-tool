@@ -96,6 +96,158 @@
       position: relative;
     }
 
+    /* Rack & Port Matrix Interactive Faceplate & Accordion Styles */
+    details[open] > summary .rack-acc-chevron {
+      transform: rotate(180deg);
+    }
+    .rack-kp-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(2, 6, 23, 0.92);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(126, 34, 206, 0.45);
+      flex-shrink: 0;
+    }
+    .rack-kp-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .rack-kp-btn {
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      background: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+    }
+    .rack-kp-dot {
+      width: 13px;
+      height: 12px;
+      border-radius: 2px;
+      border: 1px solid rgba(168, 85, 247, 0.45);
+      background: #0f172a;
+      color: #64748b;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 7px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .rack-kp-dot:hover {
+      transform: scale(1.25);
+      border-color: #d8b4fe;
+      color: #f8fafc;
+    }
+    .rack-kp-dot.occupied-poe {
+      background: #10b981;
+      border-color: #6ee7b7;
+      color: #020617;
+      font-weight: 800;
+      box-shadow: 0 0 5px rgba(16, 185, 129, 0.65);
+    }
+    .rack-kp-dot.occupied-data {
+      background: #f59e0b;
+      border-color: #fde68a;
+      color: #020617;
+      font-weight: 800;
+      box-shadow: 0 0 5px rgba(245, 158, 11, 0.55);
+    }
+    .rack-kp-cord {
+      width: 2px;
+      height: 5px;
+      border-radius: 9999px;
+      background: rgba(51, 65, 85, 0.5);
+    }
+    .rack-kp-cord.poe {
+      background: #34d399;
+    }
+    .rack-kp-cord.data {
+      background: #fbbf24;
+    }
+    .rack-sw-strip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(2, 6, 23, 0.92);
+      padding: 3px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(3, 105, 161, 0.45);
+      flex-shrink: 0;
+    }
+    .rack-sw-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .rack-sw-row {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .rack-sw-dot {
+      width: 11px;
+      height: 9px;
+      border-radius: 2px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      padding: 0;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .rack-sw-dot:hover {
+      transform: scale(1.25);
+      border-color: #94a3b8;
+    }
+    .rack-sw-dot.poe {
+      background: #10b981;
+      border-color: #6ee7b7;
+      box-shadow: 0 0 4px rgba(16, 185, 129, 0.7);
+    }
+    .rack-sw-dot.data {
+      background: #f59e0b;
+      border-color: #fde68a;
+    }
+    .rack-sw-dot.uplink-active {
+      background: #38bdf8;
+      border-color: #bae6fd;
+      box-shadow: 0 0 4px rgba(56, 189, 248, 0.7);
+    }
+    .rack-sw-dot.uplink-idle {
+      background: #0f172a;
+      border-color: rgba(2, 132, 199, 0.65);
+    }
+    .rack-sw-dot.stack {
+      background: #6366f1;
+      border-color: #a5b4fc;
+    }
+    .matrix-24p-grid {
+      display: grid;
+      grid-template-columns: repeat(24, minmax(0, 1fr));
+      gap: 4px;
+    }
+    @media (max-width: 900px) {
+      .matrix-24p-grid {
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+      }
+    }
+    .matrix-trace-grid {
+      display: grid;
+      grid-template-columns: 1.35fr 0.75fr 1.35fr 0.75fr 1.35fr;
+      gap: 8px;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .matrix-trace-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
     /* Formal Engineering Submittal & Proposal Print Stylesheet */
     @media print {
       body {
@@ -2303,12 +2455,12 @@
       </div>
 
       <!-- View 2: Enclosure Visualizer Frame & Engineering Analytics -->
-      <div id="facilityVisualizerView" class="hidden flex-1 overflow-y-auto p-4 sm:p-5 flex flex-col lg:flex-row gap-4 bg-slate-950">
+      <div id="facilityVisualizerView" class="hidden flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6 bg-slate-950">
         <!-- Host Frame Elevation Column -->
-        <div class="flex-1 flex flex-col items-center min-w-0">
-          <div class="w-full max-w-6xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-3.5 shadow-xl">
+        <div class="flex-1 flex flex-col items-center">
+          <div class="w-full max-w-5xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
             <!-- Elevation Action Toolbar: Title + Orientation Toggle + PDU Config + Dimension Selectors + Auto-Mount/Unmount -->
-            <div class="pb-2.5 mb-2.5 border-b border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between gap-2">
+            <div class="pb-3 mb-3 border-b border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between gap-2">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <span id="elevationFrameTitle" class="flex items-center gap-1.5 font-bold text-slate-200 text-xs">
                   <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Standard 19" Equipment Rail
@@ -2338,7 +2490,7 @@
                     <span>0U Verticals</span>
                   </button>
                   <div class="flex items-center bg-slate-950 border border-slate-800 px-1.5 py-0.5 rounded-lg text-xs font-semibold shadow-inner">
-                    <select id="rackPduConfigSelect" onchange="setRackPduConfig(this.value)" class="bg-transparent text-indigo-300 font-mono font-bold text-[10.5px] focus:outline-none cursor-pointer" title="Vertical Layout Preset">
+                    <select id="rackPduConfigSelect" onchange="setRackPduConfig(this.value)" class="bg-transparent text-indigo-300 font-mono font-bold text-[10px] focus:outline-none cursor-pointer" title="Vertical Layout Preset">
                       <option value="front_cable_rear_pdu">Front Cable Mgr / Rear PDUs</option>
                       <option value="dual_vertical">Dual 0U Vertical (A+B Rear)</option>
                       <option value="single_vertical">Single 0U Vertical (Feed A)</option>
@@ -2387,7 +2539,7 @@
         </div>
 
         <!-- Right Side: Collapsible Inspector Pane for Analytics, Served Endpoints & Unassigned Staging -->
-        <div id="rackRightSidePane" class="w-full lg:w-[370px] shrink-0 flex flex-col gap-2.5 transition-all">
+        <div id="rackRightSidePane" class="w-full lg:w-96 flex flex-col gap-3">
           <!-- Sidebar Tabs + Expand/Collapse All Accordions -->
           <div class="flex items-center justify-between gap-1.5">
             <div class="flex-1 flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-1 text-xs font-semibold">
@@ -2407,16 +2559,16 @@
           </div>
 
           <!-- Tab Content 1: Engineering Telemetry (Collapsible Accordion Cards) -->
-          <div id="hostTabContent-telemetry" class="space-y-2.5">
-            <div id="hostTelemetryContainer" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"></div>
-            <div id="hostPduContainer" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"></div>
-            <div id="hostAuxContainer" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"></div>
-            <div id="hostFieldSummaryContainer" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"></div>
+          <div id="hostTabContent-telemetry" class="space-y-3">
+            <div id="hostTelemetryContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2"></div>
+            <div id="hostPduContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2"></div>
+            <div id="hostAuxContainer" class="space-y-3"></div>
+            <div id="hostFieldSummaryContainer" class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-2"></div>
           </div>
 
           <!-- Tab Content 2: Served Field Endpoints -->
-          <div id="hostTabContent-endpoints" class="hidden space-y-2.5">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          <div id="hostTabContent-endpoints" class="hidden space-y-3">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                   <i data-lucide="door-open" class="w-4 h-4 text-emerald-400"></i> Field Drops Home-Runned Here
@@ -2427,8 +2579,8 @@
           </div>
 
           <!-- Tab Content 3: Staged Unassigned Hardware (Requirement 2) -->
-          <div id="hostTabContent-staging" class="hidden space-y-2.5">
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 space-y-3">
+          <div id="hostTabContent-staging" class="hidden space-y-3">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
                   <i data-lucide="inbox" class="w-4 h-4 text-amber-400"></i> Staged Equipment Inventory
