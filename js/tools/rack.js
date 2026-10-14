@@ -84,7 +84,7 @@ window.toggleRackPatchJumpers = toggleRackPatchJumpers;
  * Renders an interactive, data-driven 24-Keystone Patch Panel row and paired Switch row
  * with live PortEngine occupancy, end-to-end trace tooltips, and 1-click Port Matrix navigation.
  */
-function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, deck) {
+function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, deck, patchMapping) {
   const renderBlock = (slice) => slice.map(j => {
     const p = j.port;
     const isOccupied = Boolean(p && p.connectedDeviceId);
@@ -94,6 +94,10 @@ function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, de
       : (p?.connectedDeviceModel || "Unassigned / Spare");
     const portNum = p ? p.portNumber : j.jackNumber;
     const unitPort = p ? (p.unitPortNumber || p.portNumber) : j.jackNumber;
+    const pm = (p && patchMapping?.byPortNumber?.[p.portNumber]) ? patchMapping.byPortNumber[p.portNumber] : null;
+    const keystoneTag = j.fullTag || (pm ? `${pm.patchPanelId}:${pm.keystoneJackLabel}` : `Keystone ${j.jackLabel}`);
+    const cableRunTag = pm && pm.horizontalCableId ? `Cable ${pm.horizontalCableId} • ` : "";
+    const swPortTag = pm && pm.switchPortTag ? pm.switchPortTag : `Switch Port ${unitPort}`;
 
     let dotState = "";
     let cordState = "";
@@ -108,8 +112,8 @@ function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, de
     }
 
     const tooltip = isOccupied
-      ? `Keystone ${j.jackLabel} ⟷ 6" Slim Cat6A ⟷ Switch Port ${unitPort} • Connected: ${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
-      : `Keystone ${j.jackLabel} (Open) ⟷ Mapped to Switch Port ${unitPort} — Click to assign in Port Studio`;
+      ? `${keystoneTag} ⟷ 6" Slim Cat6A ⟷ ${swPortTag} • ${cableRunTag}${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
+      : `${keystoneTag} (Open) ⟷ Mapped to ${swPortTag} — Click to assign in Port Studio`;
 
     return `
       <button
@@ -2388,10 +2392,10 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                   const upperPortRange = is48P ? "Ports 1–24" : "Ports 1–12";
                   const lowerPortRange = is48P ? "Ports 25–48" : "Ports 13–24";
 
-                  const upperPanelId = stackUnits > 1 ? `PP-U${unitNum}-TOP` : `PP-01-TOP`;
-                  const lowerPanelId = stackUnits > 1 ? `PP-U${unitNum}-BOT` : `PP-02-BOT`;
-                  const upperPanelObj = patchMapping?.panels?.find(p => p.panelId === upperPanelId);
-                  const lowerPanelObj = patchMapping?.panels?.find(p => p.panelId === lowerPanelId);
+                  const upperPanelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "upper");
+                  const lowerPanelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "lower");
+                  const upperPanelId = upperPanelObj ? upperPanelObj.panelId : `PP${String((unitNum - 1) * 2 + 1).padStart(2, "0")}`;
+                  const lowerPanelId = lowerPanelObj ? lowerPanelObj.panelId : `PP${String((unitNum - 1) * 2 + 2).padStart(2, "0")}`;
 
                   const upperJacks = upperPanelObj ? upperPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
                   const lowerJacks = lowerPanelObj ? lowerPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
@@ -2410,7 +2414,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                             ${upperActiveCount}/24 Patched
                           </span>
                         </div>
-                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, upperJacks, "upper")}
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, upperJacks, "upper", patchMapping)}
                       </div>
 
                       <!-- 1U Middle Switch Chassis Row -->
@@ -2418,7 +2422,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                         <div class="flex items-center gap-2 min-w-0">
                           <span class="text-indigo-400 font-bold w-7 shrink-0">U${switchU}</span>
                           <span class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 font-bold border border-sky-700/60 shrink-0">
-                            ${stackUnits > 1 ? `SW Unit ${unitNum} (${isMaster ? 'Master' : 'Member'})` : 'Switch Faceplate'}
+                            ${stackUnits > 1 ? `${patchMapping?.switchCode || 'SW'}-U${unitNum} (${isMaster ? 'Master' : 'Member'})` : (patchMapping?.switchCode || 'Switch Faceplate')}
                           </span>
                           <span class="text-slate-200 font-semibold truncate">${escapeHTML(it.model)}</span>
                           ${showRackPatchJumpers ? `<span class="text-[9px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.5 rounded hidden md:inline shrink-0">6" Slim Cat6A 1:1</span>` : ''}
@@ -2436,7 +2440,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                             ${lowerActiveCount}/24 Patched
                           </span>
                         </div>
-                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, lowerJacks, "lower")}
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, lowerJacks, "lower", patchMapping)}
                       </div>
                     </div>
                   `;

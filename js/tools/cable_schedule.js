@@ -231,12 +231,18 @@ function generateCableScheduleData() {
       const serviceLoopFt = 25; // 10ft at drop + 15ft at telecom rack dressing
       const cutLengthFt = measuredFt > 0 ? measuredFt + serviceLoopFt : 150;
 
-      // Switch Port / ACS Panel Termination
+      // Switch Port / ACS Panel Termination & Patch Panel Keystone Mapping
       let switchName = isAcsCompositeDrop ? "ACS Intelligent Panel (LP1502)" : "Unpatched";
       let switchPortNumber = null;
-      let switchCode = isAcsCompositeDrop ? "ACP1" : "SW1";
+      let switchCode = isAcsCompositeDrop ? "ACP01" : "SW01";
       let portVlan = "Untagged (Flat)";
       let portPoe = isAcsCompositeDrop ? "12/24VDC Panel Feed + OSDP RS-485" : "PoE+";
+      let resolvedPanelTag = isAcsCompositeDrop ? `TB${String(panelNum).padStart(2, "0")}-${String(panelPort).padStart(2, "0")}` : panelTag;
+      let resolvedPatchPanelId = `${closetCode}-PP${String(panelNum).padStart(2, "0")}`;
+      let resolvedPatchCordId = `PC-${closetCode}-${resolvedPanelTag}`;
+
+      // Persist canonical OSS Cable ID on BOM item for cross-studio sync
+      if (bom) bom.cableId = cableId;
 
       // Find switch port assignment if patched in Port Matrix
       const hostSw = projectBOM.find((sw, swIdx) => {
@@ -245,7 +251,9 @@ function generateCableScheduleData() {
         const foundP = ports.find(p => p.connectedDeviceId === (bom ? bom.instanceId : (dev ? dev.instanceId : null)));
         if (foundP) {
           switchPortNumber = foundP.portNumber;
-          switchCode = `SW${swIdx + 1}`;
+          switchCode = (sw.deviceNumber && String(sw.deviceNumber).startsWith("SW"))
+            ? String(sw.deviceNumber).split("-")[0]
+            : `SW${String(swIdx + 1).padStart(2, "0")}`;
           portVlan = foundP.vlan || (typeof getProjectVlanForDevice === "function" ? getProjectVlanForDevice(bom || dev, foundP) : "Untagged (Flat)");
           portPoe = (foundP.poeOutputWatts || foundP.allocatedWatts) ? `${foundP.poeOutputWatts || foundP.allocatedWatts}W (${foundP.poeStandard || foundP.poeType || '802.3at'})` : 'Data Only';
           return true;
@@ -256,13 +264,24 @@ function generateCableScheduleData() {
         portVlan = getProjectVlanForDevice(bom || dev, null);
       }
 
-      if (hostSw) {
-        switchName = hostSw.friendlyName || hostSw.model;
-      }
-
-      const switchPortTag = isAcsCompositeDrop
+      let switchPortTag = isAcsCompositeDrop
         ? `${switchCode}-DR${panelPort}`
         : (switchPortNumber ? `${switchCode}P${switchPortNumber}` : `${switchCode}P${panelPort}`);
+
+      if (hostSw) {
+        switchName = hostSw.friendlyName || hostSw.model;
+        if (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function" && switchPortNumber) {
+          const patchData = PortEngine.resolveSwitchPatchMapping(hostSw);
+          const pm = patchData && patchData.byPortNumber ? patchData.byPortNumber[switchPortNumber] : null;
+          if (pm) {
+            resolvedPanelTag = pm.panelTag || resolvedPanelTag;
+            resolvedPatchPanelId = pm.patchPanelId || resolvedPatchPanelId;
+            resolvedPatchCordId = pm.patchCordId || resolvedPatchCordId;
+            switchPortTag = pm.switchPortTag || switchPortTag;
+            switchCode = pm.switchCode || switchCode;
+          }
+        }
+      }
 
       // =========================================================================
       // OSS STANDARD CABLE LABEL LEGEND (Docx & TOW Cabling Standard)
@@ -271,7 +290,9 @@ function generateCableScheduleData() {
       // Rule 3: Brady PN: M21-750-499 Black on White Nylon cloth tape (vinyl for outdoor/wet)
       // =========================================================================
       const headendLabelLine1 = cableId;
-      const headendLabelLine2 = `${deviceTag} → ${switchPortTag}`;
+      const headendLabelLine2 = isAcsCompositeDrop
+        ? `${deviceTag} → ${resolvedPanelTag} → ${switchPortTag}`
+        : `${deviceTag} → ${resolvedPanelTag} → ${switchPortTag}`;
 
       const fieldLabelLine1 = cableId;
       const fieldLabelLine2 = `${deviceTag} → ${locationDesc}`;
@@ -284,7 +305,9 @@ function generateCableScheduleData() {
         dropIndex,
         panelNum,
         panelPort,
-        panelTag: isAcsCompositeDrop ? `TB${String(panelNum).padStart(2, "0")}-${String(panelPort).padStart(2, "0")}` : panelTag,
+        panelTag: resolvedPanelTag,
+        patchPanelId: resolvedPatchPanelId,
+        patchCordId: resolvedPatchCordId,
         closetName: entry.closetName,
         closetCode,
         floorName: entry.floorName,
@@ -300,7 +323,7 @@ function generateCableScheduleData() {
         runHex,
         patchColor: patchStd.color || "Yellow",
         patchHex: patchStd.hex || "#eab308",
-        patchLengthFt: patchStd.lengthFt || 1,
+        patchLengthFt: patchStd.lengthFt || 0.5,
         measuredFt,
         cutLengthFt,
         serviceLoopFt,
@@ -624,11 +647,11 @@ function renderCablePullScheduleContent() {
       <table class="w-full text-left text-xs font-mono">
         <thead class="bg-slate-900 border-b border-slate-800 text-[10px] uppercase text-slate-400 select-none">
           <tr>
-            <th class="p-2.5">Patch Panel Port</th>
+            <th class="p-2.5">OSS Cable ID &amp; Patch Jack</th>
             <th class="p-2.5">Headend Label (2-Line)</th>
             <th class="p-2.5">Field End Label (2-Line)</th>
             <th class="p-2.5">Destination Device &amp; Area</th>
-            <th class="p-2.5">Cable Spec &amp; Rating</th>
+            <th class="p-2.5">Cable &amp; Patch Cord Spec</th>
             <th class="p-2.5">Cut Length</th>
             <th class="p-2.5">Switch Port</th>
             <th class="p-2.5 text-right">Floor Link</th>
@@ -637,13 +660,14 @@ function renderCablePullScheduleContent() {
         <tbody class="divide-y divide-slate-800/60">
           ${filtered.map(r => `
             <tr class="hover:bg-slate-900/60 transition-colors ${r.isOverLimit ? 'bg-rose-950/20' : ''}">
-              <!-- Patch Panel Port -->
+              <!-- OSS Cable ID & Patch Panel Port -->
               <td class="p-2.5 font-bold text-amber-400">
                 <div class="flex items-center gap-1.5">
                   <span class="w-2 h-2 rounded-full shrink-0 shadow-sm" style="background-color: ${r.runHex}; border: 1px solid rgba(255,255,255,0.3);"></span>
                   <span>${escapeHTML(r.cableId)}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-purple-950/90 border border-purple-700/70 text-purple-200 text-[10px] font-bold">${escapeHTML(r.panelTag || 'PP01-01')}</span>
                 </div>
-                <div class="text-[10px] text-slate-400 font-sans">${escapeHTML(r.closetName)}</div>
+                <div class="text-[10px] text-slate-400 font-sans mt-0.5">${escapeHTML(r.closetName)} &bull; <span class="font-mono text-purple-300">${escapeHTML(r.patchPanelId || 'PP01')}</span></div>
               </td>
 
               <!-- Headend Label (2-Line per Orion Standard) -->
@@ -665,7 +689,7 @@ function renderCablePullScheduleContent() {
               <!-- Destination & Device -->
               <td class="p-2.5 font-sans">
                 <div class="font-bold text-white flex items-center gap-1.5">
-                  <span class="px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold font-mono">${escapeHTML(r.deviceTag)}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[9px] font-bold font-mono">${escapeHTML(r.deviceTag)}</span>
                   <span>${escapeHTML(r.deviceName)}</span>
                 </div>
                 <div class="text-[10px] text-slate-400">${escapeHTML(r.floorName)} &bull; ${escapeHTML(r.roomName)} (${escapeHTML(r.subsystem)})</div>
@@ -677,7 +701,7 @@ function renderCablePullScheduleContent() {
                   <span class="font-bold text-emerald-400">${escapeHTML(r.runCategory)}</span>
                   <span class="text-slate-400">(${escapeHTML(r.runColor)})</span>
                 </div>
-                <div class="text-[10px] text-slate-400">Patch: ${r.patchLengthFt}ft (${escapeHTML(r.patchColor)})</div>
+                <div class="text-[10px] text-slate-400">Patch: <span class="text-sky-300 font-semibold">${escapeHTML(r.patchCordId || 'PC')}</span> (${r.patchLengthFt === 0.5 ? '6" Slim' : `${r.patchLengthFt}ft`} ${escapeHTML(r.patchColor)})</div>
               </td>
 
               <!-- Length -->

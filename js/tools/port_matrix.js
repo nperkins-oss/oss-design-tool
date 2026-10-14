@@ -409,17 +409,17 @@ function renderPortMatrixStudioContent(switchInstanceId) {
           </div>
         </div>
 
-        <!-- Link 1: Horizontal Cable Run -->
+        <!-- Link 1: Horizontal Cable Run (OSS Cable Legend & 2-Line Brady Label) -->
         <div class="flex flex-col items-center justify-center px-2 text-center">
-          <div class="text-[9px] font-bold ${tracedPort.connectedDeviceId ? 'text-amber-300' : 'text-slate-600'}">
-            ${tracedIsOptical ? 'Fiber Backbone Trunk' : (tracedPatch && tracedPatch.horizontalCableId ? escapeHTML(tracedPatch.horizontalCableId) : 'No Horizontal Drop')}
+          <div class="text-[10px] font-bold ${tracedPort.connectedDeviceId ? 'text-amber-300' : 'text-slate-600'}" title="OSS Standard Cable Label Legend (Brady M21-750-499)">
+            ${tracedIsOptical ? 'Fiber Backbone Trunk' : (tracedPatch && tracedPatch.horizontalCableId ? `Cable: ${escapeHTML(tracedPatch.horizontalCableId)}` : 'No Horizontal Drop')}
           </div>
           <div class="w-full flex items-center gap-1 my-1">
             <div class="h-0.5 flex-1 ${tracedPort.connectedDeviceId ? 'bg-gradient-to-r from-emerald-500 to-purple-500' : 'bg-slate-800'}"></div>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5 ${tracedPort.connectedDeviceId ? 'text-purple-400' : 'text-slate-700'}"></i>
           </div>
-          <div class="text-[9px] text-slate-400">
-            ${tracedIsOptical ? escapeHTML(tracedPort.connector || 'SFP+ Fiber') : 'Cat6A Horizontal Run'}
+          <div class="text-[9px] text-slate-400 truncate max-w-full" title="${tracedPatch && tracedPatch.headendLabelLine2 ? `Headend L2: ${escapeHTML(tracedPatch.headendLabelLine2)}` : ''}">
+            ${tracedIsOptical ? escapeHTML(tracedPort.connector || 'SFP+ Fiber') : (tracedPatch && tracedPatch.headendLabelLine2 && tracedPort.connectedDeviceId ? escapeHTML(tracedPatch.headendLabelLine2) : 'Cat6A CMP Horizontal')}
           </div>
         </div>
 
@@ -431,10 +431,10 @@ function renderPortMatrixStudioContent(switchInstanceId) {
           <div class="min-w-0">
             <div class="text-[9px] uppercase text-purple-300">2. Patch Panel &amp; Jack</div>
             <div class="font-bold text-white truncate">
-              ${tracedIsOptical ? 'Fiber LIU Housing' : escapeHTML(tracedPatch ? `${tracedPatch.patchPanelId} • Jack ${tracedPatch.keystoneJackLabel}` : 'Direct / Unpatched')}
+              ${tracedIsOptical ? escapeHTML(tracedPatch ? tracedPatch.patchPanelId : 'Fiber LIU') : escapeHTML(tracedPatch ? `${tracedPatch.patchPanelId} • ${tracedPatch.panelTag || tracedPatch.keystoneJackLabel}` : 'Direct / Unpatched')}
             </div>
             <div class="text-[10px] text-slate-400 truncate">
-              ${tracedIsOptical ? 'LC Duplex Bulkhead' : (tracedPatch && tracedPatch.patchPanelSlotU ? `Mounted at ${escapeHTML(tracedPatch.patchPanelSlotU)}` : 'Closet Patch Panel')}
+              ${tracedIsOptical ? 'LC Duplex Bulkhead' : (tracedPatch && tracedPatch.patchPanelSlotU ? `Rack ${escapeHTML(tracedPatch.patchPanelSlotU)} • Jack ${escapeHTML(tracedPatch.keystoneJackLabel)}` : 'Closet Patch Panel')}
             </div>
           </div>
         </div>
@@ -442,14 +442,14 @@ function renderPortMatrixStudioContent(switchInstanceId) {
         <!-- Link 2: Short Patch Cord -->
         <div class="flex flex-col items-center justify-center px-2 text-center">
           <div class="text-[9px] font-bold ${tracedPort.connectedDeviceId ? 'text-sky-300' : 'text-slate-500'}">
-            ${tracedIsOptical ? 'LC-LC Fiber Jumper' : escapeHTML(tracedPatch ? tracedPatch.patchCordSpec : '6" Cat6A Slim Patch')}
+            ${tracedIsOptical ? 'LC-LC Fiber Jumper' : escapeHTML(tracedPatch && tracedPatch.patchCordId ? tracedPatch.patchCordId : 'Patch Cord')}
           </div>
           <div class="w-full flex items-center gap-1 my-1">
             <div class="h-0.5 flex-1 ${tracedPort.connectedDeviceId ? 'bg-gradient-to-r from-purple-500 to-sky-500' : 'bg-slate-800'}"></div>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5 ${tracedPort.connectedDeviceId ? 'text-sky-400' : 'text-slate-700'}"></i>
           </div>
           <div class="text-[9px] text-slate-400">
-            1:1 Vertical Patching
+            ${tracedIsOptical ? 'Optical Jumper' : escapeHTML(tracedPatch ? tracedPatch.patchCordSpec : '6" Cat6A Slim')}
           </div>
         </div>
 
@@ -459,7 +459,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
             P${tracedPort.unitPortNumber || tracedPort.portNumber}
           </div>
           <div class="min-w-0">
-            <div class="text-[9px] uppercase text-sky-300">3. Switch Port</div>
+            <div class="text-[9px] uppercase text-sky-300">3. Switch Port (${escapeHTML(tracedPatch && tracedPatch.switchPortTag ? tracedPatch.switchPortTag : `P${tracedPort.portNumber}`)})</div>
             <div class="font-bold text-white truncate">
               ${escapeHTML(sw.friendlyName || sw.model)} &bull; ${escapeHTML(tracedPort.shortLabel || `P${tracedPort.portNumber}`)}
             </div>
