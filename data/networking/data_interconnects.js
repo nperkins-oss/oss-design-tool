@@ -13,10 +13,17 @@ const MODULAR_UPLINK_CATALOG = {
   "C9300-NM-4M": { sku: "C9300-NM-4M", name: "Cisco 4x Multi-Gigabit Network Module", speed: "10G", ports: 4, msrp: 1500 },
   "C9300-NM-2Y": { sku: "C9300-NM-2Y", name: "Cisco 2x 25G/10G/1G SFP28 Network Module (Catalyst 9300)", speed: "25G", ports: 2, msrp: 2100 },
   "C9300-NM-2Y-M": { sku: "C9300-NM-2Y-M", name: "Cisco Meraki 2x 25G/10G SFP28 Network Module", speed: "25G", ports: 2, msrp: 2100 },
+  "C9300-NM-8X-M": { sku: "C9300-NM-8X-M", name: "Cisco Meraki 8x 10G SFP+ Network Module", speed: "10G", ports: 8, msrp: 2400 },
+  "C9300-NM-4M-M": { sku: "C9300-NM-4M-M", name: "Cisco Meraki 4x Multi-Gigabit Network Module", speed: "10G", ports: 4, msrp: 1500 },
   "C9300X-NM-8Y": { sku: "C9300X-NM-8Y", name: "Cisco 8x 10G/25G SFP28 Network Module", speed: "25G", ports: 8, msrp: 3200 },
+  "C9300X-NM-8Y-M": { sku: "C9300X-NM-8Y-M", name: "Cisco Meraki 8x 10G/25G SFP28 Network Module (C9300X-M)", speed: "25G", ports: 8, msrp: 3200 },
   "C9300X-NM-2C": { sku: "C9300X-NM-2C", name: "Cisco 2x 40G/100G QSFP28 Network Module", speed: "100G", ports: 2, msrp: 4500 },
+  "C9300X-NM-2C-M": { sku: "C9300X-NM-2C-M", name: "Cisco Meraki 2x 40G/100G QSFP28 Network Module (C9300X-M)", speed: "100G", ports: 2, msrp: 4500 },
   "C9300X-NM-4C": { sku: "C9300X-NM-4C", name: "Cisco 4x 40G/100G QSFP28 Network Module (9300X-HX/TX/24Y)", speed: "100G", ports: 4, msrp: 5800 },
   "C9300-NM-BLANK": { sku: "C9300-NM-BLANK=", name: "Cisco Catalyst 9300 Network Module Blank Cover Plate", speed: "N/A", ports: 0, msrp: 45 },
+  "MA-MOD-4X10G": { sku: "MA-MOD-4X10G", name: "Meraki 4x 10G SFP+ Modular Uplink Card (MS390)", speed: "10G", ports: 4, msrp: 1200 },
+  "MA-MOD-8X10G": { sku: "MA-MOD-8X10G", name: "Meraki 8x 10G SFP+ Modular Uplink Card (MS390)", speed: "10G", ports: 8, msrp: 2400 },
+  "MA-MOD-2X40G": { sku: "MA-MOD-2X40G", name: "Meraki 2x 40G QSFP+ Modular Uplink Card (MS390)", speed: "40G", ports: 2, msrp: 3000 },
 
   // Juniper EX4400 Extension Modules
   "EX4400-EM-4Y": { sku: "EX4400-EM-4Y", name: "Juniper 4x 10G/25G SFP28 Uplink Module", speed: "25G", ports: 4, msrp: 1850 },
@@ -61,10 +68,11 @@ const FEATURE_LICENSE_CATALOG = {
   // Allied Telesis Feature Licenses
   "AT-FL-X530-CPOE": { sku: "AT-FL-X530-CPOE", name: "Allied Telesis Continuous PoE License (Zero-Drop Reboot)", msrp: 500, category: "switch_feature" },
   "AT-FL-X530-01": { sku: "AT-FL-X530-01", name: "Allied Telesis x530 Premium L3 Routing (OSPFv2, BGP4, VRF)", msrp: 1350, category: "switch_feature" },
-  "AT-FL-IE340-01": { sku: "AT-IE340-FL01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", msrp: 650, category: "switch_feature" },
+  "AT-FL-IE340-01": { sku: "AT-FL-IE340-01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", msrp: 650, category: "switch_feature" },
+  "AT-IE340-FL01": { sku: "AT-IE340-FL01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", msrp: 650, category: "switch_feature" },
   "AT-IE220-FL01": { sku: "AT-IE220-FL01", name: "Allied Telesis IE220 10G Uplink & 95W PoE++ Sourcing License", msrp: 340, category: "switch_feature" },
-  "AT-FL-X320-01": { sku: "AT-FL-x320-01", name: "Allied Telesis x320 Premium L3 & Continuous PoE License", msrp: 650, category: "switch_feature" },
-  "AT-FL-AMF-NODE": { sku: "AT-FL-AMF-01", name: "Allied Telesis AMF-Plus Node Permanent License", msrp: 450, category: "switch_feature" },
+  "AT-FL-X320-01": { sku: "AT-FL-X320-01", name: "Allied Telesis x320 Premium L3 & Continuous PoE License", msrp: 650, category: "switch_feature" },
+  "AT-FL-AMF-NODE": { sku: "AT-FL-AMF-NODE", name: "Allied Telesis AMF-Plus Node Permanent License", msrp: 450, category: "switch_feature" },
 
   // Juniper Junos Feature Tiers
   "JUNIPER-S-EX-A": { sku: "S-EX-A-C1", name: "Juniper Advanced Junos L3 Routing License (Class 1)", msrp: 650, category: "switch_feature" },
@@ -101,6 +109,14 @@ const MGMT_SUBSCRIPTION_CATALOG = {
     }
   },
   "Ruckus": {
+    "cloud": {
+      name: "RUCKUS One Cloud Switch Subscription",
+      terms: {
+        "1YR": { sku: "CLD-SW-1YR", msrp: 95 },
+        "3YR": { sku: "CLD-SW-3YR", msrp: 245 },
+        "5YR": { sku: "CLD-SW-5YR", msrp: 380 }
+      }
+    },
     "ruckus_one_prof": {
       name: "RUCKUS One Professional Cloud Subscription",
       terms: {
@@ -179,107 +195,133 @@ const MGMT_SUBSCRIPTION_CATALOG = {
 // 4. POWER SUPPLIES & RPS MODULES
 // ==========================================
 const POWER_SUPPLY_CATALOG = {
-  // Cisco Catalyst Modular Power Supplies & High-Amperage Cables
-  "PWR-C1-1900WAC-P": { sku: "PWR-C1-1900WAC-P", name: "Cisco 1900W AC Platinum PSU (Catalyst 9300X UPOE+)", msrp: 1600, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600 },
-  "PWR-C1-1900WAC-P-M": { sku: "PWR-C1-1900WAC-P-M", name: "Cisco Meraki 1900W AC Secondary PSU (Catalyst 9300X-M)", msrp: 1650, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600 },
-  "PWR-C1-1100WAC-P": { sku: "PWR-C1-1100WAC-P", name: "Cisco 1100W AC Platinum PSU (Catalyst 9300)", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
-  "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Meraki 1100W AC Secondary PSU (C9300X / MS390)", msrp: 1250, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
-  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
-  "PWR-C1-715WAC-P": { sku: "PWR-C1-715WAC-P", name: "Cisco 715W AC Platinum PSU (Catalyst 9300)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
-  "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
-  "MA-PWR-715WAC": { sku: "MA-PWR-715WAC", name: "Meraki MS390 715W Modular AC Power Supply", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
-  "PWR-C1-350WAC-P": { sku: "PWR-C1-350WAC-P", name: "Cisco 350W AC Platinum PSU (Catalyst 9300 Data)", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0 },
-  "PWR-C1-350WAC-P-M": { sku: "PWR-C1-350WAC-P-M", name: "Cisco Meraki 350W AC Secondary PSU (C9300-M Data)", msrp: 575, category: "internal_psu", wattage: 350, poeBudgetContribution: 0 },
-  "MA-PWR-350WAC": { sku: "MA-PWR-350WAC", name: "Meraki MS390 350W Modular AC Power Supply", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0 },
-  "PWR-C1-715WDC": { sku: "PWR-C1-715WDC", name: "Cisco 715W DC Power Supply (Catalyst 9300 -48VDC)", msrp: 1100, category: "internal_psu", wattage: 715, poeBudgetContribution: 437 },
-  "PWR-C1-1100WDC": { sku: "PWR-C1-1100WDC", name: "Cisco 1100W DC Power Supply (Catalyst 9300 -48VDC)", msrp: 1450, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800 },
-  "C9K-PWR-CAB-AC-US": { sku: "C9K-PWR-CAB-AC-US", name: "Cisco High-Amperage C21 AC Power Cord (NEMA 5-20P)", msrp: 65, category: "power_cord", wattage: 0, poeBudgetContribution: 0 },
-  "C9K-PWR-CAB-AC-BL": { sku: "C9K-PWR-CAB-AC-BL", name: "Cisco High-Amperage C20-to-C21 Jumper Cord (Rack PDU)", msrp: 75, category: "power_cord", wattage: 0, poeBudgetContribution: 0 },
+  // Cisco Catalyst & Meraki Modular Power Supplies & High-Amperage Cables
+  "PWR-C1-1900WAC-P": { sku: "PWR-C1-1900WAC-P", name: "Cisco 1900W AC Platinum PSU (Catalyst 9300X UPOE+)", msrp: 1600, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600, weightLbs: 3.1 },
+  "PWR-C1-1900WAC-P-M": { sku: "PWR-C1-1900WAC-P-M", name: "Cisco Meraki 1900W AC Secondary PSU (Catalyst 9300X-M)", msrp: 1650, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600, weightLbs: 3.1 },
+  "PWR-C1-1100WAC-P": { sku: "PWR-C1-1100WAC-P", name: "Cisco 1100W AC Platinum PSU (Catalyst 9300)", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1 },
+  "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Meraki 1100W AC Secondary PSU (C9300X / MS390)", msrp: 1250, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1 },
+  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1 },
+  "MA-PWR-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1 },
+  "PWR-C1-715WAC-P": { sku: "PWR-C1-715WAC-P", name: "Cisco 715W AC Platinum PSU (Catalyst 9300)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8 },
+  "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8 },
+  "MA-PWR-715WAC": { sku: "MA-PWR-715WAC", name: "Meraki MS390 715W Modular AC Power Supply", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8 },
+  "PWR-C1-350WAC-P": { sku: "PWR-C1-350WAC-P", name: "Cisco 350W AC Platinum PSU (Catalyst 9300 Data)", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "PWR-C1-350WAC-P-M": { sku: "PWR-C1-350WAC-P-M", name: "Cisco Meraki 350W AC Secondary PSU (C9300-M Data)", msrp: 575, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "MA-PWR-350WAC": { sku: "MA-PWR-350WAC", name: "Meraki MS390 350W Modular AC Power Supply", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "MA-PWR-250WAC": { sku: "MA-PWR-250WAC", name: "Meraki 250W Modular AC Power Supply (MS250 / MS350 Data)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "MA-PWR-640WAC": { sku: "MA-PWR-640WAC", name: "Meraki 640W Modular AC PoE+ Power Supply (MS250 / MS350 LP)", msrp: 750, category: "internal_psu", wattage: 640, poeBudgetContribution: 370, weightLbs: 2.7 },
+  "MA-PWR-1025WAC": { sku: "MA-PWR-1025WAC", name: "Meraki 1025W Modular AC PoE+ Power Supply (MS250 / MS350 FP / MS355)", msrp: 1150, category: "internal_psu", wattage: 1025, poeBudgetContribution: 740, weightLbs: 3.0 },
+  "PWR-C5-600WAC": { sku: "PWR-C5-600WAC", name: "Cisco Catalyst 9200L 600W AC Secondary Power Supply", msrp: 695, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 2.4 },
+  "PWR-C5-600WAC-M": { sku: "PWR-C5-600WAC-M", name: "Cisco Meraki C9200L 600W AC Secondary Power Supply", msrp: 695, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 2.4 },
+  "PWR-C5-1KWAC": { sku: "PWR-C5-1KWAC", name: "Cisco Catalyst 9200L 1000W AC Secondary Power Supply", msrp: 1095, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.6 },
+  "PWR-C5-1KWAC-M": { sku: "PWR-C5-1KWAC-M", name: "Cisco Meraki C9200L 1000W AC Secondary Power Supply", msrp: 1095, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.6 },
+  "PWR-C1-715WDC": { sku: "PWR-C1-715WDC", name: "Cisco 715W DC Power Supply (Catalyst 9300 -48VDC)", msrp: 1100, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8 },
+  "PWR-C1-1100WDC": { sku: "PWR-C1-1100WDC", name: "Cisco 1100W DC Power Supply (Catalyst 9300 -48VDC)", msrp: 1450, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1 },
+  "C9K-PWR-CAB-AC-US": { sku: "C9K-PWR-CAB-AC-US", name: "Cisco High-Amperage C21 AC Power Cord (NEMA 5-20P)", msrp: 65, category: "power_cord", wattage: 0, poeBudgetContribution: 0, weightLbs: 0.8 },
+  "C9K-PWR-CAB-AC-BL": { sku: "C9K-PWR-CAB-AC-BL", name: "Cisco High-Amperage C20-to-C21 Jumper Cord (Rack PDU)", msrp: 75, category: "power_cord", wattage: 0, poeBudgetContribution: 0, weightLbs: 0.8 },
 
   // Juniper Networks Modular Power Supplies (AC & DC)
-  "JPSU-2000-C-AC-AFO": { sku: "JPSU-2000-C-AC-AFO", name: "Juniper 2000W AC Platinum PSU (EX4400 High PoE)", msrp: 1850, category: "internal_psu", wattage: 2000, poeBudgetContribution: 1800 },
-  "JPSU-1600-C-AC-AFO": { sku: "JPSU-1600-C-AC-AFO", name: "Juniper 1600W AC Redundant PSU (EX4400-48MP PoE-bt)", msrp: 1450, category: "internal_psu", wattage: 1600, poeBudgetContribution: 1400 },
-  "JPSU-1050-C-AC-AFO": { sku: "JPSU-1050-C-AC-AFO", name: "Juniper 1050W AC Redundant PSU (EX4400 PoE+)", msrp: 1050, category: "internal_psu", wattage: 1050, poeBudgetContribution: 880 },
-  "JPSU-920-AC-AFO": { sku: "JPSU-920-AC-AFO", name: "Juniper 920W AC Redundant PSU Front-to-Back (EX4100-48P)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740 },
-  "JPSU-920-AC-AFI": { sku: "JPSU-920-AC-AFI", name: "Juniper 920W AC Redundant PSU Back-to-Front (EX4400)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740 },
-  "JPSU-600-AC-AFO": { sku: "JPSU-600-AC-AFO", name: "Juniper 600W AC Redundant PSU (EX4100-24P)", msrp: 650, category: "internal_psu", wattage: 600, poeBudgetContribution: 450 },
-  "JPSU-550-C-AC-AFO": { sku: "JPSU-550-C-AC-AFO", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFO)", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0 },
-  "JPSU-550-C-AC-AFI": { sku: "JPSU-550-C-AC-AFI", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFI)", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0 },
-  "JPSU-150-AC-AFO": { sku: "JPSU-150-AC-AFO", name: "Juniper 150W AC Redundant PSU (EX4100/EX3400 Data)", msrp: 350, category: "internal_psu", wattage: 150, poeBudgetContribution: 0 },
-  "JPSU-350-AC-AFO": { sku: "JPSU-350-AC-AFO", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFO)", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0 },
-  "JPSU-350-AC-AFI": { sku: "JPSU-350-AC-AFI", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFI)", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0 },
-  "JPSU-715-AC-AFO": { sku: "JPSU-715-AC-AFO", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFO)", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565 },
-  "JPSU-715-AC-AFI": { sku: "JPSU-715-AC-AFI", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFI)", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565 },
-  "JPSU-1100-AC-AFO": { sku: "JPSU-1100-AC-AFO", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFO)", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950 },
-  "JPSU-1100-AC-AFI": { sku: "JPSU-1100-AC-AFI", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFI)", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950 },
-  "JPSU-550-C-DC-AFO": { sku: "JPSU-550-C-DC-AFO", name: "Juniper 550W DC Redundant PSU (EX4400 -48VDC)", msrp: 850, category: "internal_psu", wattage: 550, poeBudgetContribution: 0 },
-  "JPSU-650-AC-AFO": { sku: "JPSU-650-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0 },
-  "JPSU-650-AC-AFI": { sku: "JPSU-650-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0 },
-  "JPSU-850-AC-AFO": { sku: "JPSU-850-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0 },
-  "JPSU-850-AC-AFI": { sku: "JPSU-850-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0 },
-  "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", msrp: 650, category: "external_brick", wattage: 340, poeBudgetContribution: 240 },
-  "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", msrp: 750, category: "internal_hardened", wattage: 340, poeBudgetContribution: 240 },
+  "JPSU-2000-C-AC-AFO": { sku: "JPSU-2000-C-AC-AFO", name: "Juniper 2000W AC Platinum PSU (EX4400 High PoE)", msrp: 1850, category: "internal_psu", wattage: 2000, poeBudgetContribution: 1800, weightLbs: 2.4 },
+  "JPSU-1600-C-AC-AFO": { sku: "JPSU-1600-C-AC-AFO", name: "Juniper 1600W AC Redundant PSU (EX4400-48MP PoE-bt)", msrp: 1450, category: "internal_psu", wattage: 1600, poeBudgetContribution: 1400, weightLbs: 2.3 },
+  "JPSU-1050-C-AC-AFO": { sku: "JPSU-1050-C-AC-AFO", name: "Juniper 1050W AC Redundant PSU (EX4400 PoE+)", msrp: 1050, category: "internal_psu", wattage: 1050, poeBudgetContribution: 880, weightLbs: 2.2 },
+  "JPSU-920-AC-AFO": { sku: "JPSU-920-AC-AFO", name: "Juniper 920W AC Redundant PSU Front-to-Back (EX4100-48P)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.2 },
+  "JPSU-920-AC-AFI": { sku: "JPSU-920-AC-AFI", name: "Juniper 920W AC Redundant PSU Back-to-Front (EX4400)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.2 },
+  "JPSU-600-AC-AFO": { sku: "JPSU-600-AC-AFO", name: "Juniper 600W AC Redundant PSU (EX4100-24P)", msrp: 650, category: "internal_psu", wattage: 600, poeBudgetContribution: 450, weightLbs: 2.0 },
+  "JPSU-550-C-AC-AFO": { sku: "JPSU-550-C-AC-AFO", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFO)", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0 },
+  "JPSU-550-C-AC-AFI": { sku: "JPSU-550-C-AC-AFI", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFI)", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0 },
+  "JPSU-150-AC-AFO": { sku: "JPSU-150-AC-AFO", name: "Juniper 150W AC Redundant PSU (EX4100/EX3400 Data)", msrp: 350, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.8 },
+  "JPSU-350-AC-AFO": { sku: "JPSU-350-AC-AFO", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFO)", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.0 },
+  "JPSU-350-AC-AFI": { sku: "JPSU-350-AC-AFI", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFI)", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.0 },
+  "JPSU-715-AC-AFO": { sku: "JPSU-715-AC-AFO", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFO)", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565, weightLbs: 2.2 },
+  "JPSU-715-AC-AFI": { sku: "JPSU-715-AC-AFI", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFI)", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565, weightLbs: 2.2 },
+  "JPSU-1100-AC-AFO": { sku: "JPSU-1100-AC-AFO", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFO)", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950, weightLbs: 2.5 },
+  "JPSU-1100-AC-AFI": { sku: "JPSU-1100-AC-AFI", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFI)", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950, weightLbs: 2.5 },
+  "JPSU-550-C-DC-AFO": { sku: "JPSU-550-C-DC-AFO", name: "Juniper 550W DC Redundant PSU (EX4400 -48VDC)", msrp: 850, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0 },
+  "JPSU-650-AC-AFO": { sku: "JPSU-650-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "JPSU-650W-AC-AFO": { sku: "JPSU-650W-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "JPSU-650-AC-AFI": { sku: "JPSU-650-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "JPSU-650W-AC-AFI": { sku: "JPSU-650W-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "JPSU-850-AC-AFO": { sku: "JPSU-850-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "JPSU-850W-AC-AFO": { sku: "JPSU-850W-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "JPSU-850-AC-AFI": { sku: "JPSU-850-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "JPSU-850W-AC-AFI": { sku: "JPSU-850W-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", msrp: 650, category: "external_brick", wattage: 340, poeBudgetContribution: 240, weightLbs: 3.1 },
+  "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", msrp: 750, category: "internal_hardened", wattage: 340, poeBudgetContribution: 240, weightLbs: 2.8 },
 
   // Ruckus CommScope Modular Power Supplies
-  "RPS22-E": { sku: "RPS22-E", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Exhaust (ICX 7550)", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960 },
-  "RPS22-I": { sku: "RPS22-I", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Intake (ICX 7550)", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960 },
-  "RPS21-E": { sku: "RPS21-E", name: "Ruckus 400W AC Redundant Non-PoE PSU Exhaust (ICX 7550)", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0 },
-  "RPS21-I": { sku: "RPS21-I", name: "Ruckus 400W AC Redundant Non-PoE PSU Intake (ICX 7550)", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0 },
-  "RPS21DC-E": { sku: "RPS21DC-E", name: "Ruckus 400W DC Redundant Non-PoE PSU (ICX 7550 -48VDC)", msrp: 750, category: "internal_psu", wattage: 400, poeBudgetContribution: 0 },
-  "RPS23-E": { sku: "RPS23-E", name: "Ruckus 1000W AC Redundant PSU (ICX 7650 / 8200)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740 },
-  "RPS16": { sku: "RPS16", name: "Ruckus 1000W AC Redundant PoE Power Supply (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740 },
-  "RPS16-E": { sku: "RPS16-E", name: "Ruckus 1000W AC Redundant PoE PSU Exhaust (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740 },
-  "RPS16-I": { sku: "RPS16-I", name: "Ruckus 1000W AC Redundant PoE PSU Intake (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740 },
-  "RPS15": { sku: "RPS15", name: "Ruckus 250W AC Redundant Non-PoE PSU (ICX 7450 / 7650)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0 },
-  "RPS15-E": { sku: "RPS15-E", name: "Ruckus 250W AC Redundant Non-PoE PSU Exhaust (ICX 7450 / 7650)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0 },
-  "RPS16DC": { sku: "RPS16DC", name: "Ruckus 510W DC Redundant PoE PSU (ICX 7450 / 7650 -48VDC)", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390 },
-  "RPS16DC-E": { sku: "RPS16DC-E", name: "Ruckus 510W DC Redundant PoE PSU Exhaust (ICX 7450 / 7650 -48VDC)", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390 },
+  "RPS22-E": { sku: "RPS22-E", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Exhaust (ICX 7550)", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960, weightLbs: 2.5 },
+  "RPS22-I": { sku: "RPS22-I", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Intake (ICX 7550)", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960, weightLbs: 2.5 },
+  "RPS21-E": { sku: "RPS21-E", name: "Ruckus 400W AC Redundant Non-PoE PSU Exhaust (ICX 7550)", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2 },
+  "RPS21-I": { sku: "RPS21-I", name: "Ruckus 400W AC Redundant Non-PoE PSU Intake (ICX 7550)", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2 },
+  "RPS21DC-E": { sku: "RPS21DC-E", name: "Ruckus 400W DC Redundant Non-PoE PSU (ICX 7550 -48VDC)", msrp: 750, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2 },
+  "RPS23-E": { sku: "RPS23-E", name: "Ruckus 1000W AC Redundant PSU (ICX 7650 / 8200)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5 },
+  "RPS19-E": { sku: "RPS19-E", name: "Ruckus 920W/650W AC Redundant Power Supply Exhaust (ICX 7150-48ZP / 7850)", msrp: 795, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.4 },
+  "RPS19-I": { sku: "RPS19-I", name: "Ruckus 920W/650W AC Redundant Power Supply Intake (ICX 7150-48ZP / 7850)", msrp: 795, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.4 },
+  "RPS9+": { sku: "RPS9+", name: "Ruckus 500W AC Redundant Power Supply (ICX 7750)", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "RPS9E": { sku: "RPS9E", name: "Ruckus 500W AC Redundant Power Supply Exhaust (ICX 7750)", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "RPS9I": { sku: "RPS9I", name: "Ruckus 500W AC Redundant Power Supply Intake (ICX 7750)", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4 },
+  "RPS16": { sku: "RPS16", name: "Ruckus 1000W AC Redundant PoE Power Supply (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5 },
+  "RPS16-E": { sku: "RPS16-E", name: "Ruckus 1000W AC Redundant PoE PSU Exhaust (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5 },
+  "RPS16-I": { sku: "RPS16-I", name: "Ruckus 1000W AC Redundant PoE PSU Intake (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5 },
+  "RPS15": { sku: "RPS15", name: "Ruckus 250W AC Redundant Non-PoE PSU (ICX 7450 / 7650)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1 },
+  "RPS15-E": { sku: "RPS15-E", name: "Ruckus 250W AC Redundant Non-PoE PSU Exhaust (ICX 7450 / 7650)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1 },
+  "RPS16DC": { sku: "RPS16DC", name: "Ruckus 510W DC Redundant PoE PSU (ICX 7450 / 7650 -48VDC)", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390, weightLbs: 2.4 },
+  "RPS16DC-E": { sku: "RPS16DC-E", name: "Ruckus 510W DC Redundant PoE PSU Exhaust (ICX 7450 / 7650 -48VDC)", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390, weightLbs: 2.4 },
 
   // Hot-Swappable Cooling Fan Modules (Cisco, Juniper, Ruckus, UniFi)
-  "FAN-T2": { sku: "FAN-T2", name: "Cisco Catalyst 9300 Hot-Swap Fan Module (Spare)", vendor: "Cisco", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "FAN-T2-M": { sku: "FAN-T2-M", name: "Cisco Meraki System Fan Module (Catalyst 9300-M / MS390 Spare)", vendor: "Meraki", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "EX4400-FAN-AFO": { sku: "EX4400-FAN-AFO", name: "Juniper EX4400 Hot-Swap Fan Tray (Front-to-Back Airflow)", vendor: "Juniper", msrp: 120, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "EX4400-FAN-AFI": { sku: "EX4400-FAN-AFI", name: "Juniper EX4400 Hot-Swap Fan Tray (Back-to-Front Airflow)", vendor: "Juniper", msrp: 120, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "EX4300-FAN": { sku: "EX4300-FAN", name: "Juniper EX4300 Hot-Swap Fan Module (Front-to-Back Airflow)", vendor: "Juniper", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "EX4300-FAN-AFI": { sku: "EX4300-FAN-AFI", name: "Juniper EX4300 Hot-Swap Fan Module (Back-to-Front Airflow)", vendor: "Juniper", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "ICX-FAN12-E": { sku: "ICX-FAN12-E", name: "Ruckus ICX 7550/7650/7850 Fan Tray Exhaust (Front-to-Back)", vendor: "Ruckus", msrp: 125, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "ICX-FAN12-I": { sku: "ICX-FAN12-I", name: "Ruckus ICX 7550/7650/7850 Fan Tray Intake (Back-to-Front)", vendor: "Ruckus", msrp: 125, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "ICX-FAN10-E": { sku: "ICX-FAN10-E", name: "Ruckus ICX 7450 Hot-Swap Fan Tray Exhaust (Front-to-Back)", vendor: "Ruckus", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "ICX-FAN10-I": { sku: "ICX-FAN10-I", name: "Ruckus ICX 7450 Hot-Swap Fan Tray Intake (Back-to-Front)", vendor: "Ruckus", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0 },
-  "UACC-Fan-4020": { sku: "UACC-Fan-4020", name: "UniFi Hot-Swappable Fan Module (40x20mm)", vendor: "UniFi", msrp: 49, category: "fan_module", wattage: 2, poeBudgetContribution: 0 },
+  "FAN-T2": { sku: "FAN-T2", name: "Cisco Catalyst 9300 Hot-Swap Fan Module (Spare)", vendor: "Cisco", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4 },
+  "FAN-T2-M": { sku: "FAN-T2-M", name: "Cisco Meraki System Fan Module (Catalyst 9300-M / MS390 Spare)", vendor: "Meraki", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4 },
+  "EX4400-FAN-AFO": { sku: "EX4400-FAN-AFO", name: "Juniper EX4400 Hot-Swap Fan Tray (Front-to-Back Airflow)", vendor: "Juniper", msrp: 120, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.5 },
+  "EX4400-FAN-AFI": { sku: "EX4400-FAN-AFI", name: "Juniper EX4400 Hot-Swap Fan Tray (Back-to-Front Airflow)", vendor: "Juniper", msrp: 120, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.5 },
+  "EX4300-FAN": { sku: "EX4300-FAN", name: "Juniper EX4300 Hot-Swap Fan Module (Front-to-Back Airflow)", vendor: "Juniper", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4 },
+  "EX4300-FAN-AFI": { sku: "EX4300-FAN-AFI", name: "Juniper EX4300 Hot-Swap Fan Module (Back-to-Front Airflow)", vendor: "Juniper", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4 },
+  "ICX-FAN12-E": { sku: "ICX-FAN12-E", name: "Ruckus ICX 7550/7650/7850 Fan Tray Exhaust (Front-to-Back)", vendor: "Ruckus", msrp: 125, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.5 },
+  "ICX-FAN12-I": { sku: "ICX-FAN12-I", name: "Ruckus ICX 7550/7650/7850 Fan Tray Intake (Back-to-Front)", vendor: "Ruckus", msrp: 125, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.5 },
+  "ICX-FAN10-E": { sku: "ICX-FAN10-E", name: "Ruckus ICX 7450 Hot-Swap Fan Tray Exhaust (Front-to-Back)", vendor: "Ruckus", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4 },
+  "ICX-FAN10-I": { sku: "ICX-FAN10-I", name: "Ruckus ICX 7450 Hot-Swap Fan Tray Intake (Back-to-Front)", vendor: "Ruckus", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4 },
+  "UACC-Fan-4020": { sku: "UACC-Fan-4020", name: "UniFi Hot-Swappable Fan Module (40x20mm)", vendor: "UniFi", msrp: 49, category: "fan_module", wattage: 2, poeBudgetContribution: 0, weightLbs: 0.2 },
 
   // Allied Telesis Modular Power
-  "AT-PWR800": { sku: "AT-PWR800-80", name: "Allied Telesis 800W AC Redundant PSU (x530 Series)", msrp: 750, category: "internal_psu", wattage: 800, poeBudgetContribution: 500 },
-  "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", msrp: 380, category: "external_brick", wattage: 300, poeBudgetContribution: 240 },
+  "AT-PWR600-AC": { sku: "AT-PWR600-AC", name: "Allied Telesis 600W Hot-Swap AC System Power Supply (x950 Series)", msrp: 850, category: "internal_psu", wattage: 600, poeBudgetContribution: 0, weightLbs: 2.6 },
+  "AT-PWR800": { sku: "AT-PWR800-80", name: "Allied Telesis 800W AC Redundant PSU (x530 / x930 Series)", msrp: 750, category: "internal_psu", wattage: 800, poeBudgetContribution: 500, weightLbs: 2.5 },
+  "AT-PWR250-AC": { sku: "AT-PWR250-AC", name: "Allied Telesis 250W AC Redundant System Power Supply (x930 / x530)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1 },
+  "AT-PWR150-AC": { sku: "AT-PWR150-AC", name: "Allied Telesis 150W AC Redundant System Power Supply (x930)", msrp: 380, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.9 },
+  "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", msrp: 380, category: "external_brick", wattage: 300, poeBudgetContribution: 240, weightLbs: 2.4 },
+  "AT-PWR05": { sku: "AT-PWR05", name: "Allied Telesis 480W Industrial DIN Rail DC Power Supply (IE340 / IE220)", msrp: 390, category: "din_psu", wattage: 480, poeBudgetContribution: 370, weightLbs: 2.6 },
+
   // AMG Industrial DIN Rail Power Supplies & UPS (Genuine Manufacturer Catalog)
-  "AMGPSU-I12-P24A": { sku: "AMGPSU-I12-P24A", name: "AMG 24W 12VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 75, category: "din_psu", wattage: 24, poeBudgetContribution: 0 },
-  "AMGPSU-I12-P54": { sku: "AMGPSU-I12-P54", name: "AMG 54W 12VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 110, category: "din_psu", wattage: 54, poeBudgetContribution: 0 },
-  "AMGPSU-I24-P60": { sku: "AMGPSU-I24-P60", name: "AMG 60W 24VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 120, category: "din_psu", wattage: 60, poeBudgetContribution: 0 },
-  "AMGPSU-I24-P120": { sku: "AMGPSU-I24-P120", name: "AMG 120W 24VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 180, category: "din_psu", wattage: 120, poeBudgetContribution: 0 },
-  "AMGPSU-I48-P60": { sku: "AMGPSU-I48-P60", name: "AMG 60W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 140, category: "din_psu", wattage: 60, poeBudgetContribution: 60 },
-  "AMGPSU-I48-P120": { sku: "AMGPSU-I48-P120", name: "AMG 120W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 195, category: "din_psu", wattage: 120, poeBudgetContribution: 120 },
-  "AMGPSU-I48-P120A": { sku: "AMGPSU-I48-P120A", name: "AMG 120W Industrial High-Efficiency DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 210, category: "din_psu", wattage: 120, poeBudgetContribution: 120 },
-  "AMGPSU-I48-P120-IEC": { sku: "AMGPSU-I48-P120-IEC", name: "AMG 120W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 230, category: "din_psu", wattage: 120, poeBudgetContribution: 120 },
-  "AMGPSU-I48-P240": { sku: "AMGPSU-I48-P240", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 250, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
-  "AMGPSU-I48-P240A": { sku: "AMGPSU-I48-P240A", name: "AMG 240W Industrial High-Efficiency DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
-  "AMGPSU-I48-P240A-IEC": { sku: "AMGPSU-I48-P240A-IEC", name: "AMG 240W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 280, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
-  "AMGPSU-I48-P290": { sku: "AMGPSU-I48-P290", name: "AMG 290W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 310, category: "din_psu", wattage: 290, poeBudgetContribution: 290 },
-  "AMGPSU-I48-P480": { sku: "AMGPSU-I48-P480", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 390, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
-  "AMGPSU-I48-P480A": { sku: "AMGPSU-I48-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
-  "AMGPSU-I48-P480A-IEC": { sku: "AMGPSU-I48-P480A-IEC", name: "AMG 480W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 450, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
-  "AMGPSU-I48-P530": { sku: "AMGPSU-I48-P530", name: "AMG 530W Industrial Ultra High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 495, category: "din_psu", wattage: 530, poeBudgetContribution: 530 },
-  "AMGUPS-I48-P240": { sku: "AMGUPS-I48-P240", name: "AMG 240W Industrial DIN Rail UPS Controller (48-56VDC)", vendor: "AMG", msrp: 480, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
-  "AMGPSU-W12-P25": { sku: "AMGPSU-W12-P25", name: "AMG 25W 12VDC Commercial Wall-Mount Plug-In Power Adapter", vendor: "AMG", msrp: 45, category: "external_brick", wattage: 25, poeBudgetContribution: 0 },
+  "AMGPSU-I12-P24A": { sku: "AMGPSU-I12-P24A", name: "AMG 24W 12VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 75, category: "din_psu", wattage: 24, poeBudgetContribution: 0, weightLbs: 0.45, depthInches: 3.9 },
+  "AMGPSU-I12-P54": { sku: "AMGPSU-I12-P54", name: "AMG 54W 12VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 110, category: "din_psu", wattage: 54, poeBudgetContribution: 0, weightLbs: 0.65, depthInches: 4.0 },
+  "AMGPSU-I24-P60": { sku: "AMGPSU-I24-P60", name: "AMG 60W 24VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 120, category: "din_psu", wattage: 60, poeBudgetContribution: 0, weightLbs: 0.7, depthInches: 4.0 },
+  "AMGPSU-I24-P120": { sku: "AMGPSU-I24-P120", name: "AMG 120W 24VDC Industrial DIN Rail PSU", vendor: "AMG", msrp: 180, category: "din_psu", wattage: 120, poeBudgetContribution: 0, weightLbs: 1.2, depthInches: 4.5 },
+  "AMGPSU-I48-P60": { sku: "AMGPSU-I48-P60", name: "AMG 60W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 140, category: "din_psu", wattage: 60, poeBudgetContribution: 60, weightLbs: 0.75, depthInches: 4.0 },
+  "AMGPSU-I48-P120": { sku: "AMGPSU-I48-P120", name: "AMG 120W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 195, category: "din_psu", wattage: 120, poeBudgetContribution: 120, weightLbs: 1.3, depthInches: 4.5 },
+  "AMGPSU-I48-P120A": { sku: "AMGPSU-I48-P120A", name: "AMG 120W Industrial High-Efficiency DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 210, category: "din_psu", wattage: 120, poeBudgetContribution: 120, weightLbs: 1.3, depthInches: 4.5 },
+  "AMGPSU-I48-P120-IEC": { sku: "AMGPSU-I48-P120-IEC", name: "AMG 120W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 230, category: "din_psu", wattage: 120, poeBudgetContribution: 120, weightLbs: 1.4, depthInches: 4.5 },
+  "AMGPSU-I48-P240": { sku: "AMGPSU-I48-P240", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 250, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 1.85, depthInches: 4.5 },
+  "AMGPSU-I48-P240A": { sku: "AMGPSU-I48-P240A", name: "AMG 240W Industrial High-Efficiency DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 1.85, depthInches: 4.5 },
+  "AMGPSU-I48-P240A-IEC": { sku: "AMGPSU-I48-P240A-IEC", name: "AMG 240W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 280, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 1.95, depthInches: 4.5 },
+  "AMGPSU-I48-P290": { sku: "AMGPSU-I48-P290", name: "AMG 290W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 310, category: "din_psu", wattage: 290, poeBudgetContribution: 290, weightLbs: 2.1, depthInches: 4.8 },
+  "AMGPSU-I48-P480": { sku: "AMGPSU-I48-P480", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 390, category: "din_psu", wattage: 480, poeBudgetContribution: 480, weightLbs: 2.65, depthInches: 5.0 },
+  "AMGPSU-I48-P480A": { sku: "AMGPSU-I48-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480, weightLbs: 2.65, depthInches: 5.0 },
+  "AMGPSU-I48-P480A-IEC": { sku: "AMGPSU-I48-P480A-IEC", name: "AMG 480W Industrial DIN Rail PSU with C14 IEC Mains", vendor: "AMG", msrp: 450, category: "din_psu", wattage: 480, poeBudgetContribution: 480, weightLbs: 2.75, depthInches: 5.0 },
+  "AMGPSU-I48-P530": { sku: "AMGPSU-I48-P530", name: "AMG 530W Industrial Ultra High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 495, category: "din_psu", wattage: 530, poeBudgetContribution: 530, weightLbs: 2.9, depthInches: 5.0 },
+  "AMGUPS-I48-P240": { sku: "AMGUPS-I48-P240", name: "AMG 240W Industrial DIN Rail UPS Controller (48-56VDC)", vendor: "AMG", msrp: 480, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 2.1, depthInches: 4.8 },
+  "AMGPSU-W12-P25": { sku: "AMGPSU-W12-P25", name: "AMG 25W 12VDC Commercial Wall-Mount Plug-In Power Adapter", vendor: "AMG", msrp: 45, category: "external_brick", wattage: 25, poeBudgetContribution: 0, weightLbs: 0.4 },
+  // Mean Well / Fortinet Industrial & Redundant PSUs
+  "NDR-120-48": { sku: "NDR-120-48", name: "Mean Well 120W 48VDC Slim Industrial DIN Rail PSU", vendor: "Mean Well", msrp: 49, category: "din_psu", wattage: 120, poeBudgetContribution: 120, weightLbs: 1.32, depthInches: 4.47 },
+  "NDR-240-48": { sku: "NDR-240-48", name: "Mean Well 240W 48VDC Slim Industrial DIN Rail PSU", vendor: "Mean Well", msrp: 79, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 2.2, depthInches: 4.47 },
+  "SP-FG60F-PDC": { sku: "SP-FG60F-PDC", name: "Fortinet Dual Power Adapter & Cable Kit (FortiGate 60F/80F)", vendor: "Fortinet", msrp: 95, category: "external_brick", wattage: 60, poeBudgetContribution: 0, weightLbs: 0.7 },
   // Backward-compatibility aliases
-  "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240 },
-  "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480 },
-  "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", msrp: 399, category: "dc_rps", wattage: 950, poeBudgetContribution: 0 },
-  
+  "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 1.85, depthInches: 4.5 },
+  "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480, weightLbs: 2.65, depthInches: 5.0 },
+  "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", msrp: 399, category: "dc_rps", wattage: 950, poeBudgetContribution: 0, weightLbs: 12.13, depthInches: 12.8 },
+
   // UniFi Enterprise Modular Power Supplies
-  "UACC-PSU-54V-1200W": { sku: "UACC-PSU-54V-1200W", name: "UniFi 1,200W 54V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 299, category: "internal_psu", wattage: 1200, poeBudgetContribution: 720 },
-  "UACC-PSU-54V-600W": { sku: "UACC-PSU-54V-600W", name: "UniFi 600W 54V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 199, category: "internal_psu", wattage: 600, poeBudgetContribution: 370 },
-  "UACC-PSU-12V-550W": { sku: "UACC-PSU-12V-550W", name: "UniFi 550W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 149, category: "internal_psu", wattage: 550, poeBudgetContribution: 0 },
-  "UACC-PSU-12V-150W": { sku: "UACC-PSU-12V-150W", name: "UniFi 150W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 99, category: "internal_psu", wattage: 150, poeBudgetContribution: 0 }
+  "UACC-PSU-54V-1200W": { sku: "UACC-PSU-54V-1200W", name: "UniFi 1,200W 54V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 299, category: "internal_psu", wattage: 1200, poeBudgetContribution: 720, weightLbs: 2.2 },
+  "UACC-PSU-54V-600W": { sku: "UACC-PSU-54V-600W", name: "UniFi 600W 54V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 199, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 1.9 },
+  "UACC-PSU-12V-550W": { sku: "UACC-PSU-12V-550W", name: "UniFi 550W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 149, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 1.8 },
+  "UACC-PSU-12V-150W": { sku: "UACC-PSU-12V-150W", name: "UniFi 150W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 99, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.5 }
 };
 window.POWER_SUPPLY_CATALOG = POWER_SUPPLY_CATALOG;
 
@@ -296,6 +338,8 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "chassis",
     rackUnits: 3,
+    weightLbs: 11.5,
+    depthInches: 9.8,
     description: "19-inch 3U rackmount chassis accommodating up to 14 AMG mini cards or media converters with dual power options"
   },
   "AMG2015-DR": {
@@ -306,6 +350,8 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "rack_shelf",
     rackUnits: 3,
+    weightLbs: 6.2,
+    depthInches: 8.5,
     description: "Standard 19-inch 3U rackmount shelf with integrated DIN rail for installing DIN rail switches and power supplies into equipment racks"
   },
   "AMG2031": {
@@ -316,15 +362,19 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "rack_shelf",
     rackUnits: 1,
+    weightLbs: 3.4,
+    depthInches: 7.5,
     description: "19-inch 1U shallow rackmount shelf with recessed DIN rail for compact DIN switches and PSUs"
   },
   "AMG2035": {
     sku: "AMG2035",
+    depthInches: 1.2,
     name: "AMG Side Mounted Wall Bracket Adapter Kit",
     vendor: "AMG",
     msrp: 35,
     category: "mounting",
     type: "wall_bracket",
+    weightLbs: 0.3,
     description: "Side mounted wall bracket adapter kit for mounting AMG DIN rail switches and PSUs in depth-restricted enclosures"
   },
   "AMG2036-RP-AA": {
@@ -335,36 +385,68 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "chassis",
     rackUnits: 1,
+    weightLbs: 9.8,
+    depthInches: 11.2,
     description: "1U 19-inch 18-slot high density blade rack chassis with dual redundant AC mains power supplies"
   },
   "AMGMNT-MAG": {
     sku: "AMGMNT-MAG-04",
+    depthInches: 1.2,
     name: "AMG Heavy-Duty Magnetic Mounting Kit",
     vendor: "AMG",
     msrp: 45,
     category: "mounting",
     type: "magnetic_mount",
+    weightLbs: 0.4,
     description: "4x rear-mounted heavy duty neodymium magnets with mounting plates for tool-less installation to steel cabinets"
   },
 
   "UACC-DIN-Rail": {
     sku: "UACC-DIN-Rail",
+    depthInches: 1.2,
     name: "UniFi DIN Rail Mount Kit",
     vendor: "UniFi",
     msrp: 19,
     category: "mounting",
     type: "din_rail_mount",
     rackUnits: 0,
+    weightLbs: 0.2,
     description: "Standard 35mm (TS-35) DIN rail mounting bracket adapter kit for compact UniFi desktop and edge switches (USW-Ultra, USW-Lite, USW-Flex-Mini, USW-Flex-2.5G)"
+  },
+  "UACC-Switch-DIN": {
+    sku: "UACC-Switch-DIN",
+    depthInches: 1.2,
+    name: "UniFi Compact Switch DIN Rail Mount",
+    vendor: "UniFi",
+    msrp: 19,
+    category: "mounting",
+    type: "din_rail_mount",
+    rackUnits: 0,
+    weightLbs: 0.25,
+    description: "Official Ubiquiti 35mm DIN rail mount bracket for USW-Ultra, USW-Flex-2.5G, and compact utility switches"
+  },
+  "UACC-Switch-FM": {
+    sku: "UACC-Switch-FM",
+    depthInches: 1.2,
+    name: "UniFi Compact Switch Floating / Wall Mount",
+    vendor: "UniFi",
+    msrp: 19,
+    category: "mounting",
+    type: "wall_bracket",
+    rackUnits: 0,
+    weightLbs: 0.3,
+    description: "Official Ubiquiti floating wall/desk mount bracket for USW-Flex-2.5G-8, USW-Flex-2.5G-8-PoE, and USW-Ultra series"
   },
   "UACC-Flex-DIN": {
     sku: "UACC-Flex-DIN",
+    depthInches: 1.2,
     name: "UniFi Switch Flex DIN Rail Mount Bracket",
     vendor: "UniFi",
     msrp: 19,
     category: "mounting",
     type: "din_rail_mount",
     rackUnits: 0,
+    weightLbs: 0.2,
     description: "Heavy-duty 35mm (TS-35) DIN rail mounting bracket custom engineered for the USW-Flex outdoor/edge switch"
   },
   "UACC-Rack-Rails-Slide": {
@@ -374,6 +456,8 @@ const MOUNTING_CATALOG = {
     msrp: 99,
     category: "mounting",
     type: "sliding_rails",
+    weightLbs: 5.95,
+    depthInches: 25.6,
     description: "Tool-less sliding rail kit for 4-post server racks (25.6\" - 39.4\" depth)"
   },
   "UACC-Pro-Max-16-RM": {
@@ -384,7 +468,33 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "rack_ears",
     rackUnits: 1,
+    weightLbs: 1.4,
+    depthInches: 7.9,
     description: "Custom 1U rackmount adapter shelf specifically contoured for the USW-Pro-Max-16 switch"
+  },
+  "UACC-UCG-Industrial-RM": {
+    sku: "UACC-UCG-Industrial-RM",
+    name: "UniFi Cloud Gateway Industrial 1U Rack Mount Kit",
+    vendor: "UniFi",
+    msrp: 39,
+    category: "mounting",
+    type: "rack_ears",
+    rackUnits: 1,
+    weightLbs: 1.5,
+    depthInches: 7.5,
+    description: "1U 19-inch rackmount adapter kit for the UniFi Cloud Gateway Industrial (UCG-Industrial)"
+  },
+  "RM-FR-T10": {
+    sku: "RM-FR-T10",
+    name: "Rackmount.IT 1U Front-Port Rack Mount Kit for FortiGate 60F/80F",
+    vendor: "Fortinet",
+    msrp: 149,
+    category: "mounting",
+    type: "rack_shelf",
+    rackUnits: 1,
+    weightLbs: 3.1,
+    depthInches: 8.5,
+    description: "Custom 1U 19-inch rackmount kit with front RJ45 patch pass-through and power supply retention for FortiGate desktop firewalls"
   },
   "USW-Flex-Utility": {
     sku: "USW-Flex-Utility",
@@ -393,16 +503,42 @@ const MOUNTING_CATALOG = {
     msrp: 58,
     category: "mounting",
     type: "outdoor_enclosure",
+    weightLbs: 3.75,
+    depthInches: 2.5,
     description: "Outdoor weatherproof IPX5 enclosure for the USW-Flex switch with 60W PoE adapter"
+  },
+  "UACC-Flex-Utility-Pro": {
+    sku: "UACC-Flex-Utility-Pro",
+    name: "UniFi Flex Utility Pro Outdoor Enclosure",
+    vendor: "UniFi",
+    msrp: 99,
+    category: "mounting",
+    type: "outdoor_enclosure",
+    weightLbs: 4.8,
+    depthInches: 3.2,
+    description: "Heavy-duty weatherproof outdoor enclosure for USW-Flex-2.5G-8-PoE and AC/PoE power adapters"
   },
   "UACC-UTS": {
     sku: "UACC-UTS",
+    depthInches: 1.2,
     name: "UniFi Universal Table Stand",
     vendor: "UniFi",
     msrp: 19,
     category: "mounting",
     type: "desktop_stand",
+    weightLbs: 0.45,
     description: "Universal weighted desktop table stand for compact switches"
+  },
+  "UACC-Ultra-WM": {
+    sku: "UACC-Ultra-WM",
+    depthInches: 1.2,
+    name: "UniFi Ultra Magnetic / Wall Mount Kit",
+    vendor: "UniFi",
+    msrp: 19,
+    category: "mounting",
+    type: "wall_bracket",
+    weightLbs: 0.3,
+    description: "Wall and magnetic mounting bracket for UniFi Ultra compact switches"
   },
   "UACC-Rack-Shelf-SD": {
     sku: "UACC-Rack-Shelf-SD",
@@ -412,6 +548,8 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "rack_shelf",
     rackUnits: 1,
+    weightLbs: 4.5,
+    depthInches: 10.6,
     description: "Compact 1U 2-post cantilever rack shelf for compact non-rackmount switches"
   },
   "UACC-Rack-Shelf-FD": {
@@ -422,15 +560,19 @@ const MOUNTING_CATALOG = {
     category: "mounting",
     type: "rack_shelf",
     rackUnits: 1,
+    weightLbs: 8.2,
+    depthInches: 21.3,
     description: "Heavy-duty vented 4-post rack shelf supporting non-rackmount equipment"
   },
   "3rd_party_enclosure": {
     sku: "3rd_party_enclosure",
+    depthInches: 1.2,
     name: "Inside 3rd-Party / NEMA Enclosure (Included Mount)",
     vendor: "Generic / 3rd Party",
     msrp: 0,
     category: "mounting",
     type: "enclosure_mount",
+    weightLbs: 0,
     description: "Mounted inside an existing or 3rd-party weatherproof outdoor NEMA enclosure using the switch's included mounting plate or magnetic base"
   },
   "NF141208": {
@@ -440,6 +582,8 @@ const MOUNTING_CATALOG = {
     msrp: 149,
     category: "mounting",
     type: "outdoor_enclosure",
+    weightLbs: 11.2,
+    depthInches: 8.0,
     description: "Vented NEMA 4X / IP66 weatherproof enclosure with aluminum equipment mounting plate"
   },
   "Trove1WP1": {
@@ -449,82 +593,98 @@ const MOUNTING_CATALOG = {
     msrp: 289,
     category: "mounting",
     type: "outdoor_enclosure",
+    weightLbs: 33.4,
+    depthInches: 7.88,
     description: "Outdoor weatherproof NEMA 4/11 security enclosure with backplane for edge switches & power"
   },
 
   // Cisco Catalyst / Meraki 4-Post & Recessed Mounts
   "4PT-KIT-T1": {
     sku: "4PT-KIT-T1",
+    depthInches: 1.2,
     name: "Cisco Catalyst Universal 4-Post Equipment Rack Mount Kit",
     vendor: "Cisco",
     msrp: 120,
     category: "mounting",
     type: "sliding_rails",
     rackUnits: 1,
+    weightLbs: 3.5,
     description: "Heavy-duty adjustable 4-post rack mount kit designed for Catalyst 9300 and 9300X switches in 24-36 inch deep 19-inch equipment racks"
   },
   "4PT-KIT-T2-M": {
     sku: "4PT-KIT-T2-M",
+    depthInches: 1.2,
     name: "Cisco Catalyst 9300-M 4-Post Equipment Rack Mount Kit",
     vendor: "Meraki",
     msrp: 120,
     category: "mounting",
     type: "sliding_rails",
     rackUnits: 1,
+    weightLbs: 3.5,
     description: "Cisco Meraki 4-post equipment rack mount rail kit for C9300-M, C9300L-M, C9300X-M, and MS390 switches"
   },
   "19-CMP-KIT-T1": {
     sku: "19-CMP-KIT-T1",
+    depthInches: 1.2,
     name: "Cisco 19\" Recessed Rack Mount Extension Kit",
     vendor: "Cisco",
     msrp: 95,
     category: "mounting",
     type: "rack_ears",
     rackUnits: 1,
+    weightLbs: 1.2,
     description: "Recesses switch by 2 to 4 inches to allow cabinet door clearance for high-density patch cables and transceivers"
   },
 
   // Juniper Networks 4-Post & Wall Mounts
   "EX-4PST-RMK": {
     sku: "EX-4PST-RMK",
+    depthInches: 1.2,
     name: "Juniper Adjustable 4-Post Rack Mount Kit (24\"-36\")",
     vendor: "Juniper",
     msrp: 95,
     category: "mounting",
     type: "sliding_rails",
     rackUnits: 1,
+    weightLbs: 3.2,
     description: "Adjustable 4-post equipment rail kit for 1U Juniper EX4300, EX4400, and SRX deep-chassis switches"
   },
   "EX-RMK": {
     sku: "EX-RMK",
+    depthInches: 1.2,
     name: "Juniper Standard 19\" 2-Post Replacement Rack Ears",
     vendor: "Juniper",
     msrp: 45,
     category: "mounting",
     type: "rack_ears",
     rackUnits: 1,
+    weightLbs: 0.8,
     description: "Replacement 19-inch front mounting brackets and screws for Juniper EX switches"
   },
 
   // Ruckus CommScope 4-Post Mounts
   "ICX-RMK-4POST-TL": {
     sku: "ICX-RMK-4POST-TL",
+    depthInches: 1.2,
     name: "Ruckus Universal Tool-Less 4-Post Rack Mount Kit",
     vendor: "Ruckus",
     msrp: 110,
     category: "mounting",
     type: "sliding_rails",
     rackUnits: 1,
+    weightLbs: 3.4,
     description: "Tool-less 4-post equipment shelf rail kit for ICX 7450, 7550, 7650, and 7850 switches"
   },
   "XBR-R000295": {
     sku: "XBR-R000295",
+    depthInches: 1.2,
     name: "Ruckus Universal 4-Post Fixed Rack Mount Kit (24\"-32\")",
     vendor: "Ruckus",
     msrp: 95,
     category: "mounting",
     type: "sliding_rails",
     rackUnits: 1,
+    weightLbs: 3.2,
     description: "FRU Universal 4-post fixed rack mount kit for ICX 7450, 7550, 7650, and 7750"
   }
 };
@@ -551,16 +711,25 @@ const OPTICS_LIST = [
   { vendor: "Meraki", sku: "STACK-T1-1M-M", name: "Catalyst Meraki 480G Stacking Cable (1m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
   { vendor: "Meraki", sku: "STACK-T1-3M-M", name: "Catalyst Meraki 480G Stacking Cable (3m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
 
-  // Cisco Catalyst 9300L Type 3A Stacking Cables
+  // Cisco Catalyst 9300L Type 3A & 9200L Type 4 Stacking Cables
   { vendor: "Meraki", sku: "STACK-T3A-50CM-M", name: "Catalyst 9300L Type 3A Stacking Cable (0.5m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 175, lengthMeters: 0.5, reach: "0.5m", industrial: false },
   { vendor: "Meraki", sku: "STACK-T3A-1M-M", name: "Catalyst 9300L Type 3A Stacking Cable (1m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 215, lengthMeters: 1, reach: "1m", industrial: false },
   { vendor: "Meraki", sku: "STACK-T3A-3M-M", name: "Catalyst 9300L Type 3A Stacking Cable (3m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 315, lengthMeters: 3, reach: "3m", industrial: false },
   { vendor: "Meraki", sku: "STACK-T4-50CM", name: "Cisco Catalyst StackWise-1T Stacking Cable (0.5m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 280, lengthMeters: 0.5, reach: "0.5m", industrial: false },
   { vendor: "Meraki", sku: "STACK-T4-1M", name: "Cisco Catalyst StackWise-1T Stacking Cable (1m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 320, lengthMeters: 1, reach: "1m", industrial: false },
   { vendor: "Meraki", sku: "STACK-T4-3M", name: "Cisco Catalyst StackWise-1T Stacking Cable (3m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 420, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T4-50CM-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (0.5m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T4-1M-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (1m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "STACK-T4-3M-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (3m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
   { vendor: "Cisco", sku: "C9200L-STACK-KIT", name: "Cisco Catalyst 9200L Stacking Kit (2 Adapters + 1 0.5m Cable)", speed: "80G", speedRank: 80, formFactor: "Stacking", medium: "stacking", msrp: 1050, lengthMeters: 0.5, reach: "0.5m", industrial: false },
 
-  // Meraki MS350/MS355 Hardware Stacking
+  // Meraki MS210/MS225/MS250/MS350/MS355 Hardware Stacking
+  { vendor: "Meraki", sku: "MA-CBL-40G-50CM", name: "Meraki 40G Stacking Cable (0.5m, MS210/MS225/MS250/MS350)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 145, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-40G-1M", name: "Meraki 40G Stacking Cable (1m, MS210/MS225/MS250/MS350)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 180, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-40G-3M", name: "Meraki 40G Stacking Cable (3m, MS210/MS225/MS250/MS350)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 240, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-100G-50CM", name: "Meraki 100G QSFP28 Stacking Cable (0.5m, MS355)", speed: "100G", speedRank: 100, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-100G-1M", name: "Meraki 100G QSFP28 Stacking Cable (1m, MS355)", speed: "100G", speedRank: 100, formFactor: "Stacking", medium: "stacking", msrp: 295, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", sku: "MA-CBL-100G-3M", name: "Meraki 100G QSFP28 Stacking Cable (3m, MS355)", speed: "100G", speedRank: 100, formFactor: "Stacking", medium: "stacking", msrp: 395, lengthMeters: 3, reach: "3m", industrial: false },
   { vendor: "Meraki", sku: "STACK-DAC-1M", name: "Meraki MS350/MS355 Hardware Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 180, lengthMeters: 1, reach: "1m", industrial: false },
   { vendor: "Meraki", sku: "STACK-DAC-3M", name: "Meraki MS350/MS355 Hardware Stacking Cable (3m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 240, lengthMeters: 3, reach: "3m", industrial: false },
 
@@ -583,6 +752,10 @@ const OPTICS_LIST = [
   { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-50CM", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (0.5m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 165, lengthMeters: 0.5, reach: "0.5m", industrial: false },
   { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-1M", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (1m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 1, reach: "1m", industrial: false },
   { vendor: "Juniper", sku: "EX-QSFP-40GE-DAC-3M", name: "Juniper Virtual Chassis QSFP+ Dedicated Stacking Cable (3m)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Allied Telesis", sku: "AT-STACKQS", name: "Allied Telesis x930/x950 40G QSFP+ Stacking Module & Cable Kit", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 450, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Fortinet", sku: "FG-TRAN-SFP+SR", name: "Fortinet 10GBASE-SR SFP+ Multi-Mode Transceiver (300m)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "mmf", msrp: 550, industrial: false },
+  { vendor: "Fortinet", sku: "FG-TRAN-SFP+LR", name: "Fortinet 10GBASE-LR SFP+ Single-Mode Transceiver (10km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 950, industrial: false },
+  { vendor: "Fortinet", sku: "FG-TRAN-GC", name: "Fortinet 1000BASE-T RJ45 Copper SFP Transceiver", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "copper", msrp: 195, industrial: false },
 
   // ----------------------------------------
   // B. Direct Attach Copper (DAC) Cables

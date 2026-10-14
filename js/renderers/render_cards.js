@@ -196,8 +196,8 @@ function renderSwitchCard(sw) {
     '<span class="badge-chip border border-indigo-500/50 bg-indigo-500/20 text-indigo-300">Aggregation</span>' :
     '<span class="badge-chip border border-slate-600 bg-slate-800 text-slate-300">Access Edge</span>';
 
-  const hasModularBay = sw.modularUplink && sw.modularUplink.hasSlot;
-  const hasLicenseOption = sw.featureLicense && sw.featureLicense.hasOptions;
+  const hasModularBay = Boolean(sw.modularUplink && sw.modularUplink.hasSlot);
+  const hasLicenseOption = Boolean(sw.featureLicense && (sw.featureLicense.hasOptions || sw.featureLicense.hasLicense));
   const allLocations = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(true) : ["Unassigned", "MDF • Rack-1", "IDF-1 • Rack-1"];
   const defaultLoc = (sw.role === "Core" || sw.role === "Aggregation") ? "MDF • Rack-1" : "IDF-1 • Rack-1";
 

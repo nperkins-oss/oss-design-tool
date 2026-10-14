@@ -13,6 +13,7 @@ const WIRELESS_DATABASE = [
     vendor: "UniFi",
     model: "UniFi Building Bridge XG (10G 60 GHz PtP)",
     sku: "UBB-XG",
+    depthInches: 3.8,
     category: "ptp_60g",
     type: "PtP Link Pair",
     topology: "PtP",
@@ -66,6 +67,7 @@ const WIRELESS_DATABASE = [
     vendor: "UniFi",
     model: "UniFi Building Bridge (Gigabit 60 GHz PtP)",
     sku: "UBB",
+    depthInches: 3.8,
     category: "ptp_60g",
     type: "PtP Link Pair",
     topology: "PtP",
@@ -613,6 +615,7 @@ const WIRELESS_DATABASE = [
     vendor: "UniFi",
     model: "UniFi 5G Max Gateway",
     sku: "UniFi-5G-Max",
+    depthInches: 3.8,
     category: "cellular_backup",
     type: "Cellular WAN",
     topology: "WAN",
@@ -643,6 +646,7 @@ const WIRELESS_DATABASE = [
     vendor: "UniFi",
     model: "UniFi Device Bridge Pro",
     sku: "UDB-Pro",
+    depthInches: 3.8,
     category: "wireless_bridge",
     type: "Station",
     topology: "Client Bridge",
@@ -827,7 +831,7 @@ const WIRELESS_DATABASE = [
     powerConsumptionWatts: 10,
     powerSource: "poe_switch",
     rackUnits: 0,
-    weightLbs: 0.88,
+    weightLbs: 0.93.88,
     depthInches: 1.6,
     weatherRating: "IP67 Rated",
     mounting: "Wall / Pole Mount Included",
@@ -1370,6 +1374,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   // Mounting Brackets
   "Wave-Precision-Mount": {
     sku: "Wave-Precision-Mount",
+    weightLbs: 1.2,
+    depthInches: 4.2,
     name: "Ubiquiti Wave Precision Alignment Mount",
     msrp: 99,
     category: "mounting",
@@ -1377,6 +1383,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "UBB-XG-Mount": {
     sku: "UBB-XG-Mount",
+    weightLbs: 1.2,
+    depthInches: 4.2,
     name: "UniFi Building Bridge Precision Alignment Bracket",
     msrp: 79,
     category: "mounting",
@@ -1384,6 +1392,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "N000045L002A": {
     sku: "N000045L002A",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Cambium cnWave V3000 Precision Fine-Adjustment Bracket",
     msrp: 165,
     category: "mounting",
@@ -1391,6 +1401,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "N000000L125A": {
     sku: "N000000L125A",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Cambium cnWave V1000 / V5000 Adjustable Tilt Bracket Mount",
     msrp: 49,
     category: "mounting",
@@ -1398,6 +1410,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "AX-MK-1FT-B": {
     sku: "AX-MK-1FT-B",
+    weightLbs: 1.2,
+    depthInches: 4.2,
     name: "Siklu Precision Fine-Tune Pole / Tower Mount Kit (1ft/2ft)",
     msrp: 280,
     category: "mounting",
@@ -1405,6 +1419,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "EH-MK-SM": {
     sku: "EH-MK-SM",
+    weightLbs: 1.2,
+    depthInches: 4.2,
     name: "Siklu Compact Wall & Pole Mounting Bracket (T260 / EH-600)",
     msrp: 95,
     category: "mounting",
@@ -1412,6 +1428,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "AMG8870F-WALL": {
     sku: "AMG8870F-WALL",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "AMG SkyWave Heavy-Duty Wall Mounting Bracket",
     msrp: 45,
     category: "mounting",
@@ -1421,6 +1439,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   // Outdoor PoE Surge Suppressors
   "ETH-SP-G2": {
     sku: "ETH-SP-G2",
+    weightLbs: 0.25,
+    depthInches: 1.5,
     name: "Ubiquiti Ethernet Surge Protector Gen2",
     msrp: 19,
     category: "surge_protector",
@@ -1428,6 +1448,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "C000000L065A": {
     sku: "C000000L065A",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Cambium Outdoor Gigabit 56V Surge Suppressor",
     msrp: 75,
     category: "surge_protector",
@@ -1435,6 +1457,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "AX-SP-01": {
     sku: "AX-SP-01",
+    weightLbs: 0.25,
+    depthInches: 1.5,
     name: "Siklu Outdoor Gigabit PoE Surge Protector",
     msrp: 85,
     category: "surge_protector",
@@ -1444,6 +1468,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   // High-Power Outdoor PoE Injectors
   "POE-48-24W-G": {
     sku: "POE-48-24W-G",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Ubiquiti 48VDC 24W Gigabit Passive PoE Injector",
     msrp: 19,
     category: "power_injector",
@@ -1451,6 +1477,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "POE-24-12W-G": {
     sku: "POE-24-12W-G",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Ubiquiti 24VDC 12W Gigabit Passive PoE Injector",
     msrp: 15,
     category: "power_injector",
@@ -1458,6 +1486,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "N000065L001C": {
     sku: "N000065L001C",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Cambium 60W Gigabit Passive PoE Injector (54VDC)",
     msrp: 85,
     category: "power_injector",
@@ -1465,6 +1495,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "AMGPSU-T24-P24": {
     sku: "AMGPSU-T24-P24",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "AMG 24VDC 24W Passive Gigabit PoE Injector",
     msrp: 35,
     category: "power_injector",
@@ -1472,6 +1504,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "EH-POE-AC-60W": {
     sku: "EH-POE-AC-60W",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Siklu 60W Outdoor 802.3bt PoE Power Injector (100-240VAC)",
     msrp: 145,
     category: "power_injector",
@@ -1481,6 +1515,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   // Specialized Antennas
   "AMGANT-W1-ODA9": {
     sku: "AMGANT-W1-ODA9",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "AMG Outdoor 5GHz 9dBi Dual-Polarized Omni Antenna",
     msrp: 125,
     category: "antenna",
@@ -1488,6 +1524,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "EH-ANT-1FT-80GHz": {
     sku: "EH-ANT-1FT-80GHz",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Siklu 1-Foot High-Gain Directional Dish Antenna (43 dBi)",
     msrp: 650,
     category: "antenna",
@@ -1495,6 +1533,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
   },
   "EH-ANT-2FT-80GHz": {
     sku: "EH-ANT-2FT-80GHz",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Siklu 2-Foot Ultra-High-Gain Directional Dish Antenna (50 dBi)",
     msrp: 1150,
     category: "antenna",
@@ -1508,6 +1548,8 @@ const WIRELESS_ACCESSORY_CATALOG = {
 const WIRELESS_LICENSE_CATALOG = {
   "AX-LIC-10G-EH8010": {
     sku: "AX-LIC-10G-EH8010",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Siklu EtherHaul 8010FX 10 Gbps Symmetrical Capacity Upgrade License",
     msrp: 2450,
     category: "wireless_license",
@@ -1515,6 +1557,8 @@ const WIRELESS_LICENSE_CATALOG = {
   },
   "AX-LIC-2.5G-T280": {
     sku: "AX-LIC-2.5G-T280",
+    weightLbs: 0.85,
+    depthInches: 3.8,
     name: "Siklu MultiHaul TG T280 2.5 Gbps Full-Duplex Speed Upgrade License",
     msrp: 650,
     category: "wireless_license",

@@ -67,7 +67,10 @@ const ALLIED_SWITCHES = [
       "6.4 Tbps ultra-high capacity wire-speed fabric",
       "EVPN-VXLAN distributed overlay fabrics",
       "Dual hot-swap load-sharing redundant PSUs"
-    ]
+    ],
+    "portsBreakdown": {
+      "qsfp28_100g": 32
+    }
   },
   {
     "id": "at-x980-32dq",
@@ -131,7 +134,10 @@ const ALLIED_SWITCHES = [
       "25.6 Tbps extreme bandwidth enterprise datacenter fabric",
       "EVPN-VXLAN and advanced multi-chassis link aggregation",
       "Redundant hot-swappable cooling and power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "qsfp28_100g": 32
+    }
   },
   {
     "id": "at-x950-28xtqm",
@@ -195,7 +201,11 @@ const ALLIED_SWITCHES = [
       "Active Fiber Monitoring (AFM) anti-tamper optical detection",
       "Full Layer 3 dynamic routing & EVPN-VXLAN",
       "Dual hot-swap redundant load-sharing PSUs"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_plus_10g": 24,
+      "qsfp28_100g": 4
+    }
   },
   {
     "id": "at-x950-28xsq",
@@ -259,7 +269,11 @@ const ALLIED_SWITCHES = [
       "4x 100G QSFP28 uplinks & 1.92 Tbps switching capacity",
       "Expansion bay supports XEM2-40G or XEM2-100G modules",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_plus_10g": 24,
+      "qsfp28_100g": 4
+    }
   },
   {
     "id": "at-x950-52xtqm",
@@ -323,7 +337,11 @@ const ALLIED_SWITCHES = [
       "4x 100G QSFP28 uplinks for non-blocking campus core",
       "VCStack up to 4 units over 100G interconnects",
       "Dual hot-swap redundant load-sharing PSUs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_10g": 48,
+      "qsfp28_100g": 4
+    }
   },
   {
     "id": "at-x950-52xsq",
@@ -387,7 +405,11 @@ const ALLIED_SWITCHES = [
       "4x 100G QSFP28 high-speed uplinks & 2.4 Tbps switching",
       "Full Layer 3 routing, BGP, OSPF & EVPN-VXLAN",
       "Dual hot-swap redundant load-sharing PSUs"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_plus_10g": 48,
+      "qsfp28_100g": 4
+    }
   },
   {
     "id": "at-x930-28gpx",
@@ -449,7 +471,11 @@ const ALLIED_SWITCHES = [
       "PoE budget expandable up to 1440W with dual power supplies",
       "Continuous PoE maintains IP video uptime through reboots",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x930-28gtx",
@@ -506,7 +532,12 @@ const ALLIED_SWITCHES = [
       "Active Fiber Monitoring (AFM) support on 10G uplinks",
       "Dual hot-swap load-sharing AC or DC power supplies",
       "AMF Plus autonomous management node"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x930-28gstx",
@@ -563,7 +594,13 @@ const ALLIED_SWITCHES = [
       "Dedicated 160 Gbps hardware stacking module",
       "Full Layer 3 IPv4/IPv6 routing suite with OSPF and BGP",
       "Dual hot-swap redundant power supplies"
-    ]
+    ],
+    "psuSku": "AT-PWR250-AC",
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "sfp_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x930-52gpx",
@@ -624,7 +661,12 @@ const ALLIED_SWITCHES = [
       "Expandable up to 1440W PoE budget with dual AT-PWR800/1200",
       "160 Gbps high-speed VCStack backplane",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x930-52gtx",
@@ -681,7 +723,13 @@ const ALLIED_SWITCHES = [
       "160 Gbps VCStack resilient chassis stacking",
       "Full Layer 3 IPv4/IPv6 dynamic routing suite",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "psuSku": "AT-PWR250-AC",
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x560-28ysq",
@@ -738,7 +786,12 @@ const ALLIED_SWITCHES = [
       "4x 100G QSFP28 uplinks & 2.0 Tbps non-blocking capacity",
       "EVPN-VXLAN support for agile network segmentation",
       "Dual hot-swap load-sharing AC or DC power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "sfp28_25g": 24,
+      "qsfp28_100g": 4
+    }
   },
   {
     "id": "at-x550-18xsq",
@@ -795,7 +848,12 @@ const ALLIED_SWITCHES = [
       "2x 40G QSFP+ core uplinks & VCStack support",
       "Active Fiber Monitoring (AFM) protection on fiber ports",
       "Dual hot-swap redundant power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "sfp_plus_10g": 16,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "at-x530-28gpx",
@@ -865,7 +923,11 @@ const ALLIED_SWITCHES = [
       "VCStack up to 8 switches locally or over distance",
       "Active Fiber Monitoring (AFM)",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530-28gtxm",
@@ -922,7 +984,13 @@ const ALLIED_SWITCHES = [
       "4x 10G SFP+ uplinks & VCStack up to 8 switches",
       "Full Layer 3 routing & EVPN-VXLAN support",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 20,
+      "rj45_10g": 4,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530-28gpxm",
@@ -983,7 +1051,13 @@ const ALLIED_SWITCHES = [
       "Continuous PoE delivers uninterrupted power through reboots",
       "4x 10G SFP+ optical uplinks with Active Fiber Monitoring",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 20,
+      "rj45_10g": 4,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530dp-28ghxm",
@@ -1045,7 +1119,13 @@ const ALLIED_SWITCHES = [
       "1440W total PoE budget with dual fixed internal power supplies",
       "Continuous PoE maintains PTZ cameras & video analytics uptime",
       "Dual AC power inputs for true electrical supply redundancy"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 20,
+      "rj45_10g": 4,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530-52gpx",
@@ -1115,7 +1195,11 @@ const ALLIED_SWITCHES = [
       "VCStack up to 8 units",
       "Active Fiber Monitoring (AFM)",
       "Dual hot-swap power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530-52gtxm",
@@ -1172,7 +1256,13 @@ const ALLIED_SWITCHES = [
       "4x 10G SFP+ uplinks & 400 Gbps switching bandwidth",
       "Full Layer 3 routing suite with VCStack support",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 40,
+      "rj45_10g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530-52gpxm",
@@ -1233,7 +1323,13 @@ const ALLIED_SWITCHES = [
       "Continuous PoE keeps surveillance cameras powered during upgrades",
       "4x 10G SFP+ optical uplinks with Active Fiber Monitoring",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 40,
+      "rj45_10g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530dp-52ghxm",
@@ -1295,7 +1391,13 @@ const ALLIED_SWITCHES = [
       "2040W total PoE budget with dual integrated high-output supplies",
       "Continuous PoE guarantees continuous operation for security devices",
       "Dual AC power inputs provide full power feed redundancy"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 40,
+      "rj45_10g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530-28spxx",
@@ -1361,7 +1463,11 @@ const ALLIED_SWITCHES = [
       "4x 10G SFP+ uplinks and VCStack up to 8 units",
       "Active Fiber Monitoring (AFM) anti-tamper optical detection",
       "Dual hot-swap load-sharing AC or DC power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530l-10ghxm",
@@ -1369,16 +1475,16 @@ const ALLIED_SWITCHES = [
     "model": "Allied Telesis x530L-10GHXm 90W Multi-Gig",
     "sku": "AT-x530L-10GHXm",
     "role": "Access",
-    "ports": 10,
+    "ports": 12,
     "portCategory": "compact",
     "portSpeed": "mGig",
-    "portFormFactorSummary": "8x 100M/1G/2.5G/5G mGig (90W PoE++) + 2x 10G SFP+",
+    "portFormFactorSummary": "8x 100M/1G/2.5G/5G mGig RJ-45 (90W PoE++) + 4x 10G SFP+ cages",
     "uplinksSummary": "2x 10G SFP+ optical cages",
     "poeAfPorts": 8,
     "poeAtPorts": 8,
     "poeBt60Ports": 8,
     "poeBt90Ports": 8,
-    "poeBudget": 500,
+    "poeBudget": 360,
     "poeStandardsSupported": [
       "802.3af",
       "802.3at",
@@ -1415,8 +1521,8 @@ const ALLIED_SWITCHES = [
     "mgmtLabel": "AlliedWare Plus CLI / AMF Plus",
     "defaultMgmtProfile": "standalone",
     "maxBackboneSpeed": "10G",
-    "switchingCapacity": "120 Gbps",
-    "throughputMpps": 89.2,
+    "switchingCapacity": "160 Gbps",
+    "throughputMpps": 119.0,
     "packetBufferMb": 3,
     "stackCableSku": "AT-SP10TW1",
     "featureLicense": {
@@ -1431,7 +1537,11 @@ const ALLIED_SWITCHES = [
       "Continuous PoE ensures zero downtime for cameras",
       "Compact half-width rackmount/desktop chassis",
       "2x 10G SFP+ uplinks & VCStack"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530l-18ghxm",
@@ -1439,16 +1549,16 @@ const ALLIED_SWITCHES = [
     "model": "Allied Telesis x530L-18GHXm 90W Multi-Gig",
     "sku": "AT-x530L-18GHXm",
     "role": "Access",
-    "ports": 18,
+    "ports": 20,
     "portCategory": "16",
     "portSpeed": "mGig",
-    "portFormFactorSummary": "16x 100M/1G/2.5G/5G mGig (90W PoE++) + 2x 10G SFP+",
+    "portFormFactorSummary": "16x 100M/1G/2.5G/5G mGig RJ-45 (90W PoE++) + 4x 10G SFP+ cages",
     "uplinksSummary": "2x 10G SFP+ optical cages",
     "poeAfPorts": 16,
     "poeAtPorts": 16,
     "poeBt60Ports": 16,
     "poeBt90Ports": 16,
-    "poeBudget": 500,
+    "poeBudget": 720,
     "poeStandardsSupported": [
       "802.3af",
       "802.3at",
@@ -1485,15 +1595,20 @@ const ALLIED_SWITCHES = [
     "mgmtLabel": "AlliedWare Plus CLI / AMF Plus",
     "defaultMgmtProfile": "standalone",
     "maxBackboneSpeed": "10G",
-    "switchingCapacity": "200 Gbps",
-    "throughputMpps": 148.8,
+    "switchingCapacity": "240 Gbps",
+    "throughputMpps": 178.5,
     "packetBufferMb": 3,
     "keyFeatures": [
       "16x Multi-Gigabit ports with 90W 802.3bt PoE++ per port",
       "Continuous PoE maintains uninterrupted power during reboots",
       "2x 10G SFP+ uplinks & VCStack support",
       "Fixed internal AC power supply"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 16,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530l-28gtx",
@@ -1550,7 +1665,12 @@ const ALLIED_SWITCHES = [
       "24x 1G RJ-45 non-PoE enterprise access ports",
       "4x 10G SFP+ uplinks & VCStack stacking",
       "Energy efficient green Ethernet design"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530l-28gpx",
@@ -1600,7 +1720,7 @@ const ALLIED_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.2,
-    "packetBufferMb": 3,
+    "packetBufferMb": 1.5,
     "stackCableSku": "AT-SP10TW1",
     "featureLicense": {
       "hasOptions": true,
@@ -1614,7 +1734,11 @@ const ALLIED_SWITCHES = [
       "24x 1G PoE+ with Continuous PoE",
       "4x 10G SFP+ uplinks & VCStack",
       "Fixed internal power supply"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530l-52gtx",
@@ -1671,7 +1795,12 @@ const ALLIED_SWITCHES = [
       "4x 10G SFP+ uplinks & VCStack stacking",
       "Full Layer 3 IPv4/IPv6 static & dynamic routing",
       "Compact 13.4\" depth chassis"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x530l-52gpx",
@@ -1731,7 +1860,12 @@ const ALLIED_SWITCHES = [
       "Continuous PoE keeps video feeds live through updates",
       "4x 10G SFP+ uplinks & VCStack up to 8 switches",
       "Cost-effective fixed internal power supply"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-x230-10gp",
@@ -1791,7 +1925,11 @@ const ALLIED_SWITCHES = [
       "Compact 8.3\" depth fits shallow wall enclosures and retail kiosks",
       "Active Fiber Monitoring (AFM) on 1G SFP uplinks",
       "Autonomous Management Framework (AMF Plus) node"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "at-x230-10gt",
@@ -1848,7 +1986,11 @@ const ALLIED_SWITCHES = [
       "8x 1G RJ-45 copper + 2x 1G SFP uplinks",
       "Ultra-compact 7.1\" depth chassis",
       "Full AlliedWare Plus enterprise software features"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "at-x230-18gp",
@@ -1908,7 +2050,11 @@ const ALLIED_SWITCHES = [
       "Shallow 8.3\" depth fits compact wall cabinets",
       "Active Fiber Monitoring on 1G SFP uplinks",
       "Enterprise security: 802.1X, MAC auth, Web auth"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "at-x230-18gt",
@@ -1965,7 +2111,11 @@ const ALLIED_SWITCHES = [
       "16x 1G RJ-45 non-PoE + 2x 1G SFP uplinks",
       "Energy efficient green Ethernet design",
       "Compact 8.3\" depth fits wall racks"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "at-x230-28gp",
@@ -2025,7 +2175,11 @@ const ALLIED_SWITCHES = [
       "4x 1G SFP uplinks with Active Fiber Monitoring",
       "Shallow 11.4\" depth fits shallow equipment cabinets",
       "Full Layer 2+ switching and static routing"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "at-x230-28gt",
@@ -2082,7 +2236,11 @@ const ALLIED_SWITCHES = [
       "Ultra-shallow 8.3\" depth fits wall-mount racks",
       "4x 1G SFP fiber uplinks with AFM support",
       "AMF Plus autonomous network management"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "at-gs980mx-28psm",
@@ -2142,7 +2300,13 @@ const ALLIED_SWITCHES = [
       "4x 10G SFP+ uplinks & VCStack up to 4 units",
       "Continuous PoE maintains surveillance camera feeds during reboots",
       "Active Fiber Monitoring on 10G ports"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 20,
+      "rj45_5g": 4,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-gs980mx-52psm",
@@ -2202,7 +2366,13 @@ const ALLIED_SWITCHES = [
       "4x 10G SFP+ uplinks & VCStack up to 4 units",
       "Full Layer 3 IPv4/IPv6 static and dynamic routing",
       "Continuous PoE keeps surveillance cameras powered"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_1g": 40,
+      "rj45_5g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "at-gs980mx-10hsm",
@@ -2264,7 +2434,12 @@ const ALLIED_SWITCHES = [
       "2x 10G SFP+ uplinks & VCStack stacking",
       "Compact half-width rackmount or desktop chassis",
       "Continuous PoE ensures uninterrupted PTZ and lighting power"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 8,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "at-gs980mx-18hsm",
@@ -2326,7 +2501,12 @@ const ALLIED_SWITCHES = [
       "2x 10G SFP+ uplinks & VCStack stacking",
       "Shallow 11.8\" depth fits compact wall racks",
       "Continuous PoE maintains active surveillance"
-    ]
+    ],
+    "stackCableSku": "AT-SP10TW1",
+    "portsBreakdown": {
+      "rj45_5g": 16,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "at-gs980em-10h",
@@ -2396,7 +2576,11 @@ const ALLIED_SWITCHES = [
       "Scales power budget via external AT-PWR300 power bricks",
       "Ultra-shallow 7.1\" depth fits small NEMA enclosures",
       "Dual external power inputs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "at-gs980em-11pt",
@@ -2456,7 +2640,11 @@ const ALLIED_SWITCHES = [
       "Powered via dual 802.3bt/at PoE inputs, delivers up to 60W downstream PoE",
       "100% silent fanless design with DIN rail / wall mounting",
       "Extends Gigabit Ethernet & PoE up to another 100 meters"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 10,
+      "sfp_1g": 1
+    }
   },
   {
     "id": "at-ie340-12gp",
@@ -2520,11 +2708,15 @@ const ALLIED_SWITCHES = [
       ]
     },
     "keyFeatures": [
-      "-40\u00b0C to +75\u00b0C fanless hardened operation",
+      "-40°C to +75°C fanless hardened operation",
       "Substation IEC 61850-3 certified",
       "Requires external 48-56VDC industrial DIN rail supply",
       "Continuous PoE & sub-50ms EPSR ring"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "at-ie340-12gt",
@@ -2577,11 +2769,16 @@ const ALLIED_SWITCHES = [
     "throughputMpps": 17.8,
     "packetBufferMb": 2,
     "keyFeatures": [
-      "-40\u00b0C to +75\u00b0C fanless hardened industrial operation",
+      "-40°C to +75°C fanless hardened industrial operation",
       "Substation IEC 61850-3 & IEEE 1613 certified",
       "Dual redundant DC inputs (12-48VDC)",
       "Continuous alarm relay contacts for enclosure monitoring"
-    ]
+    ],
+    "psuSku": "AMGPSU-I12-P24A",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "at-ie340-20gp",
@@ -2644,10 +2841,15 @@ const ALLIED_SWITCHES = [
     },
     "keyFeatures": [
       "16x 1G PoE+ (480W budget) on DIN rail",
-      "-40\u00b0C to +75\u00b0C operating range",
+      "-40°C to +75°C operating range",
       "Dual redundant DC inputs (46-57VDC)",
       "Continuous PoE & Alarm Relays"
-    ]
+    ],
+    "psuSku": "AT-PWR05",
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "at-ie340-18gp",
@@ -2704,9 +2906,13 @@ const ALLIED_SWITCHES = [
     "keyFeatures": [
       "1U 19\" rackmount hardened switch for unconditioned traffic cabinets",
       "16x 1G PoE+ (480W budget) with Continuous PoE",
-      "-40\u00b0C to +75\u00b0C fanless wide-temperature operation",
+      "-40°C to +75°C fanless wide-temperature operation",
       "Substation IEC 61850-3 & IEEE 1613 certified"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "at-ie220-6ghx",
@@ -2767,7 +2973,12 @@ const ALLIED_SWITCHES = [
       "2x 10G SFP+ uplinks for high-speed perimeter rings",
       "Hardened for unconditioned exterior enclosures",
       "Continuous PoE support"
-    ]
+    ],
+    "psuSku": "AT-PWR05",
+    "portsBreakdown": {
+      "rj45_10g": 4,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "at-ie220-10ghx",
@@ -2826,9 +3037,14 @@ const ALLIED_SWITCHES = [
     "keyFeatures": [
       "8x 10G Multi-Gigabit ports with 95W 802.3bt PoE++ per port",
       "2x 10G SFP+ optical uplinks with Active Fiber Monitoring",
-      "-40\u00b0C to +75\u00b0C fanless hardened industrial operation",
+      "-40°C to +75°C fanless hardened industrial operation",
       "Dual DC power inputs (46-57VDC) & alarm relay contacts"
-    ]
+    ],
+    "psuSku": "AT-PWR05",
+    "portsBreakdown": {
+      "rj45_10g": 8,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "at-ie560-12gsx",
@@ -2881,10 +3097,14 @@ const ALLIED_SWITCHES = [
     "packetBufferMb": 4,
     "keyFeatures": [
       "12x 25G SFP28 hardened fiber ports on DIN rail",
-      "-40\u00b0C to +75\u00b0C fanless operation for extreme substations & plants",
+      "-40°C to +75°C fanless operation for extreme substations & plants",
       "Substation IEC 61850-3 certified with sub-50ms ring protection",
       "Dual redundant DC inputs & alarm output relays"
-    ]
+    ],
+    "psuSku": "AMGPSU-I12-P24A",
+    "portsBreakdown": {
+      "sfp28_25g": 12
+    }
   },
   {
     "id": "at-ie360-12",
@@ -2938,9 +3158,14 @@ const ALLIED_SWITCHES = [
     "keyFeatures": [
       "8x Multi-Gigabit (up to 5G) industrial DIN rail ports",
       "4x 10G SFP+ optical uplinks for high-speed industrial aggregation",
-      "-40\u00b0C to +75\u00b0C fanless wide-temperature tolerance",
+      "-40°C to +75°C fanless wide-temperature tolerance",
       "Continuous alarm monitoring relays & dual DC inputs"
-    ]
+    ],
+    "psuSku": "AMGPSU-I12-P24A",
+    "portsBreakdown": {
+      "rj45_5g": 8,
+      "sfp_plus_10g": 4
+    }
   }
 ];
 

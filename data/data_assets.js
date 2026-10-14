@@ -344,11 +344,11 @@ const CATALOG_ASSETS = {
   },
   "AMG8870F-WALL": {
     "datasheetPath": "Datasheets/Network/AMG/AMG8870F-WALL Datasheet D26093-00.pdf",
-    "image": null
+    "image": "assets/images/products/amg8870f_wall.webp"
   },
   "AMGANT-W1-ODA9": {
     "datasheetPath": "Datasheets/Network/AMG/AMGANT-W1-ODA9 Series Datasheet D39334-00.pdf",
-    "image": null
+    "image": "assets/images/products/amgant_w1_oda9.webp"
   },
   "AMGMNT-MAG-04": {
     "datasheetPath": "Datasheets/Network/AMG/AMGMNT-MAG Series Datasheet D39361-00.pdf",
@@ -356,7 +356,7 @@ const CATALOG_ASSETS = {
   },
   "AMGPSU-T24-P24": {
     "datasheetPath": "Datasheets/Network/AMG/AMG8870F-06 Datasheet D26090-04.pdf",
-    "image": null
+    "image": "assets/images/products/amgpsu_t24_p24.webp"
   },
   "AR3100": {
     "datasheetPath": null,
@@ -572,23 +572,23 @@ const CATALOG_ASSETS = {
   },
   "AX-LIC-10G-EH8010": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/ax_lic_10g_eh8010.webp"
   },
   "AX-LIC-2.5G-T280": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu MultiHaul TG Terminal Unit T280 - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/ax_lic_2_5g_t280.webp"
   },
   "AX-MK-1FT-B": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/ax_mk_1ft_b.webp"
   },
   "AX-SP-01": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/ax_sp_01.webp"
   },
   "C000000L065A": {
     "datasheetPath": "Datasheets/Network/Cambium/Cambium ePMP Force 300-25 - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/c000000l065a.webp"
   },
   "C050900C201A": {
     "datasheetPath": "Datasheets/Network/Cambium/Cambium ePMP Force 300-25 - Tech Specs.pdf",
@@ -792,19 +792,19 @@ const CATALOG_ASSETS = {
   },
   "EH-ANT-1FT-80GHz": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/eh_ant_1ft_80ghz.webp"
   },
   "EH-ANT-2FT-80GHz": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/eh_ant_2ft_80ghz.webp"
   },
   "EH-MK-SM": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu MultiHaul TG Terminal Unit T260 - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/eh_mk_sm.webp"
   },
   "EH-POE-AC-60W": {
     "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/eh_poe_ac_60w.webp"
   },
   "ETH-SP-G2": {
     "datasheetPath": "Datasheets/Network/Ubiquiti/Ubiquiti Ethernet Surge Protector Gen2 - Tech Specs.pdf",
@@ -1654,15 +1654,15 @@ const CATALOG_ASSETS = {
   },
   "N000000L125A": {
     "datasheetPath": "Datasheets/Network/Cambium/Cambium cnWave 60 GHz V1000 - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/n000000l125a.webp"
   },
   "N000045L002A": {
     "datasheetPath": "Datasheets/Network/Cambium/Cambium cnWave 60 GHz V3000 - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/n000045l002a.webp"
   },
   "N000065L001C": {
     "datasheetPath": "Datasheets/Network/Cambium/Cambium cnWave 60 GHz V5000 - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/n000065l001c.webp"
   },
   "NBE-5AC-Gen2": {
     "datasheetPath": "Datasheets/Network/Ubiquiti/Ubiquiti NanoBeam 5AC Gen2 - Tech Specs.pdf",
@@ -1971,8 +1971,8 @@ const CATALOG_ASSETS = {
     "image": "assets/images/products/unifi_uacc_poe_plus_plus_10g.webp"
   },
   "UACC-Pro-Max-16-RM": {
-    "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Pro Max 16 Rackmount Kit - Tech Specs.pdf",
-    "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
+    "datasheetPath": null,
+    "image": null
   },
   "UACC-RACK-12U-WALL-SW-G": {
     "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 12U Wall Swing-Out Cabinet Glass - Tech Specs.pdf",
@@ -2480,7 +2480,7 @@ const CATALOG_ASSETS = {
   },
   "Wave-Precision-Mount": {
     "datasheetPath": "Datasheets/Network/Ubiquiti/Ubiquiti Wave Pro - Tech Specs.pdf",
-    "image": null
+    "image": "assets/images/products/wave_precision_mount.webp"
   },
   "Wave-Pro": {
     "datasheetPath": "Datasheets/Network/Ubiquiti/Ubiquiti Wave Pro - Tech Specs.pdf",
@@ -6848,82 +6848,782 @@ const CATALOG_ASSETS = {
   },
   "mercury-lp1502-poe-controller": {
     "datasheetPath": "Datasheets/Access Control/Mercury/Mercury LP1502 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/mercury_lp1502.webp"
   },
   "LP1502-POE": {
     "datasheetPath": "Datasheets/Access Control/Mercury/Mercury LP1502 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/mercury_lp1502.webp"
   },
   "mercury-mr52-s3-subcontroller": {
     "datasheetPath": "Datasheets/Access Control/Mercury/Mercury MR52-S3 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/mercury_mr52_s3.webp"
   },
   "MR52-S3": {
     "datasheetPath": "Datasheets/Access Control/Mercury/Mercury MR52-S3 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/mercury_mr52_s3.webp"
   },
   "axis-a1001-network-controller": {
     "datasheetPath": "Datasheets/Access Control/Axis/Axis A1001 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/axis_a1001.webp"
   },
   "0540-001": {
     "datasheetPath": "Datasheets/Access Control/Axis/Axis A1001 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/axis_a1001.webp"
   },
   "hid-signo-40-smart-reader": {
     "datasheetPath": "Datasheets/Access Control/HID/HID Signo 40 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/hid_signo_20.webp"
   },
   "40NKS-00-000000": {
     "datasheetPath": "Datasheets/Access Control/HID/HID Signo 40 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/hid_signo_20.webp"
   },
   "hes-9600-rim-strike": {
     "datasheetPath": "Datasheets/Access Control/HES/HES 9600 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/hes_9600.webp"
   },
   "9600-630": {
     "datasheetPath": "Datasheets/Access Control/HES/HES 9600 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/hes_9600.webp"
   },
   "hes-1006-mortise-strike": {
     "datasheetPath": "Datasheets/Access Control/HES/HES 1006 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/hes_1006.webp"
   },
   "1006CLB-630": {
     "datasheetPath": "Datasheets/Access Control/HES/HES 1006 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/hes_1006.webp"
   },
   "securitron-m62-maglock": {
     "datasheetPath": "Datasheets/Access Control/Securitron/Securitron M62 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/securitron_m62.webp"
   },
   "M62": {
     "datasheetPath": "Datasheets/Access Control/Securitron/Securitron M62 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/securitron_m62.webp"
   },
   "bosch-ds160-rex-sensor": {
     "datasheetPath": "Datasheets/Access Control/Bosch/Bosch DS160 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/bosch_ds160.webp"
   },
   "DS160": {
     "datasheetPath": "Datasheets/Access Control/Bosch/Bosch DS160 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/bosch_ds160.webp"
   },
   "gri-180-12-dps-contact": {
     "datasheetPath": "Datasheets/Access Control/GRI/GRI 180-12 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/gri_180_12.webp"
   },
   "180-12": {
     "datasheetPath": "Datasheets/Access Control/GRI/GRI 180-12 - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/gri_180_12.webp"
   },
   "sentrol-1078c-dps-contact": {
     "datasheetPath": "Datasheets/Access Control/Sentrol/Sentrol 1078C - Datasheet.pdf",
-    "image": null
+    "image": "assets/images/products/sentrol_1078c.webp"
   },
   "1078C-N": {
     "datasheetPath": "Datasheets/Access Control/Sentrol/Sentrol 1078C - Datasheet.pdf",
+    "image": "assets/images/products/sentrol_1078c.webp"
+  },
+  "USW-Flex-2.5G-8-PoE": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "unifi-usw-flex-2-5g-8-poe": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-Switch-DIN": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-Switch-FM": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-UCG-Industrial-RM": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-Flex-Utility-Pro": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-Ultra-WM": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-UTS": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "5PXEBM72RTG2": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX3000RTNG2 - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_5pxebm48rtg2.webp"
+  },
+  "9PXEBM48RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX1500RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9pxebm72rt_l.webp"
+  },
+  "9PXEBM72RT": {
+    "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 9PX3000RT - Tech Specs.pdf",
+    "image": "assets/images/products/eaton_9pxebm72rt_l.webp"
+  },
+  "PE-R760-VMS-2U": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "BCD-104-E-1U-32T": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SS-6049P-E1CR24H": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P52534-B21-AC": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-DIN-Rail": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UACC-Flex-DIN": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AR3104": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AR3107": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SR42UB": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SR24UB": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SRW6US": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SRW18US": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SRW26US": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "CPI-50110-703": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "DWR-24-26": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "T1KV14": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "T2KV78": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "T3KV712": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FPO75/250-2E2": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FPO150/250-4E4": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "NF171408": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "A242008LP": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "BB-4X8-FR": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "BB-4X4-FR": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SURT5000XLI": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SURT5000RMXLT": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SMT750I": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SMT1500I": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SMT2200RM2U": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SMT3000RM2U": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SMX3000RMHV2U-US": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SMX120RMBP2U": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "SURT192XLBP": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP7900B": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP7902B": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP7911A": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP8841": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP8941": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP8832": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP9562": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP7752": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AP7753": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PDU20SW8RNET": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PDU30SVT24F": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-001": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-002": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003-YEL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006-YEL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003-GRN": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006-GRN": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003-WHT": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006-WHT": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-003-ORG": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P004-006-ORG": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC13-003-BLK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC13-006-BLK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC13-003-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC13-006-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC13-003-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC13-006-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P018-003-BLK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P018-006-BLK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P018-003-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P018-006-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P018-003-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P018-006-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P092-003": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P005-006": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P005-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P005-006-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P005-006-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PLC19-006-BLK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P094-006": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P006-003": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P006-006": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P006-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P006-015": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P006-006-BLU": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P006-006-RED": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P049-006": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P049-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P019-006": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P040-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P046-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P043-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "P041-010": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "EX-4PST-RMK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "UBB-XG-Mount": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMR-1K-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-CMP-1K-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMR-1K-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-CMP-1K-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-GN": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-OR": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-VT": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-WH": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-GY": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-CMP-1K-RD": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-OUTDOOR-1K": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AC-COMP-CMP-500": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "AC-COMP-CMR-500": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "LV-22-4-CMP-1K": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "LV-18-2-CMP-1K": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "LV-18-4-CMP-1K": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PP-1U-24P-MOD": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PP-2U-48P-MOD": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "PP-BLANK-1U": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-KEY-SLD-24": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-KEY-UTP-24": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-FIELD-PLUG": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-6IN-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-1FT-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-2FT-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-3FT-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-5FT-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-7FT-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-10FT-YL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-6IN-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-1FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-2FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-3FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-5FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-7FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-10FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-15FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6A-SLIM-25FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-1FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-3FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-5FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-7FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-10FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-15FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "C6-PATCH-25FT-BL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FIBER-OM4-6STRAND": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FIBER-OM4-12STRAND": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FIBER-OM4-24STRAND": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FIBER-OS2-6STRAND": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FIBER-OS2-12STRAND": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "FIBER-OS2-24STRAND": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "RM-FR-T10": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "3rd_party_enclosure": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "4PT-KIT-T1": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "4PT-KIT-T2-M": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "19-CMP-KIT-T1": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "EX-RMK": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "ICX-RMK-4POST-TL": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "XBR-R000295": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "POE-48-24W-G": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "POE-24-12W-G": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "02327-001": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "02131-001": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "XNV-8081Z": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "XNO-6080R": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "5.0C-H5A-DO1": {
+    "datasheetPath": null,
+    "image": null
+  },
+  "NDV-5704-AL": {
+    "datasheetPath": null,
     "image": null
   }
 };

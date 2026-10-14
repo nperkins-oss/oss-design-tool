@@ -35,7 +35,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -53,13 +53,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "20 Gbps",
     "throughputMpps": 14.88,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Hardened 1U 19\" rackmount design with -40°C to +75°C fanless operation",
       "Sub-20ms ITU-T G.8032 ERPS fiber ring recovery",
       "Dual redundant 90-264VAC / 48-56VDC power inputs",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-510-8gat-2s",
@@ -95,7 +99,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -112,13 +116,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "20 Gbps",
     "throughputMpps": 14.88,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "8x 1G PoE+ with 210W internal budget in hardened 1U form factor",
       "Fanless passive cooling with zero acoustic noise (0 dBA)",
       "Wide temperature operation from -40°C to +75°C",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-510-16gat-2c",
@@ -154,7 +162,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -171,13 +179,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "36 Gbps",
     "throughputMpps": 26.78,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "16x 1G PoE+ (290W budget) + 2x Combo RJ45/SFP uplinks",
       "Hardened operating temperature -40°C to +75°C",
       "Dual redundant 90-264VAC power inputs",
       "Net-Hawk monitoring and ERPS ring support"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-510-22gat-2cat-2s",
@@ -213,7 +226,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -230,13 +243,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "52 Gbps",
     "throughputMpps": 38.69,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "24x total PoE+ ports with 460W internal budget",
       "Hardened 1U chassis with -40°C to +75°C operating range",
       "Sub-20ms ITU-T G.8032 ERPS fiber ring recovery",
       "Dual redundant universal AC power inputs"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-510-24g-4xs",
@@ -269,7 +287,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -285,13 +303,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Wide temperature -40°C to +75°C fanless hardened operation",
       "Sub-20ms ITU-T G.8032 ERPS fiber ring recovery",
       "Dual redundant wide range 90-264VAC / 48-56VDC power inputs",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-510-24gat-4xs",
@@ -327,7 +349,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -344,13 +366,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "24x 1G PoE+ (460W budget) with 4x 10G SFP+ uplinks",
       "-40°C to +75°C operating temperature for harsh environments",
       "Sub-20ms ERPS ring recovery on 10G uplinks",
       "Dual redundant universal AC power inputs"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-510-8gbt-16gat-4xs",
@@ -388,7 +415,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -405,13 +432,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "8x 90W 802.3bt Type 4 ports for PTZs, heaters, & LED luminaires",
       "16x 30W PoE+ ports + 4x 10G SFP+ uplinks",
       "Dual redundant AC power supplies with -40°C to +75°C temperature rating",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-510-24gat-4xs-rp",
@@ -447,7 +479,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -464,13 +496,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Dual rear hot-swappable AC power supply modules (540W budget)",
       "4x 10G SFP+ optical uplink ports",
       "Full -40°C to +75°C temperature certified",
       "Sub-20ms ERPS ring recovery and Net-Hawk integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-510-48gat-4xs",
@@ -522,13 +559,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 131,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Shallow 11.2\" depth fits standard 12\" wall racks",
       "48x 1G PoE+ (860W internal budget)",
       "4x 10G SFP+ optical cages",
       "Dual redundant AC power inputs"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-510-4g-24s-4xs",
@@ -561,7 +603,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -578,13 +620,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "24x 1G SFP cages + 4x 10G SFP+ uplinks for hardened campus core",
       "-40°C to +75°C fanless operation (0 dBA acoustic noise)",
       "Sub-20ms ERPS ring termination across up to 14 fiber rings",
       "Dual redundant AC & DC power supplies with Net-Hawk integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_1g": 24,
+      "rj45_1g": 4,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-570-4g-2s",
@@ -617,7 +664,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -635,13 +682,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "18 Gbps",
     "throughputMpps": 13.39,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Ultra-compact 4.8\" DIN rail depth for edge field cabinets",
       "2x 2.5G/1G SFP cages with sub-20ms ERPS ring recovery",
       "Dual 12-56VDC power inputs with 1 In / 1 Out alarm contacts",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "sfp_2_5g": 2
+    }
   },
   {
     "id": "amg-570-4gat-2s",
@@ -677,7 +728,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -695,13 +746,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "18 Gbps",
     "throughputMpps": 13.39,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "4x 30W PoE+ ports with 120W budget on DIN rail",
       "2x 2.5G SFP uplinks with sub-20ms ERPS ring recovery",
       "Wide -40°C to +75°C fanless passive cooling",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "sfp_2_5g": 2
+    }
   },
   {
     "id": "amg-570-2gbt-2gat-2s",
@@ -739,7 +794,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -757,13 +812,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "18 Gbps",
     "throughputMpps": 13.39,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "2x 90W 802.3bt ports for high-power PTZ cameras and edge sensors",
       "2x 30W PoE+ ports + 2x 2.5G SFP uplink cages",
       "Dual 52-56VDC terminal block inputs with 240W PoE budget",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "sfp_2_5g": 2
+    }
   },
   {
     "id": "amg-570-8g-3s",
@@ -796,7 +855,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -812,15 +871,19 @@ const AMG_SWITCHES = [
     ],
     "mgmtLabel": "Standalone / Air-Gapped (Web GUI / CLI)",
     "maxBackboneSpeed": "2.5G",
-    "switchingCapacity": "31 Gbps",
-    "throughputMpps": 23.06,
-    "packetBufferMb": 2,
+    "switchingCapacity": "54 Gbps",
+    "throughputMpps": 40.18,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "8x 1G RJ45 non-PoE + 3x 2.5G SFP optical cages on DIN rail",
       "Wide -40°C to +75°C fanless passive cooling",
       "Dual 12-56VDC power inputs with 1 In / 1 Out alarm contacts",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_2_5g": 3
+    }
   },
   {
     "id": "amg-570-8gat-3s",
@@ -856,7 +919,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -872,15 +935,19 @@ const AMG_SWITCHES = [
     ],
     "mgmtLabel": "Standalone / Air-Gapped (Web GUI / CLI)",
     "maxBackboneSpeed": "2.5G",
-    "switchingCapacity": "31 Gbps",
-    "throughputMpps": 23.06,
-    "packetBufferMb": 2,
+    "switchingCapacity": "54 Gbps",
+    "throughputMpps": 40.18,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "8x 30W PoE+ ports (240W budget) on DIN rail",
       "3x 2.5G SFP uplinks enabling dual redundant fiber rings",
       "-40°C to +75°C fanless industrial operating temperature",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_2_5g": 3
+    }
   },
   {
     "id": "amg-570-2gbt-4gat-2g-3s",
@@ -918,7 +985,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -936,13 +1003,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "31 Gbps",
     "throughputMpps": 23.06,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "2x 90W 802.3bt + 4x 30W PoE+ with 300W total power budget",
       "3x 2.5G SFP cages for high-bandwidth redundant rings",
       "-40°C to +75°C fanless passive cooling",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_2_5g": 3
+    }
   },
   {
     "id": "amg-570-4gbt-3s",
@@ -980,7 +1052,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount (NEMA)",
@@ -996,15 +1068,20 @@ const AMG_SWITCHES = [
     ],
     "mgmtLabel": "Standalone / Air-Gapped (Web GUI / CLI)",
     "maxBackboneSpeed": "2.5G",
-    "switchingCapacity": "38 Gbps",
-    "throughputMpps": 28,
-    "packetBufferMb": 2,
+    "switchingCapacity": "22 Gbps",
+    "throughputMpps": 16.36,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Direct 52-56VDC terminal block inputs for solar/battery banks",
       "Integrated 1 In / 2 Out dry contact alarm relay closures",
       "Ultra-shallow 4.8\" DIN rail depth fits small exterior NEMA boxes",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_2_5g": 3
+    }
   },
   {
     "id": "amg-570-8gat-3s-lv",
@@ -1040,13 +1117,13 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
     "stacking": false,
     "dualPsu": true,
-    "psuSku": "AMGPSU-I24-P120",
+    "psuSku": "AMGPSU-I48-P240A",
     "needsExternalPsu": true,
     "evpnVxlan": false,
     "taa": true,
@@ -1056,15 +1133,19 @@ const AMG_SWITCHES = [
     ],
     "mgmtLabel": "Standalone / Air-Gapped (Web GUI / CLI)",
     "maxBackboneSpeed": "2.5G",
-    "switchingCapacity": "31 Gbps",
-    "throughputMpps": 23.06,
-    "packetBufferMb": 2,
+    "switchingCapacity": "54 Gbps",
+    "throughputMpps": 40.18,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "Integrated 12-24VDC voltage booster circuit providing 54VDC PoE+",
       "Perfect for vehicle, solar, and battery-backed installations without 48V",
       "8x 30W PoE+ ports (up to 240W budget) + 3x 2.5G SFP uplinks",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_2_5g": 3
+    }
   },
   {
     "id": "amg-570-8gat-4s",
@@ -1100,7 +1181,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -1118,13 +1199,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "42 Gbps",
     "throughputMpps": 31,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "4x SFP cages for dual redundant ERPS fiber rings",
       "Direct 48-56VDC terminal block inputs",
       "-40°C to +75°C fanless operation",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "amg-570-8gbt-4s",
@@ -1162,7 +1247,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -1180,13 +1265,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "42 Gbps",
     "throughputMpps": 31,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "All 8 copper ports support 90W 802.3bt PoE (720W with dual DC)",
       "Direct dual DC terminals (48-56VDC)",
       "Dry contact alarm inputs/outputs",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "amg-570-12gat-4s",
@@ -1222,7 +1312,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -1240,13 +1330,19 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "48 Gbps",
     "throughputMpps": 35.71,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "12x 30W PoE+ ports + 4x SFP optical cages on DIN rail",
       "Dual ERPS redundant rings support",
       "Fanless passive cooling from -40°C to +75°C",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 12,
+      "sfp_1g": 2,
+      "sfp_2_5g": 2
+    }
   },
   {
     "id": "amg-570-2gbt-10gat-4s",
@@ -1284,7 +1380,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -1302,13 +1398,19 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "48 Gbps",
     "throughputMpps": 35.71,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "2x 90W 802.3bt + 10x 30W PoE+ with 360W total budget",
       "4x SFP cages (2x 2.5G + 2x 1G) for multi-ring topology",
       "-40°C to +75°C fanless operation",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 12,
+      "sfp_1g": 2,
+      "sfp_2_5g": 2
+    }
   },
   {
     "id": "amg-570-16gat-8s",
@@ -1344,7 +1446,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount (NEMA)",
@@ -1362,13 +1464,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "54 Gbps",
     "throughputMpps": 40.18,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "16x 1G PoE+ (360W budget) + 8x SFP cages (2x 2.5G + 6x 1G)",
       "High density DIN switch replacing multiple field switches",
       "Digital tamper alarm relay contact closures",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 8
+    }
   },
   {
     "id": "amg-570-4gbt-8gat-4g-8s",
@@ -1406,7 +1513,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -1424,13 +1531,18 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "54 Gbps",
     "throughputMpps": 40.18,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "4x 90W 802.3bt + 8x 30W PoE+ + 4x 1G RJ45 + 8x SFP cages",
       "Total versatility for edge traffic intersection control cabinets",
       "-40°C to +75°C fanless operation",
       "Native Genetec Net-Hawk plugin integration"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_1g": 8
+    }
   },
   {
     "id": "amg-570-4gat-2s-k",
@@ -1484,13 +1596,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "18 Gbps",
     "throughputMpps": 13.39,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "IEC 61850-3 & IEEE 1613 Electric Utility Substation Certified",
       "High EMI/EMC immunity for harsh power grid and rail environments",
       "4x 30W PoE+ ports + 2x 2.5G SFP cages with sub-20ms ERPS ring recovery",
       "Complete installation kit with industrial PSU and line cord"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "sfp_2_5g": 2
+    }
   },
   {
     "id": "amg-570-8gat-3s-k",
@@ -1544,13 +1660,17 @@ const AMG_SWITCHES = [
     "maxBackboneSpeed": "2.5G",
     "switchingCapacity": "31 Gbps",
     "throughputMpps": 23.06,
-    "packetBufferMb": 2,
+    "packetBufferMb": 0.22,
     "keyFeatures": [
       "IEC 61850-3 & IEEE 1613 Electric Utility Substation Certified",
       "8x 30W PoE+ ports (240W budget) + 3x 2.5G SFP fiber ring uplinks",
       "Zero packet loss under severe electromagnetic discharge and surge",
       "Complete substation kit including industrial PSU and mounting"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_2_5g": 3
+    }
   },
   {
     "id": "amg-560-8g-4s",
@@ -1607,7 +1727,11 @@ const AMG_SWITCHES = [
       "Cost-effective hardened edge switch for utility rooms and closets",
       "-40°C to +75°C fanless passive cooling",
       "Full Layer 2+ management with ERPS ring support"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "amg-560-8gat-4s",
@@ -1667,7 +1791,11 @@ const AMG_SWITCHES = [
       "4x 1G SFP cages supporting dual redundant fiber rings",
       "-40°C to +75°C fanless passive cooling",
       "Full Layer 2+ Web GUI, CLI, SNMP, and ERPS ring support"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "amg-560-8gat-4xs",
@@ -1727,7 +1855,11 @@ const AMG_SWITCHES = [
       "10G uplink speeds for high-definition video camera clusters",
       "-40°C to +75°C fanless passive cooling",
       "Sub-20ms ERPS ring recovery and Net-Hawk integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-560-8g-12s",
@@ -1784,7 +1916,11 @@ const AMG_SWITCHES = [
       "High-density fiber concentration for industrial field cabinets",
       "-40°C to +75°C fanless passive cooling",
       "ERPS ring recovery and Net-Hawk integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 12
+    }
   },
   {
     "id": "amg-560-8g-8s-4xs",
@@ -1841,7 +1977,12 @@ const AMG_SWITCHES = [
       "High performance 10G aggregation in compact fanless enclosure",
       "-40°C to +75°C fanless passive cooling",
       "ERPS ring recovery and Net-Hawk integration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-560-24gat-4xs",
@@ -1900,7 +2041,12 @@ const AMG_SWITCHES = [
       "Cost-effective hardened 1U rackmount switch with wide temp rating",
       "Dual AC mains inputs for power redundancy",
       "Full Layer 2+ management with ERPS ring support"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "amg-560-24gat-4s-rp-ad",
@@ -1959,7 +2105,12 @@ const AMG_SWITCHES = [
       "Seamless hitless power failover to battery bank during AC power loss",
       "24x 1G PoE+ (300W budget) + 4x SFP uplinks",
       "-40°C to +75°C operating range for unconditioned site shelters"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "amg-350-2g-2s",
@@ -1992,7 +2143,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2016,7 +2167,11 @@ const AMG_SWITCHES = [
       "Ideal for daisy-chain fiber runs between field cameras or gates",
       "-40°C to +75°C fanless operation",
       "Dual 12-48VDC redundant terminal inputs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 2,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-350-2gat-2s",
@@ -2052,7 +2207,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2076,7 +2231,11 @@ const AMG_SWITCHES = [
       "Plug-and-play operation with DIP switch speed selection",
       "-40°C to +75°C fanless passive cooling",
       "Dual 48-56VDC terminal block inputs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 2,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-350-2gbt-2s",
@@ -2114,7 +2273,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2138,7 +2297,11 @@ const AMG_SWITCHES = [
       "Powers two high-power PTZ cameras or wireless backhauls",
       "-40°C to +75°C fanless passive cooling",
       "Dual 52-56VDC power inputs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 2,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-350-4g-1c-1s",
@@ -2171,7 +2334,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2195,7 +2358,11 @@ const AMG_SWITCHES = [
       "-40°C to +75°C fanless passive cooling",
       "Dual 12-48VDC terminal inputs with reverse polarity protection",
       "DIN rail and wall mounting hardware included"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-350-4gat-1c-1s",
@@ -2231,7 +2398,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2255,7 +2422,11 @@ const AMG_SWITCHES = [
       "Flexible uplinks with 1x Combo port and 1x dedicated SFP cage",
       "-40°C to +75°C fanless passive cooling",
       "Dual 48-56VDC terminal block inputs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 5,
+      "sfp_1g": 1
+    }
   },
   {
     "id": "amg-350-4gbt-1c-1s",
@@ -2293,7 +2464,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2317,7 +2488,11 @@ const AMG_SWITCHES = [
       "Powers up to 4 high-draw edge devices without switch configuration",
       "-40°C to +75°C fanless passive cooling",
       "Dual 52-56VDC terminal inputs"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 5,
+      "sfp_1g": 1
+    }
   },
   {
     "id": "amg-350-5g",
@@ -2350,7 +2525,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2374,7 +2549,10 @@ const AMG_SWITCHES = [
       "Fits the smallest NEMA pole boxes and terminal cabinets",
       "-40°C to +75°C fanless passive cooling",
       "Wide 12-48VDC terminal block power input"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 5
+    }
   },
   {
     "id": "amg-350-4gat-1g-pd",
@@ -2410,7 +2588,7 @@ const AMG_SWITCHES = [
     "directDc": false,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": true,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2433,7 +2611,10 @@ const AMG_SWITCHES = [
       "Provides 75W total PoE+ power across 4 output ports to cameras and APs",
       "-40°C to +75°C fanless industrial operating temperature",
       "Saves thousands in electrical conduit and wiring labor at remote poles"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 5
+    }
   },
   {
     "id": "amg-350-8g",
@@ -2466,7 +2647,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2490,7 +2671,10 @@ const AMG_SWITCHES = [
       "-40°C to +75°C fanless passive cooling",
       "Dual 12-48VDC terminal inputs with surge protection",
       "Rugged aluminum IP40 enclosure"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8
+    }
   },
   {
     "id": "amg-350-8gat",
@@ -2526,7 +2710,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2550,7 +2734,10 @@ const AMG_SWITCHES = [
       "-40°C to +75°C fanless passive cooling",
       "Dual 48-56VDC terminal inputs",
       "Plug-and-play zero configuration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8
+    }
   },
   {
     "id": "amg-350-8gat-2s",
@@ -2586,7 +2773,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2610,7 +2797,11 @@ const AMG_SWITCHES = [
       "Direct dual DC terminals (48-56VDC)",
       "-40°C to +75°C fanless operation",
       "Plug-and-play zero configuration"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-350-14gat-2s",
@@ -2646,7 +2837,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": false,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": true,
     "mounting": "DIN Rail / Wall Mount",
@@ -2670,7 +2861,12 @@ const AMG_SWITCHES = [
       "Ultra-compact 5\" depth for NEMA pole boxes",
       "14x PoE+ ports with 300W power budget",
       "Zero software management required"
-    ]
+    ],
+    "ulMaxPoeBudgetWatts": 240,
+    "portsBreakdown": {
+      "rj45_1g": 14,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "amg-840-6n-4xs",
@@ -2703,7 +2899,7 @@ const AMG_SWITCHES = [
     "directDc": true,
     "dryContacts": true,
     "env": "Industrial",
-    "substationCertified": true,
+    "substationCertified": false,
     "poePassThrough": false,
     "isDinMounted": false,
     "mounting": "19\" Rackmount (1U)",
@@ -2726,7 +2922,11 @@ const AMG_SWITCHES = [
       "Designed for extreme throughput industrial core and aggregation",
       "Dual hot-swap redundant AC or DC power modules",
       "-40°C to +70°C hardened operating temperature range"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_10g": 6,
+      "sfp28_25g": 4
+    }
   }
 ];
 

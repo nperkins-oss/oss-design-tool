@@ -54,7 +54,7 @@ def process_product_image(input_path, device_id, out_size=600, make_transparent=
     # Determine output path
     if out_dir is None:
         # Default workspace path
-        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
         out_dir = os.path.join(workspace_root, "assets", "images", "products")
     
     os.makedirs(out_dir, exist_ok=True)

@@ -11,7 +11,7 @@ const RUCKUS_SWITCHES = [
     "model": "Ruckus ICX 7150-C10ZP Compact Multi-Gigabit",
     "sku": "ICX7150-C10ZP",
     "role": "Access",
-    "ports": 10,
+    "ports": 12,
     "portCategory": "compact",
     "portSpeed": "mGig",
     "portFormFactorSummary": "8x 2.5G PoE+ + 2x 2.5G 90W PoH RJ-45 + 2x 10G SFP+ uplinks",
@@ -71,7 +71,11 @@ const RUCKUS_SWITCHES = [
       "240W PoE budget capable of powering high-power PTZ cameras and Wi-Fi 6/7 APs",
       "2x 10G SFP+ wire-speed stacking and uplink ports",
       "Zero acoustic noise (0 dB) for noise-sensitive workspace deployments"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 10,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "ruckus-icx7150-c12p",
@@ -79,7 +83,7 @@ const RUCKUS_SWITCHES = [
     "model": "Ruckus ICX 7150-C12P Compact Fanless PoE+",
     "sku": "ICX7150-C12P",
     "role": "Access",
-    "ports": 14,
+    "ports": 16,
     "portCategory": "compact",
     "portSpeed": "1G",
     "portFormFactorSummary": "12x 10/100/1000BASE-T PoE+ + 2x 1G RJ-45 + 2x 10G SFP+ uplinks",
@@ -138,7 +142,11 @@ const RUCKUS_SWITCHES = [
       "124W PoE+ budget supporting up to 4 Class 4 cameras/APs concurrently",
       "2x 10G SFP+ uplinks and 2x 1G copper uplink ports",
       "Completely silent operation (0 dB) with shallow 8.4-inch chassis"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 14,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "ruckus-icx7150-24",
@@ -202,7 +210,11 @@ const RUCKUS_SWITCHES = [
       "Up to 12-unit long-distance stacking over standard SFP+ cabling",
       "Full enterprise Layer 2 and base Layer 3 routing (OSPF, RIP)",
       "Cloud management via RUCKUS One or SmartZone controllers"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx7150-24p",
@@ -269,7 +281,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ wire-speed uplink or stacking cages",
       "Perpetual PoE keeps surveillance cameras powered during switch reboot",
       "Industry-leading 12-unit stacking with hitless failover"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx7150-48",
@@ -333,7 +349,11 @@ const RUCKUS_SWITCHES = [
       "High-density port layout in a compact 1U rackmount form factor",
       "Seamless integration into campus fabrics and RUCKUS cloud architectures",
       "Up to 12 switches per stack with 40 Gbps stacking throughput"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx7150-48p",
@@ -400,7 +420,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ uplinks and stacking connections",
       "Ideal for distributed VoIP phones, access points, and security endpoints",
       "Advanced sFlow network telemetry and flexible QoS scheduling"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx7150-48pf",
@@ -467,7 +491,11 @@ const RUCKUS_SWITCHES = [
       "48x 1G RJ-45 + 4x 10G SFP+ high-speed optical ports",
       "Enterprise-grade reliability with Perpetual PoE and fast link convergence",
       "Flexible management via RUCKUS One, SmartZone, or local FastIron CLI"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx7150-48zp",
@@ -535,7 +563,12 @@ const RUCKUS_SWITCHES = [
       "Dual hot-swap load-sharing PSUs providing up to 1,480W total PoE budget",
       "8x 10G SFP+ uplink ports or 2x 40G QSFP+ stacking ports",
       "High-density Wi-Fi 6/7 and surveillance aggregation engine"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 16,
+      "rj45_1g": 32,
+      "sfp_plus_10g": 8
+    }
   },
   {
     "id": "ruckus-icx7450-24",
@@ -615,11 +648,14 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN10-E",
     "psuSku": "RPS15-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7450-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24
     }
   },
   {
@@ -704,11 +740,14 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN10-E",
     "psuSku": "RPS16-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7450-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24
     }
   },
   {
@@ -789,11 +828,14 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN10-E",
     "psuSku": "RPS15-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7450-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48
     }
   },
   {
@@ -878,11 +920,14 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN10-E",
     "psuSku": "RPS16-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7450-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48
     }
   },
   {
@@ -963,11 +1008,14 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN10-E",
     "psuSku": "RPS15-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7450-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_1g": 48
     }
   },
   {
@@ -1048,11 +1096,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS21-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1136,11 +1188,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS22-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1225,11 +1281,16 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS22-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_5g": 16,
+      "rj45_10g": 8,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1310,11 +1371,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS21-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_plus_10g": 24,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1395,11 +1460,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS21-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1483,11 +1552,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS22-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1572,11 +1645,16 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS22-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_5g": 36,
+      "rj45_10g": 12,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1657,11 +1735,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS21-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7550-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_plus_10g": 48,
+      "qsfp28_100g": 2
     }
   },
   {
@@ -1745,11 +1827,14 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS16-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7650-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48
     }
   },
   {
@@ -1833,11 +1918,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS16-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7650-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "rj45_1g": 24
     }
   },
   {
@@ -1917,11 +2006,15 @@ const RUCKUS_SWITCHES = [
     "fanSku": "ICX-FAN12-E",
     "psuSku": "RPS15-E",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "ICX7650-PREM-LIC",
         "ICX-MACSEC-LIC"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_plus_10g": 24,
+      "sfp_1g": 24
     }
   },
   {
@@ -1986,7 +2079,11 @@ const RUCKUS_SWITCHES = [
       "Up to 32x 40G QSFP+ ports with rear expansion module (or 128x 10G breakout)",
       "2.56 Tbps non-blocking switching throughput",
       "Up to 12-unit stacking providing a massive 5.76 Tbps distributed chassis"
-    ]
+    ],
+    "psuSku": "RPS9+",
+    "portsBreakdown": {
+      "qsfp_plus_40g": 26
+    }
   },
   {
     "id": "ruckus-icx7750-48f",
@@ -2050,7 +2147,12 @@ const RUCKUS_SWITCHES = [
       "Expandable to 12x 40G QSFP+ with optional rear interface module",
       "1.92 Tbps wire-speed throughput with sub-microsecond latency",
       "Dual hot-swap load-sharing AC or DC power supplies and reversible airflow"
-    ]
+    ],
+    "psuSku": "RPS9+",
+    "portsBreakdown": {
+      "sfp_plus_10g": 48,
+      "qsfp_plus_40g": 6
+    }
   },
   {
     "id": "ruckus-icx7750-48c",
@@ -2114,7 +2216,12 @@ const RUCKUS_SWITCHES = [
       "High-density 10GbE copper server and storage interconnect",
       "Expandable to 12x 40G QSFP+ ports with rear module",
       "Dual redundant hot-swappable power supplies with N+1 fan redundancy"
-    ]
+    ],
+    "psuSku": "RPS9+",
+    "portsBreakdown": {
+      "rj45_10g": 48,
+      "qsfp_plus_40g": 6
+    }
   },
   {
     "id": "ruckus-icx7850-32q",
@@ -2178,7 +2285,11 @@ const RUCKUS_SWITCHES = [
       "32x 100G QSFP28 wire-speed ports in 1U for spine/leaf aggregation",
       "6.4 Tbps / 2.4 Bpps non-blocking switching throughput",
       "Dual hot-swap 1+1 redundant power supplies and reversible airflow"
-    ]
+    ],
+    "psuSku": "RPS19-E",
+    "portsBreakdown": {
+      "qsfp28_100g": 32
+    }
   },
   {
     "id": "ruckus-icx7850-48f",
@@ -2242,7 +2353,12 @@ const RUCKUS_SWITCHES = [
       "4.0 Tbps switching capacity with sub-microsecond latency",
       "Advanced EVPN-VXLAN campus fabric and data center spine/leaf support",
       "Dual load-sharing AC or DC power supplies with N+1 fans"
-    ]
+    ],
+    "psuSku": "RPS19-E",
+    "portsBreakdown": {
+      "sfp28_25g": 48,
+      "qsfp28_100g": 8
+    }
   },
   {
     "id": "ruckus-icx7850-48fs",
@@ -2306,7 +2422,12 @@ const RUCKUS_SWITCHES = [
       "8x 100G QSFP28 wire-speed uplinks for zero-compromise security backbone",
       "32 MB deep packet buffer ensures jitter-free video multicast distribution",
       "Dual redundant hot-swappable power supplies and 5+1 fan trays"
-    ]
+    ],
+    "psuSku": "RPS19-E",
+    "portsBreakdown": {
+      "sfp_plus_10g": 48,
+      "qsfp28_100g": 8
+    }
   },
   {
     "id": "ruckus-icx7850-48c",
@@ -2370,7 +2491,12 @@ const RUCKUS_SWITCHES = [
       "High-density copper aggregation for high-speed NVR and server clusters",
       "EVPN-VXLAN overlay support for automated modern network fabrics",
       "Dual hot-swap load-sharing power supplies"
-    ]
+    ],
+    "psuSku": "RPS19-E",
+    "portsBreakdown": {
+      "rj45_10g": 48,
+      "qsfp28_100g": 8
+    }
   },
   {
     "id": "ruckus-icx8200-c08pf",
@@ -2437,7 +2563,11 @@ const RUCKUS_SWITCHES = [
       "2x 10G SFP+ uplink ports for high-speed campus backhaul",
       "Silent operation (0 dB) for classrooms, clinics, and retail workspaces",
       "Native RUCKUS One cloud and SmartZone AI-driven telemetry"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "ruckus-icx8200-c08zp",
@@ -2505,7 +2635,12 @@ const RUCKUS_SWITCHES = [
       "Fanless, whisper-quiet design with shallow depth",
       "2x 10G SFP+ uplinks for high-speed Wi-Fi 7 connection",
       "Perpetual & Fast PoE keeps access points online through switch reloads"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "rj45_5g": 4,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "ruckus-icx8200-24",
@@ -2569,7 +2704,11 @@ const RUCKUS_SWITCHES = [
       "Future-proof 25GbE connectivity at edge pricing",
       "Up to 12 switches per stack with 200 Gbps stacking throughput",
       "Next-gen ASIC architecture with low power draw"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-24p",
@@ -2636,7 +2775,11 @@ const RUCKUS_SWITCHES = [
       "25 Gbps stacking & uplinks provide massive backhaul headroom",
       "Perpetual & Fast PoE for zero camera disruption during firmware upgrades",
       "Full enterprise Layer 2 and advanced Layer 3 routing"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-24zp",
@@ -2704,7 +2847,11 @@ const RUCKUS_SWITCHES = [
       "740W PoE budget with 4x 25G SFP28 high-speed uplinks",
       "Ideal for high-density Wi-Fi 7 deployments and smart building systems",
       "200 Gbps stacking bandwidth with up to 12 switches"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48",
@@ -2768,7 +2915,11 @@ const RUCKUS_SWITCHES = [
       "High-density port layout with wire-speed non-blocking performance",
       "Up to 12-unit stacking over standard optical transceivers or DACs",
       "Full FastIron software feature set with rich sFlow telemetry"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48p",
@@ -2835,7 +2986,11 @@ const RUCKUS_SWITCHES = [
       "4x 25G SFP28 high-speed uplinks/stacking ports",
       "Power-efficient design with intelligent PoE negotiation",
       "FastIron advanced Layer 2/3 enterprise software suite"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48pf",
@@ -2902,7 +3057,11 @@ const RUCKUS_SWITCHES = [
       "4x 25G SFP28 uplinks providing non-blocking 100 Gbps uplink capacity",
       "Perpetual PoE ensures continuous CCTV power during switch reboots",
       "Stacking up to 12 switches with hitless failover"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48pf2",
@@ -2969,7 +3128,11 @@ const RUCKUS_SWITCHES = [
       "48x 1G 802.3at PoE+ and 4x 25G SFP28 high-speed uplinks",
       "Mission-critical power redundancy for enterprise physical security",
       "Hitless stacking failover and field-replaceable fan modules"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48zp2",
@@ -3037,7 +3200,12 @@ const RUCKUS_SWITCHES = [
       "Dual hot-swap power supplies delivering 1,480W PoE budget",
       "4x 25G SFP28 high-speed uplinks for Wi-Fi 7 campus core backhaul",
       "Perpetual & Fast PoE with dual redundant hot-swappable fans"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "rj45_5g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-24xp2",
@@ -3105,7 +3273,11 @@ const RUCKUS_SWITCHES = [
       "4x 25G SFP28 wire-speed uplinks with 200 Gbps stacking",
       "Dual hot-swap redundant power supplies for mission-critical core access",
       "High-capacity 680 Gbps non-blocking switching throughput"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48np2",
@@ -3173,7 +3345,12 @@ const RUCKUS_SWITCHES = [
       "1,480W total PoE capacity supporting heavy campus security drops",
       "4x 25G SFP28 high-speed wire-speed uplinks",
       "Perpetual & Fast PoE with hitless stacking failover"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "rj45_5g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-24f",
@@ -3237,7 +3414,11 @@ const RUCKUS_SWITCHES = [
       "Ideal for distributed campus fiber runs and IDF aggregation",
       "200 Gbps stacking bandwidth connects up to 12 switches",
       "Cloud management via RUCKUS One or on-premises SmartZone"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_1g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-48f",
@@ -3301,7 +3482,11 @@ const RUCKUS_SWITCHES = [
       "High-density 1G fiber concentration in compact 1U form factor",
       "Non-blocking 296 Gbps line-rate switching capacity",
       "Advanced Layer 2/3 enterprise software suite"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8200-24fx",
@@ -3365,7 +3550,11 @@ const RUCKUS_SWITCHES = [
       "680 Gbps non-blocking switching throughput for mid-sized campus core",
       "High-density 10GbE fiber aggregation in 1U footprint",
       "Full enterprise routing and cloud-managed simplicity"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_plus_10g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "ruckus-icx8100-c08pf",
@@ -3432,7 +3621,11 @@ const RUCKUS_SWITCHES = [
       "2x 10G SFP+ uplinks for cost-effective branch edge connectivity",
       "Completely silent operation (0 dB) in space-constrained locations",
       "Management via RUCKUS One cloud or SmartZone"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "ruckus-icx8100-c16p",
@@ -3499,7 +3692,11 @@ const RUCKUS_SWITCHES = [
       "124W PoE budget and 2x 10G SFP+ uplink ports",
       "Whisper-quiet acoustic profile (0 dB) for office and healthcare environments",
       "FastIron software reliability with full Layer 2 switching"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "ruckus-icx8100-24",
@@ -3563,7 +3760,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ uplinks supporting up to 8 switches per stack",
       "Zero acoustic noise (0 dB) in full 19-inch 1U form factor",
       "Cost-effective enterprise edge switching with Cloud AI analytics"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx8100-24p",
@@ -3630,7 +3831,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ uplink ports and 40 Gbps stacking throughput",
       "Shallow 11-inch chassis fits shallow depth network cabinets",
       "Perpetual PoE keeps edge security devices active during switch reboot"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx8100-48",
@@ -3694,7 +3899,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ uplink ports and shallow 11-inch chassis depth",
       "Zero acoustic noise (0 dB) ideal for distributed school and office spaces",
       "Up to 8 switches per stack with 40 Gbps stacking bandwidth"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx8100-48p",
@@ -3761,7 +3970,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ high-speed uplinks in shallow 11-inch rack depth",
       "Low-noise acoustic engineering (39 dB)",
       "Cloud-first management via RUCKUS One or SmartZone controllers"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "ruckus-icx8100-48pf",
@@ -3828,7 +4041,11 @@ const RUCKUS_SWITCHES = [
       "4x 10G SFP+ uplinks and stacking connections",
       "Perpetual PoE prevents camera reboot cycles during switch maintenance",
       "Stacking up to 8 units in a single logical management domain"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   }
 ];
 

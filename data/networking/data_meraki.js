@@ -62,7 +62,11 @@ const MERAKI_SWITCHES = [
       "Warm spare failover (VRRP) for core high availability"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS450 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms450-12.webp"
+    "image": "assets/images/products/meraki-ms450-12.webp",
+    "portsBreakdown": {
+      "qsfp_plus_40g": 12,
+      "qsfp28_100g": 2
+    }
   },
   {
     "id": "meraki-ms425-32",
@@ -122,7 +126,11 @@ const MERAKI_SWITCHES = [
       "Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS425 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms425-32.webp"
+    "image": "assets/images/products/meraki-ms425-32.webp",
+    "portsBreakdown": {
+      "sfp_plus_10g": 32,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "meraki-ms425-16",
@@ -182,7 +190,11 @@ const MERAKI_SWITCHES = [
       "High availability warm spare failover via VRRP"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS425 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms425-16.webp"
+    "image": "assets/images/products/meraki-ms425-16.webp",
+    "portsBreakdown": {
+      "sfp_plus_10g": 16,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "meraki-ms410-32",
@@ -242,7 +254,11 @@ const MERAKI_SWITCHES = [
       "Full Layer 3 routing with static routes and OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS410 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms410-32.webp"
+    "image": "assets/images/products/meraki-ms410-32.webp",
+    "portsBreakdown": {
+      "sfp_1g": 32,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms410-16",
@@ -302,7 +318,11 @@ const MERAKI_SWITCHES = [
       "Full Layer 3 routing with static routes and OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS410 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms410-16.webp"
+    "image": "assets/images/products/meraki-ms410-16.webp",
+    "portsBreakdown": {
+      "sfp_1g": 16,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300x-24y-m",
@@ -379,7 +399,10 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300x-12y-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "sfp28_25g": 28
+    }
   },
   {
     "id": "cisco-c9300x-12y-m",
@@ -456,7 +479,10 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300x-12y-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "sfp28_25g": 16
+    }
   },
   {
     "id": "cisco-c9300-24s-m",
@@ -531,7 +557,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-24p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-350WAC-P-M"
+    "psuSku": "PWR-C1-350WAC-P-M",
+    "portsBreakdown": {
+      "sfp_1g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-48s-m",
@@ -606,7 +636,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-48p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-350WAC-P-M"
+    "psuSku": "PWR-C1-350WAC-P-M",
+    "portsBreakdown": {
+      "sfp_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "meraki-ms120-8",
@@ -665,7 +699,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120-8 Compact Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-8.webp"
+    "image": "assets/images/products/meraki-ms120-8.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "meraki-ms120-8lp",
@@ -727,7 +765,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120-8 Compact Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-8.webp"
+    "image": "assets/images/products/meraki-ms120-8.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "meraki-ms120-8fp",
@@ -789,7 +831,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120-8 Compact Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-8.webp"
+    "image": "assets/images/products/meraki-ms120-8.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "meraki-ms120-24",
@@ -848,7 +894,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-24.webp"
+    "image": "assets/images/products/meraki-ms120-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms120-24p",
@@ -910,7 +960,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-24.webp"
+    "image": "assets/images/products/meraki-ms120-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms120-48",
@@ -969,7 +1023,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms120-48lp",
@@ -1031,7 +1089,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms120-48fp",
@@ -1093,7 +1155,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS120 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms125-24",
@@ -1152,7 +1218,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS125 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms125-24p",
@@ -1214,7 +1284,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS125 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms125-48",
@@ -1273,7 +1347,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS125 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms125-48lp",
@@ -1335,7 +1413,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS125 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms125-48fp",
@@ -1397,7 +1479,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS125 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms130-8",
@@ -1456,7 +1542,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-8.webp"
+    "image": "assets/images/products/meraki-ms120-8.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "meraki-ms130-8p",
@@ -1518,7 +1608,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-8.webp"
+    "image": "assets/images/products/meraki-ms120-8.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "meraki-ms130-8x",
@@ -1580,7 +1674,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-8.webp"
+    "image": "assets/images/products/meraki-ms120-8.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "meraki-ms130-12x",
@@ -1642,7 +1740,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-12x.webp"
+    "image": "assets/images/products/meraki-ms130-12x.webp",
+    "portsBreakdown": {
+      "rj45_5g": 12,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "meraki-ms130-24",
@@ -1701,7 +1803,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-24.webp"
+    "image": "assets/images/products/meraki-ms130-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms130-24p",
@@ -1763,7 +1869,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-24.webp"
+    "image": "assets/images/products/meraki-ms130-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms130-24x",
@@ -1825,7 +1935,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-24.webp"
+    "image": "assets/images/products/meraki-ms130-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms130-48",
@@ -1884,7 +1998,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-48.webp"
+    "image": "assets/images/products/meraki-ms130-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms130-48p",
@@ -1946,7 +2064,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-48.webp"
+    "image": "assets/images/products/meraki-ms130-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms130-48fp",
@@ -2008,7 +2130,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-48.webp"
+    "image": "assets/images/products/meraki-ms130-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms130-48x",
@@ -2070,7 +2196,11 @@ const MERAKI_SWITCHES = [
       "Layer 2 access switching with voice VLAN and QoS"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130-48.webp"
+    "image": "assets/images/products/meraki-ms130-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms130r-8p",
@@ -2119,20 +2249,24 @@ const MERAKI_SWITCHES = [
       "paid_cloud"
     ],
     "mgmtLabel": "Paid Cloud-Managed (Meraki Dashboard)",
-    "mgmtLicenseSku": "LIC-MS130-1YR",
-    "mgmtLicenseMsrp": 180,
+    "mgmtLicenseSku": "LIC-MS130-CMPT-1YR",
+    "mgmtLicenseMsrp": 65,
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "20 Gbps",
     "throughputMpps": 14.88,
     "packetBufferMb": 2,
     "keyFeatures": [
       "Ruggedized IP30 fanless design for outdoor NEMA cabinets",
-      "Wide temperature operation from -40\u00b0C to +70\u00b0C",
+      "Wide temperature operation from -40°C to +70°C",
       "Direct 54V DC dual terminal power input",
       "8x PoE+ ports delivering up to 240W budget"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS130R Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms130r-8p.webp"
+    "image": "assets/images/products/meraki-ms130r-8p.webp",
+    "portsBreakdown": {
+      "rj45_1g": 8,
+      "sfp_1g": 2
+    }
   },
   {
     "id": "meraki-ms150-24t-4g",
@@ -2192,7 +2326,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-24.webp"
+    "image": "assets/images/products/meraki-ms120-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms150-24p-4g",
@@ -2255,7 +2393,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-24.webp"
+    "image": "assets/images/products/meraki-ms120-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms150-24t-4x",
@@ -2315,7 +2457,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms150-24p-4x",
@@ -2378,7 +2524,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms150-24mp-4x",
@@ -2389,7 +2539,7 @@ const MERAKI_SWITCHES = [
     "ports": 28,
     "portCategory": "24",
     "portSpeed": "2.5G",
-    "portFormFactorSummary": "16x 1G PoE+ & 8x 2.5G mGig (60W UPOE) + 4x 10G SFP+",
+    "portFormFactorSummary": "16x 1G RJ-45 + 8x 2.5G/5G mGig RJ-45 + 4x 10G SFP+ cages",
     "uplinksSummary": "4x 10G SFP+ optical cages",
     "poeAfPorts": 24,
     "poeAtPorts": 24,
@@ -2443,7 +2593,12 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "rj45_5g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms150-48lp-4g",
@@ -2506,7 +2661,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms150-48fp-4g",
@@ -2569,7 +2728,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms150-48lp-4x",
@@ -2632,7 +2795,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms150-48fp-4x",
@@ -2695,7 +2862,11 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms150-48mp",
@@ -2706,7 +2877,7 @@ const MERAKI_SWITCHES = [
     "ports": 52,
     "portCategory": "48",
     "portSpeed": "5G",
-    "portFormFactorSummary": "32x 1G PoE+ & 16x 5G mGig (60W UPOE) + 4x 10G SFP+",
+    "portFormFactorSummary": "32x 1G RJ-45 + 16x 2.5G/5G mGig RJ-45 + 4x 10G SFP+ cages",
     "uplinksSummary": "4x 10G SFP+ optical cages",
     "poeAfPorts": 48,
     "poeAtPorts": 48,
@@ -2746,7 +2917,7 @@ const MERAKI_SWITCHES = [
       "paid_cloud"
     ],
     "mgmtLabel": "Paid Cloud-Managed (Meraki Dashboard)",
-    "mgmtLicenseSku": "LIC-MS150-1YR",
+    "mgmtLicenseSku": "LIC-MS150-48-1YR",
     "mgmtLicenseMsrp": 320,
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "304 Gbps",
@@ -2760,7 +2931,12 @@ const MERAKI_SWITCHES = [
       "Full cloud visibility and zero-touch configuration in Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS150 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms390-24p.webp"
+    "image": "assets/images/products/meraki-ms390-24p.webp",
+    "portsBreakdown": {
+      "rj45_1g": 32,
+      "rj45_5g": 16,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms210-24p",
@@ -2823,7 +2999,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS210 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-24.webp"
+    "image": "assets/images/products/meraki-ms120-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms210-48lp",
@@ -2886,7 +3066,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS210 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms210-48fp",
@@ -2949,7 +3133,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS210 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms120-48.webp"
+    "image": "assets/images/products/meraki-ms120-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "meraki-ms225-24",
@@ -3009,7 +3197,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS225 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms225-24p",
@@ -3072,7 +3264,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS225 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms225-48",
@@ -3132,7 +3328,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS225 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms225-48lp",
@@ -3195,7 +3395,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS225 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms225-48fp",
@@ -3258,7 +3462,11 @@ const MERAKI_SWITCHES = [
       "100% cloud management via Meraki Dashboard"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS225 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms250-24",
@@ -3318,7 +3526,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS250 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "psuSku": "MA-PWR-250WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms250-24p",
@@ -3381,7 +3594,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS250 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "psuSku": "MA-PWR-640WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms250-48",
@@ -3441,7 +3659,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS250 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "psuSku": "MA-PWR-250WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms250-48lp",
@@ -3504,7 +3727,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS250 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "psuSku": "MA-PWR-640WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms250-48fp",
@@ -3567,7 +3795,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS250 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "psuSku": "MA-PWR-1025WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms350-24",
@@ -3627,7 +3860,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS350 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "psuSku": "MA-PWR-250WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms350-24p",
@@ -3690,7 +3928,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS350 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-24.webp"
+    "image": "assets/images/products/meraki-ms125-24.webp",
+    "psuSku": "MA-PWR-640WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms350-48",
@@ -3750,7 +3993,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS350 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "psuSku": "MA-PWR-250WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms350-48lp",
@@ -3813,7 +4061,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS350 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "psuSku": "MA-PWR-640WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms350-48fp",
@@ -3876,7 +4129,12 @@ const MERAKI_SWITCHES = [
       "Full Dynamic Layer 3 routing with OSPFv2"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS350 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms125-48.webp"
+    "image": "assets/images/products/meraki-ms125-48.webp",
+    "psuSku": "MA-PWR-1025WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms355-24x",
@@ -3933,7 +4191,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
     "packetBufferMb": 16.0,
-    "stackCableSku": "STACK-DAC-1M",
+    "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 4x 10G SFP+ fixed optical cages",
       "740W PoE budget with 60W Cisco UPoE per port",
@@ -3941,7 +4199,12 @@ const MERAKI_SWITCHES = [
       "Layer 3 routing with OSPFv2, warm spare VRRP, and DHCP server"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS355 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms355-24x.webp"
+    "image": "assets/images/products/meraki-ms355-24x.webp",
+    "psuSku": "MA-PWR-1025WAC",
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms355-24x2",
@@ -3998,7 +4261,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
     "packetBufferMb": 16.0,
-    "stackCableSku": "STACK-DAC-1M",
+    "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 2x 40G QSFP+ fixed optical cages",
       "740W PoE budget with 60W Cisco UPoE per port",
@@ -4006,7 +4269,12 @@ const MERAKI_SWITCHES = [
       "Layer 3 routing with OSPFv2, warm spare VRRP, and DHCP server"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS355 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms355-24x.webp"
+    "image": "assets/images/products/meraki-ms355-24x.webp",
+    "psuSku": "MA-PWR-1025WAC",
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "meraki-ms355-48x",
@@ -4063,7 +4331,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "880 Gbps",
     "throughputMpps": 654.76,
     "packetBufferMb": 16.0,
-    "stackCableSku": "STACK-DAC-1M",
+    "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 4x 10G SFP+ fixed optical cages",
       "740W PoE budget with 60W Cisco UPoE per port",
@@ -4071,7 +4339,13 @@ const MERAKI_SWITCHES = [
       "Layer 3 routing with OSPFv2, warm spare VRRP, and DHCP server"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS355 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms355-48x.webp"
+    "image": "assets/images/products/meraki-ms355-48x.webp",
+    "psuSku": "MA-PWR-1100WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "rj45_10g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms355-48x2",
@@ -4128,7 +4402,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "880 Gbps",
     "throughputMpps": 654.76,
     "packetBufferMb": 16.0,
-    "stackCableSku": "STACK-DAC-1M",
+    "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 2x 40G QSFP+ fixed optical cages",
       "740W PoE budget with 60W Cisco UPoE per port",
@@ -4136,7 +4410,13 @@ const MERAKI_SWITCHES = [
       "Layer 3 routing with OSPFv2, warm spare VRRP, and DHCP server"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS355 Datasheet.pdf",
-    "image": "assets/images/products/meraki-ms355-48x.webp"
+    "image": "assets/images/products/meraki-ms355-48x.webp",
+    "psuSku": "MA-PWR-1100WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "rj45_10g": 24,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "meraki-ms390-24p",
@@ -4214,7 +4494,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-24p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-715WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms390-24u",
@@ -4294,7 +4578,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-24p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms390-24ux",
@@ -4377,7 +4665,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-24p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms390-48p",
@@ -4455,7 +4747,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-48p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-715WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms390-48u",
@@ -4535,7 +4831,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-48p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms390-48ux",
@@ -4618,7 +4918,12 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-48p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_5g": 36,
+      "rj45_10g": 12,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "meraki-ms390-48ux2",
@@ -4701,7 +5006,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/meraki-ms390-48p.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_5g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9200l-24p-4g-m",
@@ -4756,7 +5065,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "56 Gbps",
     "throughputMpps": 41.66,
     "packetBufferMb": 6.0,
-    "stackCableSku": "C9200L-STACK-KIT",
+    "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "24x 1G access ports + 4x 1G SFP fixed optical cages",
       "370W PoE+ power budget with Perpetual PoE support",
@@ -4764,7 +5073,12 @@ const MERAKI_SWITCHES = [
       "Native Meraki Dashboard cloud monitoring and management"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-    "image": "assets/images/products/cisco-c9200l-24p-4g-m.webp"
+    "image": "assets/images/products/cisco-c9200l-24p-4g-m.webp",
+    "psuSku": "PWR-C5-600WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "cisco-c9200l-24p-4x-m",
@@ -4819,7 +5133,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
     "packetBufferMb": 6.0,
-    "stackCableSku": "C9200L-STACK-KIT",
+    "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "24x 1G access ports + 4x 10G SFP+ fixed optical cages",
       "370W PoE+ power budget with Perpetual PoE support",
@@ -4827,7 +5141,12 @@ const MERAKI_SWITCHES = [
       "Native Meraki Dashboard cloud monitoring and management"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-    "image": "assets/images/products/cisco-c9200l-24p-4g-m.webp"
+    "image": "assets/images/products/cisco-c9200l-24p-4g-m.webp",
+    "psuSku": "PWR-C5-600WAC",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9200l-24pxg-4x-m",
@@ -4882,7 +5201,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "272 Gbps",
     "throughputMpps": 202.38,
     "packetBufferMb": 6.0,
-    "stackCableSku": "C9200L-STACK-KIT",
+    "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "24x 10G access ports + 4x 10G SFP+ fixed optical cages",
       "370W PoE+ power budget with Perpetual PoE support",
@@ -4890,7 +5209,13 @@ const MERAKI_SWITCHES = [
       "Native Meraki Dashboard cloud monitoring and management"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-    "image": "assets/images/products/cisco-c9200l-24p-4g-m.webp"
+    "image": "assets/images/products/cisco-c9200l-24p-4g-m.webp",
+    "psuSku": "PWR-C5-600WAC",
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "rj45_10g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9200l-48p-4g-m",
@@ -4945,7 +5270,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
     "packetBufferMb": 6.0,
-    "stackCableSku": "C9200L-STACK-KIT",
+    "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP fixed optical cages",
       "740W PoE+ power budget with Perpetual PoE support",
@@ -4953,7 +5278,12 @@ const MERAKI_SWITCHES = [
       "Native Meraki Dashboard cloud monitoring and management"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-    "image": "assets/images/products/cisco-c9200l-48p-4g-m.webp"
+    "image": "assets/images/products/cisco-c9200l-48p-4g-m.webp",
+    "psuSku": "PWR-C5-600WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_1g": 4
+    }
   },
   {
     "id": "cisco-c9200l-48p-4x-m",
@@ -5008,7 +5338,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
     "packetBufferMb": 6.0,
-    "stackCableSku": "C9200L-STACK-KIT",
+    "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "48x 1G access ports + 4x 10G SFP+ fixed optical cages",
       "740W PoE+ power budget with Perpetual PoE support",
@@ -5016,7 +5346,12 @@ const MERAKI_SWITCHES = [
       "Native Meraki Dashboard cloud monitoring and management"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-    "image": "assets/images/products/cisco-c9200l-48p-4g-m.webp"
+    "image": "assets/images/products/cisco-c9200l-48p-4g-m.webp",
+    "psuSku": "PWR-C5-600WAC",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9200l-48pxg-4x-m",
@@ -5071,7 +5406,7 @@ const MERAKI_SWITCHES = [
     "switchingCapacity": "392 Gbps",
     "throughputMpps": 291.66,
     "packetBufferMb": 6.0,
-    "stackCableSku": "C9200L-STACK-KIT",
+    "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "48x 10G access ports + 4x 10G SFP+ fixed optical cages",
       "740W PoE+ power budget with Perpetual PoE support",
@@ -5079,7 +5414,13 @@ const MERAKI_SWITCHES = [
       "Native Meraki Dashboard cloud monitoring and management"
     ],
     "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-    "image": "assets/images/products/cisco-c9200l-48pxg-4x-m.webp"
+    "image": "assets/images/products/cisco-c9200l-48pxg-4x-m.webp",
+    "psuSku": "PWR-C5-1KWAC",
+    "portsBreakdown": {
+      "rj45_1g": 36,
+      "rj45_10g": 12,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300l-24p-4x-m",
@@ -5145,7 +5486,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300l-24p-4x-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-715WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300l-24uxg-4x-m",
@@ -5213,7 +5558,12 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300l-24p-4x-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "rj45_10g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300l-48p-4x-m",
@@ -5279,7 +5629,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300l-48p-4x-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-715WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300l-48pf-4x-m",
@@ -5345,7 +5699,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300l-48p-4x-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300l-48uxg-4x-m",
@@ -5413,7 +5771,12 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300l-48p-4x-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 36,
+      "rj45_10g": 12,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "cisco-c9300-24p-m",
@@ -5491,7 +5854,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-24p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-715WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-24u-m",
@@ -5571,7 +5938,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-24p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-24ux-m",
@@ -5651,7 +6022,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-24p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-48p-m",
@@ -5729,7 +6104,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-48p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-715WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-48u-m",
@@ -5809,7 +6188,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-48p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-48uxm-m",
@@ -5889,7 +6272,12 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-48p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_5g": 36,
+      "rj45_10g": 12,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300-48un-m",
@@ -5969,7 +6357,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300-48p-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_5g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300x-24hx-m",
@@ -6021,7 +6413,7 @@ const MERAKI_SWITCHES = [
       "paid_cloud"
     ],
     "mgmtLabel": "Paid Cloud-Managed (Meraki Dashboard)",
-    "mgmtLicenseSku": "LIC-C9300-24-1YR",
+    "mgmtLicenseSku": "LIC-C9300X-24-1YR",
     "mgmtLicenseMsrp": 460,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "1280 Gbps",
@@ -6052,7 +6444,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300x-24hx-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300x-48tx-m",
@@ -6081,7 +6477,7 @@ const MERAKI_SWITCHES = [
     "acousticNoiseDb": 46,
     "operatingTempMinC": -5,
     "operatingTempMaxC": 45,
-    "perpetualPoE": true,
+    "perpetualPoE": false,
     "directDc": false,
     "dryContacts": false,
     "env": "Commercial",
@@ -6098,7 +6494,7 @@ const MERAKI_SWITCHES = [
       "paid_cloud"
     ],
     "mgmtLabel": "Paid Cloud-Managed (Meraki Dashboard)",
-    "mgmtLicenseSku": "LIC-C9300-48-1YR",
+    "mgmtLicenseSku": "LIC-C9300X-48-1YR",
     "mgmtLicenseMsrp": 640,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "2000 Gbps",
@@ -6129,7 +6525,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300x-24hx-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-715WAC-P-M",
+    "portsBreakdown": {
+      "rj45_10g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300x-48hx-m",
@@ -6181,7 +6581,7 @@ const MERAKI_SWITCHES = [
       "paid_cloud"
     ],
     "mgmtLabel": "Paid Cloud-Managed (Meraki Dashboard)",
-    "mgmtLicenseSku": "LIC-C9300-48-1YR",
+    "mgmtLicenseSku": "LIC-C9300X-48-1YR",
     "mgmtLicenseMsrp": 640,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "2000 Gbps",
@@ -6212,7 +6612,11 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300x-24hx-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_10g": 48,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "cisco-c9300x-48hxn-m",
@@ -6264,7 +6668,7 @@ const MERAKI_SWITCHES = [
       "paid_cloud"
     ],
     "mgmtLabel": "Paid Cloud-Managed (Meraki Dashboard)",
-    "mgmtLicenseSku": "LIC-C9300-48-1YR",
+    "mgmtLicenseSku": "LIC-C9300X-48-1YR",
     "mgmtLicenseMsrp": 640,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "2000 Gbps",
@@ -6295,7 +6699,12 @@ const MERAKI_SWITCHES = [
     "image": "assets/images/products/cisco-c9300x-24hx-m.webp",
     "mountSku": "4PT-KIT-T2-M",
     "fanSku": "FAN-T2-M",
-    "psuSku": "PWR-C1-1100WAC-P-M"
+    "psuSku": "PWR-C1-1100WAC-P-M",
+    "portsBreakdown": {
+      "rj45_5g": 40,
+      "rj45_10g": 8,
+      "sfp28_25g": 4
+    }
   }
 ];
 

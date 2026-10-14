@@ -62,7 +62,11 @@ const JUNIPER_SWITCHES = [
       "Compact 9.4\" depth fits tight enclosures and credenzas",
       "2x 10G SFP+ fixed uplinks supporting Virtual Chassis",
       "Autonomous Junos CLI and Juniper Mist cloud onboarding"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 12,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "juniper-ex2300-c-12p",
@@ -125,7 +129,11 @@ const JUNIPER_SWITCHES = [
       "Silent fanless design ideal for conference rooms and clinics",
       "2x 10G SFP+ uplinks configurable as Virtual Chassis ports",
       "Layer 2/Layer 3 routing with sFlow and telemetry"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 12,
+      "sfp_plus_10g": 2
+    }
   },
   {
     "id": "juniper-ex2300-24t",
@@ -185,7 +193,11 @@ const JUNIPER_SWITCHES = [
       "4x 10G SFP+ uplinks supporting up to 4-member Virtual Chassis",
       "Low power consumption (under 55W maximum)",
       "Energy Efficient Ethernet (IEEE 802.3az) compliant"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex2300-24p",
@@ -248,7 +260,11 @@ const JUNIPER_SWITCHES = [
       "4x 10G SFP+ uplinks for high-speed core connectivity",
       "Virtual Chassis technology manages up to 4 switches as one",
       "Integrated Layer 2 and Layer 3 RIP/OSPFv2 routing"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex2300-24mp",
@@ -311,7 +327,12 @@ const JUNIPER_SWITCHES = [
       "16x 1G PoE+ ports with 380W total power budget",
       "4x 10G SFP+ optical uplinks with Virtual Chassis stacking",
       "Cloud-ready management via Juniper Mist Wired Assurance"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 16,
+      "rj45_5g": 8,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex2300-48t",
@@ -371,7 +392,11 @@ const JUNIPER_SWITCHES = [
       "4x 10G SFP+ uplinks supporting 4-member Virtual Chassis",
       "Energy-efficient design consuming under 75W at full load",
       "Mist AI telemetry and Marvis automated troubleshooting"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex2300-48p",
@@ -434,7 +459,11 @@ const JUNIPER_SWITCHES = [
       "4x 10G SFP+ uplinks for backbone connectivity",
       "Virtual Chassis stacking across up to 4 switches",
       "Enterprise Junos CLI with unified image across EX series"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex2300-48mp",
@@ -497,7 +526,12 @@ const JUNIPER_SWITCHES = [
       "6x 10G SFP+ uplinks for aggregation and stacking",
       "Up to 4-member Virtual Chassis configuration",
       "Mist AI telemetry with Marvis automated anomaly detection"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 32,
+      "rj45_5g": 16,
+      "sfp_plus_10g": 6
+    }
   },
   {
     "id": "juniper-ex3400-24t",
@@ -558,7 +592,12 @@ const JUNIPER_SWITCHES = [
       "2x 40G QSFP+ dedicated Virtual Chassis stacking ports",
       "4x 10G SFP+ fixed uplinks",
       "Up to 10-switch Virtual Chassis managed as a single entity"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "juniper-ex3400-24p",
@@ -622,7 +661,12 @@ const JUNIPER_SWITCHES = [
       "2x 40G QSFP+ stacking ports delivering 80 Gbps stacking fabric",
       "4x 10G SFP+ uplink ports",
       "Redundant field-replaceable fans and power supplies"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "juniper-ex3400-48t",
@@ -683,7 +727,12 @@ const JUNIPER_SWITCHES = [
       "2x 40G QSFP+ ports for 80 Gbps Virtual Chassis stacking",
       "4x 10G SFP+ high-speed optical uplinks",
       "Comprehensive hardware redundancy with field-replaceable fans"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "juniper-ex3400-48p",
@@ -747,7 +796,12 @@ const JUNIPER_SWITCHES = [
       "2x 40G QSFP+ stacking ports delivering 80 Gbps fabric",
       "4x 10G SFP+ uplink ports",
       "Redundant hot-swap power supplies and cooling fans"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "juniper-ex4100-f-12t",
@@ -807,7 +861,11 @@ const JUNIPER_SWITCHES = [
       "Mist AI cloud-native provisioning with Marvis VNA",
       "EVPN-VXLAN to the edge with microsegmentation",
       "Shallow 10.2\" compact form factor for tight wall cabinets"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 12,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex4100-f-12p",
@@ -870,7 +928,11 @@ const JUNIPER_SWITCHES = [
       "Perpetual & Fast PoE keeps access control readers powered",
       "EVPN-VXLAN campus fabric support to the edge",
       "2x 10G SFP+ uplinks & dedicated 10G Virtual Chassis ports"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 12,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex4100-f-24t",
@@ -930,7 +992,11 @@ const JUNIPER_SWITCHES = [
       "4x 10G SFP+ uplinks + 2x 20G Virtual Chassis ports",
       "Mist AI telemetry with Marvis automated root-cause analysis",
       "EVPN-VXLAN to the access switch layer"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex4100-f-24p",
@@ -993,7 +1059,11 @@ const JUNIPER_SWITCHES = [
       "Perpetual & Fast PoE keeps security devices powered",
       "4x 10G SFP+ uplinks & 2x dedicated 20G VC ports",
       "Compact 11.8\" depth ideal for distributed edge IDF racks"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex4100-f-48t",
@@ -1053,7 +1123,11 @@ const JUNIPER_SWITCHES = [
       "4x 10G SFP+ uplinks + 2x 20G Virtual Chassis ports",
       "EVPN-VXLAN access fabric support",
       "Native Mist AI cloud onboarding with Zero Touch Provisioning"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex4100-f-48p",
@@ -1116,7 +1190,11 @@ const JUNIPER_SWITCHES = [
       "Perpetual & Fast PoE keeps CCTV online during reboot",
       "4x 10G SFP+ uplinks & dedicated 20G Virtual Chassis ports",
       "Full EVPN-VXLAN campus fabric support"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 4
+    }
   },
   {
     "id": "juniper-ex4100-24t",
@@ -1177,7 +1255,12 @@ const JUNIPER_SWITCHES = [
       "4x 25G SFP28 uplinks & 2x 100G QSFP28 Virtual Chassis ports",
       "Deep 12 MB buffer prevents microburst packet loss",
       "EVPN-VXLAN campus fabric support with MACsec AES-256"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp28_25g": 4,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "juniper-ex4100-24p",
@@ -1241,7 +1324,11 @@ const JUNIPER_SWITCHES = [
       "Perpetual & Fast PoE keeps cameras active during reload",
       "4x 25G SFP28 uplinks + 2x 100G Virtual Chassis ports",
       "Full EVPN-VXLAN multi-tenancy and MACsec encryption"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp28_25g": 2
+    }
   },
   {
     "id": "juniper-ex4100-24mp",
@@ -1252,13 +1339,13 @@ const JUNIPER_SWITCHES = [
     "ports": 30,
     "portCategory": "24",
     "portSpeed": "mGig",
-    "portFormFactorSummary": "16x 1G + 8x 100M/1G/2.5G/5G/10G mGig (90W) + 4x 25G SFP28 + 2x 100G VC",
+    "portFormFactorSummary": "8x 100M/1G/2.5G/5G/10G mGig RJ-45 + 16x 1G RJ-45 + 4x 10G/25G SFP28 uplinks + 4x 10G/25G SFP28 Virtual Chassis",
     "uplinksSummary": "4x 25G / 10G SFP28 uplinks + 2x 100G / 40G VC stacking",
     "poeAfPorts": 24,
     "poeAtPorts": 24,
     "poeBt60Ports": 8,
-    "poeBt90Ports": 8,
-    "poeBudget": 1440,
+    "poeBt90Ports": 24,
+    "poeBudget": 1620,
     "poeStandardsSupported": [
       "802.3af",
       "802.3at",
@@ -1307,7 +1394,12 @@ const JUNIPER_SWITCHES = [
       "16x 1G PoE+ ports with up to 1440W power budget",
       "4x 25G SFP28 uplinks & 2x 100G dedicated Virtual Chassis ports",
       "Flow-based telemetry and automated Mist AI root cause analysis"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_10g": 8,
+      "rj45_1g": 16,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "juniper-ex4100-48t",
@@ -1368,7 +1460,12 @@ const JUNIPER_SWITCHES = [
       "4x 25G SFP28 uplinks + 2x 100G Virtual Chassis ports",
       "EVPN-VXLAN campus fabric support",
       "12 MB packet buffer for bursty enterprise campus applications"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 4,
+      "qsfp_plus_40g": 2
+    }
   },
   {
     "id": "juniper-ex4100-48p",
@@ -1432,7 +1529,11 @@ const JUNIPER_SWITCHES = [
       "Perpetual & Fast PoE keeps IP surveillance online through reboot",
       "4x 25G SFP28 uplinks & 2x 100G dedicated Virtual Chassis ports",
       "Cloud-native Mist Wired Assurance with automated operations"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp28_25g": 2
+    }
   },
   {
     "id": "juniper-ex4100-48mp",
@@ -1443,12 +1544,12 @@ const JUNIPER_SWITCHES = [
     "ports": 54,
     "portCategory": "48",
     "portSpeed": "mGig",
-    "portFormFactorSummary": "32x 1G + 16x 100M/1G/2.5G/5G/10G mGig (90W) + 4x 25G SFP28 + 2x 100G VC",
+    "portFormFactorSummary": "16x 100M/1G/2.5G mGig RJ-45 + 32x 1G RJ-45 + 4x 10G/25G SFP28 uplinks + 4x 10G/25G SFP28 Virtual Chassis",
     "uplinksSummary": "4x 25G / 10G SFP28 uplinks + 2x 100G / 40G VC stacking",
     "poeAfPorts": 48,
     "poeAtPorts": 48,
     "poeBt60Ports": 16,
-    "poeBt90Ports": 16,
+    "poeBt90Ports": 48,
     "poeBudget": 1620,
     "poeStandardsSupported": [
       "802.3af",
@@ -1498,7 +1599,12 @@ const JUNIPER_SWITCHES = [
       "32x 1G PoE+ ports with 1620W massive dual-PSU power budget",
       "4x 25G SFP28 uplinks & 2x 100G Virtual Chassis ports",
       "Full EVPN-VXLAN campus fabric support with MACsec AES-256"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 16,
+      "rj45_1g": 32,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "juniper-ex4100-h-12t",
@@ -1556,11 +1662,16 @@ const JUNIPER_SWITCHES = [
     "datasheet": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
     "image": "assets/images/products/juniper-ex4100-h-12t.webp",
     "keyFeatures": [
-      "Ruggedized fanless vertical brick for utility cabinets (-40\u00b0C to +75\u00b0C)",
+      "Ruggedized fanless vertical brick for utility cabinets (-40°C to +75°C)",
       "IEC 61850-3 & IEEE 1613 power substation certified",
       "Dual DC/AC redundant power terminals with dry alarm relays",
       "4x 10G SFP+ uplinks & Virtual Chassis stacking support"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_1g": 4,
+      "rj45_5g": 4,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "juniper-ex4100-h-12mp",
@@ -1624,10 +1735,15 @@ const JUNIPER_SWITCHES = [
     "image": "assets/images/products/juniper-ex4100-h-12t.webp",
     "keyFeatures": [
       "4x 90W 802.3bt PoE++ ports with Perpetual & Fast PoE",
-      "Extreme temperature range (-40\u00b0C to +75\u00b0C) 100% silent fanless",
+      "Extreme temperature range (-40°C to +75°C) 100% silent fanless",
       "IEC 61850-3 & EN 50121-4 railway & substation certified",
       "Vertical DIN rail form factor (5.3\" depth) with dry alarm contacts"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 4,
+      "rj45_1g": 4,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "juniper-ex4100-h-24mp",
@@ -1690,10 +1806,15 @@ const JUNIPER_SWITCHES = [
     "image": "assets/images/products/juniper-ex4100-h-24mp.webp",
     "keyFeatures": [
       "1U 19\" rackmount hardened switch with fanless convection cooling",
-      "Substation IEC 61850-3 & IEEE 1613 certified (-40\u00b0C to +75\u00b0C)",
+      "Substation IEC 61850-3 & IEEE 1613 certified (-40°C to +75°C)",
       "Dual hot-swap hardened PSUs with front terminal blocks",
       "8x 90W 802.3bt ports with Perpetual PoE and MACsec encryption"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_5g": 8,
+      "rj45_1g": 16,
+      "sfp28_25g": 4
+    }
   },
   {
     "id": "juniper-ex4300-24t",
@@ -1767,12 +1888,17 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4300-FAN",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C2-P",
         "S-EX-P-C2-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "qsfp_plus_40g": 4,
+      "sfp_plus_10g": 4
     }
   },
   {
@@ -1850,12 +1976,17 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4300-FAN",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C2-P",
         "S-EX-P-C2-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "qsfp_plus_40g": 4,
+      "sfp_plus_10g": 4
     }
   },
   {
@@ -1930,12 +2061,17 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4300-FAN",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "qsfp_plus_40g": 4,
+      "sfp_plus_10g": 4
     }
   },
   {
@@ -2013,12 +2149,17 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4300-FAN",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "qsfp_plus_40g": 4,
+      "sfp_plus_10g": 4
     }
   },
   {
@@ -2099,12 +2240,18 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4300-FAN",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "rj45_10g": 24,
+      "qsfp_plus_40g": 4,
+      "sfp_plus_10g": 4
     }
   },
   {
@@ -2179,12 +2326,17 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4300-FAN",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_1g": 32,
+      "sfp_plus_10g": 4,
+      "qsfp_plus_40g": 2
     }
   },
   {
@@ -2259,12 +2411,16 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 2
     }
   },
   {
@@ -2342,12 +2498,16 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 24,
+      "sfp_plus_10g": 2
     }
   },
   {
@@ -2427,12 +2587,16 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_10g": 24,
+      "sfp_plus_10g": 2
     }
   },
   {
@@ -2507,12 +2671,15 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_plus_10g": 26
     }
   },
   {
@@ -2587,12 +2754,16 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 2
     }
   },
   {
@@ -2670,12 +2841,16 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_1g": 48,
+      "sfp_plus_10g": 2
     }
   },
   {
@@ -2755,12 +2930,17 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "rj45_5g": 36,
+      "rj45_10g": 12,
+      "sfp_plus_10g": 2
     }
   },
   {
@@ -2835,12 +3015,15 @@ const JUNIPER_SWITCHES = [
     "mountSku": "EX-4PST-RMK",
     "fanSku": "EX4400-FAN-AFO",
     "featureLicense": {
-      "hasLicense": true,
       "supportedLicenses": [
         "S-EX-A-C3-P",
         "S-EX-P-C3-P",
         "EX-QFX-MACSEC-ACC4"
-      ]
+      ],
+      "hasOptions": true
+    },
+    "portsBreakdown": {
+      "sfp_plus_10g": 50
     }
   },
   {
@@ -2902,7 +3085,11 @@ const JUNIPER_SWITCHES = [
       "Two modular expansion bays for up to 40x 10G or 12x 40G ports",
       "Virtual Chassis stacking up to 10 switches across campus",
       "Hot-swappable redundant power supplies and fan trays"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_plus_10g": 36,
+      "qsfp_plus_40g": 4
+    }
   },
   {
     "id": "juniper-ex4650-48y",
@@ -2963,7 +3150,11 @@ const JUNIPER_SWITCHES = [
       "8x 100G QSFP28 spine uplinks and Virtual Chassis ports",
       "Redundant field-replaceable PSUs and fans",
       "Campus microsegmentation with EVPN-VXLAN"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp28_25g": 48,
+      "qsfp28_100g": 8
+    }
   },
   {
     "id": "juniper-qfx5110-48s",
@@ -3024,7 +3215,11 @@ const JUNIPER_SWITCHES = [
       "4x 100G QSFP28 spine uplinks with sub-600ns latency",
       "EVPN-VXLAN campus and data center fabric overlay",
       "Dual hot-swap redundant power supplies and N+1 cooling"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp_plus_10g": 48,
+      "qsfp28_100g": 4
+    }
   },
   {
     "id": "juniper-qfx5120-48y",
@@ -3085,7 +3280,11 @@ const JUNIPER_SWITCHES = [
       "48x 25G SFP28 + 8x 100G QSFP28 cages",
       "Dual hot-swap redundant power supplies",
       "Wire-speed 4.0 Tbps backbone capacity"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp28_25g": 48,
+      "qsfp28_100g": 8
+    }
   },
   {
     "id": "juniper-qfx5120-48t",
@@ -3146,7 +3345,11 @@ const JUNIPER_SWITCHES = [
       "6x 100G QSFP28 spine uplinks",
       "32 MB shared packet buffer absorbs video bursts",
       "Sub-550ns ultra-low latency architecture"
-    ]
+    ],
+    "portsBreakdown": {
+      "rj45_10g": 48,
+      "qsfp28_100g": 6
+    }
   },
   {
     "id": "juniper-qfx5120-32c",
@@ -3207,7 +3410,10 @@ const JUNIPER_SWITCHES = [
       "6.4 Tbps non-blocking throughput with sub-550ns latency",
       "Full EVPN-VXLAN campus fabric architecture",
       "Dual hot-swap redundant load-sharing AC/DC PSUs"
-    ]
+    ],
+    "portsBreakdown": {
+      "qsfp28_100g": 32
+    }
   },
   {
     "id": "juniper-qfx5120-48ym",
@@ -3268,7 +3474,11 @@ const JUNIPER_SWITCHES = [
       "Full EVPN-VXLAN campus core and secure data center interconnect",
       "Dual hot-swap load-sharing power supplies",
       "Deep 32 MB buffer prevents microburst packet loss"
-    ]
+    ],
+    "portsBreakdown": {
+      "sfp28_25g": 48,
+      "qsfp28_100g": 8
+    }
   },
   {
     "id": "juniper-qfx5200-32c",
@@ -3329,7 +3539,10 @@ const JUNIPER_SWITCHES = [
       "6.4 Tbps / 2.4 Bpps non-blocking switching throughput",
       "Advanced EVPN-VXLAN and telemetry streaming via Junos OS",
       "Redundant 1+1 power supplies and front-to-back/back-to-front airflow"
-    ]
+    ],
+    "portsBreakdown": {
+      "qsfp28_100g": 32
+    }
   }
 ];
 

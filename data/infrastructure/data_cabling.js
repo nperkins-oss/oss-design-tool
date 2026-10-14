@@ -6,6 +6,8 @@ const CABLING_CATALOG = {
   bulkCable: [
     {
       sku: "C6A-CMP-1K-BL",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -17,6 +19,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMR-1K-BL",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Riser (CMR) Solid Bulk Cable (1,000 ft Spool Box)",
       vendor: "Superior Essex",
       rating: "CMR",
@@ -28,6 +32,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-CMP-1K-BL",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6 U/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -39,6 +45,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-YL",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Yellow)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -50,6 +58,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMR-1K-YL",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Riser (CMR) Solid Bulk Cable (1,000 ft Spool Box, Yellow)",
       vendor: "Superior Essex",
       rating: "CMR",
@@ -61,6 +71,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-CMP-1K-YL",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6 U/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Yellow)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -72,6 +84,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-GN",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Green)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -83,6 +97,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-OR",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Orange)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -94,6 +110,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-VT",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Violet/Purple)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -105,6 +123,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-WH",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, White)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -116,6 +136,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-GY",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Gray)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -127,6 +149,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-CMP-1K-RD",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A F/UTP Plenum (CMP) Solid Bulk Cable (1,000 ft Spool Box, Red)",
       vendor: "Superior Essex",
       rating: "CMP",
@@ -138,6 +162,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-OUTDOOR-1K",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Cat6A Shielded OSP Direct Burial / UV Outdoor Cable (1,000 ft Spool)",
       vendor: "Superior Essex",
       rating: "OSP",
@@ -149,6 +175,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "AC-COMP-CMP-500",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Access Control Composite Cable (4-Element Banana Cable, CMP Plenum, 500 ft Spool)",
       vendor: "Superior Essex / Belden",
       rating: "CMP",
@@ -160,6 +188,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "AC-COMP-CMR-500",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "Access Control Composite Cable (4-Element Banana Cable, CMR Riser, 500 ft Spool)",
       vendor: "Superior Essex / Belden",
       rating: "CMR",
@@ -171,6 +201,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "LV-22-4-CMP-1K",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "22 AWG 4-Conductor Shielded OAS Low-Voltage Cable (CMP Plenum, 1,000 ft Spool)",
       vendor: "Superior Essex / Belden",
       rating: "CMP",
@@ -182,6 +214,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "LV-18-2-CMP-1K",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "18 AWG 2-Conductor Stranded Low-Voltage Lock Power Cable (CMP Plenum, 1,000 ft Spool)",
       vendor: "Superior Essex / Belden",
       rating: "CMP",
@@ -193,6 +227,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "LV-18-4-CMP-1K",
+      weightLbs: 28.0,
+      depthInches: 14.0,
       name: "18 AWG 4-Conductor Shielded Low-Voltage Cable (CMP Plenum, 1,000 ft Spool)",
       vendor: "Superior Essex / Belden",
       rating: "CMP",
@@ -210,6 +246,8 @@ const CABLING_CATALOG = {
       vendor: "Panduit",
       ports: 24,
       rackUnits: 1,
+      weightLbs: 1.8,
+      depthInches: 1.5,
       msrp: 68
     },
     {
@@ -218,6 +256,8 @@ const CABLING_CATALOG = {
       vendor: "Panduit",
       ports: 48,
       rackUnits: 2,
+      weightLbs: 3.2,
+      depthInches: 1.5,
       msrp: 115
     },
     {
@@ -226,12 +266,16 @@ const CABLING_CATALOG = {
       vendor: "Panduit",
       ports: 0,
       rackUnits: 1,
+      weightLbs: 0.5,
+      depthInches: 0.5,
       msrp: 18
     }
   ],
   connectors: [
     {
       sku: "C6A-KEY-SLD-24",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A Shielded Toolless Keystone Jacks (Pack of 24)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -240,6 +284,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-KEY-UTP-24",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Unshielded 90-Degree Keystone Jacks (Pack of 24)",
       vendor: "Panduit",
       standard: "Cat6",
@@ -248,6 +294,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-FIELD-PLUG",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A Toolless Industrial Field-Term RJ45 Plug (10-Pack)",
       vendor: "Leviton",
       packQty: 10,
@@ -258,6 +306,8 @@ const CABLING_CATALOG = {
     // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Yellow - Security Default)
     {
       sku: "C6A-SLIM-6IN-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -268,6 +318,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-1FT-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (1-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -278,6 +330,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-2FT-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (2-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -288,6 +342,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-3FT-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (3-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -298,6 +354,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-5FT-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (5-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -308,6 +366,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-7FT-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -318,6 +378,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-10FT-YL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (10-Foot, Yellow)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -330,6 +392,8 @@ const CABLING_CATALOG = {
     // Panduit 28AWG Slim High-Density Cat6A Patch Cords (Blue - Data)
     {
       sku: "C6A-SLIM-6IN-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -340,6 +404,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-1FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (1-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -349,6 +415,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-2FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (2-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -358,6 +426,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-3FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (3-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -367,6 +437,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-5FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (5-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -376,6 +448,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-7FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -385,6 +459,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-10FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (10-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -394,6 +470,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-15FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (15-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -403,6 +481,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-25FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (25-Foot, Blue)",
       vendor: "Panduit",
       standard: "Cat6A",
@@ -445,68 +525,88 @@ const CABLING_CATALOG = {
     // UniFi Etherlighting™ Ultra-Thin RJ45 Patch Cords
     {
       sku: "UACC-Cable-Patch-EL-0.15M-W",
+      weightLbs: 0.15,
+      depthInches: 1.2,
       name: "UniFi Etherlighting™ Ultra-Thin Patch Cable (0.15m / 6-Inch, White)",
       vendor: "UniFi",
       standard: "Cat6",
       etherlighting: true,
       lengthFt: 0.5,
       lengthMeters: 0.15,
-      msrp: 4.50
+      msrp: 4.50,
+      datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf"
     },
     {
       sku: "UACC-Cable-Patch-EL-0.3M-W",
+      weightLbs: 0.15,
+      depthInches: 1.2,
       name: "UniFi Etherlighting™ Ultra-Thin Patch Cable (0.3m / 1-Foot, White)",
       vendor: "UniFi",
       standard: "Cat6",
       etherlighting: true,
       lengthFt: 1,
       lengthMeters: 0.3,
-      msrp: 5.00
+      msrp: 5.00,
+      datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf"
     },
     {
       sku: "UACC-Cable-Patch-EL-1M-W",
+      weightLbs: 0.15,
+      depthInches: 1.2,
       name: "UniFi Etherlighting™ Ultra-Thin Patch Cable (1m / 3.3-Foot, White)",
       vendor: "UniFi",
       standard: "Cat6",
       etherlighting: true,
       lengthFt: 3.3,
       lengthMeters: 1.0,
-      msrp: 6.50
+      msrp: 6.50,
+      datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf"
     },
     {
       sku: "UACC-Cable-Patch-EL-2M-W",
+      weightLbs: 0.15,
+      depthInches: 1.2,
       name: "UniFi Etherlighting™ Ultra-Thin Patch Cable (2m / 6.6-Foot, White)",
       vendor: "UniFi",
       standard: "Cat6",
       etherlighting: true,
       lengthFt: 6.6,
       lengthMeters: 2.0,
-      msrp: 8.00
+      msrp: 8.00,
+      datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf"
     },
     {
       sku: "UACC-Cable-Patch-EL-3M-W",
+      weightLbs: 0.15,
+      depthInches: 1.2,
       name: "UniFi Etherlighting™ Ultra-Thin Patch Cable (3m / 9.8-Foot, White)",
       vendor: "UniFi",
       standard: "Cat6",
       etherlighting: true,
       lengthFt: 9.8,
       lengthMeters: 3.0,
-      msrp: 9.50
+      msrp: 9.50,
+      datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf"
     },
     {
       sku: "UACC-Cable-Patch-EL-5M-W",
+      weightLbs: 0.15,
+      depthInches: 1.2,
       name: "UniFi Etherlighting™ Ultra-Thin Patch Cable (5m / 16.4-Foot, White)",
       vendor: "UniFi",
       standard: "Cat6",
       etherlighting: true,
       lengthFt: 16.4,
       lengthMeters: 5.0,
-      msrp: 12.50
+      msrp: 12.50,
+      datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf"
     },
 
     // Standard Snagless Molded RJ45 Patch Cords
     {
       sku: "C6-PATCH-1FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (1-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -516,6 +616,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-PATCH-3FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (3-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -525,6 +627,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-PATCH-5FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (5-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -534,6 +638,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-PATCH-7FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (7-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -543,6 +649,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-PATCH-10FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (10-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -552,6 +660,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-PATCH-15FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (15-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -561,6 +671,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6-PATCH-25FT-BL",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "Cat6 Snagless RJ45 Patch Cord (25-Foot, Blue)",
       vendor: "Superior Essex",
       standard: "Cat6",
@@ -573,6 +685,8 @@ const CABLING_CATALOG = {
   fiberBackbone: [
     {
       sku: "FIBER-OM4-6STRAND",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "6-Strand OM4 Armored Indoor/Outdoor Pre-Term LC Fiber Trunk Assembly",
       vendor: "Corning / Panduit",
       medium: "mmf",
@@ -583,6 +697,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "FIBER-OM4-12STRAND",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "12-Strand OM4 Armored Indoor/Outdoor Pre-Term LC Fiber Trunk Assembly",
       vendor: "Corning / Panduit",
       medium: "mmf",
@@ -593,6 +709,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "FIBER-OM4-24STRAND",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "24-Strand OM4 Armored Indoor/Outdoor Pre-Term LC Fiber Trunk Assembly",
       vendor: "Corning / Panduit",
       medium: "mmf",
@@ -603,6 +721,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "FIBER-OS2-6STRAND",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "6-Strand OS2 Single-Mode Armored Pre-Term LC Fiber Trunk Assembly",
       vendor: "Corning / Panduit",
       medium: "smf",
@@ -613,6 +733,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "FIBER-OS2-12STRAND",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "12-Strand OS2 Single-Mode Armored Pre-Term LC Fiber Trunk Assembly",
       vendor: "Corning / Panduit",
       medium: "smf",
@@ -623,6 +745,8 @@ const CABLING_CATALOG = {
     },
     {
       sku: "FIBER-OS2-24STRAND",
+      weightLbs: 0.85,
+      depthInches: 1.2,
       name: "24-Strand OS2 Single-Mode Armored Pre-Term LC Fiber Trunk Assembly",
       vendor: "Corning / Panduit",
       medium: "smf",

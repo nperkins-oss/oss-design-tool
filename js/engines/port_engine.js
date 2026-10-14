@@ -12,9 +12,12 @@ const PORT_MEDIA_TYPES = {
   rj45_mgig: { id: "rj45_mgig", label: "2.5G/5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
   rj45_mgeg: { id: "rj45_mgig", label: "2.5G/5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
   "rj45_2.5g": { id: "rj45_2.5g", label: "2.5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
+  rj45_2_5g: { id: "rj45_2.5g", label: "2.5G Multi-Gig Copper", speed: "2.5G", speedMbps: 2500, connector: "RJ-45", defaultPoe: "bt60" },
   rj45_5g: { id: "rj45_5g", label: "5G Multi-Gig Copper", speed: "5G", speedMbps: 5000, connector: "RJ-45", defaultPoe: "bt60" },
   rj45_10g: { id: "rj45_10g", label: "10G RJ-45 Copper", speed: "10G", speedMbps: 10000, connector: "RJ-45", defaultPoe: "bt90" },
   sfp_1g: { id: "sfp_1g", label: "1G SFP Optical Cage", speed: "1G", speedMbps: 1000, connector: "SFP", defaultPoe: null },
+  "sfp_2.5g": { id: "sfp_2.5g", label: "2.5G SFP Optical Cage", speed: "2.5G", speedMbps: 2500, connector: "SFP", defaultPoe: null },
+  sfp_2_5g: { id: "sfp_2.5g", label: "2.5G SFP Optical Cage", speed: "2.5G", speedMbps: 2500, connector: "SFP", defaultPoe: null },
   sfp_plus_10g: { id: "sfp_plus_10g", label: "10G SFP+ Optical Cage", speed: "10G", speedMbps: 10000, connector: "SFP+", defaultPoe: null },
   sfp28_25g: { id: "sfp28_25g", label: "25G SFP28 Optical Cage", speed: "25G", speedMbps: 25000, connector: "SFP28", defaultPoe: null },
   qsfp_plus_40g: { id: "qsfp_plus_40g", label: "40G QSFP+ Optical Cage", speed: "40G", speedMbps: 40000, connector: "QSFP+", defaultPoe: null },
@@ -166,56 +169,95 @@ const PortEngine = {
 
     // Detect optical uplink cages from uplinksSummary, SKU, or port descriptions
     const portDesc = `${item.portFormFactorSummary || ''} ${item.uplinksSummary || ''} ${item.description || ''}`.toLowerCase();
-    
+    const pb = (item.portsBreakdown && typeof item.portsBreakdown === "object") ? item.portsBreakdown : null;
+    const pbCopperCount = pb
+      ? (parseInt(pb.rj45_100m, 10) || 0) +
+        (parseInt(pb.rj45_1g, 10) || 0) +
+        (parseInt(pb.rj45_2_5g || pb["rj45_2.5g"], 10) || 0) +
+        (parseInt(pb.rj45_5g, 10) || 0) +
+        (parseInt(pb.rj45_10g, 10) || 0)
+      : 0;
+    const pbOpticalCount = pb
+      ? (parseInt(pb.sfp_1g, 10) || 0) +
+        (parseInt(pb.sfp_2_5g || pb["sfp_2.5g"], 10) || 0) +
+        (parseInt(pb.sfp_plus_10g, 10) || 0) +
+        (parseInt(pb.sfp28_25g, 10) || 0) +
+        (parseInt(pb.qsfp_plus_40g, 10) || 0) +
+        (parseInt(pb.qsfp28_100g, 10) || 0)
+      : 0;
+
     // Check if device is an all-optical spine / aggregation switch (e.g. 32x 100G QSFP28 Core)
-    const isAllOptical = (
-      item.role === "Core" || 
-      item.role === "Aggregation" || 
-      item.role === "Core & Agg" || 
-      portDesc.includes("qsfp") || 
-      portDesc.includes("cage")
-    ) && !portDesc.includes("rj-45") && !portDesc.includes("rj45") && !portDesc.includes("base-t") && poeBudget === 0;
+    const isAllOptical = (pb && pbOpticalCount > 0 && pbCopperCount === 0) || (
+      !pb && (
+        item.role === "Core" || 
+        item.role === "Aggregation" || 
+        item.role === "Core & Agg" || 
+        portDesc.includes("qsfp") || 
+        portDesc.includes("cage")
+      ) && !portDesc.includes("rj-45") && !portDesc.includes("rj45") && !portDesc.includes("base-t") && poeBudget === 0
+    );
 
     const ports = [];
 
     if (isAllOptical) {
-      // All ports are high-speed optical cages
-      let speed = "100G";
-      let media = "qsfp28_100g";
-      let connector = "QSFP28";
-      let prefix = "Q";
+      // Build exact optical cage list if portsBreakdown is available, else use primary speed
+      const opticalCageDefs = [];
+      if (pb && pbOpticalCount > 0) {
+        const pushCages = (cnt, speed, media, connector, prefix) => {
+          for (let k = 0; k < (parseInt(cnt, 10) || 0); k++) {
+            opticalCageDefs.push({ speed, media, connector, prefix });
+          }
+        };
+        pushCages(pb.sfp_1g, "1G", "sfp_1g", "SFP", "SFP ");
+        pushCages(pb.sfp_2_5g || pb["sfp_2.5g"], "2.5G", "sfp_2.5g", "SFP", "SFP ");
+        pushCages(pb.sfp_plus_10g, "10G", "sfp_plus_10g", "SFP+", "SFP+ ");
+        pushCages(pb.sfp28_25g, "25G", "sfp28_25g", "SFP28", "SFP28 ");
+        pushCages(pb.qsfp_plus_40g, "40G", "qsfp_plus_40g", "QSFP+", "Q");
+        pushCages(pb.qsfp28_100g, "100G", "qsfp28_100g", "QSFP28", "Q");
+      }
 
-      if (item.portSpeed === "25G" || portDesc.includes("25g") || portDesc.includes("sfp28")) {
-        speed = "25G";
-        media = "sfp28_25g";
-        connector = "SFP28";
-        prefix = "SFP28 ";
-      } else if (item.portSpeed === "10G" || portDesc.includes("10g") || portDesc.includes("sfp+")) {
-        speed = "10G";
-        media = "sfp_plus_10g";
-        connector = "SFP+";
-        prefix = "SFP+ ";
-      } else if (item.portSpeed === "40G" || portDesc.includes("40g")) {
-        speed = "40G";
-        media = "qsfp_plus_40g";
-        connector = "QSFP+";
-        prefix = "Q";
+      if (opticalCageDefs.length === 0) {
+        let speed = "100G";
+        let media = "qsfp28_100g";
+        let connector = "QSFP28";
+        let prefix = "Q";
+
+        if (item.portSpeed === "25G" || portDesc.includes("25g") || portDesc.includes("sfp28")) {
+          speed = "25G";
+          media = "sfp28_25g";
+          connector = "SFP28";
+          prefix = "SFP28 ";
+        } else if (item.portSpeed === "10G" || portDesc.includes("10g") || portDesc.includes("sfp+")) {
+          speed = "10G";
+          media = "sfp_plus_10g";
+          connector = "SFP+";
+          prefix = "SFP+ ";
+        } else if (item.portSpeed === "40G" || portDesc.includes("40g")) {
+          speed = "40G";
+          media = "qsfp_plus_40g";
+          connector = "QSFP+";
+          prefix = "Q";
+        }
+        for (let k = 0; k < totalPortCount; k++) {
+          opticalCageDefs.push({ speed, media, connector, prefix });
+        }
       }
 
       let globalPortIdx = 1;
       for (let u = 1; u <= stackUnits; u++) {
-        for (let i = 1; i <= totalPortCount; i++) {
+        for (let i = 1; i <= opticalCageDefs.length; i++) {
           const portNum = globalPortIdx++;
           const conn = existingConnections[portNum] || {};
+          const cDef = opticalCageDefs[i - 1];
           ports.push({
             portNumber: portNum,
             unitIndex: u,
             unitPortNumber: i,
-            label: stackUnits > 1 ? `Unit ${u} - Q${i} (${speed})` : `${prefix}${i} (${speed})`,
-            shortLabel: stackUnits > 1 ? `U${u}:Q${i}` : `${prefix}${i}`,
-            mediaType: media,
-            connector: connector,
-            speed: speed,
+            label: stackUnits > 1 ? `Unit ${u} - ${cDef.prefix}${i} (${cDef.speed})` : `${cDef.prefix}${i} (${cDef.speed})`,
+            shortLabel: stackUnits > 1 ? `U${u}:Q${i}` : `${cDef.prefix.trim()}${i}`,
+            mediaType: cDef.media,
+            connector: cDef.connector,
+            speed: cDef.speed,
             poeStandard: null,
             maxPoeWatts: 0,
             poeOutputWatts: conn.poeOutputWatts || 0,
@@ -241,61 +283,88 @@ const PortEngine = {
     const hasDedicatedStack = this.hasDedicatedStackPorts(item);
     item.hasDedicatedStackPorts = hasDedicatedStack;
 
-    // Parse multi-tier copper port breakdown from portFormFactorSummary or interfaces
-    // E.g. "16x 10G RJ-45 + 32x 2.5G RJ-45 copper" or "8x 1GbE RJ45"
+    // 1. Prefer structured item.portsBreakdown when available
     const copperTierMap = [];
-    const copperRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(?:RJ-?45|copper|base-t|gbe)?/gi;
-    let cMatch;
-    const formSummary = `${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
-    const hasCopper = formSummary.toLowerCase().includes("rj-45") || 
-                      formSummary.toLowerCase().includes("rj45") || 
-                      formSummary.toLowerCase().includes("copper") || 
-                      formSummary.toLowerCase().includes("base-t") ||
-                      formSummary.toLowerCase().includes("gbe");
-    if (hasCopper) {
-      while ((cMatch = copperRegex.exec(formSummary)) !== null) {
-        const full = cMatch[0].toLowerCase();
-        if (!full.includes("sfp") && !full.includes("qsfp") && !full.includes("cage")) {
-          const count = parseInt(cMatch[1], 10);
-          let spd = cMatch[2].toUpperCase();
-          if (!spd.endsWith("G") && !spd.endsWith("M")) spd += "G";
-          copperTierMap.push({ count, speed: spd });
+    const parsedCages = [];
+
+    if (pb && (pbCopperCount > 0 || pbOpticalCount > 0)) {
+      if (parseInt(pb.rj45_10g, 10) > 0) copperTierMap.push({ count: parseInt(pb.rj45_10g, 10), speed: "10G" });
+      if (parseInt(pb.rj45_5g, 10) > 0) copperTierMap.push({ count: parseInt(pb.rj45_5g, 10), speed: "5G" });
+      const c25 = parseInt(pb.rj45_2_5g || pb["rj45_2.5g"], 10) || 0;
+      if (c25 > 0) copperTierMap.push({ count: c25, speed: "2.5G" });
+      if (parseInt(pb.rj45_1g, 10) > 0) copperTierMap.push({ count: parseInt(pb.rj45_1g, 10), speed: "1G" });
+      if (parseInt(pb.rj45_100m, 10) > 0) copperTierMap.push({ count: parseInt(pb.rj45_100m, 10), speed: "100M" });
+
+      const addOptCages = (cnt, speed, connector, mediaType) => {
+        for (let c = 0; c < (parseInt(cnt, 10) || 0); c++) {
+          parsedCages.push({ speed, connector, mediaType });
+        }
+      };
+      addOptCages(pb.sfp_1g, "1G", "SFP", "sfp_1g");
+      addOptCages(pb.sfp_2_5g || pb["sfp_2.5g"], "2.5G", "SFP", "sfp_2.5g");
+      addOptCages(pb.sfp_plus_10g, "10G", "SFP+", "sfp_plus_10g");
+      addOptCages(pb.sfp28_25g, "25G", "SFP28", "sfp28_25g");
+      addOptCages(pb.qsfp_plus_40g, "40G", "QSFP+", "qsfp_plus_40g");
+      addOptCages(pb.qsfp28_100g, "100G", "QSFP28", "qsfp28_100g");
+    } else {
+      // Fallback: Parse multi-tier copper port breakdown from portFormFactorSummary or interfaces
+      const copperRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(?:RJ-?45|copper|base-t|gbe)?/gi;
+      let cMatch;
+      const formSummary = `${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
+      const hasCopper = formSummary.toLowerCase().includes("rj-45") || 
+                        formSummary.toLowerCase().includes("rj45") || 
+                        formSummary.toLowerCase().includes("copper") || 
+                        formSummary.toLowerCase().includes("base-t") ||
+                        formSummary.toLowerCase().includes("gbe");
+      if (hasCopper) {
+        while ((cMatch = copperRegex.exec(formSummary)) !== null) {
+          const full = cMatch[0].toLowerCase();
+          if (!full.includes("sfp") && !full.includes("qsfp") && !full.includes("cage")) {
+            const count = parseInt(cMatch[1], 10);
+            let spd = cMatch[2].toUpperCase();
+            if (!spd.endsWith("G") && !spd.endsWith("M")) spd += "G";
+            copperTierMap.push({ count, speed: spd });
+          }
+        }
+      }
+
+      // Parse optical uplink cages from uplinksSummary, portFormFactorSummary or interfaces
+      const uplinkRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|cages?)/gi;
+      let uMatch;
+      const allOpticalText = `${item.uplinksSummary || ''} ${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
+      while ((uMatch = uplinkRegex.exec(allOpticalText)) !== null) {
+        const count = parseInt(uMatch[1], 10);
+        let spd = uMatch[2].toUpperCase();
+        if (!spd.endsWith("G") && !spd.endsWith("M")) spd += "G";
+        const typeStr = (uMatch[3] || '').toLowerCase();
+        let conn = "SFP+";
+        let media = "sfp_plus_10g";
+        if (spd.includes("100") || typeStr.includes("qsfp28")) {
+          conn = "QSFP28";
+          media = "qsfp28_100g";
+        } else if (spd.includes("40") || typeStr.includes("qsfp")) {
+          conn = "QSFP+";
+          media = "qsfp_plus_40g";
+        } else if (spd.includes("25") || typeStr.includes("sfp28")) {
+          conn = "SFP28";
+          media = "sfp28_25g";
+        } else if (spd.includes("10") || typeStr.includes("sfp+")) {
+          conn = "SFP+";
+          media = "sfp_plus_10g";
+        } else if (spd.includes("2.5")) {
+          conn = "SFP";
+          media = "sfp_2.5g";
+        } else if (spd.includes("1") || typeStr.includes("sfp")) {
+          conn = "SFP";
+          media = "sfp_1g";
+        }
+        for (let c = 0; c < count; c++) {
+          parsedCages.push({ speed: spd, connector: conn, mediaType: media });
         }
       }
     }
 
-    // Parse optical uplink cages from uplinksSummary, portFormFactorSummary or interfaces
-    const parsedCages = [];
-    const uplinkRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|cages?)/gi;
-    let uMatch;
     const allOpticalText = `${item.uplinksSummary || ''} ${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
-    while ((uMatch = uplinkRegex.exec(allOpticalText)) !== null) {
-      const count = parseInt(uMatch[1], 10);
-      let spd = uMatch[2].toUpperCase();
-      if (!spd.endsWith("G") && !spd.endsWith("M")) spd += "G";
-      const typeStr = (uMatch[3] || '').toLowerCase();
-      let conn = "SFP+";
-      let media = "sfp_plus_10g";
-      if (spd.includes("100") || typeStr.includes("qsfp28")) {
-        conn = "QSFP28";
-        media = "qsfp28_100g";
-      } else if (spd.includes("40") || typeStr.includes("qsfp")) {
-        conn = "QSFP+";
-        media = "qsfp_plus_40g";
-      } else if (spd.includes("25") || typeStr.includes("sfp28")) {
-        conn = "SFP28";
-        media = "sfp28_25g";
-      } else if (spd.includes("10") || typeStr.includes("sfp+")) {
-        conn = "SFP+";
-        media = "sfp_plus_10g";
-      } else if (spd.includes("1") || typeStr.includes("sfp")) {
-        conn = "SFP";
-        media = "sfp_1g";
-      }
-      for (let c = 0; c < count; c++) {
-        parsedCages.push({ speed: spd, connector: conn, mediaType: media });
-      }
-    }
 
     const hasOpticalExplicitly = /sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|optical|cage/i.test(allOpticalText);
     const isPureCopperSwitch = !hasOpticalExplicitly && (
@@ -327,7 +396,9 @@ const PortEngine = {
 
     // Determine access ports per unit
     let accessPortCount = totalPortCount;
-    if (totalPortCount === 52) accessPortCount = 48;
+    if (pb && pbCopperCount > 0) {
+      accessPortCount = pbCopperCount;
+    } else if (totalPortCount === 52) accessPortCount = 48;
     else if (totalPortCount === 28) accessPortCount = 24;
     else if (totalPortCount > uplinkPortCount && (totalPortCount === 24 || totalPortCount === 48)) {
       accessPortCount = totalPortCount;

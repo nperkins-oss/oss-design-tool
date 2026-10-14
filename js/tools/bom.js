@@ -594,6 +594,7 @@ function addToProjectBOM(id, targetLocation = null) {
       role: "Power Supply",
       vendor: sw.vendor,
       msrp: psu.msrp,
+      weightLbs: psu.weightLbs || 2.2,
       poeBudget: 0,
       baseWatts: 0,
       closetName: assignedLoc,
@@ -606,7 +607,7 @@ function addToProjectBOM(id, targetLocation = null) {
   const fanSpareChecked = document.getElementById(`fanSpare-${sw.id}`)?.checked;
   const fanSku = sw.fanSku || (sw.compatibleAccessories && sw.compatibleAccessories.includes('UACC-Fan-4020') ? 'UACC-Fan-4020' : null);
   if (fanSpareChecked && fanSku) {
-    const fan = (typeof POWER_SUPPLY_CATALOG !== "undefined" && POWER_SUPPLY_CATALOG[fanSku]) || { sku: fanSku, name: `${sw.vendor || ''} Hot-Swappable Fan Module (${fanSku})`, msrp: 49 };
+    const fan = (typeof POWER_SUPPLY_CATALOG !== "undefined" && POWER_SUPPLY_CATALOG[fanSku]) || { sku: fanSku, name: `${sw.vendor || ''} Hot-Swappable Fan Module (${fanSku})`, msrp: 49, weightLbs: 0.4 };
     projectBOM.push({
       instanceId: `fan-${instanceId}`,
       parentInstanceId: instanceId,
@@ -617,6 +618,7 @@ function addToProjectBOM(id, targetLocation = null) {
       category: "Accessory",
       vendor: sw.vendor,
       msrp: fan.msrp || 49,
+      weightLbs: fan.weightLbs || 0.4,
       poeBudget: 0,
       baseWatts: 2,
       closetName: assignedLoc,
@@ -685,6 +687,8 @@ function addToProjectBOM(id, targetLocation = null) {
         vendor: sw.vendor || "UniFi",
         msrp: mountItem.msrp || 0,
         rackUnits: mountItem.rackUnits || 0,
+        weightLbs: mountItem.weightLbs || 1.5,
+        depthInches: mountItem.depthInches || 0,
         closetName: assignedLoc,
         rackId: assignedLoc,
         qty: 1
@@ -706,6 +710,8 @@ function addToProjectBOM(id, targetLocation = null) {
       role: "Power Supply",
       vendor: sw.vendor,
       msrp: psu.msrp,
+      weightLbs: psu.weightLbs || 1.8,
+      depthInches: psu.depthInches || 4.5,
       poeBudget: 0,
       baseWatts: 0,
       closetName: assignedLoc,
@@ -760,7 +766,8 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
         const mountKit = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-Flex-DIN"]) || {
           sku: "UACC-Flex-DIN",
           name: "UniFi Switch Flex DIN Rail Mount Bracket",
-          msrp: 19
+          msrp: 19,
+          weightLbs: 0.2
         };
         projectBOM.push({
           instanceId: `mount-flex-din-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -773,6 +780,7 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
           vendor: item.vendor || "UniFi",
           msrp: mountKit.msrp || 19,
           rackUnits: 0,
+          weightLbs: mountKit.weightLbs || 0.2,
           closetName: targetLocation,
           rackId: targetLocation,
           qty: 1
@@ -793,7 +801,8 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
         const mountKit = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-DIN-Rail"]) || {
           sku: "UACC-DIN-Rail",
           name: "UniFi DIN Rail Mount Kit",
-          msrp: 19
+          msrp: 19,
+          weightLbs: 0.2
         };
         projectBOM.push({
           instanceId: `mount-din-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -806,6 +815,7 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
           vendor: item.vendor || "UniFi",
           msrp: mountKit.msrp || 19,
           rackUnits: 0,
+          weightLbs: mountKit.weightLbs || 0.2,
           closetName: targetLocation,
           rackId: targetLocation,
           qty: 1
@@ -825,7 +835,8 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
       const mountKit = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-Pro-Max-16-RM"]) || {
         sku: "UACC-Pro-Max-16-RM",
         name: "UniFi Pro Max 16 Rack Mount Kit",
-        msrp: 29
+        msrp: 29,
+        weightLbs: 1.4
       };
       projectBOM.push({
         instanceId: `mount-pmax16-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -838,6 +849,7 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
         vendor: item.vendor || "UniFi",
         msrp: mountKit.msrp || 29,
         rackUnits: 0,
+        weightLbs: mountKit.weightLbs || 1.4,
         closetName: targetLocation,
         rackId: targetLocation,
         qty: 1
@@ -874,7 +886,9 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
       const utilItem = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["USW-Flex-Utility"]) || {
         sku: "USW-Flex-Utility",
         name: "UniFi Switch Flex Outdoor Weatherproof Enclosure (60W PoE)",
-        msrp: 58
+        msrp: 58,
+        weightLbs: 3.75,
+        depthInches: 2.5
       };
       projectBOM.push({
         instanceId: `util-flex-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -887,6 +901,8 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
         vendor: item.vendor || "UniFi",
         msrp: utilItem.msrp || 58,
         rackUnits: 0,
+        weightLbs: utilItem.weightLbs || 3.75,
+        depthInches: utilItem.depthInches || 2.5,
         closetName: targetLocation,
         rackId: targetLocation,
         qty: 1
@@ -905,7 +921,9 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
       const shelfItem = (typeof MOUNTING_CATALOG !== "undefined" && MOUNTING_CATALOG["UACC-Rack-Shelf-SD"]) || {
         sku: "UACC-Rack-Shelf-SD",
         name: "UniFi 1U Cantilever Shallow Rack Shelf",
-        msrp: 49
+        msrp: 49,
+        weightLbs: 4.5,
+        depthInches: 10.6
       };
       projectBOM.push({
         instanceId: `shelf-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -918,6 +936,8 @@ function autoSelectMountingForHost(item, targetLocation, hostType = null) {
         vendor: item.vendor || "UniFi",
         msrp: shelfItem.msrp || 49,
         rackUnits: 0,
+        weightLbs: shelfItem.weightLbs || 4.5,
+        depthInches: shelfItem.depthInches || 10.6,
         closetName: targetLocation,
         rackId: targetLocation,
         qty: 1
@@ -1086,6 +1106,8 @@ function applyStackCabling(item) {
         vendor: "Panduit",
         msrp: 68,
         rackUnits: 1,
+        weightLbs: 1.8,
+        depthInches: 1.5,
         ports: 24,
         poeBudget: 0,
         baseWatts: 0,
@@ -1108,6 +1130,8 @@ function applyStackCabling(item) {
         vendor: "Panduit",
         msrp: 45,
         rackUnits: 1,
+        weightLbs: 1.6,
+        depthInches: 3.5,
         ports: 0,
         poeBudget: 0,
         baseWatts: 0,
@@ -1146,6 +1170,8 @@ function applyStandardPodCabling(item) {
     vendor: "Panduit",
     msrp: 68,
     rackUnits: 1,
+    weightLbs: 1.8,
+    depthInches: 1.5,
     ports: 24,
     poeBudget: 0,
     baseWatts: 0,
