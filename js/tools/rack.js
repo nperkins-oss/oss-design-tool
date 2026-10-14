@@ -664,17 +664,22 @@ function renderVerticalChannelHtml(slotKey, type, pduMetrics, isRear) {
 
   if (type === "pdu") {
     const isFeedA = (slotKey === "rearLeft" || slotKey === "frontLeft");
-    const feed = isFeedA ? (pduMetrics ? pduMetrics.pduA : { amps: 0, watts: 0, pct: 0, outletsUsed: 0 }) : (pduMetrics ? pduMetrics.pduB : { amps: 0, watts: 0, pct: 0, outletsUsed: 0 });
-    const feedName = isFeedA ? (isRear ? "PDU-A" : "PDU-FL") : (isRear ? "PDU-B" : "PDU-FR");
-    const feedSubtitle = isFeedA ? (isRear ? "Feed A (Util)" : "Front Feed A") : (isRear ? "Feed B (UPS)" : "Front Feed B");
+    const feed = isFeedA
+      ? (pduMetrics ? pduMetrics.pduA : { id: "PDU-A", amps: 0, watts: 0, pct: 0, outletsUsed: 0, totalOutlets: 24, outlets: [] })
+      : (pduMetrics ? pduMetrics.pduB : { id: "PDU-B", amps: 0, watts: 0, pct: 0, outletsUsed: 0, totalOutlets: 24, outlets: [] });
+    const feedKey = isFeedA ? "PDU-A" : "PDU-B";
+    const feedName = feed.fullId || (isFeedA ? (isRear ? "PDU-A" : "PDU-FL") : (isRear ? "PDU-B" : "PDU-FR"));
+    const feedSubtitle = feed.upstreamShort || (isFeedA ? (isRear ? "Feed A (Util)" : "Front Feed A") : (isRear ? "Feed B (UPS)" : "Front Feed B"));
     const feedColor = isFeedA ? "text-emerald-400" : "text-sky-400";
     const barBg = feed.pct > 80 ? "bg-rose-500" : (isFeedA ? "bg-emerald-500" : "bg-sky-500");
-    const activeDotColor = isFeedA ? "text-emerald-400" : "text-sky-400";
-    const activeBorderColor = isFeedA ? "border-emerald-500/50 bg-emerald-950/30" : "border-sky-500/50 bg-sky-950/30";
+    const totalOutlets = feed.totalOutlets || 24;
+    const outletsArr = Array.isArray(feed.outlets) && feed.outlets.length > 0
+      ? feed.outlets
+      : Array.from({ length: totalOutlets }, (_, idx) => ({ outletNumber: idx + 1, occupied: idx < (feed.outletsUsed || 0) }));
 
     return `
       <!-- 0U Vertical PDU Channel (${slotTitle}) -->
-      <div class="w-20 sm:w-24 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md group relative">
+      <div class="w-24 sm:w-28 shrink-0 bg-slate-950 border border-slate-800 rounded-xl p-2 flex flex-col justify-between select-none shadow-md group relative">
         <div class="space-y-1 border-b border-slate-800 pb-2 text-center relative">
           <button 
             type="button" 
@@ -684,34 +689,59 @@ function renderVerticalChannelHtml(slotKey, type, pduMetrics, isRear) {
           >
             <i data-lucide="settings" class="w-2.5 h-2.5"></i>
           </button>
-          <div class="flex items-center justify-center gap-1 text-[11px] font-bold ${feedColor}">
-            <i data-lucide="zap" class="w-3 h-3"></i> ${feedName}
-          </div>
-          <span class="text-[8.5px] text-slate-400 uppercase font-mono block">${slotTitle}</span>
-          <span class="text-[8px] text-slate-500 uppercase font-mono block">${feedSubtitle}</span>
+          <button
+            type="button"
+            onclick="event.stopPropagation(); openRackPowerMatrixModal('${feedKey}', 1)"
+            class="flex items-center justify-center gap-1 text-[10px] font-mono font-bold ${feedColor} hover:underline mx-auto cursor-pointer"
+            title="Click to open Rack Power &amp; PDU Receptacle Matrix"
+          >
+            <i data-lucide="zap" class="w-3 h-3"></i>
+            <span class="truncate">${escapeHTML(feedName)}</span>
+          </button>
+          <span class="text-[8px] text-slate-400 uppercase font-mono block truncate" title="${escapeHTML(feedSubtitle)}">${escapeHTML(feedSubtitle)}</span>
           <span class="text-[10px] font-mono font-bold text-white block">${feed.amps}A / 16A</span>
-          <span class="text-[9px] font-mono text-slate-500 block">${feed.watts}W (${feed.pct}%)</span>
+          <span class="text-[9px] font-mono text-slate-400 block">${feed.watts}W (${feed.pct}%)</span>
           <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
             <div class="${barBg} h-1 rounded-full" style="width: ${feed.pct}%"></div>
           </div>
         </div>
 
-        <!-- Vertical 24-Receptacle Visualizer -->
-        <div class="py-2 space-y-1 flex-1 flex flex-col justify-around">
-          ${Array.from({ length: 12 }, (_, oIdx) => {
-            const isOccupied = (oIdx * 2) < feed.outletsUsed;
-            return `
-              <div class="flex items-center justify-between px-1 py-0.5 rounded bg-slate-900 border border-slate-800/80 text-[8px] font-mono ${isOccupied ? activeBorderColor : ''}">
-                <span class="text-slate-500">${oIdx + 1}</span>
-                <span class="${isOccupied ? `${activeDotColor} font-bold` : 'text-slate-700'}">●</span>
-              </div>
-            `;
-          }).join('')}
+        <!-- Interactive 24-Receptacle Visualizer (R01-R24) -->
+        <div class="py-2 flex-1 flex flex-col justify-center">
+          <div class="rack-pdu-grid">
+            ${outletsArr.map(o => {
+              const rNumStr = String(o.outletNumber).padStart(2, "0");
+              const isOcc = Boolean(o.occupied);
+              const stateCls = isOcc
+                ? (o.isSpof ? "spof-warn" : (isFeedA ? "occupied-a" : "occupied-b"))
+                : "";
+              const tip = isOcc && o.assignment
+                ? `${o.assignment.pduReceptacleTag} ⟷ ${o.assignment.powerCordId} ⟷ U${o.assignment.rackSlot} ${o.assignment.devicePsuTag} (${o.assignment.deviceModel} • ${o.assignment.watts}W / ${o.assignment.amps}A) — Click to inspect in Power Matrix`
+                : `${feedName}-R${rNumStr} (NEMA 5-20R / IEC C13) — Open Receptacle — Click to assign`;
+              return `
+                <button
+                  type="button"
+                  onclick="event.stopPropagation(); openRackPowerMatrixModal('${feedKey}', ${o.outletNumber})"
+                  class="rack-pdu-outlet ${stateCls}"
+                  title="${escapeHTML(tip)}"
+                >
+                  <span>R${rNumStr}</span>
+                  <span>${isOcc ? '●' : '○'}</span>
+                </button>
+              `;
+            }).join('')}
+          </div>
         </div>
 
-        <div class="pt-2 border-t border-slate-800 text-center">
-          <span class="text-[8px] font-mono text-slate-400 block">${feed.outletsUsed}/24 Outlets</span>
-          <span class="text-[8px] font-mono text-slate-500 block">NEMA 5-20R (0U)</span>
+        <div class="pt-2 border-t border-slate-800 text-center space-y-1">
+          <span class="text-[8px] font-mono text-slate-300 font-bold block">${feed.outletsUsed}/${totalOutlets} Outlets</span>
+          <button
+            type="button"
+            onclick="event.stopPropagation(); openRackPowerMatrixModal('${feedKey}', 1)"
+            class="w-full py-0.5 px-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[8px] font-mono font-bold ${feedColor} transition-colors cursor-pointer"
+          >
+            Inspect PDU
+          </button>
         </div>
       </div>
     `;
@@ -1002,6 +1032,56 @@ function getDevicePsuSpecs(item) {
   };
 }
 
+function isMountedUpsUnit(item) {
+  if (!item) return false;
+  if (item.isEbp || item.isPdu) return false;
+  const role = (item.role || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  const model = (item.model || "").toLowerCase();
+  const sku = (item.sku || "").toLowerCase();
+  if (model.includes("battery pack") || sku.startsWith("bp") || sku.includes("ebp")) return false;
+  return role === "ups" || cat.includes("ups") || model.includes("smart-ups") || /\bups\b/i.test(model);
+}
+
+function isPoweredRackEquipment(item) {
+  if (!item || !item.rackSlot) return false;
+  if (isPassiveInfrastructure(item)) return false;
+  if (item.isEbp || item.isPdu) return false;
+  const model = (item.model || "").toLowerCase();
+  const sku = (item.sku || "").toLowerCase();
+  if (model.includes("battery pack") || sku.startsWith("bp") || sku.includes("ebp")) return false;
+  if (isMountedUpsUnit(item)) return false; // UPS units feed the PDUs upstream rather than plugging into PDU outlets
+  return true;
+}
+
+function getDeviceShortPowerTag(item, peerItems) {
+  if (!item) return "DEV01";
+  if (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function" && (isStackableSwitch(item) || isFirewallDevice(item))) {
+    const pm = PortEngine.resolveSwitchPatchMapping(item);
+    if (pm && pm.switchCode) return pm.switchCode;
+  }
+  if (item.deviceNumber) {
+    return String(item.deviceNumber).replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  }
+  const role = (item.role || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  let prefix = "DEV";
+  if (isFirewallDevice(item)) prefix = "FW";
+  else if (isStackableSwitch(item)) prefix = "SW";
+  else if (role.includes("nvr") || (item.model || "").toLowerCase().includes("nvr")) prefix = "NVR";
+  else if (role.includes("server") || cat.includes("server") || role.includes("storage")) prefix = "SRV";
+  else if (isMountedUpsUnit(item)) prefix = "UPS";
+
+  const sameGroup = (peerItems || []).filter(p => {
+    if (prefix === "FW") return isFirewallDevice(p);
+    if (prefix === "SW") return isStackableSwitch(p);
+    if (prefix === "UPS") return isMountedUpsUnit(p);
+    return !isFirewallDevice(p) && !isStackableSwitch(p) && !isMountedUpsUnit(p);
+  });
+  const idx = Math.max(0, sameGroup.findIndex(p => p.instanceId === item.instanceId));
+  return `${prefix}${String(idx + 1).padStart(2, "0")}`;
+}
+
 function getDevicePowerConnections(item) {
   if (!item) return { psu1: "PDU-A" };
   const specs = getDevicePsuSpecs(item);
@@ -1013,6 +1093,12 @@ function getDevicePowerConnections(item) {
   }
   if (specs.psuCount >= 2 && !item.powerConnections.psu2) {
     item.powerConnections.psu2 = "PDU-B";
+  }
+  for (let p = 3; p <= specs.psuCount; p++) {
+    const k = `psu${p}`;
+    if (!item.powerConnections[k]) {
+      item.powerConnections[k] = (p % 2 === 1) ? "PDU-A" : "PDU-B";
+    }
   }
   return item.powerConnections;
 }
@@ -1029,10 +1115,8 @@ function toggleDevicePsuFeed(instanceId, psuNum) {
 
   let next = "PDU-A";
   if (pduConfig === "single_vertical" || pduConfig === "horizontal") {
-    // Single feed toggles between PDU-A (connected) and None (unplugged)
     next = (current === "PDU-A" || current === "PDU-Main") ? "None" : "PDU-A";
   } else {
-    // Dual feeds cycle: PDU-A -> PDU-B -> None -> PDU-A
     if (current === "PDU-A") next = "PDU-B";
     else if (current === "PDU-B") next = "None";
     else next = "PDU-A";
@@ -1041,28 +1125,115 @@ function toggleDevicePsuFeed(instanceId, psuNum) {
   item.powerConnections[key] = next;
   FacilityStore.notifyWorkspaceChange();
   renderRackVisualizer();
+  if (document.getElementById("rackPowerMatrixModal") && !document.getElementById("rackPowerMatrixModal").classList.contains("hidden")) {
+    renderRackPowerMatrixModalContent();
+  }
 }
 window.toggleDevicePsuFeed = toggleDevicePsuFeed;
 
+function setDevicePsuFeedDirect(instanceId, psuNum, feedVal) {
+  if (typeof projectBOM === "undefined") return;
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+  const conns = getDevicePowerConnections(item);
+  conns[`psu${psuNum}`] = feedVal;
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (document.getElementById("rackPowerMatrixModal") && !document.getElementById("rackPowerMatrixModal").classList.contains("hidden")) {
+    renderRackPowerMatrixModalContent();
+  }
+}
+window.setDevicePsuFeedDirect = setDevicePsuFeedDirect;
+
+function setDevicePsuOutlet(instanceId, psuNum, targetOutletNumber) {
+  if (typeof projectBOM === "undefined") return;
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+  const outletInt = parseInt(targetOutletNumber, 10);
+  if (!outletInt || outletInt < 1) return;
+
+  if (!item.powerOutlets || typeof item.powerOutlets !== "object") {
+    item.powerOutlets = {};
+  }
+  const conns = getDevicePowerConnections(item);
+  const feed = conns[`psu${psuNum}`] || "PDU-A";
+
+  // Check if another device PSU in the same rack & feed is currently using that outlet, and clear/swap it
+  const prevOutlet = item.powerOutlets[`psu${psuNum}`] || null;
+  projectBOM.forEach(other => {
+    if (FacilityStore.normalize(other.closetName || other.rackId) !== activeRackId) return;
+    if (!other.powerOutlets || !other.powerConnections) return;
+    Object.keys(other.powerOutlets).forEach(pKey => {
+      if (other.instanceId === instanceId && pKey === `psu${psuNum}`) return;
+      if (other.powerConnections[pKey] === feed && parseInt(other.powerOutlets[pKey], 10) === outletInt) {
+        if (prevOutlet) {
+          other.powerOutlets[pKey] = prevOutlet;
+        } else {
+          delete other.powerOutlets[pKey];
+        }
+      }
+    });
+  });
+
+  item.powerOutlets[`psu${psuNum}`] = outletInt;
+  window._rackPowerMatrixSelected = { pduKey: feed === "PDU-B" ? "PDU-B" : "PDU-A", outletNumber: outletInt };
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (document.getElementById("rackPowerMatrixModal") && !document.getElementById("rackPowerMatrixModal").classList.contains("hidden")) {
+    renderRackPowerMatrixModalContent();
+  }
+}
+window.setDevicePsuOutlet = setDevicePsuOutlet;
+
 function autoBalanceRackPowerFeeds() {
   if (typeof projectBOM === "undefined") return;
-  const assigned = projectBOM.filter(i => (FacilityStore.normalize(i.closetName || i.rackId) === activeRackId) && i.rackSlot);
+  const assigned = projectBOM
+    .filter(i => (FacilityStore.normalize(i.closetName || i.rackId) === activeRackId) && isPoweredRackEquipment(i))
+    .sort((a, b) => (parseInt(b.rackSlot, 10) || 0) - (parseInt(a.rackSlot, 10) || 0));
+
   const pduConfig = getRackPduConfig();
+  const isSingleFeedMode = (pduConfig === "single_vertical" || pduConfig === "horizontal");
+  const maxOutlets = pduConfig === "horizontal" ? 8 : 24;
+
   let singleCounter = 0;
+  let nextOutletA = 1;
+  let nextOutletB = 1;
 
   assigned.forEach(item => {
     const specs = getDevicePsuSpecs(item);
     if (!item.powerConnections) item.powerConnections = {};
-    if (pduConfig === "single_vertical" || pduConfig === "horizontal") {
+    item.powerOutlets = {};
+
+    if (isSingleFeedMode) {
       item.powerConnections.psu1 = "PDU-A";
-      if (specs.psuCount >= 2) item.powerConnections.psu2 = "PDU-A";
+      item.powerOutlets.psu1 = Math.min(maxOutlets, nextOutletA++);
+      if (specs.psuCount >= 2) {
+        for (let p = 2; p <= specs.psuCount; p++) {
+          item.powerConnections[`psu${p}`] = "PDU-A";
+          item.powerOutlets[`psu${p}`] = Math.min(maxOutlets, nextOutletA++);
+        }
+      }
     } else {
       if (specs.psuCount >= 2) {
+        // Symmetric A+B numbering so PSU1 (PDU-A) and PSU2 (PDU-B) share matching receptacle index R##
+        const symOutlet = Math.min(maxOutlets, Math.max(nextOutletA, nextOutletB));
         item.powerConnections.psu1 = "PDU-A";
         item.powerConnections.psu2 = "PDU-B";
+        item.powerOutlets.psu1 = symOutlet;
+        item.powerOutlets.psu2 = symOutlet;
+        nextOutletA = symOutlet + 1;
+        nextOutletB = symOutlet + 1;
+
+        for (let p = 3; p <= specs.psuCount; p++) {
+          const isOdd = (p % 2 === 1);
+          item.powerConnections[`psu${p}`] = isOdd ? "PDU-A" : "PDU-B";
+          item.powerOutlets[`psu${p}`] = Math.min(maxOutlets, isOdd ? nextOutletA++ : nextOutletB++);
+        }
       } else {
         singleCounter++;
-        item.powerConnections.psu1 = (singleCounter % 2 === 1) ? "PDU-A" : "PDU-B";
+        const toA = (singleCounter % 2 === 1);
+        item.powerConnections.psu1 = toA ? "PDU-A" : "PDU-B";
+        item.powerOutlets.psu1 = Math.min(maxOutlets, toA ? nextOutletA++ : nextOutletB++);
         delete item.powerConnections.psu2;
       }
     }
@@ -1070,8 +1241,11 @@ function autoBalanceRackPowerFeeds() {
 
   FacilityStore.notifyWorkspaceChange();
   renderRackVisualizer();
+  if (document.getElementById("rackPowerMatrixModal") && !document.getElementById("rackPowerMatrixModal").classList.contains("hidden")) {
+    renderRackPowerMatrixModalContent();
+  }
   if (typeof showToast === "function") {
-    showToast(`Balanced power feeds across ${assigned.length} mounted units.`);
+    showToast(`Balanced power feeds & aligned A/B receptacle numbers across ${assigned.length} units.`);
   }
 }
 window.autoBalanceRackPowerFeeds = autoBalanceRackPowerFeeds;
@@ -1082,6 +1256,85 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
   const circuitBreakerAmps = 20;
   const maxSafeAmps = 16.0; // 80% continuous NEC
   const maxSafeWatts = 1920;
+  const totalOutlets = (pduConfig === "horizontal") ? 8 : 24;
+  const isSingleFeedMode = (pduConfig === "single_vertical" || pduConfig === "horizontal");
+
+  // Resolve OSS Standard Closet Prefix (e.g., MDF, IDFA, 2-IDFB, 1-2-IDFC)
+  const parsed = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(activeRackId) : { space: "MDF" };
+  const closetPrefix = (typeof PortEngine !== "undefined" && typeof PortEngine.formatClosetPrefix === "function")
+    ? PortEngine.formatClosetPrefix(parsed)
+    : ((parsed.space || "MDF").replace(/[^a-zA-Z0-9]/g, "").toUpperCase() || "MDF");
+
+  const pduACode = (pduConfig === "horizontal") ? "PDU01" : "PDUA";
+  const pduBCode = "PDUB";
+  const pduAFullId = `${closetPrefix}-${pduACode}`;
+  const pduBFullId = `${closetPrefix}-${pduBCode}`;
+
+  // Discover Mounted UPS Units in this Rack (sorted from bottom U1 upward)
+  const mountedUps = (assignedItems || [])
+    .filter(it => it.rackSlot && isMountedUpsUnit(it))
+    .sort((a, b) => (parseInt(a.rackSlot, 10) || 0) - (parseInt(b.rackSlot, 10) || 0))
+    .map((u, idx) => {
+      const upsTag = `${closetPrefix}-UPS${String(idx + 1).padStart(2, "0")}`;
+      const circuitTag = (idx % 2 === 0 && !isSingleFeedMode && (assignedItems || []).filter(x => x.rackSlot && isMountedUpsUnit(x)).length === 1)
+        ? `${closetPrefix}-CKT-B (120V/20A)`
+        : `${closetPrefix}-CKT-${idx % 2 === 0 ? 'A' : 'B'} (120V/20A)`;
+      return {
+        instanceId: u.instanceId,
+        upsTag,
+        model: u.model || u.sku || "Rackmount UPS",
+        sku: u.sku || "UPS",
+        rackSlot: parseInt(u.rackSlot, 10) || 1,
+        va: u.va || 1500,
+        watts: u.powerWatts || 1000,
+        inputCordId: `PWR-${upsTag}-IN`,
+        upstreamCircuit: circuitTag
+      };
+    });
+
+  // Determine Upstream Power Chain for PDU-A and PDU-B
+  let pduAUpstream = `${closetPrefix}-CKT-A (120V/20A Utility)`;
+  let pduAUpstreamShort = "CKT-A (Utility)";
+  let pduBUpstream = `${closetPrefix}-CKT-B (120V/20A Secondary)`;
+  let pduBUpstreamShort = "CKT-B (Utility)";
+
+  if (mountedUps.length >= 2) {
+    pduAUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-A (120V/20A)`;
+    pduAUpstreamShort = `${mountedUps[0].upsTag} (UPS A)`;
+    pduBUpstream = `${mountedUps[1].upsTag} ➔ ${closetPrefix}-CKT-B (120V/20A)`;
+    pduBUpstreamShort = `${mountedUps[1].upsTag} (UPS B)`;
+  } else if (mountedUps.length === 1) {
+    if (isSingleFeedMode) {
+      pduAUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-A (120V/20A)`;
+      pduAUpstreamShort = `${mountedUps[0].upsTag} (UPS)`;
+    } else {
+      pduAUpstream = `${closetPrefix}-CKT-A (120V/20A Utility)`;
+      pduAUpstreamShort = "CKT-A (Utility)";
+      pduBUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-B (120V/20A)`;
+      pduBUpstreamShort = `${mountedUps[0].upsTag} (UPS B)`;
+    }
+  }
+
+  // Initialize Receptacle Arrays for PDU-A (1..totalOutlets) and PDU-B (1..24)
+  const pduAOutlets = Array.from({ length: totalOutlets }, (_, idx) => ({
+    outletNumber: idx + 1,
+    outletCode: `R${String(idx + 1).padStart(2, "0")}`,
+    receptacleTag: `${pduAFullId}-R${String(idx + 1).padStart(2, "0")}`,
+    shortTag: `${pduACode}-R${String(idx + 1).padStart(2, "0")}`,
+    occupied: false,
+    isSpof: false,
+    assignment: null
+  }));
+
+  const pduBOutlets = Array.from({ length: 24 }, (_, idx) => ({
+    outletNumber: idx + 1,
+    outletCode: `R${String(idx + 1).padStart(2, "0")}`,
+    receptacleTag: `${pduBFullId}-R${String(idx + 1).padStart(2, "0")}`,
+    shortTag: `${pduBCode}-R${String(idx + 1).padStart(2, "0")}`,
+    occupied: false,
+    isSpof: false,
+    assignment: null
+  }));
 
   let pduALoadWatts = 0;
   let pduBLoadWatts = 0;
@@ -1091,8 +1344,25 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
   let singlePointFailureCount = 0;
   let singleCordedCount = 0;
 
-  assignedItems.forEach(item => {
-    if (!item.rackSlot) return;
+  const poweredDevices = (assignedItems || [])
+    .filter(item => isPoweredRackEquipment(item))
+    .sort((a, b) => (parseInt(b.rackSlot, 10) || 0) - (parseInt(a.rackSlot, 10) || 0));
+
+  const byDeviceId = {};
+  const powerCords = [];
+
+  // Helper to claim a receptacle on PDU-A or PDU-B
+  const claimOutlet = (targetPduKey, preferredOutletNum) => {
+    const arr = targetPduKey === "PDU-B" ? pduBOutlets : pduAOutlets;
+    if (preferredOutletNum && preferredOutletNum >= 1 && preferredOutletNum <= arr.length) {
+      const slot = arr[preferredOutletNum - 1];
+      if (!slot.occupied) return slot;
+    }
+    const freeSlot = arr.find(s => !s.occupied);
+    return freeSlot || arr[arr.length - 1];
+  };
+
+  poweredDevices.forEach(item => {
     const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
     const baseW = (parseFloat(item.baseWatts) || 0) * stackUnits;
     const poeW = (parseFloat(item.poeBudget) || 0) * stackUnits;
@@ -1100,94 +1370,203 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
 
     const specs = getDevicePsuSpecs(item);
     const psuConn = getDevicePowerConnections(item);
+    if (!item.powerOutlets || typeof item.powerOutlets !== "object") {
+      item.powerOutlets = {};
+    }
 
-    if (pduConfig === "single_vertical" || pduConfig === "horizontal") {
-      // In single or horizontal PDU, all connected load goes to primary PDU-A
-      const p1 = psuConn.psu1;
-      const p2 = psuConn.psu2;
-      if (p1 === "PDU-A" || p1 === "PDU-Main") {
-        pduALoadWatts += (specs.psuCount >= 2 && p2 === "PDU-A") ? itemOperatingWatts : (specs.psuCount >= 2 ? itemOperatingWatts * 0.5 : itemOperatingWatts);
-        pduAOutletCount++;
+    const deviceShortTag = getDeviceShortPowerTag(item, poweredDevices);
+    const psuList = [];
+    for (let p = 1; p <= specs.psuCount; p++) {
+      let rawFeed = psuConn[`psu${p}`] || (p === 1 ? "PDU-A" : "PDU-B");
+      if (isSingleFeedMode && (rawFeed === "PDU-B" || rawFeed === "PDU-Main")) {
+        rawFeed = "PDU-A";
       }
-      if (specs.psuCount >= 2 && (p2 === "PDU-A" || p2 === "PDU-Main")) {
-        if (p1 !== "PDU-A" && p1 !== "PDU-Main") pduALoadWatts += itemOperatingWatts * 0.5;
-        pduAOutletCount++;
-      }
-      singleCordedCount++;
-    } else {
-      // dual_vertical
-      if (specs.psuCount >= 2) {
-        const p1 = psuConn.psu1;
-        const p2 = psuConn.psu2;
+      psuList.push({ psuNum: p, feed: rawFeed });
+    }
 
-        if ((p1 === "PDU-A" && p2 === "PDU-B") || (p1 === "PDU-B" && p2 === "PDU-A")) {
-          pduALoadWatts += (itemOperatingWatts * 0.5);
-          pduBLoadWatts += (itemOperatingWatts * 0.5);
-          pduAOutletCount++;
-          pduBOutletCount++;
-          redundantDeviceCount++;
-        } else if (p1 === p2 && (p1 === "PDU-A" || p1 === "PDU-B")) {
-          if (p1 === "PDU-A") {
-            pduALoadWatts += itemOperatingWatts;
-            pduAOutletCount += 2;
-          } else {
-            pduBLoadWatts += itemOperatingWatts;
-            pduBOutletCount += 2;
-          }
-          singlePointFailureCount++;
-        } else {
-          if (p1 === "PDU-A" || p2 === "PDU-A") {
-            pduALoadWatts += itemOperatingWatts;
-            pduAOutletCount++;
-          } else if (p1 === "PDU-B" || p2 === "PDU-B") {
-            pduBLoadWatts += itemOperatingWatts;
-            pduBOutletCount++;
-          }
-          singleCordedCount++;
-        }
-      } else {
-        singleCordedCount++;
-        if (psuConn.psu1 === "PDU-A") {
-          pduALoadWatts += itemOperatingWatts;
-          pduAOutletCount++;
-        } else if (psuConn.psu1 === "PDU-B") {
-          pduBLoadWatts += itemOperatingWatts;
-          pduBOutletCount++;
+    const activePsus = psuList.filter(p => p.feed === "PDU-A" || p.feed === "PDU-B");
+    const feedsUsed = new Set(activePsus.map(p => p.feed));
+    const isDualRedundant = !isSingleFeedMode && specs.psuCount >= 2 && feedsUsed.has("PDU-A") && feedsUsed.has("PDU-B");
+    const isSpof = !isSingleFeedMode && specs.psuCount >= 2 && activePsus.length >= 2 && feedsUsed.size === 1;
+
+    if (isDualRedundant) redundantDeviceCount++;
+    else if (isSpof) singlePointFailureCount++;
+    else singleCordedCount++;
+
+    const perPsuWatts = activePsus.length > 0 ? Math.round(itemOperatingWatts / activePsus.length) : 0;
+    const perPsuAmps = parseFloat((perPsuWatts / voltage).toFixed(2));
+
+    // Check if dual-PSU A+B can claim a symmetrical outlet number when no manual outlet override exists
+    if (
+      !isSingleFeedMode &&
+      specs.psuCount >= 2 &&
+      psuList[0].feed !== "None" &&
+      psuList[1].feed !== "None" &&
+      psuList[0].feed !== psuList[1].feed &&
+      !item.powerOutlets.psu1 &&
+      !item.powerOutlets.psu2
+    ) {
+      for (let r = 1; r <= Math.min(pduAOutlets.length, pduBOutlets.length); r++) {
+        if (!pduAOutlets[r - 1].occupied && !pduBOutlets[r - 1].occupied) {
+          item.powerOutlets.psu1 = r;
+          item.powerOutlets.psu2 = r;
+          break;
         }
       }
     }
+
+    const deviceAssignments = {};
+
+    psuList.forEach(pObj => {
+      const pNum = pObj.psuNum;
+      const pKey = `psu${pNum}`;
+      const feed = pObj.feed;
+      const devicePsuTag = `${deviceShortTag}-PSU${pNum}`;
+
+      if (feed !== "PDU-A" && feed !== "PDU-B") {
+        deviceAssignments[pKey] = {
+          psuNum: pNum,
+          feed: "None",
+          connected: false,
+          deviceShortTag,
+          devicePsuTag,
+          watts: 0,
+          amps: 0
+        };
+        return;
+      }
+
+      const isFeedA = (feed === "PDU-A");
+      const preferredOutlet = parseInt(item.powerOutlets[pKey], 10) || null;
+      const slot = claimOutlet(feed, preferredOutlet);
+      const rNum = slot.outletNumber;
+      const rStr = String(rNum).padStart(2, "0");
+      item.powerOutlets[pKey] = rNum;
+
+      const pduCode = isFeedA ? pduACode : pduBCode;
+      const pduFullId = isFeedA ? pduAFullId : pduBFullId;
+      const pduReceptacleTag = `${pduFullId}-R${rStr}`;
+      const pduShortReceptacle = `${pduCode}-R${rStr}`;
+      const powerCordId = `PWR-${closetPrefix}-${pduCode}-${rStr}`;
+      const cordColor = isFeedA ? "Black" : "Blue";
+      const cordSpec = `6ft 14AWG ${specs.cordType} (${cordColor})`;
+      const upstreamSource = isFeedA ? pduAUpstream : pduBUpstream;
+
+      // Orion 2-Line Brady (M21-750-499) Power Cord Labels
+      const bradyPsuLine1 = powerCordId;
+      const bradyPsuLine2 = `${devicePsuTag} -> ${pduReceptacleTag}`;
+      const bradyPduLine1 = powerCordId;
+      const bradyPduLine2 = `${pduReceptacleTag} -> ${devicePsuTag}`;
+
+      const assignmentRecord = {
+        instanceId: item.instanceId,
+        deviceModel: item.friendlyName || item.model || item.sku || "Device",
+        deviceCatalogModel: item.model || item.sku || "",
+        rackSlot: parseInt(item.rackSlot, 10) || 1,
+        psuNum: pNum,
+        psuKey: pKey,
+        psuCount: specs.psuCount,
+        inletType: specs.inletType,
+        cordType: specs.cordType,
+        cordColor,
+        cordSpec,
+        feed,
+        pduCode,
+        pduFullId,
+        outletNumber: rNum,
+        outletCode: `R${rStr}`,
+        pduReceptacleTag,
+        pduShortReceptacle,
+        powerCordId,
+        deviceShortTag,
+        devicePsuTag,
+        watts: perPsuWatts,
+        amps: perPsuAmps,
+        isDualRedundant,
+        isSpof,
+        upstreamSource,
+        bradyPsuLine1,
+        bradyPsuLine2,
+        bradyPduLine1,
+        bradyPduLine2,
+        connected: true
+      };
+
+      slot.occupied = true;
+      slot.isSpof = isSpof;
+      slot.assignment = assignmentRecord;
+      deviceAssignments[pKey] = assignmentRecord;
+      powerCords.push(assignmentRecord);
+
+      if (isFeedA) {
+        pduALoadWatts += perPsuWatts;
+        pduAOutletCount++;
+      } else {
+        pduBLoadWatts += perPsuWatts;
+        pduBOutletCount++;
+      }
+    });
+
+    byDeviceId[item.instanceId] = {
+      instanceId: item.instanceId,
+      deviceShortTag,
+      psuCount: specs.psuCount,
+      inletType: specs.inletType,
+      cordType: specs.cordType,
+      operatingWatts: itemOperatingWatts,
+      isDualRedundant,
+      isSpof,
+      psus: deviceAssignments
+    };
   });
 
   const pduAAmps = parseFloat((pduALoadWatts / voltage).toFixed(1));
   const pduBAmps = parseFloat((pduBLoadWatts / voltage).toFixed(1));
   const pduAPct = Math.min(100, Math.round((pduAAmps / maxSafeAmps) * 100));
   const pduBPct = Math.min(100, Math.round((pduBAmps / maxSafeAmps) * 100));
-  const totalOutlets = (pduConfig === "horizontal") ? 8 : 24;
 
-  return {
+  const metricsResult = {
+    closetPrefix,
     voltage,
     circuitBreakerAmps,
     maxSafeAmps,
     maxSafeWatts,
     pduConfig,
+    mountedUps,
+    byDeviceId,
+    powerCords,
     pduA: {
-      label: (pduConfig === "horizontal") ? "1U Horizontal PDU" : (pduConfig === "single_vertical" ? "0U Vertical PDU" : "PDU-A"),
-      subLabel: (pduConfig === "horizontal") ? "1U Rackmount Strip" : (pduConfig === "single_vertical" ? "Single 0U Feed" : "Feed A (Utility)"),
+      id: "PDU-A",
+      code: pduACode,
+      fullId: pduAFullId,
+      label: (pduConfig === "horizontal") ? `1U PDU (${pduAFullId})` : (pduConfig === "single_vertical" ? `0U PDU (${pduAFullId})` : pduAFullId),
+      subLabel: pduAUpstreamShort,
+      upstreamFull: pduAUpstream,
+      upstreamShort: pduAUpstreamShort,
+      cordColor: "Black",
       watts: Math.round(pduALoadWatts),
       amps: pduAAmps,
       pct: pduAPct,
       outletsUsed: pduAOutletCount,
       totalOutlets,
+      outlets: pduAOutlets,
       isOverloaded: pduAAmps > maxSafeAmps
     },
     pduB: {
-      label: "PDU-B",
-      subLabel: "Feed B (UPS)",
+      id: "PDU-B",
+      code: pduBCode,
+      fullId: pduBFullId,
+      label: pduBFullId,
+      subLabel: pduBUpstreamShort,
+      upstreamFull: pduBUpstream,
+      upstreamShort: pduBUpstreamShort,
+      cordColor: "Blue",
       watts: Math.round(pduBLoadWatts),
       amps: pduBAmps,
       pct: pduBPct,
       outletsUsed: pduBOutletCount,
       totalOutlets: 24,
+      outlets: pduBOutlets,
       isOverloaded: pduBAmps > maxSafeAmps
     },
     redundancy: {
@@ -1196,7 +1575,553 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       singleCordedCount
     }
   };
+
+  window._lastRackPduMetrics = metricsResult;
+  return metricsResult;
 }
+window.calculateRackPduMetrics = calculateRackPduMetrics;
+
+// =========================================================================
+// RACK POWER & PDU RECEPTACLE MATRIX STUDIO MODAL
+// Interactive End-to-End Power Chain Trace, 24-Receptacle PDU Faceplates,
+// and Orion 2-Line Brady (M21-750-499) Power Cord Schedule
+// =========================================================================
+function openRackPowerMatrixModal(focusPduKey = null, focusOutletNum = null, focusInstanceId = null) {
+  let modal = document.getElementById("rackPowerMatrixModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "rackPowerMatrixModal";
+    modal.className = "fixed inset-0 z-[75] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6";
+    document.body.appendChild(modal);
+  }
+  modal.classList.remove("hidden");
+
+  if (focusPduKey && focusOutletNum) {
+    window._rackPowerMatrixSelected = { pduKey: focusPduKey, outletNumber: parseInt(focusOutletNum, 10) };
+  } else if (focusInstanceId && window._lastRackPduMetrics?.byDeviceId?.[focusInstanceId]) {
+    const devPwr = window._lastRackPduMetrics.byDeviceId[focusInstanceId];
+    const firstPsu = devPwr.psus?.psu1 || devPwr.psus?.psu2;
+    if (firstPsu && firstPsu.connected) {
+      window._rackPowerMatrixSelected = { pduKey: firstPsu.feed, outletNumber: firstPsu.outletNumber };
+    }
+  }
+
+  renderRackPowerMatrixModalContent();
+}
+window.openRackPowerMatrixModal = openRackPowerMatrixModal;
+
+function closeRackPowerMatrixModal() {
+  const modal = document.getElementById("rackPowerMatrixModal");
+  if (modal) modal.classList.add("hidden");
+}
+window.closeRackPowerMatrixModal = closeRackPowerMatrixModal;
+
+function selectRackPowerMatrixOutlet(pduKey, outletNumber) {
+  window._rackPowerMatrixSelected = { pduKey, outletNumber: parseInt(outletNumber, 10) };
+  renderRackPowerMatrixModalContent();
+}
+window.selectRackPowerMatrixOutlet = selectRackPowerMatrixOutlet;
+
+function exportRackPowerScheduleCSV() {
+  const metrics = window._lastRackPduMetrics;
+  if (!metrics || !Array.isArray(metrics.powerCords) || metrics.powerCords.length === 0) {
+    if (typeof showToast === "function") showToast("No active power cords in this rack to export.");
+    return;
+  }
+
+  const headers = [
+    "Power Cord ID",
+    "Enclosure / Rack",
+    "Rack Slot",
+    "Device Tag",
+    "Device Model",
+    "Chassis PSU Tag",
+    "Inlet Type",
+    "Cord Spec & Color",
+    "PDU ID",
+    "PDU Receptacle Tag",
+    "Upstream UPS / Circuit",
+    "Operating Watts",
+    "Amps @ 120V",
+    "Redundancy Status",
+    "Brady PSU End (Line 1)",
+    "Brady PSU End (Line 2)",
+    "Brady PDU End (Line 1)",
+    "Brady PDU End (Line 2)"
+  ];
+
+  const escapeCsv = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+  const rows = metrics.powerCords.map(c => [
+    c.powerCordId,
+    activeRackId,
+    `U${c.rackSlot}`,
+    c.deviceShortTag,
+    c.deviceModel,
+    c.devicePsuTag,
+    c.inletType,
+    c.cordSpec,
+    c.pduFullId,
+    c.pduReceptacleTag,
+    c.upstreamSource,
+    `${c.watts}W`,
+    `${c.amps}A`,
+    c.isDualRedundant ? "Dual-Feed A+B Redundant" : (c.isSpof ? "SPOF Warning (Same PDU)" : "Single-Corded"),
+    c.bradyPsuLine1,
+    c.bradyPsuLine2,
+    c.bradyPduLine1,
+    c.bradyPduLine2
+  ].map(escapeCsv).join(","));
+
+  const csvContent = [headers.map(escapeCsv).join(","), ...rows].join("\r\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Orion_Rack_Power_Schedule_${metrics.closetPrefix}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  if (typeof showToast === "function") {
+    showToast(`Exported ${metrics.powerCords.length} power cords & Brady labels for ${activeRackId}`);
+  }
+}
+window.exportRackPowerScheduleCSV = exportRackPowerScheduleCSV;
+
+function renderRackPowerMatrixModalContent() {
+  const modal = document.getElementById("rackPowerMatrixModal");
+  if (!modal) return;
+
+  const assignedItems = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+    ? projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === activeRackId)
+    : [];
+  const parsed = FacilityStore.parse(activeRackId);
+  const enclosures = FacilityStore.getEnclosures();
+  const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === (parsed.hostName || "").toLowerCase()) || null;
+
+  const metrics = calculateRackPduMetrics(assignedItems, activeEnc);
+  const isSingleFeedMode = (metrics.pduConfig === "single_vertical" || metrics.pduConfig === "horizontal");
+
+  // Default selected outlet to first occupied outlet if not set
+  let sel = window._rackPowerMatrixSelected;
+  if (!sel || !sel.pduKey || !sel.outletNumber) {
+    const firstOccA = metrics.pduA.outlets.find(o => o.occupied);
+    const firstOccB = !isSingleFeedMode ? metrics.pduB.outlets.find(o => o.occupied) : null;
+    if (firstOccA) sel = { pduKey: "PDU-A", outletNumber: firstOccA.outletNumber };
+    else if (firstOccB) sel = { pduKey: "PDU-B", outletNumber: firstOccB.outletNumber };
+    else sel = { pduKey: "PDU-A", outletNumber: 1 };
+    window._rackPowerMatrixSelected = sel;
+  }
+
+  const selPduObj = (sel.pduKey === "PDU-B" && !isSingleFeedMode) ? metrics.pduB : metrics.pduA;
+  const selOutletObj = selPduObj.outlets[Math.min(selPduObj.outlets.length - 1, Math.max(0, (sel.outletNumber || 1) - 1))] || selPduObj.outlets[0];
+  const selAssign = selOutletObj ? selOutletObj.assignment : null;
+
+  const renderPduStripCard = (pduObj, isFeedA) => {
+    const pduKey = isFeedA ? "PDU-A" : "PDU-B";
+    const accentText = isFeedA ? "text-emerald-400" : "text-sky-400";
+    const accentBorder = isFeedA ? "border-emerald-500/40" : "border-sky-500/40";
+    const barColor = pduObj.pct > 80 ? "bg-rose-500" : (isFeedA ? "bg-emerald-500" : "bg-sky-500");
+    const gridClass = pduObj.totalOutlets <= 8 ? "pdu-strip-8col" : "pdu-strip-12col";
+
+    return `
+      <div class="p-3.5 rounded-2xl bg-slate-950 border ${accentBorder} space-y-2.5 shadow-lg">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded bg-slate-900 border ${accentBorder} font-mono text-xs font-bold ${accentText} flex items-center gap-1">
+              <i data-lucide="plug-zap" class="w-3.5 h-3.5"></i>
+              <span>${escapeHTML(pduObj.fullId)}</span>
+            </span>
+            <span class="text-xs text-slate-300 font-semibold">${escapeHTML(pduObj.upstreamFull)}</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+              Cord Color: <strong class="${isFeedA ? 'text-slate-200' : 'text-sky-300'}">${pduObj.cordColor}</strong>
+            </span>
+          </div>
+          <div class="flex items-center gap-3 text-xs font-mono">
+            <span class="text-slate-400">Outlets: <strong class="text-white">${pduObj.outletsUsed}/${pduObj.totalOutlets}</strong></span>
+            <span class="${pduObj.pct > 80 ? 'text-rose-400 font-bold' : accentText} font-bold">${pduObj.amps}A / 16.0A (${pduObj.watts}W &bull; ${pduObj.pct}%)</span>
+          </div>
+        </div>
+
+        <div class="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
+          <div class="${barColor} h-full rounded-full transition-all" style="width: ${pduObj.pct}%"></div>
+        </div>
+
+        <!-- Interactive Numbered Receptacles R01..R24 -->
+        <div class="${gridClass} pt-1">
+          ${pduObj.outlets.map(o => {
+            const isSelected = (sel.pduKey === pduKey && sel.outletNumber === o.outletNumber);
+            const isOcc = Boolean(o.occupied && o.assignment);
+            const a = o.assignment;
+            let boxStyle = "bg-slate-900/90 border-slate-800 text-slate-500 hover:border-slate-600";
+            if (isOcc) {
+              if (o.isSpof) {
+                boxStyle = "bg-rose-950/60 border-rose-500/70 text-rose-200";
+              } else if (isFeedA) {
+                boxStyle = "bg-emerald-950/50 border-emerald-500/60 text-emerald-200";
+              } else {
+                boxStyle = "bg-sky-950/50 border-sky-500/60 text-sky-200";
+              }
+            }
+            const ringStyle = isSelected ? "ring-2 ring-amber-400 border-amber-400 scale-105 z-10" : "";
+
+            return `
+              <button
+                type="button"
+                onclick="selectRackPowerMatrixOutlet('${pduKey}', ${o.outletNumber})"
+                class="p-1.5 rounded-lg border ${boxStyle} ${ringStyle} flex flex-col items-center justify-between text-center font-mono transition-all cursor-pointer select-none"
+                title="${escapeHTML(isOcc ? `${a.pduReceptacleTag} ⟷ ${a.powerCordId} ⟷ U${a.rackSlot} ${a.devicePsuTag} (${a.deviceModel} • ${a.watts}W)` : `${pduObj.fullId}-${o.outletCode} — Open Receptacle`)}"
+              >
+                <div class="w-full flex items-center justify-between text-[9px] font-bold">
+                  <span>${o.outletCode}</span>
+                  <span class="${isOcc ? (isFeedA ? 'text-emerald-400' : 'text-sky-400') : 'text-slate-700'}">${isOcc ? '●' : '○'}</span>
+                </div>
+                <div class="text-[9px] font-bold truncate w-full mt-0.5 ${isOcc ? 'text-white' : 'text-slate-600'}">
+                  ${isOcc ? escapeHTML(a.devicePsuTag) : 'OPEN'}
+                </div>
+                <div class="text-[8px] text-slate-400 truncate w-full">
+                  ${isOcc ? `U${a.rackSlot} &bull; ${a.watts}W` : '5-20R/C13'}
+                </div>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    `;
+  };
+
+  const poweredDevices = assignedItems
+    .filter(item => isPoweredRackEquipment(item))
+    .sort((a, b) => (parseInt(b.rackSlot, 10) || 0) - (parseInt(a.rackSlot, 10) || 0));
+
+  modal.innerHTML = `
+    <div class="bg-slate-900 border border-slate-700/90 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+            <i data-lucide="plug-zap" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-sm sm:text-base font-bold text-white">Rack Power &amp; PDU Receptacle Matrix Studio</h2>
+              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[10px] font-mono font-bold">${escapeHTML(activeRackId)}</span>
+              <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono font-bold">Orion 2-Line Brady Power Standard</span>
+            </div>
+            <p class="text-[11px] text-slate-400">End-to-End Power Chain: Chassis PSU ⟷ Power Cord (PWR-${escapeHTML(metrics.closetPrefix)}-*) ⟷ PDU Receptacle (R01–R24) ⟷ UPS ⟷ Branch Breaker</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            onclick="autoBalanceRackPowerFeeds()"
+            class="px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Auto-balance dual-PSU devices symmetrically across PDU-A and PDU-B with matching R01..R24 outlet numbers"
+          >
+            <i data-lucide="scale" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Auto-Balance &amp; Align A+B</span>
+          </button>
+          <button
+            type="button"
+            onclick="exportRackPowerScheduleCSV()"
+            class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer"
+            title="Export Orion Rack Power &amp; 2-Line Brady Label Schedule to CSV"
+          >
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Export Power CSV</span>
+          </button>
+          <button
+            type="button"
+            onclick="closeRackPowerMatrixModal()"
+            class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+            title="Close Power Matrix"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Scrollable Body -->
+      <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <!-- 1. End-to-End Power Chain KPI Strip -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400 flex items-center justify-between">
+              <span>1. Facility Branch Circuits</span>
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+            </div>
+            <div class="text-xs font-bold text-white mt-1 font-mono">${escapeHTML(metrics.closetPrefix)}-CKT-A ${!isSingleFeedMode ? `&amp; CKT-B` : ''}</div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">120V / 20A Dedicated (16.0A NEC Continuous)</div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400 flex items-center justify-between">
+              <span>2. Standby UPS Backing</span>
+              <i data-lucide="battery-charging" class="w-3.5 h-3.5 text-emerald-400"></i>
+            </div>
+            ${metrics.mountedUps.length > 0 ? `
+              <div class="text-xs font-bold text-emerald-300 mt-1 font-mono truncate">
+                ${metrics.mountedUps.map(u => `${u.upsTag} (U${u.rackSlot})`).join(" + ")}
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                ${escapeHTML(metrics.mountedUps[0].model)}
+              </div>
+            ` : `
+              <div class="text-xs font-bold text-amber-300 mt-1 font-mono">No UPS Slotted in Rack</div>
+              <button type="button" onclick="closeRackPowerMatrixModal(); window.addRecommendedUpsAndEbpToRack()" class="text-[10px] text-indigo-400 hover:underline font-mono mt-0.5 cursor-pointer">
+                + Auto-Slot Recommended UPS at U1
+              </button>
+            `}
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400 flex items-center justify-between">
+              <span>3. Rack PDU Receptacles</span>
+              <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-sky-400"></i>
+            </div>
+            <div class="text-xs font-bold text-white mt-1 font-mono">
+              ${escapeHTML(metrics.pduA.fullId)}: ${metrics.pduA.outletsUsed}/${metrics.pduA.totalOutlets}
+              ${!isSingleFeedMode ? ` &bull; ${escapeHTML(metrics.pduB.fullId)}: ${metrics.pduB.outletsUsed}/${metrics.pduB.totalOutlets}` : ''}
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">
+              Feed A: ${metrics.pduA.amps}A (${metrics.pduA.watts}W)${!isSingleFeedMode ? ` &bull; Feed B: ${metrics.pduB.amps}A (${metrics.pduB.watts}W)` : ''}
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
+            <div class="text-[10px] font-mono uppercase text-slate-400 flex items-center justify-between">
+              <span>4. Redundancy &amp; Power Cords</span>
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 ${metrics.redundancy.singlePointFailureCount > 0 ? 'text-rose-400' : 'text-emerald-400'}"></i>
+            </div>
+            <div class="text-xs font-bold text-white mt-1 font-mono">
+              ${metrics.powerCords.length} Active Power Cords
+            </div>
+            <div class="text-[10px] font-mono mt-0.5 ${metrics.redundancy.singlePointFailureCount > 0 ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
+              ${metrics.redundancy.redundantDeviceCount} A+B Redundant &bull; ${metrics.redundancy.singleCordedCount} Single &bull; ${metrics.redundancy.singlePointFailureCount} SPOF
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Interactive PDU-A & PDU-B Receptacle Faceplates -->
+        <div class="space-y-3">
+          ${renderPduStripCard(metrics.pduA, true)}
+          ${!isSingleFeedMode ? renderPduStripCard(metrics.pduB, false) : ''}
+        </div>
+
+        <!-- 3. Selected Receptacle End-to-End Power Trace & Orion 2-Line Brady Label Preview -->
+        <div class="p-4 rounded-2xl bg-slate-950 border border-indigo-500/40 space-y-3 shadow-inner">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono font-bold">
+                SELECTED RECEPTACLE TRACE
+              </span>
+              <span class="text-xs font-mono font-bold text-white">
+                ${escapeHTML(selOutletObj.receptacleTag)}
+              </span>
+              ${selAssign ? `
+                <span class="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-600/50 text-[10px] font-mono font-bold">
+                  ${escapeHTML(selAssign.powerCordId)}
+                </span>
+              ` : `
+                <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-mono">
+                  UNOCCUPIED SPARE OUTLET
+                </span>
+              `}
+            </div>
+            <span class="text-[10px] font-mono text-slate-400">Click any outlet R01–R24 above to inspect its full power chain &amp; Brady labels</span>
+          </div>
+
+          ${selAssign ? `
+            <!-- 5-Stage End-to-End Power Chain Visual Cards -->
+            <div class="matrix-trace-grid text-xs font-mono">
+              <!-- Box 1: Chassis PSU -->
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-indigo-500/50">
+                <div class="text-[9px] text-indigo-400 uppercase font-bold">1. Rack Device PSU</div>
+                <div class="text-xs font-bold text-white truncate mt-0.5">${escapeHTML(selAssign.devicePsuTag)} (U${selAssign.rackSlot})</div>
+                <div class="text-[10px] text-slate-300 truncate">${escapeHTML(selAssign.deviceModel)}</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">Inlet: ${escapeHTML(selAssign.inletType)} &bull; ${selAssign.watts}W (${selAssign.amps}A)</div>
+              </div>
+
+              <!-- Arrow 1 -->
+              <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+                <div class="text-[9px] text-amber-300 font-bold">${escapeHTML(selAssign.powerCordId)}</div>
+                <div class="text-slate-500 text-[10px]">◄───────►</div>
+                <div class="text-[8.5px] text-slate-400">${escapeHTML(selAssign.cordSpec)}</div>
+              </div>
+
+              <!-- Box 2: PDU Receptacle -->
+              <div class="p-2.5 rounded-xl bg-slate-900 border ${selAssign.feed === 'PDU-A' ? 'border-emerald-500/60' : 'border-sky-500/60'}">
+                <div class="text-[9px] ${selAssign.feed === 'PDU-A' ? 'text-emerald-400' : 'text-sky-400'} uppercase font-bold">2. PDU Receptacle</div>
+                <div class="text-xs font-bold text-white mt-0.5">${escapeHTML(selAssign.pduReceptacleTag)}</div>
+                <div class="text-[10px] text-slate-300">${escapeHTML(selAssign.pduFullId)} &bull; Outlet ${selAssign.outletCode}</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">NEMA 5-20R / IEC C13</div>
+              </div>
+
+              <!-- Arrow 2 -->
+              <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+                <div class="text-[9px] text-cyan-300 font-bold">Upstream Feed</div>
+                <div class="text-slate-500 text-[10px]">◄───────►</div>
+                <div class="text-[8.5px] text-slate-400">120V AC 20A</div>
+              </div>
+
+              <!-- Box 3: Upstream UPS & Branch Circuit -->
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-amber-500/50">
+                <div class="text-[9px] text-amber-400 uppercase font-bold">3. UPS &amp; Branch Circuit</div>
+                <div class="text-xs font-bold text-white truncate mt-0.5">${escapeHTML(selAssign.upstreamSource)}</div>
+                <div class="text-[10px] text-slate-300">Breaker: 20A (16.0A NEC Safe)</div>
+                <div class="text-[9px] ${selAssign.isDualRedundant ? 'text-emerald-400' : (selAssign.isSpof ? 'text-rose-400' : 'text-slate-400')} mt-0.5">
+                  ${selAssign.isDualRedundant ? '✓ Dual-Feed A+B Protected' : (selAssign.isSpof ? '⚠️ SPOF: Both PSUs on same PDU' : 'Single-Feed')}
+                </div>
+              </div>
+            </div>
+
+            <!-- Orion 2-Line Brady (M21-750-499) Power Cord Labels -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+                <div>
+                  <span class="text-[9px] font-mono uppercase text-slate-400 block">Orion 2-Line Brady Label (Chassis PSU End)</span>
+                  <span class="text-[10px] text-slate-500 font-mono">Brady M21-750-499 Wrap Label</span>
+                </div>
+                <div class="px-3 py-1.5 rounded bg-amber-50 text-slate-950 font-mono text-[11px] font-bold leading-tight border-2 border-amber-400 shadow">
+                  <div>L1: ${escapeHTML(selAssign.bradyPsuLine1)}</div>
+                  <div>L2: ${escapeHTML(selAssign.bradyPsuLine2)}</div>
+                </div>
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
+                <div>
+                  <span class="text-[9px] font-mono uppercase text-slate-400 block">Orion 2-Line Brady Label (PDU Receptacle End)</span>
+                  <span class="text-[10px] text-slate-500 font-mono">Brady M21-750-499 Wrap Label</span>
+                </div>
+                <div class="px-3 py-1.5 rounded bg-amber-50 text-slate-950 font-mono text-[11px] font-bold leading-tight border-2 border-amber-400 shadow">
+                  <div>L1: ${escapeHTML(selAssign.bradyPduLine1)}</div>
+                  <div>L2: ${escapeHTML(selAssign.bradyPduLine2)}</div>
+                </div>
+              </div>
+            </div>
+          ` : `
+            <div class="py-3 text-center text-xs text-slate-400 font-mono">
+              Receptacle <strong>${escapeHTML(selOutletObj.receptacleTag)}</strong> is currently open. Assign any device PSU to outlet <strong>${selOutletObj.outletCode}</strong> in the table below.
+            </div>
+          `}
+        </div>
+
+        <!-- 4. Complete Interactive Device PSU -> PDU Receptacle Assignment & Brady Label Table -->
+        <div class="rounded-2xl bg-slate-950 border border-slate-800 overflow-hidden">
+          <div class="px-4 py-2.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+            <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="list-checks" class="w-4 h-4 text-emerald-400"></i>
+              Rack Equipment Power Cord &amp; Receptacle Schedule (${poweredDevices.length} Powered Units)
+            </span>
+            <span class="text-[10px] font-mono text-slate-400">Assign Feed (PDU-A / PDU-B) &amp; Exact Receptacle (R01–R${metrics.pduA.totalOutlets})</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-900/60 border-b border-slate-800 text-[10px] font-mono uppercase text-slate-400">
+                  <th class="py-2 px-3">U-Slot</th>
+                  <th class="py-2 px-3">Device &amp; Tag</th>
+                  <th class="py-2 px-3">Chassis PSU</th>
+                  <th class="py-2 px-3">Power Feed</th>
+                  <th class="py-2 px-3">PDU Receptacle #</th>
+                  <th class="py-2 px-3">Power Cord ID &amp; Spec</th>
+                  <th class="py-2 px-3">Load</th>
+                  <th class="py-2 px-3">Orion 2-Line Brady Label (PSU End)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80 font-mono text-[11px]">
+                ${poweredDevices.length === 0 ? `
+                  <tr>
+                    <td colspan="8" class="py-6 text-center text-slate-500 font-sans">No active powered equipment is currently mounted in ${escapeHTML(activeRackId)}.</td>
+                  </tr>
+                ` : poweredDevices.map(item => {
+                  const devInfo = metrics.byDeviceId[item.instanceId];
+                  if (!devInfo) return "";
+                  const psuKeys = Object.keys(devInfo.psus);
+                  return psuKeys.map((pKey, idx) => {
+                    const p = devInfo.psus[pKey];
+                    const pNum = p.psuNum;
+                    const maxOut = (p.feed === "PDU-B") ? 24 : metrics.pduA.totalOutlets;
+                    const outletOptions = Array.from({ length: maxOut }, (_, oIdx) => {
+                      const rNum = oIdx + 1;
+                      const rCode = `R${String(rNum).padStart(2, "0")}`;
+                      const targetPdu = (p.feed === "PDU-B") ? metrics.pduB : metrics.pduA;
+                      const slotObj = targetPdu.outlets[oIdx];
+                      const occByOther = slotObj && slotObj.occupied && slotObj.assignment && !(slotObj.assignment.instanceId === item.instanceId && slotObj.assignment.psuNum === pNum);
+                      const occLabel = occByOther ? ` (${slotObj.assignment.devicePsuTag})` : "";
+                      return `<option value="${rNum}" ${p.outletNumber === rNum ? 'selected' : ''}>${targetPdu.code}-${rCode}${occLabel}</option>`;
+                    }).join("");
+
+                    return `
+                      <tr class="hover:bg-slate-900/50 transition-colors">
+                        <td class="py-2 px-3 font-bold text-indigo-400">U${item.rackSlot}</td>
+                        <td class="py-2 px-3">
+                          <div class="flex items-center gap-1.5">
+                            <span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-bold text-brand-300">${escapeHTML(devInfo.deviceShortTag)}</span>
+                            <span class="font-sans font-bold text-white truncate max-w-[180px]" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+                          </div>
+                        </td>
+                        <td class="py-2 px-3">
+                          <span class="font-bold text-slate-200">${escapeHTML(p.devicePsuTag)}</span>
+                          <span class="text-[9px] text-slate-500 block">${escapeHTML(devInfo.inletType)}</span>
+                        </td>
+                        <td class="py-2 px-3">
+                          <select
+                            onchange="setDevicePsuFeedDirect('${item.instanceId}', ${pNum}, this.value)"
+                            class="bg-slate-900 border ${p.feed === 'PDU-A' ? 'border-emerald-500/60 text-emerald-300' : (p.feed === 'PDU-B' ? 'border-sky-500/60 text-sky-300' : 'border-slate-700 text-slate-400')} rounded px-2 py-1 text-[10px] font-bold focus:outline-none cursor-pointer"
+                          >
+                            <option value="PDU-A" ${p.feed === "PDU-A" ? "selected" : ""}>${escapeHTML(metrics.pduA.fullId)} (Feed A)</option>
+                            ${!isSingleFeedMode ? `<option value="PDU-B" ${p.feed === "PDU-B" ? "selected" : ""}>${escapeHTML(metrics.pduB.fullId)} (Feed B)</option>` : ''}
+                            <option value="None" ${p.feed === "None" ? "selected" : ""}>Unplugged (None)</option>
+                          </select>
+                        </td>
+                        <td class="py-2 px-3">
+                          ${p.connected ? `
+                            <select
+                              onchange="setDevicePsuOutlet('${item.instanceId}', ${pNum}, this.value)"
+                              class="bg-slate-900 border border-slate-700 hover:border-indigo-500 text-white rounded px-2 py-1 text-[10px] font-bold focus:outline-none cursor-pointer"
+                            >
+                              ${outletOptions}
+                            </select>
+                          ` : `<span class="text-slate-600 text-[10px]">— Unplugged —</span>`}
+                        </td>
+                        <td class="py-2 px-3">
+                          ${p.connected ? `
+                            <span class="text-amber-300 font-bold block">${escapeHTML(p.powerCordId)}</span>
+                            <span class="text-[9px] text-slate-400">${escapeHTML(p.cordSpec)}</span>
+                          ` : `<span class="text-slate-600">—</span>`}
+                        </td>
+                        <td class="py-2 px-3">
+                          ${p.connected ? `
+                            <span class="text-white font-bold">${p.watts}W</span>
+                            <span class="text-[9px] text-slate-400 block">${p.amps}A</span>
+                          ` : `<span class="text-slate-600">0W</span>`}
+                        </td>
+                        <td class="py-2 px-3">
+                          ${p.connected ? `
+                            <div class="inline-block px-2 py-0.5 rounded bg-slate-900 border border-amber-500/40 text-[9.5px] leading-tight">
+                              <div class="text-amber-300 font-bold">${escapeHTML(p.bradyPsuLine1)}</div>
+                              <div class="text-slate-300">${escapeHTML(p.bradyPsuLine2)}</div>
+                            </div>
+                          ` : `<span class="text-slate-600">—</span>`}
+                        </td>
+                      </tr>
+                    `;
+                  }).join("");
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (window.lucide) lucide.createIcons();
+}
+window.renderRackPowerMatrixModalContent = renderRackPowerMatrixModalContent;
 
 function getDeviceFrontPortPreview(item) {
   const model = (item.model || "").toLowerCase();
@@ -2591,10 +3516,30 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
         const uLabel = slotData.span > 1 ? `U${u + slotData.span - 1}-U${u}` : `U${u}`;
         const psuSpecs = getDevicePsuSpecs(it);
         const psuConns = getDevicePowerConnections(it);
+        const devPowerInfo = pduMetrics?.byDeviceId?.[it.instanceId] || null;
+        const psu1Assign = devPowerInfo?.psus?.psu1 || null;
+        const psu2Assign = devPowerInfo?.psus?.psu2 || null;
+        const isPassive = isPassiveInfrastructure(it);
+        const isUps = isMountedUpsUnit(it);
+        const upsRecord = isUps ? pduMetrics?.mountedUps?.find(uObj => uObj.instanceId === it.instanceId) : null;
 
         const isDualPsu = psuSpecs.psuCount >= 2;
         const isDualRedundant = isDualPsu && ((psuConns.psu1 === "PDU-A" && psuConns.psu2 === "PDU-B") || (psuConns.psu1 === "PDU-B" && psuConns.psu2 === "PDU-A"));
         const isSpof = isDualPsu && (psuConns.psu1 === psuConns.psu2) && (psuConns.psu1 === "PDU-A" || psuConns.psu1 === "PDU-B");
+
+        const psu1Label = psu1Assign && psu1Assign.connected
+          ? `${psu1Assign.devicePsuTag} → ${psu1Assign.pduShortReceptacle} (${psu1Assign.watts}W)`
+          : `PSU 1: ${psuConns.psu1 || 'None'}`;
+        const psu1Tip = psu1Assign && psu1Assign.connected
+          ? `Brady L1: ${psu1Assign.bradyPsuLine1} | L2: ${psu1Assign.bradyPsuLine2} (${psu1Assign.cordSpec}) — Click to cycle feed`
+          : `Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)`;
+
+        const psu2Label = psu2Assign && psu2Assign.connected
+          ? `${psu2Assign.devicePsuTag} → ${psu2Assign.pduShortReceptacle} (${psu2Assign.watts}W)`
+          : `PSU 2: ${psuConns.psu2 || 'None'}`;
+        const psu2Tip = psu2Assign && psu2Assign.connected
+          ? `Brady L1: ${psu2Assign.bradyPsuLine1} | L2: ${psu2Assign.bradyPsuLine2} (${psu2Assign.cordSpec}) — Click to cycle feed`
+          : `Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)`;
 
         rearRailHTML += `
           <div 
@@ -2610,16 +3555,22 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                 <span class="text-[11px] font-mono font-bold text-slate-400 w-12 shrink-0">${uLabel}</span>
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    ${(!isPassiveInfrastructure(it) && it.deviceNumber) ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300" title="Device Sequence ID">${escapeHTML(it.deviceNumber)}</span>` : ''}
-                    <span class="text-xs font-bold text-white truncate" title="${escapeHTML(isPassiveInfrastructure(it) ? it.model : (it.friendlyName || it.model))}">${escapeHTML(isPassiveInfrastructure(it) ? it.model : (it.friendlyName || it.model))}</span>
-                    ${!isPassiveInfrastructure(it) ? `
+                    ${(!isPassive && (devPowerInfo?.deviceShortTag || it.deviceNumber)) ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300" title="Orion Device Tag">${escapeHTML(devPowerInfo?.deviceShortTag || it.deviceNumber)}</span>` : ''}
+                    <span class="text-xs font-bold text-white truncate" title="${escapeHTML(isPassive ? it.model : (it.friendlyName || it.model))}">${escapeHTML(isPassive ? it.model : (it.friendlyName || it.model))}</span>
+                    ${!isPassive ? `
                       <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${it.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
                         <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
                       </button>
                     ` : ''}
                     <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">REAR</span>
                     <!-- Redundancy Badge -->
-                    ${isHorizontalPdu ? `
+                    ${isPassive ? `
+                      <span class="text-[9px] font-mono text-purple-300 bg-purple-950/80 border border-purple-700/60 px-1.5 py-0.2 rounded">Passive Rear</span>
+                    ` : isUps ? `
+                      <span class="text-[9px] font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-700/60 px-1.5 py-0.2 rounded flex items-center gap-1">
+                        <i data-lucide="battery-charging" class="w-2.5 h-2.5 text-amber-400"></i> ${escapeHTML(upsRecord ? upsRecord.upsTag : 'Standby UPS')}
+                      </span>
+                    ` : isHorizontalPdu ? `
                       <span class="text-[9px] font-mono font-bold text-indigo-300 bg-indigo-950/80 border border-indigo-700/60 px-1.5 py-0.2 rounded flex items-center gap-1">
                         <i data-lucide="zap" class="w-2.5 h-2.5 text-indigo-400"></i> 1U PDU
                       </span>
@@ -2639,39 +3590,58 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                       `
                     ))}
                   </div>
-                  <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
-                    <span>Inlet: ${psuSpecs.inletType}</span>
-                    <span>&bull;</span>
-                    <span class="text-cyan-400 flex items-center gap-0.5" title="Front-to-Back cooling exhaust"><i data-lucide="wind" class="w-3 h-3"></i> Exhaust</span>
-                    <span>&bull;</span>
-                    <span class="text-amber-400/90 flex items-center gap-0.5" title="Chassis Grounding Lug (TIA-607-C)">⏚ GND Lug</span>
-                  </div>
+                  ${isPassive ? `
+                    <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                      <span>Rear Cable Retention Bar</span>
+                      <span>&bull;</span>
+                      <span class="text-amber-400/90 flex items-center gap-0.5">⏚ Bonded to Rack Rail</span>
+                    </div>
+                  ` : `
+                    <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                      <span>Inlet: ${psuSpecs.inletType}</span>
+                      ${psu1Assign && psu1Assign.connected ? `<span>&bull;</span><span class="text-amber-300 font-bold" title="Orion Power Cord Tag">${escapeHTML(psu1Assign.powerCordId)}${psu2Assign && psu2Assign.connected ? ` + ${escapeHTML(psu2Assign.powerCordId)}` : ''}</span>` : ''}
+                      <span>&bull;</span>
+                      <span class="text-cyan-400 flex items-center gap-0.5" title="Front-to-Back cooling exhaust"><i data-lucide="wind" class="w-3 h-3"></i> Exhaust</span>
+                      <span>&bull;</span>
+                      <span class="text-amber-400/90 flex items-center gap-0.5" title="Chassis Grounding Lug (TIA-607-C)">⏚ GND Lug</span>
+                    </div>
+                  `}
                 </div>
               </div>
 
-              <!-- Power Supply Cord Connectors -->
+              <!-- Power Supply Cord Connectors & Receptacle Badges -->
               <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                ${isHorizontalPdu ? `
-                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="Click to toggle power connection">
-                    <i data-lucide="zap" class="w-3 h-3"></i> 1U PDU: ${psuConns.psu1 === 'None' ? 'Unplugged' : 'Connected'}
-                  </button>
-                ` : (isSinglePdu ? `
-                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="Click to toggle power connection">
-                    <i data-lucide="zap" class="w-3 h-3"></i> 0U PDU: ${psuConns.psu1 === 'None' ? 'Unplugged' : 'Feed A'}
-                  </button>
+                ${isPassive ? '' : isUps ? `
+                  <span class="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-600/60 text-amber-300 text-[10px] font-mono font-bold flex items-center gap-1" title="UPS Upstream Branch Circuit Input">
+                    <i data-lucide="plug-zap" class="w-3 h-3 text-amber-400"></i>
+                    <span>${escapeHTML(upsRecord ? `${upsRecord.inputCordId} → ${upsRecord.upstreamCircuit}` : 'Branch Circuit 120V/20A')}</span>
+                  </span>
                 ` : `
-                  <!-- PSU 1 Inlet Button -->
-                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
-                    <i data-lucide="zap" class="w-3 h-3"></i> PSU 1: ${psuConns.psu1 || 'None'}
+                  <!-- PSU 1 Inlet & Assigned PDU Receptacle Button -->
+                  <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 1)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all cursor-pointer ${getPsuBtnClass(psuConns.psu1, pduConfig)}" title="${escapeHTML(psu1Tip)}">
+                    <i data-lucide="zap" class="w-3 h-3"></i>
+                    <span>${escapeHTML(psu1Label)}</span>
                   </button>
 
-                  <!-- PSU 2 Inlet Button (for dual modular PSUs) -->
+                  <!-- PSU 2 Inlet & Assigned PDU Receptacle Button (for dual modular PSUs) -->
                   ${isDualPsu ? `
-                    <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 2)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all ${getPsuBtnClass(psuConns.psu2, pduConfig)}" title="Click to cycle power feed (PDU-A -> PDU-B -> Unplugged)">
-                      <i data-lucide="zap" class="w-3 h-3"></i> PSU 2: ${psuConns.psu2 || 'None'}
+                    <button onclick="event.stopPropagation(); toggleDevicePsuFeed('${it.instanceId}', 2)" class="px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 border transition-all cursor-pointer ${getPsuBtnClass(psuConns.psu2, pduConfig)}" title="${escapeHTML(psu2Tip)}">
+                      <i data-lucide="zap" class="w-3 h-3"></i>
+                      <span>${escapeHTML(psu2Label)}</span>
                     </button>
                   ` : ''}
-                `)}
+
+                  <!-- Inspect in Power Matrix Studio Button -->
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, '${it.instanceId}')"
+                    class="px-2 py-0.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/60 text-slate-300 hover:text-emerald-300 text-[9.5px] font-mono font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    title="Inspect End-to-End Power Chain, Reassign PDU Outlet # &amp; View Orion 2-Line Brady Power Labels"
+                  >
+                    <i data-lucide="plug-zap" class="w-2.5 h-2.5 text-emerald-400"></i>
+                    <span>Outlet &amp; Label</span>
+                  </button>
+                `}
 
                 ${isSwitch ? `
                   ${isCopper ? `
@@ -2881,9 +3851,9 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
           </div>
           <div>
             <div class="text-xs font-bold text-white flex items-center gap-2">
-              <span>1U Horizontal Rackmount PDU</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-600 font-bold">120V / 20A Dedicated</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600 font-bold">8 Outlets</span>
+              <span>1U Horizontal Rackmount PDU (${escapeHTML(pduMetrics.pduA.fullId)})</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-600 font-bold">${escapeHTML(pduMetrics.pduA.upstreamFull)}</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600 font-bold">${pduMetrics.pduA.outletsUsed}/8 Outlets</span>
             </div>
             <span class="text-[10px] text-slate-400 font-mono">19" EIA Rackmount Bar &bull; NEMA 5-20R Receptacles &bull; 16A Continuous NEC Max</span>
           </div>
@@ -2898,22 +3868,33 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
             <span class="text-[9px] text-slate-400 uppercase font-mono block">Power Draw</span>
             <span class="text-xs font-mono font-bold text-indigo-300">${pduMetrics.pduA.watts}W (${pduMetrics.pduA.pct}%)</span>
           </div>
-          <div class="px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-[10px] font-mono font-bold text-emerald-400 flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>BREAKER OK</span>
-          </div>
+          <button
+            type="button"
+            onclick="openRackPowerMatrixModal('PDU-A', 1)"
+            class="px-2.5 py-1 rounded-lg bg-emerald-950 hover:bg-emerald-900 border border-emerald-600 text-[10px] font-mono font-bold text-emerald-300 hover:text-white flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <i data-lucide="plug-zap" class="w-3 h-3 text-emerald-400"></i>
+            <span>Power Matrix</span>
+          </button>
         </div>
       </div>
 
-      <!-- Receptacle Grid across width -->
-      <div class="grid grid-cols-8 gap-2 pt-2 border-t border-slate-800/80">
-        ${Array.from({ length: 8 }, (_, rIdx) => {
-          const isOccupied = rIdx < pduMetrics.pduA.outletsUsed;
+      <!-- Interactive Receptacle Grid across width (R01-R08) -->
+      <div class="pdu-strip-8col pt-2 border-t border-slate-800/80">
+        ${pduMetrics.pduA.outlets.map(o => {
+          const isOccupied = Boolean(o.occupied && o.assignment);
+          const a = o.assignment;
           return `
-            <div class="px-2 py-1.5 rounded-lg bg-slate-950 border ${isOccupied ? 'border-indigo-500/70 bg-indigo-950/40 text-indigo-300' : 'border-slate-800 text-slate-600'} text-center font-mono text-[9px] transition-all">
-              <div class="text-[8px] text-slate-500 uppercase">Outlet ${rIdx + 1}</div>
-              <div class="text-xs mt-0.5 ${isOccupied ? 'text-indigo-400 font-bold' : 'text-slate-700'}">● 5-20R</div>
-            </div>
+            <button
+              type="button"
+              onclick="openRackPowerMatrixModal('PDU-A', ${o.outletNumber})"
+              class="px-2 py-1.5 rounded-lg bg-slate-950 border ${isOccupied ? 'border-indigo-500/70 bg-indigo-950/40 text-indigo-300 hover:border-indigo-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'} text-center font-mono text-[9px] transition-all cursor-pointer"
+              title="${escapeHTML(isOccupied ? `${a.pduReceptacleTag} ⟷ ${a.powerCordId} ⟷ U${a.rackSlot} ${a.devicePsuTag} (${a.watts}W)` : `${o.receptacleTag} — Open`)}"
+            >
+              <div class="text-[8px] text-slate-400 uppercase font-bold">${o.outletCode}</div>
+              <div class="text-[10px] mt-0.5 truncate ${isOccupied ? 'text-white font-bold' : 'text-slate-600'}">${isOccupied ? escapeHTML(a.devicePsuTag) : 'OPEN'}</div>
+              <div class="text-[8px] ${isOccupied ? 'text-indigo-300' : 'text-slate-700'}">${isOccupied ? `${a.watts}W` : '5-20R'}</div>
+            </button>
           `;
         }).join('')}
       </div>
@@ -5987,12 +6968,34 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
       const pduAColor = pduMetrics.pduA.pct > 80 ? "text-rose-400" : (pduMetrics.pduA.pct > 70 ? "text-amber-400" : "text-emerald-400");
       const pduABarColor = pduMetrics.pduA.pct > 80 ? "bg-rose-500" : (pduMetrics.pduA.pct > 70 ? "bg-amber-500" : "bg-emerald-500");
 
+      const cordPreviewHtml = (pduMetrics.powerCords && pduMetrics.powerCords.length > 0) ? `
+        <div class="pt-2 border-t border-slate-800 space-y-1">
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-400">
+            <span class="uppercase font-bold">Assigned Power Cords (${pduMetrics.powerCords.length})</span>
+            <button type="button" onclick="openRackPowerMatrixModal()" class="text-emerald-400 hover:underline font-bold cursor-pointer">Full Matrix ➔</button>
+          </div>
+          <div class="max-h-36 overflow-y-auto space-y-1 pr-1">
+            ${pduMetrics.powerCords.slice(0, 8).map(c => `
+              <button
+                type="button"
+                onclick="openRackPowerMatrixModal('${c.feed}', ${c.outletNumber})"
+                class="w-full px-2 py-1 rounded bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 flex items-center justify-between text-[10px] font-mono transition-colors cursor-pointer"
+                title="Brady L1: ${escapeHTML(c.bradyPsuLine1)} | L2: ${escapeHTML(c.bradyPsuLine2)}"
+              >
+                <span class="text-amber-300 font-bold truncate">${escapeHTML(c.powerCordId)}</span>
+                <span class="text-slate-300 truncate">${escapeHTML(c.devicePsuTag)} ➔ <strong class="${c.feed === 'PDU-A' ? 'text-emerald-400' : 'text-sky-400'}">${escapeHTML(c.pduShortReceptacle)}</strong></span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      ` : '';
+
       if (pduConfig === "horizontal") {
         pduContainer.innerHTML = `
           <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
             <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
               <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-indigo-400">
-                <i data-lucide="plug-zap" class="w-4 h-4"></i> 1U Rackmount PDU
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> 1U PDU (${escapeHTML(pduMetrics.pduA.fullId)})
               </span>
               <div class="flex items-center gap-1.5">
                 <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / 16A (${pduMetrics.pduA.outletsUsed}/8)</span>
@@ -6003,10 +7006,11 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
               <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
                 <div class="flex items-center justify-between text-xs mb-1">
                   <span class="font-bold text-indigo-300 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 1U PDU Load (120V Circuit)
+                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)}
                   </span>
                   <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
                 </div>
+                <div class="text-[10px] font-mono text-slate-400 mb-1.5">Upstream: <strong class="text-slate-200">${escapeHTML(pduMetrics.pduA.upstreamFull)}</strong></div>
                 <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
                   <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
                 </div>
@@ -6015,9 +7019,15 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                   <span>${pduMetrics.pduA.outletsUsed} / 8 Receptacles</span>
                 </div>
               </div>
-              <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
-                <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i> View Rear Receptacles
-              </button>
+              ${cordPreviewHtml}
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="openRackPowerMatrixModal()" class="py-1.5 px-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer">
+                  <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i> Power Matrix
+                </button>
+                <button onclick="switchRackOrientation('rear')" class="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer">
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i> Rear View
+                </button>
+              </div>
             </div>
           </details>
         `;
@@ -6026,7 +7036,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
           <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
             <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
               <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
-                <i data-lucide="plug-zap" class="w-4 h-4"></i> Single 0U Vertical PDU
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> 0U PDU (${escapeHTML(pduMetrics.pduA.fullId)})
               </span>
               <div class="flex items-center gap-1.5">
                 <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / 16A (${pduMetrics.pduA.outletsUsed}/24)</span>
@@ -6037,10 +7047,11 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
               <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
                 <div class="flex items-center justify-between text-xs mb-1">
                   <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Primary 0U PDU (Feed A)
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)} (Feed A)
                   </span>
                   <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
                 </div>
+                <div class="text-[10px] font-mono text-slate-400 mb-1.5">Upstream: <strong class="text-slate-200">${escapeHTML(pduMetrics.pduA.upstreamFull)}</strong></div>
                 <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
                   <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
                 </div>
@@ -6049,9 +7060,15 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                   <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
                 </div>
               </div>
-              <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
-                <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-emerald-400"></i> View Rear Channels
-              </button>
+              ${cordPreviewHtml}
+              <div class="grid grid-cols-2 gap-1.5">
+                <button onclick="openRackPowerMatrixModal()" class="py-1.5 px-2 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer">
+                  <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i> Power Matrix
+                </button>
+                <button onclick="switchRackOrientation('rear')" class="py-1.5 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1 transition-all cursor-pointer">
+                  <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-emerald-400"></i> Rear View
+                </button>
+              </div>
             </div>
           </details>
         `;
@@ -6081,35 +7098,37 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
               <div class="space-y-2">
                 <!-- Feed A (Utility) -->
                 <div class="p-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div class="flex items-center justify-between text-xs mb-1">
-                    <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Feed A (Primary Utility)
+                  <div class="flex items-center justify-between text-xs mb-0.5">
+                    <span class="font-bold text-emerald-400 flex items-center gap-1.5 font-mono">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)}
                     </span>
                     <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
                   </div>
+                  <div class="text-[9.5px] font-mono text-slate-400 mb-1 truncate">Feed: <strong class="text-slate-300">${escapeHTML(pduMetrics.pduA.upstreamFull)}</strong></div>
                   <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1">
                     <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
                   </div>
                   <div class="flex justify-between text-[10px] font-mono text-slate-400">
-                    <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-                    <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+                    <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}%)</span>
+                    <span>${pduMetrics.pduA.outletsUsed} / 24 Outlets (Black)</span>
                   </div>
                 </div>
 
                 <!-- Feed B (UPS / Generator) -->
                 <div class="p-2 rounded-xl bg-slate-950 border border-slate-800">
-                  <div class="flex items-center justify-between text-xs mb-1">
-                    <span class="font-bold text-sky-400 flex items-center gap-1.5">
-                      <span class="w-2 h-2 rounded-full bg-sky-400"></span> Feed B (Secondary / UPS)
+                  <div class="flex items-center justify-between text-xs mb-0.5">
+                    <span class="font-bold text-sky-400 flex items-center gap-1.5 font-mono">
+                      <span class="w-2 h-2 rounded-full bg-sky-400"></span> ${escapeHTML(pduMetrics.pduB.fullId)}
                     </span>
                     <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
                   </div>
+                  <div class="text-[9.5px] font-mono text-slate-400 mb-1 truncate">Feed: <strong class="text-slate-300">${escapeHTML(pduMetrics.pduB.upstreamFull)}</strong></div>
                   <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1">
                     <div class="${pduBBarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduB.pct}%"></div>
                   </div>
                   <div class="flex justify-between text-[10px] font-mono text-slate-400">
-                    <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}% continuous)</span>
-                    <span>${pduMetrics.pduB.outletsUsed} / 24 Receptacles</span>
+                    <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}%)</span>
+                    <span>${pduMetrics.pduB.outletsUsed} / 24 Outlets (Blue)</span>
                   </div>
                 </div>
               </div>
@@ -6132,13 +7151,18 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 </div>
               </div>
 
-              <!-- Auto-Balance Action & Orientation Link -->
+              ${cordPreviewHtml}
+
+              <!-- Power Matrix, Auto-Balance Action & Orientation Link -->
               <div class="pt-2 border-t border-slate-800 space-y-1.5">
-                <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
-                  <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance Power Feeds
+                <button onclick="openRackPowerMatrixModal()" class="w-full py-1.5 px-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer">
+                  <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i> Open Power &amp; PDU Matrix
+                </button>
+                <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer">
+                  <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance &amp; Align A+B
                 </button>
                 <div class="text-center pt-0.5">
-                  <button onclick="switchRackOrientation('rear')" class="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto">
+                  <button onclick="switchRackOrientation('rear')" class="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto cursor-pointer">
                     <i data-lucide="rotate-cw" class="w-3 h-3 text-indigo-400"></i>
                     <span>Inspect Receptacles in Rear Elevation</span>
                   </button>
