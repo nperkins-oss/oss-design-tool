@@ -1386,7 +1386,7 @@ const WIRELESS_ACCESSORY_CATALOG = {
     weightLbs: 1.2,
     depthInches: 4.2,
     name: "UniFi Building Bridge Precision Alignment Bracket",
-    msrp: 79,
+    msrp: 79, image: "assets/images/products/unifi_ubb_xg_mount.webp", image: "assets/images/products/unifi_ubb_xg_mount.webp",
     category: "mounting",
     vendor: "UniFi"
   },
@@ -1471,7 +1471,7 @@ const WIRELESS_ACCESSORY_CATALOG = {
     weightLbs: 0.85,
     depthInches: 3.8,
     name: "Ubiquiti 48VDC 24W Gigabit Passive PoE Injector",
-    msrp: 19,
+    msrp: 19, image: "assets/images/products/unifi_uacc_poe_at.webp", image: "assets/images/products/unifi_uacc_poe_at.webp",
     category: "power_injector",
     vendor: "Ubiquiti"
   },
@@ -1480,7 +1480,7 @@ const WIRELESS_ACCESSORY_CATALOG = {
     weightLbs: 0.85,
     depthInches: 3.8,
     name: "Ubiquiti 24VDC 12W Gigabit Passive PoE Injector",
-    msrp: 15,
+    msrp: 15, image: "assets/images/products/unifi_u_poe_af.webp", image: "assets/images/products/unifi_u_poe_af.webp",
     category: "power_injector",
     vendor: "Ubiquiti"
   },
@@ -1498,7 +1498,7 @@ const WIRELESS_ACCESSORY_CATALOG = {
     weightLbs: 0.85,
     depthInches: 3.8,
     name: "AMG 24VDC 24W Passive Gigabit PoE Injector",
-    msrp: 35,
+    msrp: 35, image: "assets/images/products/amgpsu_t24_p24.webp", image: "assets/images/products/amgpsu_t24_p24.webp",
     category: "power_injector",
     vendor: "AMG"
   },

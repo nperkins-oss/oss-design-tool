@@ -54,7 +54,7 @@ const ACCESSORY_DATABASE = [
       "DIN-Rail Mountable"
     ],
         datasheetPath: "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
-        image: "assets/images/products/amg-350-4g-1c-1s.webp"
+        image: "assets/images/products/amg-250-1g-1s.webp"
     },
   {
     id: "amg-140-1gr",
@@ -718,7 +718,7 @@ const ACCESSORY_DATABASE = [
     description: "External 210W AC to 54V DC desktop power supply brick, upgrading the USW-Ultra switch to a 202W PoE budget.",
     baseWatts: 0,
     powerWatts: 210,
-        image: "assets/images/products/unifi_uacc_adapter_60w.webp"
+        image: "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
   {
     id: "unifi-uacc-adapter-60w",
@@ -1107,7 +1107,7 @@ const ACCESSORY_DATABASE = [
       "Durable powder-coated steel bracket with quick-release spring latch"
     ],
         datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        image: "assets/images/products/meanwell_ndr_120_48.webp"
+        image: "assets/images/products/unifi_uacc_switch_din.webp"
     },
   {
     id: "unifi-uacc-flex-din",
@@ -1131,7 +1131,7 @@ const ACCESSORY_DATABASE = [
       "Corrosion-resistant polycarbonate and steel assembly"
     ],
         datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
-        image: "assets/images/products/meanwell_ndr_120_48.webp"
+        image: "assets/images/products/unifi_uacc_switch_din.webp"
     },
   {
     id: "unifi-uacc-pro-max-16-rm",
@@ -7619,7 +7619,7 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Prevents chassis sag in heavy PoE enterprise rack installations"
     ],
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        image: "assets/images/products/juniper-ex2300-24mp.webp"
+        image: "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
   {
     id: "amg-2035",
@@ -7770,7 +7770,7 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Outdoor UV stabilized and powder-coated steel hardware"
     ],
         datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
-        image: "assets/images/products/unifi-5g-max.webp"
+        image: "assets/images/products/unifi_ubb_xg_mount.webp"
     },
   {
     id: "cambium-v3000-mount",

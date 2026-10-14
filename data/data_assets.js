@@ -312,7 +312,7 @@ const CATALOG_ASSETS = {
     },
     "AMG7111-1S-1C": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
-        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+        "image": "assets/images/products/amg-250-1g-1s.webp"
     },
     "AMG750-1G-4GAT-104-P120": {
         "datasheetPath": "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
@@ -1824,7 +1824,7 @@ const CATALOG_ASSETS = {
     },
     "UACC-ADAPTER-210W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
-        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "UACC-ADAPTER-60W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
@@ -1840,7 +1840,7 @@ const CATALOG_ASSETS = {
     },
     "UACC-Adapter-210W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
-        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "UACC-Adapter-60W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
@@ -1972,7 +1972,7 @@ const CATALOG_ASSETS = {
     },
     "UACC-Pro-Max-16-RM": {
         "datasheetPath": null,
-        "image": null
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "UACC-RACK-12U-WALL-SW-G": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 12U Wall Swing-Out Cabinet Glass - Tech Specs.pdf",
@@ -2140,7 +2140,7 @@ const CATALOG_ASSETS = {
     },
     "UNIFI-UACC-ADAPTER-210W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
-        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "UNIFI-UACC-ADAPTER-60W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
@@ -2308,7 +2308,8 @@ const CATALOG_ASSETS = {
     },
     "USW-Flex-2.5G-8": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G - Tech Specs.pdf",
-        "image": "assets/images/products/unifi-usw-flex-2-5g-5.webp"
+        "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G - Tech Specs.pdf",
+        "image": "assets/images/products/unifi-usw-flex-2-5g-8.webp"
     },
     "USW-Flex-Mini": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Mini - Tech Specs.pdf",
@@ -2836,7 +2837,7 @@ const CATALOG_ASSETS = {
     },
     "amg-sfp-conv-7111": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
-        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+        "image": "assets/images/products/amg-250-1g-1s.webp"
     },
     "amg140-1gr": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
@@ -3128,7 +3129,7 @@ const CATALOG_ASSETS = {
     },
     "amg7111-1s-1c": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
-        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+        "image": "assets/images/products/amg-250-1g-1s.webp"
     },
     "amg750-1g-4gat-104-p120": {
         "datasheetPath": "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
@@ -5596,7 +5597,7 @@ const CATALOG_ASSETS = {
     },
     "uacc-adapter-210w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
-        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "uacc-adapter-60w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
@@ -5904,7 +5905,7 @@ const CATALOG_ASSETS = {
     },
     "unifi-uacc-adapter-210w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
-        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "unifi-uacc-adapter-60w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
@@ -6040,7 +6041,8 @@ const CATALOG_ASSETS = {
     },
     "unifi-usw-flex-2-5g-8": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G - Tech Specs.pdf",
-        "image": "assets/images/products/unifi-usw-flex-2-5g-5.webp"
+        "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G - Tech Specs.pdf",
+        "image": "assets/images/products/unifi-usw-flex-2-5g-8.webp"
     },
     "unifi-usw-flex-mini": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Mini - Tech Specs.pdf",
@@ -6232,7 +6234,8 @@ const CATALOG_ASSETS = {
     },
     "usw-flex-2.5g-8": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G - Tech Specs.pdf",
-        "image": "assets/images/products/unifi-usw-flex-2-5g-5.webp"
+        "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G - Tech Specs.pdf",
+        "image": "assets/images/products/unifi-usw-flex-2-5g-8.webp"
     },
     "usw-flex-mini": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Mini - Tech Specs.pdf",
@@ -6927,36 +6930,38 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/sentrol_1078c.webp"
     },
     "USW-Flex-2.5G-8-PoE": {
-        "datasheetPath": null,
-        "image": null
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
+        "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
+        "image": "assets/images/products/unifi-usw-flex-2-5g-8-poe.webp"
     },
     "unifi-usw-flex-2-5g-8-poe": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
+        "image": "assets/images/products/unifi-usw-flex-2-5g-8-poe.webp"
     },
     "UACC-Switch-DIN": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UACC-Switch-FM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_fm.webp"
     },
     "UACC-UCG-Industrial-RM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Industrial - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "UACC-Flex-Utility-Pro": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Utility Pro - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_flex_utility_pro.webp"
     },
     "UACC-Ultra-WM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_fm.webp"
     },
     "UACC-UTS": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_uts.webp"
     },
     "5PXEBM72RTG2": {
         "datasheetPath": "Datasheets/Infrastructure/Eaton/Eaton 5PX3000RTNG2 - Tech Specs.pdf",
@@ -6988,11 +6993,11 @@ const CATALOG_ASSETS = {
     },
     "UACC-DIN-Rail": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UACC-Flex-DIN": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "AR3104": {
         "datasheetPath": "Datasheets/Infrastructure/APC/APC NetShelter SX AR3100 - Datasheet.pdf",
@@ -7344,11 +7349,11 @@ const CATALOG_ASSETS = {
     },
     "EX-4PST-RMK": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
     "UBB-XG-Mount": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/unifi-5g-max.webp"
+        "image": "assets/images/products/unifi_ubb_xg_mount.webp"
     },
     "C6A-CMP-1K-BL": {
         "datasheetPath": null,
@@ -7564,43 +7569,43 @@ const CATALOG_ASSETS = {
     },
     "RM-FR-T10": {
         "datasheetPath": "Datasheets/Network/Fortinet/FortiGate 60F Series - Datasheet.pdf",
-        "image": "assets/images/products/fortigate_60f.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "3rd_party_enclosure": {
         "datasheetPath": null,
-        "image": null
+        "image": "assets/images/products/altelix_nf141208.webp"
     },
     "4PT-KIT-T1": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "4PT-KIT-T2-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "19-CMP-KIT-T1": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "EX-RMK": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
     "ICX-RMK-4POST-TL": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "XBR-R000295": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "POE-48-24W-G": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE+ Injector 30W - Tech Specs.pdf",
-        "image": "assets/images/products/ubnt-af60-hd.webp"
+        "image": "assets/images/products/unifi_uacc_poe_at.webp"
     },
     "POE-24-12W-G": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE Injector 15W - Tech Specs.pdf",
-        "image": "assets/images/products/ubnt-af60-hd.webp"
+        "image": "assets/images/products/unifi_u_poe_af.webp"
     },
     "02327-001": {
         "datasheetPath": "Datasheets/Physical Security/Axis/Axis P3265-LVE - Datasheet.pdf",
@@ -7628,11 +7633,11 @@ const CATALOG_ASSETS = {
     },
     "SP-FG60F-PDC": {
         "datasheetPath": "Datasheets/Network/Fortinet/FortiGate 60F Series - Datasheet.pdf",
-        "image": "assets/images/products/fortigate_60f.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
     },
     "sp-fg60f-pdc": {
         "datasheetPath": "Datasheets/Network/Fortinet/FortiGate 60F Series - Datasheet.pdf",
-        "image": "assets/images/products/fortigate_60f.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
     },
     "MEANWELL-NDR-120-48": {
         "datasheetPath": "Datasheets/Infrastructure/Mean Well/Mean Well NDR-120 Series - Datasheet.pdf",
@@ -8102,759 +8107,759 @@ const CATALOG_ASSETS = {
     },
     "ubb-xg-mount": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/unifi-5g-max.webp"
+        "image": "assets/images/products/unifi_ubb_xg_mount.webp"
     },
     "UBB-XG-MOUNT": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/unifi-5g-max.webp"
+        "image": "assets/images/products/unifi_ubb_xg_mount.webp"
     },
     "unifi-ubb-xg-mount": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/unifi-5g-max.webp"
+        "image": "assets/images/products/unifi_ubb_xg_mount.webp"
     },
     "UNIFI-UBB-XG-MOUNT": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/unifi-5g-max.webp"
+        "image": "assets/images/products/unifi_ubb_xg_mount.webp"
     },
     "poe-48-24w-g": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE+ Injector 30W - Tech Specs.pdf",
-        "image": "assets/images/products/ubnt-af60-hd.webp"
+        "image": "assets/images/products/unifi_uacc_poe_at.webp"
     },
     "poe-24-12w-g": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE Injector 15W - Tech Specs.pdf",
-        "image": "assets/images/products/ubnt-af60-hd.webp"
+        "image": "assets/images/products/unifi_u_poe_af.webp"
     },
     "uacc-uts": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_uts.webp"
     },
     "uacc-ultra-wm": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_fm.webp"
     },
     "UACC-ULTRA-WM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_fm.webp"
     },
     "uacc-din-rail": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UACC-DIN-RAIL": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "unifi-uacc-din-rail": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UNIFI-UACC-DIN-RAIL": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "unifi-uacc-flex-din": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UNIFI-UACC-FLEX-DIN": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UACC-Fan-4020": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Enterprise Campus 48S PoE - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "uacc-fan-4020": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Enterprise Campus 48S PoE - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "UACC-FAN-4020": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Enterprise Campus 48S PoE - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "PWR-C1-1900WAC-P": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c1-1900wac-p": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-1900WAC-P-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c1-1900wac-p-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-1100WAC-P": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c1-1100wac-p": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-1100WAC-P-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c1-1100wac-p-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "MA-PWR-1100WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "ma-pwr-1100wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-715WAC-P": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c1-715wac-p": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-715WAC-P-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c1-715wac-p-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "MA-PWR-715WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "ma-pwr-715wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-350WAC-P": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "pwr-c1-350wac-p": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "PWR-C1-350WAC-P-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "pwr-c1-350wac-p-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "MA-PWR-350WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "ma-pwr-350wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "MA-PWR-250WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "ma-pwr-250wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "MA-PWR-640WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "ma-pwr-640wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "MA-PWR-1025WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "ma-pwr-1025wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C5-600WAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c5-600wac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C5-600WAC-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c5-600wac-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C5-1KWAC": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c5-1kwac": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C5-1KWAC-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "pwr-c5-1kwac-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "PWR-C1-715WDC": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/juniper_jpsu_dc.webp"
     },
     "pwr-c1-715wdc": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/juniper_jpsu_dc.webp"
     },
     "PWR-C1-1100WDC": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/juniper_jpsu_dc.webp"
     },
     "pwr-c1-1100wdc": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/juniper_jpsu_dc.webp"
     },
     "C9K-PWR-CAB-AC-US": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_usp_cable.webp"
     },
     "c9k-pwr-cab-ac-us": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_usp_cable.webp"
     },
     "C9K-PWR-CAB-AC-BL": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_usp_cable.webp"
     },
     "c9k-pwr-cab-ac-bl": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_usp_cable.webp"
     },
     "FAN-T2": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "fan-t2": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "FAN-T2-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "fan-t2-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "4pt-kit-t1": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "4pt-kit-t2-m": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "19-cmp-kit-t1": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
-        "image": "assets/images/products/meraki-ms120-24.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "JPSU-2000-C-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-2000-c-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-1600-C-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-1600-c-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-1050-C-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-1050-c-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-920-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-920-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-920-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-920-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-600-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-600-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-550-C-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-550-c-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-550-C-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-550-c-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-150-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-150-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-350-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-350-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-350-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-350-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-715-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-715-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-715-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-715-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-1100-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-1100-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-1100-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-1100-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-550-C-DC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_dc.webp"
     },
     "jpsu-550-c-dc-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_dc.webp"
     },
     "JPSU-650-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-650-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-650W-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-650w-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-650-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-650-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-650W-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-650w-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-850-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-850-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-850W-AC-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-850w-ac-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-850-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-850-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-850W-AC-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-850w-ac-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-H-340W-E-AC": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-h-340w-e-ac": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "JPSU-H-340W-AC": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "jpsu-h-340w-ac": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_jpsu_ac.webp"
     },
     "EX4400-FAN-AFO": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "ex4400-fan-afo": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "EX4400-FAN-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "ex4400-fan-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "EX4300-FAN": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "ex4300-fan": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "EX4300-FAN-AFI": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "ex4300-fan-afi": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_fan.webp"
     },
     "ex-4pst-rmk": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
     "juniper-ex-4pst-rmk": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
     "JUNIPER-EX-4PST-RMK": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
     "ex-rmk": {
         "datasheetPath": "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
-        "image": "assets/images/products/juniper-ex2300-24mp.webp"
+        "image": "assets/images/products/juniper_ex_4pst_rmk.webp"
     },
     "RPS22-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps22-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS22-I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps22-i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS21-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps21-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS21-I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps21-i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS21DC-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps21dc-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS23-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps23-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS19-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps19-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS19-I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps19-i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS9+": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps9+": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS9E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps9e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS9I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps9i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS16": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps16": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS16-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps16-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS16-I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps16-i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS15": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps15": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS15-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "rps15-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "RPS16DC": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps16dc": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "RPS16DC-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "rps16dc-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "ICX-FAN12-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "icx-fan12-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "ICX-FAN12-I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "icx-fan12-i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "ICX-FAN10-E": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "icx-fan10-e": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "ICX-FAN10-I": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "icx-fan10-i": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
     },
     "icx-rmk-4post-tl": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "xbr-r000295": {
         "datasheetPath": "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
-        "image": "assets/images/products/ruckus-icx7150-24.webp"
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
     "AT-PWR600-AC": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x950series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "at-pwr600-ac": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x950series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "AT-PWR800-80": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "at-pwr800-80": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_poe.webp"
     },
     "AT-PWR250-AC": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "at-pwr250-ac": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "AT-PWR150-AC": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "at-pwr150-ac": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "AT-PWR300-30": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs980em-series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "at-pwr300-30": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs980em-series-ds.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
     "AT-PWR05": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-ie340series-ds.pdf",
@@ -8866,163 +8871,163 @@ const CATALOG_ASSETS = {
     },
     "AMGPSU-I12-P24A": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I12-P24A Datasheet D39310-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
     },
     "amgpsu-i12-p24a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I12-P24A Datasheet D39310-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
     },
     "AMGPSU-I12-P54": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
     "amgpsu-i12-p54": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
     "AMGPSU-I24-P60": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
     "amgpsu-i24-p60": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
     "AMGPSU-I24-P120": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120 Datasheet D39170-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
     },
     "amgpsu-i24-p120": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120 Datasheet D39170-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
     },
     "AMGPSU-I48-P60": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
     "amgpsu-i48-p60": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
     "AMGPSU-I48-P120": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120 Datasheet D39170-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
     },
     "amgpsu-i48-p120": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120 Datasheet D39170-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
     },
     "AMGPSU-I48-P120A": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120A Datasheet D39312-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120a.webp"
     },
     "amgpsu-i48-p120a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120A Datasheet D39312-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120a.webp"
     },
     "AMGPSU-I48-P120-IEC": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120-IEC Datasheet D39235-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120_iec.webp"
     },
     "amgpsu-i48-p120-iec": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120-IEC Datasheet D39235-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p120_iec.webp"
     },
     "AMGPSU-I48-P240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240 Datasheet D39171-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240.webp"
     },
     "amgpsu-i48-p240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240 Datasheet D39171-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240.webp"
     },
     "AMGPSU-I48-P240A": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A Datasheet D39313-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240a.webp"
     },
     "amgpsu-i48-p240a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A Datasheet D39313-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240a.webp"
     },
     "AMGPSU-148-P240A": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A Datasheet D39313-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240a.webp"
     },
     "amgpsu-148-p240a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A Datasheet D39313-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240a.webp"
     },
     "AMGPSU-I48-P240A-IEC": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A-IEC Datasheet D39316-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240a_iec.webp"
     },
     "amgpsu-i48-p240a-iec": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A-IEC Datasheet D39316-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p240a_iec.webp"
     },
     "AMGPSU-I48-P290": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P290 Datasheet D39297-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p290.webp"
     },
     "amgpsu-i48-p290": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P290 Datasheet D39297-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p290.webp"
     },
     "AMGPSU-I48-P480": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480 Datasheet D39172-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480.webp"
     },
     "amgpsu-i48-p480": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480 Datasheet D39172-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480.webp"
     },
     "AMGPSU-I48-P480A": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480a.webp"
     },
     "amgpsu-i48-p480a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480a.webp"
     },
     "AMGPSU-148-P480A": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480a.webp"
     },
     "amgpsu-148-p480a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480a.webp"
     },
     "AMGPSU-I48-P480A-IEC": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A-IEC Datasheet D39317-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480a_iec.webp"
     },
     "amgpsu-i48-p480a-iec": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A-IEC Datasheet D39317-04.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p480a_iec.webp"
     },
     "AMGPSU-I48-P530": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P530 Datasheet D39298-02.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p530.webp"
     },
     "amgpsu-i48-p530": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P530 Datasheet D39298-02.pdf",
-        "image": "assets/images/products/meanwell_ndr_480_48.webp"
+        "image": "assets/images/products/amgpsu_i48_p530.webp"
     },
     "AMGUPS-I48-P240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGUPS-I48-P240 Datasheet D39268-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgups_i48_p240.webp"
     },
     "amgups-i48-p240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGUPS-I48-P240 Datasheet D39268-03.pdf",
-        "image": "assets/images/products/meanwell_ndr_240_48.webp"
+        "image": "assets/images/products/amgups_i48_p240.webp"
     },
     "AMGPSU-W12-P25": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-W12-P25 Datasheet D39289-02.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_w12_p25.webp"
     },
     "amgpsu-w12-p25": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-W12-P25 Datasheet D39289-02.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/amgpsu_w12_p25.webp"
     },
     "pwr-lock-c14-c13-3ft-blk": {
         "datasheetPath": "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
@@ -9086,47 +9091,47 @@ const CATALOG_ASSETS = {
     },
     "uacc-switch-din": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UACC-SWITCH-DIN": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "uacc-switch-fm": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_fm.webp"
     },
     "UACC-SWITCH-FM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_fm.webp"
     },
     "uacc-flex-din": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "UACC-FLEX-DIN": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_switch_din.webp"
     },
     "uacc-ucg-industrial-rm": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Industrial - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "UACC-UCG-INDUSTRIAL-RM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Industrial - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "uacc-flex-utility-pro": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Utility Pro - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_flex_utility_pro.webp"
     },
     "UACC-FLEX-UTILITY-PRO": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Utility Pro - Tech Specs.pdf",
-        "image": "assets/images/products/meanwell_ndr_120_48.webp"
+        "image": "assets/images/products/unifi_uacc_flex_utility_pro.webp"
     },
     "rm-fr-t10": {
         "datasheetPath": "Datasheets/Network/Fortinet/FortiGate 60F Series - Datasheet.pdf",
-        "image": "assets/images/products/fortigate_60f.webp"
+        "image": "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
     },
     "hanwha-xnv-8081z-4k-ptz": {
         "datasheetPath": "Datasheets/Physical Security/Hanwha/Hanwha XNV-8081Z - Datasheet.pdf",
@@ -9199,6 +9204,171 @@ const CATALOG_ASSETS = {
     "pdu30svt24f": {
         "datasheetPath": "Datasheets/Infrastructure/CyberPower/CyberPower Switched PDU Series - Datasheet.pdf",
         "image": "assets/images/products/cyberpower_pdu20sw8rnet.webp"
+    },
+    "amg-psu-t24-p24": {
+        "datasheet": null,
+        "image": "assets/images/products/amgpsu_t24_p24.webp"
+    },
+    "EX4400-EM-4S": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_4s.webp"
+    },
+    "EX4400-EM-4Y": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_4y.webp"
+    },
+    "EX4400-EM-1C": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_1c.webp"
+    },
+    "EX-UM-4X4SFP": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_4s.webp"
+    },
+    "EX-UM-4SFPP-MR": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_4s.webp"
+    },
+    "EX-UM-8X8SFP": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_4s.webp"
+    },
+    "EX-UM-2QSFP": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_1c.webp"
+    },
+    "EX-UM-2QSFP-MR": {
+        "datasheet": null,
+        "image": "assets/images/products/juniper_ex4400_em_1c.webp"
+    },
+    "ICX-4X10GF": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "ICX-2X100Q": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
+    },
+    "ICX7550-4X25GF": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7550_4x25gf.webp"
+    },
+    "ICX7650-2X40GQ": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_2x40gq.webp"
+    },
+    "ICX7650-1X100GQ": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
+    },
+    "ICX7400-4X10GF": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "ICX7400-1X40GQ": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_2x40gq.webp"
+    },
+    "ICX7400-4X1GF": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "ICX7400-4X10GC": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "ICX7400-SERVICE-MOD": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "MA-PWR-C1-1100WAC": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "C9300-NM-8X": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "C9300-NM-8X-M": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "C9300-NM-4G": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "C9300-NM-4M": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "C9300-NM-4M-M": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "C9300-NM-2Q": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_2x40gq.webp"
+    },
+    "C9300-NM-2Y": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7550_4x25gf.webp"
+    },
+    "C9300-NM-2Y-M": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7550_4x25gf.webp"
+    },
+    "C9300X-NM-8Y": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7550_4x25gf.webp"
+    },
+    "C9300X-NM-8Y-M": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7550_4x25gf.webp"
+    },
+    "C9300X-NM-2C": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
+    },
+    "C9300X-NM-2C-M": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
+    },
+    "C9300X-NM-4C": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
+    },
+    "C9300-NM-BLANK": {
+        "datasheet": null,
+        "image": "assets/images/products/unifi_uacc_rack_panel_ocd.webp"
+    },
+    "C9300-NM-BLANK=": {
+        "datasheet": null,
+        "image": "assets/images/products/unifi_uacc_rack_panel_ocd.webp"
+    },
+    "MA-MOD-4X10G": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "MA-MOD-8X10G": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "MA-MOD-2X40G": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_icx7650_2x40gq.webp"
+    },
+    "AT-PWR800": {
+        "datasheet": null,
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "AT-PWR300": {
+        "datasheet": null,
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+    "usw-flex-2.5g-8-poe": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
+        "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
+        "image": "assets/images/products/unifi-usw-flex-2-5g-8-poe.webp"
     }
 };
 
