@@ -1512,6 +1512,216 @@ const PortEngine = {
       percentUsed: Math.round((used / (total || 1)) * 100),
       percentPoe: Math.round((poeLoad / (poeBudget || 1)) * 100)
     };
+  },
+
+  /**
+   * Resolves the end-to-end Patch Panel & Keystone Jack mapping for every physical port on a switch.
+   * Supports:
+   *  1. Standard Pod switches (1U 24P patch panels directly above & below each switch chassis unit with 6" Cat6A slim patch cords)
+   *  2. In-stack interleaved patch panels (patchPanelBetween)
+   *  3. Standalone rack-mounted patch panels (PP-1U-24P-MOD, PP-2U-48P-MOD) in the same closet/rack
+   *  4. Custom per-port overrides (port.customPatchPanelId, port.customPatchJack)
+   *
+   * @param {Object} switchItem - Switch BOM line item
+   * @returns {Object} { byPortNumber: { [portNum]: PatchMapping }, panels: Array<PanelSummary> }
+   */
+  resolveSwitchPatchMapping(switchItem) {
+    if (!switchItem) return { byPortNumber: {}, panels: [] };
+    const ports = this.initSwitchPorts(switchItem);
+    const isStacked = (switchItem.stackedUnits && switchItem.stackedUnits >= 2) ||
+      (switchItem.stackedUnits !== 0 && switchItem.qty >= 2 && (switchItem.canStack || switchItem.role === "Access" || switchItem.role === "Aggregation"));
+    const stackUnits = isStacked ? (switchItem.stackedUnits || switchItem.qty) : 1;
+    const baseRU = (switchItem.rackUnits !== undefined && switchItem.rackUnits !== null) ? (parseInt(switchItem.rackUnits, 10) || 1) : 1;
+    const baseSlotU = parseInt(switchItem.rackSlot, 10) || 0;
+    const isStdPod = !!switchItem.standardPod;
+
+    // Locate standalone patch panels in the same closet/rack if not using Standard Pod
+    const switchLoc = (typeof FacilityStore !== "undefined")
+      ? FacilityStore.normalize(switchItem.closetName || switchItem.rackId)
+      : (switchItem.closetName || switchItem.rackId || "MDF");
+    const closetShort = String(switchLoc || "MDF").split("•")[0].trim().replace(/\s+/g, "");
+
+    const standalonePanels = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.filter(it => {
+          if (!it || it.parentInstanceId) return false;
+          const loc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(it.closetName || it.rackId) : (it.closetName || it.rackId);
+          if (loc !== switchLoc) return false;
+          const sku = String(it.sku || it.id || "").toUpperCase();
+          const mod = String(it.model || "").toLowerCase();
+          return sku.startsWith("PP-") || mod.includes("patch panel") || mod.includes("keystone");
+        }).sort((a, b) => (parseInt(b.rackSlot, 10) || 0) - (parseInt(a.rackSlot, 10) || 0))
+      : [];
+
+    const byPortNumber = {};
+    const panelsMap = new Map();
+
+    // Group access copper ports by unitIndex
+    for (let u = 1; u <= stackUnits; u++) {
+      const unitPorts = ports.filter(p => (p.unitIndex || 1) === u);
+      const copperPorts = unitPorts.filter(p => !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ"));
+      const is48P = copperPorts.length > 24;
+      const halfSplit = is48P ? 24 : 12;
+
+      // Compute RU positions if mounted in rack with Standard Pod
+      const unitBaseU = baseSlotU > 0 ? (baseSlotU + (u - 1) * (baseRU + (isStdPod ? 2 : 0))) : 0;
+      const lowerPPU = isStdPod && unitBaseU > 0 ? unitBaseU : 0;
+      const switchU = isStdPod && unitBaseU > 0 ? (unitBaseU + 1) : (baseSlotU > 0 ? (baseSlotU + (u - 1) * baseRU) : 0);
+      const upperPPU = isStdPod && unitBaseU > 0 ? (unitBaseU + baseRU + 1) : 0;
+
+      const upperPanelId = stackUnits > 1 ? `PP-U${u}-TOP` : `PP-01-TOP`;
+      const lowerPanelId = stackUnits > 1 ? `PP-U${u}-BOT` : `PP-02-BOT`;
+
+      if (isStdPod) {
+        panelsMap.set(upperPanelId, {
+          panelId: upperPanelId,
+          label: stackUnits > 1 ? `Unit ${u} Upper 24P Patch Panel` : `Upper 24P Keystone Patch Panel`,
+          shortLabel: upperPanelId,
+          sku: "PP-1U-24P-MOD",
+          slotU: upperPPU > 0 ? `U${upperPPU}` : "Above Switch",
+          switchUnit: u,
+          switchSlotU: switchU > 0 ? `U${switchU}` : "",
+          deck: "upper",
+          totalJacks: 24,
+          activePortRange: is48P ? "Ports 1–24" : "Ports 1–12",
+          patchCordSpec: '6" Cat6A Slim',
+          jacks: Array.from({ length: 24 }, (_, idx) => ({
+            jackNumber: idx + 1,
+            jackLabel: `J${String(idx + 1).padStart(2, "0")}`,
+            port: null
+          }))
+        });
+
+        panelsMap.set(lowerPanelId, {
+          panelId: lowerPanelId,
+          label: stackUnits > 1 ? `Unit ${u} Lower 24P Patch Panel` : `Lower 24P Keystone Patch Panel`,
+          shortLabel: lowerPanelId,
+          sku: "PP-1U-24P-MOD",
+          slotU: lowerPPU > 0 ? `U${lowerPPU}` : "Below Switch",
+          switchUnit: u,
+          switchSlotU: switchU > 0 ? `U${switchU}` : "",
+          deck: "lower",
+          totalJacks: 24,
+          activePortRange: is48P ? "Ports 25–48" : "Ports 13–24",
+          patchCordSpec: '6" Cat6A Slim',
+          jacks: Array.from({ length: 24 }, (_, idx) => ({
+            jackNumber: idx + 1,
+            jackLabel: `J${String(idx + 1).padStart(2, "0")}`,
+            port: null
+          }))
+        });
+      }
+
+      unitPorts.forEach((p, idxInUnit) => {
+        const dev = (p.connectedDeviceId && typeof projectBOM !== "undefined")
+          ? projectBOM.find(i => i && i.instanceId === p.connectedDeviceId)
+          : null;
+
+        const isCopperAccess = !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ");
+        const localCopperIdx = copperPorts.indexOf(p); // 0-based within unit's copper ports
+
+        let panelId = p.customPatchPanelId || null;
+        let panelLabel = "";
+        let panelSlotU = "";
+        let jackNum = p.customKeystoneJack || p.customPatchJack || null;
+        let jackLabel = "";
+        let patchCordSpec = '3ft Cat6A Patch';
+        let deck = null;
+
+        if (isCopperAccess && localCopperIdx >= 0) {
+          if (isStdPod) {
+            const isUpper = localCopperIdx < halfSplit;
+            deck = isUpper ? "upper" : "lower";
+            panelId = p.customPatchPanelId || (isUpper ? upperPanelId : lowerPanelId);
+            panelLabel = isUpper ? `${upperPanelId} (Upper)` : `${lowerPanelId} (Lower)`;
+            panelSlotU = isUpper
+              ? (upperPPU > 0 ? `U${upperPPU}` : "Upper 1U")
+              : (lowerPPU > 0 ? `U${lowerPPU}` : "Lower 1U");
+            jackNum = p.customKeystoneJack || p.customPatchJack || (isUpper ? (localCopperIdx + 1) : (localCopperIdx - halfSplit + 1));
+            jackLabel = `J${String(jackNum).padStart(2, "0")}`;
+            patchCordSpec = '6" Cat6A Slim';
+
+            const panelObj = panelsMap.get(isUpper ? upperPanelId : lowerPanelId);
+            if (panelObj && panelObj.jacks[jackNum - 1]) {
+              panelObj.jacks[jackNum - 1].port = p;
+              panelObj.jacks[jackNum - 1].device = dev;
+            }
+          } else if (standalonePanels.length > 0) {
+            // Map across standalone rack patch panels in this closet
+            const ppIdx = Math.floor(localCopperIdx / 24) % standalonePanels.length;
+            const ppItem = standalonePanels[ppIdx];
+            const ppSeq = ppItem.deviceNumber || `PP-${String(ppIdx + 1).padStart(2, "0")}`;
+            panelId = p.customPatchPanelId || ppSeq;
+            panelLabel = `${ppSeq} (${ppItem.friendlyName || ppItem.model || "Patch Panel"})`;
+            panelSlotU = ppItem.rackSlot ? `U${ppItem.rackSlot}` : "Rack";
+            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % 24) + 1);
+            jackLabel = `J${String(jackNum).padStart(2, "0")}`;
+            patchCordSpec = '3ft Cat6A Booted';
+          } else {
+            // Virtual / Standard Closet Patch Panel designation even if Standard Pod isn't toggled yet
+            const ppBank = Math.floor(((u - 1) * copperPorts.length + localCopperIdx) / 24) + 1;
+            panelId = p.customPatchPanelId || `PP-${String(ppBank).padStart(2, "0")}`;
+            panelLabel = `${panelId} (24P Keystone)`;
+            panelSlotU = switchU > 0 ? `Near U${switchU}` : "Closet Patch Field";
+            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % 24) + 1);
+            jackLabel = `J${String(jackNum).padStart(2, "0")}`;
+            patchCordSpec = '1ft / 3ft Cat6A';
+          }
+        } else if (p.role === "stack_interconnect") {
+          panelId = "STACK-RING";
+          panelLabel = "Direct-Attach Stack Ring";
+          panelSlotU = switchU > 0 ? `U${switchU}` : "Rear/Front Cage";
+          jackLabel = p.shortLabel || `Stk`;
+          patchCordSpec = "100G/40G Stack DAC";
+        } else {
+          // Optical Uplink Cage
+          panelId = "FIBER-LIU";
+          panelLabel = "Rack Fiber Patch / LIU";
+          panelSlotU = switchU > 0 ? `U${switchU}` : "Uplink Cage";
+          jackLabel = p.shortLabel || `LC-${p.unitPortNumber || p.portNumber}`;
+          patchCordSpec = p.mediaType === "dac_copper" ? "SFP+ DAC Twinax" : "LC-LC Duplex Fiber Jumper";
+        }
+
+        // Generate TIA-606-C Horizontal Cable Run ID for connected device
+        const devSeq = dev
+          ? (dev.deviceNumber || `${(dev.role || "DEV").slice(0, 3).toUpperCase()}-${String(p.portNumber).padStart(2, "0")}`)
+          : null;
+        const horizontalCableId = dev
+          ? (dev.cableId || `${closetShort}-${panelId}-${jackLabel}`)
+          : null;
+
+        byPortNumber[p.portNumber] = {
+          portNumber: p.portNumber,
+          unitIndex: u,
+          unitPortNumber: p.unitPortNumber || p.portNumber,
+          switchSlotU: switchU > 0 ? `U${switchU}` : "",
+          isCopperAccess,
+          isStandardPod: isStdPod,
+          deck,
+          patchPanelId: panelId,
+          patchPanelLabel: panelLabel,
+          patchPanelSlotU: panelSlotU,
+          keystoneJackNumber: jackNum,
+          keystoneJackLabel: jackLabel,
+          fullPatchCoordinate: isCopperAccess ? `${panelId} : ${jackLabel}${panelSlotU ? ` [${panelSlotU}]` : ""}` : `${panelId} (${jackLabel})`,
+          patchCordSpec,
+          horizontalCableId,
+          isPatched: !!p.connectedDeviceId,
+          connectedDeviceId: p.connectedDeviceId || null,
+          connectedDeviceName: dev ? (dev.friendlyName || dev.model) : (p.connectedDeviceModel || null),
+          connectedDeviceNumber: devSeq,
+          connectedDeviceRole: dev ? (dev.role || "Device") : (p.connectedDeviceRole || null),
+          connectedLocation: dev ? (dev.location || dev.closetName || switchLoc) : (p.connectedLocation || null),
+          poeWatts: p.poeOutputWatts || 0
+        };
+      });
+    }
+
+    return {
+      byPortNumber,
+      mappings: byPortNumber,
+      isStandardPod: isStdPod,
+      panels: Array.from(panelsMap.values())
+    };
   }
 };
 

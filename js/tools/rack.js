@@ -16,6 +16,51 @@ let rackViewOrientation = "front"; // "front" | "rear"
 let draggedRackItemInstanceId = null;
 let showRackPatchJumpers = true;
 window.showRackPatchJumpers = true;
+let rackSidebarCollapsed = false;
+window.rackAccordionOpenState = {
+  electrical: true,
+  pdu: false,
+  ups: false,
+  structural: false,
+  passive: true
+};
+
+function toggleRackSidebarDrawer() {
+  rackSidebarCollapsed = !rackSidebarCollapsed;
+  const pane = document.getElementById("rackRightSidePane");
+  const btn = document.getElementById("btnToggleRackSidebar");
+  if (pane) {
+    if (rackSidebarCollapsed) {
+      pane.classList.add("hidden");
+    } else {
+      pane.classList.remove("hidden");
+    }
+  }
+  if (btn) {
+    btn.innerHTML = rackSidebarCollapsed
+      ? `<i data-lucide="panel-right-open" class="w-3.5 h-3.5 text-indigo-400"></i><span id="lblToggleRackSidebar" class="hidden sm:inline">Show Pane</span>`
+      : `<i data-lucide="panel-right-close" class="w-3.5 h-3.5 text-indigo-400"></i><span id="lblToggleRackSidebar" class="hidden sm:inline">Hide Pane</span>`;
+  }
+  if (window.lucide) lucide.createIcons();
+}
+window.toggleRackSidebarDrawer = toggleRackSidebarDrawer;
+
+function toggleRackAccordionSection(sectionKey, isOpen) {
+  if (!window.rackAccordionOpenState) window.rackAccordionOpenState = {};
+  window.rackAccordionOpenState[sectionKey] = Boolean(isOpen);
+}
+window.toggleRackAccordionSection = toggleRackAccordionSection;
+
+function toggleAllRackTelemetryAccordions() {
+  if (!window.rackAccordionOpenState) window.rackAccordionOpenState = {};
+  const keys = ["electrical", "pdu", "ups", "structural", "passive"];
+  const anyClosed = keys.some(k => !window.rackAccordionOpenState[k]);
+  keys.forEach(k => {
+    window.rackAccordionOpenState[k] = anyClosed;
+  });
+  renderRackVisualizer();
+}
+window.toggleAllRackTelemetryAccordions = toggleAllRackTelemetryAccordions;
 
 function toggleRackPatchJumpers() {
   showRackPatchJumpers = !showRackPatchJumpers;
@@ -23,10 +68,10 @@ function toggleRackPatchJumpers() {
   const btn = document.getElementById("btnRackPatchJumpers");
   if (btn) {
     if (showRackPatchJumpers) {
-      btn.className = "px-2.5 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-600/70 text-cyan-300 font-bold text-xs rounded-lg flex items-center gap-1 shadow-sm transition-all";
+      btn.className = "px-2 py-0.5 bg-cyan-950/80 hover:bg-cyan-900 border border-cyan-600/70 text-cyan-300 font-bold text-[11px] rounded-lg flex items-center gap-1 shadow-sm transition-all cursor-pointer";
       btn.innerHTML = `<i data-lucide="git-commit" class="w-3 h-3 text-cyan-400"></i> <span>Patch Cords: ON</span>`;
     } else {
-      btn.className = "px-2.5 py-0.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-xs rounded-lg flex items-center gap-1 transition-all";
+      btn.className = "px-2 py-0.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 hover:text-white text-[11px] rounded-lg flex items-center gap-1 transition-all cursor-pointer";
       btn.innerHTML = `<i data-lucide="git-commit" class="w-3 h-3 text-slate-500"></i> <span>Patch Cords: OFF</span>`;
     }
   }
@@ -35,50 +80,140 @@ function toggleRackPatchJumpers() {
 }
 window.toggleRackPatchJumpers = toggleRackPatchJumpers;
 
-function renderStandardPodPatchJumpersUpperSVG(is48P) {
-  if (!showRackPatchJumpers) return '';
-  const portCount = is48P ? 24 : 12;
-  const cords = [];
-  const startX = 26;
-  const spacing = 19;
-  const colors = ["#38bdf8", "#38bdf8", "#10b981", "#10b981", "#10b981", "#10b981", "#f59e0b", "#f59e0b", "#a855f7", "#a855f7", "#06b6d4", "#38bdf8"];
-  
-  for (let i = 0; i < portCount; i++) {
-    const x1 = startX + i * spacing;
-    const x2 = startX + i * spacing + (i % 2 === 0 ? 2 : -2);
-    const color = colors[i % colors.length];
-    cords.push(`<path d="M ${x1} 1 C ${x1} 10, ${x2} 15, ${x2} 24" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" opacity="0.85" class="hover:stroke-white hover:stroke-width-3 transition-all cursor-pointer"><title>Port ${i+1}: 6\" Cat6A Slim Patch Cord (Upper Deck)</title></path>`);
-  }
+/**
+ * Renders an interactive, data-driven 24-Keystone Patch Panel row and paired Switch row
+ * with live PortEngine occupancy, end-to-end trace tooltips, and 1-click Port Matrix navigation.
+ */
+function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, deck) {
+  const renderBlock = (slice) => slice.map(j => {
+    const p = j.port;
+    const isOccupied = Boolean(p && p.connectedDeviceId);
+    const isPoe = Boolean(isOccupied && (p.poeOutputWatts || 0) > 0);
+    const devLabel = j.device
+      ? `${j.device.deviceNumber ? j.device.deviceNumber + ' • ' : ''}${j.device.friendlyName || j.device.model}`
+      : (p?.connectedDeviceModel || "Unassigned / Spare");
+    const portNum = p ? p.portNumber : j.jackNumber;
+    const unitPort = p ? (p.unitPortNumber || p.portNumber) : j.jackNumber;
+
+    let dotClass = "bg-slate-900 border-purple-500/40 hover:border-purple-300";
+    let cordColor = "bg-slate-800/40";
+    if (isOccupied) {
+      if (isPoe) {
+        dotClass = "bg-emerald-500 border-emerald-300 shadow-[0_0_5px_rgba(16,185,129,0.7)] hover:scale-125";
+        cordColor = "bg-emerald-400";
+      } else {
+        dotClass = "bg-amber-400 border-amber-200 shadow-[0_0_5px_rgba(245,158,11,0.6)] hover:scale-125";
+        cordColor = "bg-amber-400";
+      }
+    }
+
+    const tooltip = isOccupied
+      ? `Keystone ${j.jackLabel} ⟷ 6" Slim Cat6A ⟷ Switch Port ${unitPort} • Connected: ${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
+      : `Keystone ${j.jackLabel} (Open) ⟷ Mapped to Switch Port ${unitPort} — Click to assign in Port Studio`;
+
+    return `
+      <button
+        type="button"
+        onclick="event.stopPropagation(); openPortMatrixStudio('${switchInstanceId}', ${portNum})"
+        class="group/kp relative flex flex-col items-center focus:outline-none cursor-pointer"
+        title="${escapeHTML(tooltip)}"
+      >
+        ${showRackPatchJumpers && deck === "lower" ? `<span class="w-[2px] h-1.5 ${cordColor} rounded-full mb-[1px]"></span>` : ''}
+        <span class="w-2.5 h-2.5 rounded-[2px] border transition-transform ${dotClass} flex items-center justify-center text-[6.5px] font-mono leading-none ${isOccupied ? 'text-slate-950 font-extrabold' : 'text-slate-500'}">
+          ${j.jackNumber}
+        </span>
+        ${showRackPatchJumpers && deck === "upper" ? `<span class="w-[2px] h-1.5 ${cordColor} rounded-full mt-[1px]"></span>` : ''}
+      </button>
+    `;
+  }).join("");
+
+  const first12 = jacksArray.slice(0, 12);
+  const second12 = jacksArray.slice(12, 24);
 
   return `
-    <div class="px-2 py-0.5 bg-slate-950/70 rounded border border-purple-900/30 flex items-center justify-center my-0.5 overflow-hidden select-none" title="Standard Pod: 6-Inch Cat6A Slim Patch Jumpers Direct to Upper 24P Patch Panel">
-      <svg width="100%" height="24" viewBox="0 0 ${startX + portCount * spacing + 20} 24" class="w-full max-w-[620px] overflow-visible">
-        ${cords.join('')}
-      </svg>
+    <div class="flex items-center gap-1.5 bg-slate-950/90 px-2 py-0.5 rounded border border-purple-700/40 shrink-0">
+      <div class="flex items-center gap-[3px]">${renderBlock(first12)}</div>
+      <span class="w-1 h-2.5 bg-purple-900/40 rounded-full"></span>
+      <div class="flex items-center gap-[3px]">${renderBlock(second12)}</div>
     </div>
   `;
 }
 
-function renderStandardPodPatchJumpersLowerSVG(is48P) {
-  if (!showRackPatchJumpers) return '';
-  const portCount = is48P ? 24 : 12;
-  const cords = [];
-  const startX = 26;
-  const spacing = 19;
-  const colors = ["#38bdf8", "#38bdf8", "#10b981", "#10b981", "#10b981", "#10b981", "#f59e0b", "#f59e0b", "#a855f7", "#a855f7", "#06b6d4", "#38bdf8"];
-  
-  for (let i = 0; i < portCount; i++) {
-    const x1 = startX + i * spacing;
-    const x2 = startX + i * spacing + (i % 2 === 0 ? 2 : -2);
-    const color = colors[i % colors.length];
-    cords.push(`<path d="M ${x1} 1 C ${x1} 9, ${x2} 14, ${x2} 24" fill="none" stroke="${color}" stroke-width="2.2" stroke-linecap="round" opacity="0.85" class="hover:stroke-white hover:stroke-width-3 transition-all cursor-pointer"><title>Port ${i + (is48P ? 25 : 13)}: 6\" Cat6A Slim Patch Cord (Lower Deck)</title></path>`);
+function renderInteractiveRackSwitchFaceplateHTML(switchItem, unitNum, patchData) {
+  const ports = (typeof PortEngine !== "undefined") ? PortEngine.initSwitchPorts(switchItem) : [];
+  const unitPorts = ports.filter(p => (p.unitIndex || 1) === unitNum);
+  const copperPorts = unitPorts.filter(p => !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ"));
+  const uplinkPorts = unitPorts.filter(p => p.isUplink || p.role === "uplink" || p.role === "stack_interconnect");
+  const is48P = copperPorts.length > 24;
+
+  const renderPortDot = (p) => {
+    const isOccupied = Boolean(p.connectedDeviceId);
+    const isPoe = Boolean(isOccupied && (p.poeOutputWatts || 0) > 0);
+    const isStack = p.role === "stack_interconnect";
+    const isUplink = p.isUplink || p.role === "uplink";
+    const pm = patchData?.byPortNumber?.[p.portNumber];
+    const patchCoord = pm ? pm.fullPatchCoordinate : "";
+
+    let cls = "bg-slate-900 border-slate-700 text-slate-500 hover:border-slate-400";
+    if (isStack) {
+      cls = "bg-indigo-500 border-indigo-300 text-slate-950 font-extrabold";
+    } else if (isUplink && isOccupied) {
+      cls = "bg-sky-400 border-sky-200 text-slate-950 font-extrabold shadow-[0_0_4px_rgba(56,189,248,0.7)]";
+    } else if (isUplink) {
+      cls = "bg-slate-900 border-sky-600/60 text-sky-400 hover:border-sky-400";
+    } else if (isOccupied && isPoe) {
+      cls = "bg-emerald-500 border-emerald-300 text-slate-950 font-extrabold shadow-[0_0_4px_rgba(16,185,129,0.7)]";
+    } else if (isOccupied) {
+      cls = "bg-amber-400 border-amber-200 text-slate-950 font-extrabold";
+    }
+
+    const title = isOccupied
+      ? `Switch Port ${p.unitPortNumber || p.portNumber}${patchCoord ? ` ⟷ ${patchCoord}` : ''} ⟷ ${p.connectedDeviceModel || 'Connected Device'}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to open Port Studio`
+      : `Switch Port ${p.unitPortNumber || p.portNumber} (${p.speed || '1G'}${p.poeStandard ? ' PoE' : ''})${patchCoord ? ` ⟷ ${patchCoord}` : ''} — Available`;
+
+    return `
+      <button
+        type="button"
+        onclick="event.stopPropagation(); openPortMatrixStudio('${switchItem.instanceId}', ${p.portNumber})"
+        class="w-2.5 h-2 rounded-[1.5px] border ${cls} transition-transform hover:scale-125 cursor-pointer flex items-center justify-center text-[6px] font-mono leading-none"
+        title="${escapeHTML(title)}"
+      ></button>
+    `;
+  };
+
+  if (copperPorts.length === 0 && uplinkPorts.length > 0) {
+    // All-optical switch faceplate
+    return `
+      <div class="flex items-center gap-1 bg-slate-950/90 px-2 py-1 rounded border border-sky-800/50 shrink-0">
+        <div class="flex items-center gap-[3px] flex-wrap max-w-[340px]">
+          ${uplinkPorts.slice(0, 24).map(renderPortDot).join("")}
+        </div>
+      </div>
+    `;
   }
 
+  const topRow = is48P ? copperPorts.slice(0, 24) : copperPorts.slice(0, 12);
+  const botRow = is48P ? copperPorts.slice(24, 48) : copperPorts.slice(12, 24);
+
   return `
-    <div class="px-2 py-0.5 bg-slate-950/70 rounded border border-purple-900/30 flex items-center justify-center my-0.5 overflow-hidden select-none" title="Standard Pod: 6-Inch Cat6A Slim Patch Jumpers Direct to Lower 24P Patch Panel">
-      <svg width="100%" height="24" viewBox="0 0 ${startX + portCount * spacing + 20} 24" class="w-full max-w-[620px] overflow-visible">
-        ${cords.join('')}
-      </svg>
+    <div class="flex items-center gap-2 bg-slate-950/90 px-2 py-0.5 rounded border border-sky-800/40 shrink-0">
+      <div class="flex flex-col gap-[2px]">
+        <div class="flex items-center gap-[3px]">
+          ${topRow.slice(0, 12).map(renderPortDot).join("")}
+          ${topRow.length > 12 ? `<span class="w-1"></span>${topRow.slice(12, 24).map(renderPortDot).join("")}` : ''}
+        </div>
+        ${botRow.length > 0 ? `
+          <div class="flex items-center gap-[3px]">
+            ${botRow.slice(0, 12).map(renderPortDot).join("")}
+            ${botRow.length > 12 ? `<span class="w-1"></span>${botRow.slice(12, 24).map(renderPortDot).join("")}` : ''}
+          </div>
+        ` : ''}
+      </div>
+      ${uplinkPorts.length > 0 ? `
+        <div class="pl-1.5 border-l border-slate-800 flex items-center gap-[3px]" title="Optical Uplink / Stack Cages">
+          ${uplinkPorts.map(renderPortDot).join("")}
+        </div>
+      ` : ''}
     </div>
   `;
 }
@@ -1626,64 +1761,56 @@ function renderRackLocationTransferBar() {
     activeRackId = activeNorm;
   }
 
-  let html = `
-    <div class="p-2.5 bg-slate-950/80 border border-slate-800 rounded-xl shadow-inner">
-      <div class="flex items-center justify-between gap-3 flex-wrap">
-        <!-- Searchable Mounting Location Selector -->
-        <div class="flex items-center gap-2 flex-1 min-w-[280px]">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5 shrink-0">
-            <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400"></i>
-            <span>Mounting Location:</span>
-          </span>
-          <div class="relative flex-1">
-            <select 
-              id="rackLocationSearchSelect" 
-              onchange="switchActiveRackElevation(this.value)" 
-              class="w-full bg-slate-900 border border-slate-700 hover:border-indigo-500 text-indigo-300 font-bold rounded-lg px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none cursor-pointer shadow-sm font-mono"
-              title="Select active enclosure/mounting host to display"
-            >
-              ${locations.map(loc => {
-                const isCurrent = loc.name === activeNorm;
-                const count = counts[loc.name] || 0;
-                const typeDef = FacilityStore.HOST_TYPES[loc.hostType] || FacilityStore.HOST_TYPES.equipment_rack;
-                const typeLabel = typeDef.badgeLabel || "Rack";
-                return `<option value="${escapeHTML(loc.name)}" ${isCurrent ? 'selected' : ''}>[${typeLabel}] ${escapeHTML(loc.name)} (${count} unit${count === 1 ? '' : 's'})</option>`;
-              }).join('')}
-            </select>
-          </div>
+  container.innerHTML = `
+    <div class="px-3 py-1.5 bg-slate-950/80 border border-slate-800/90 rounded-xl flex items-center justify-between gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1 shrink-0">
+          <i data-lucide="map-pin" class="w-3 h-3 text-indigo-400"></i>
+          <span>Active Host:</span>
+        </span>
+        <select 
+          id="rackLocationSearchSelect" 
+          onchange="switchActiveRackElevation(this.value)" 
+          class="flex-1 max-w-md bg-slate-900 border border-slate-700 hover:border-indigo-500 text-indigo-300 font-bold rounded-lg px-2 py-1 text-xs focus:border-indigo-500 focus:outline-none cursor-pointer font-mono"
+          title="Select active enclosure/mounting host to display"
+        >
+          ${locations.map(loc => {
+            const isCurrent = loc.name === activeNorm;
+            const count = counts[loc.name] || 0;
+            const typeDef = FacilityStore.HOST_TYPES[loc.hostType] || FacilityStore.HOST_TYPES.equipment_rack;
+            const typeLabel = typeDef.badgeLabel || "Rack";
+            return `<option value="${escapeHTML(loc.name)}" ${isCurrent ? 'selected' : ''}>[${typeLabel}] ${escapeHTML(loc.name)} (${count} unit${count === 1 ? '' : 's'})</option>`;
+          }).join('')}
+        </select>
+      </div>
+
+      <div class="flex items-center gap-1.5 shrink-0">
+        <div 
+          id="locationTransferDropTarget"
+          class="px-2.5 py-1 rounded-lg border border-dashed border-indigo-500/50 bg-indigo-950/30 hover:bg-indigo-900/50 text-indigo-300 text-[11px] font-semibold flex items-center gap-1 transition-all select-none cursor-copy"
+          title="Drag any equipment here to transfer into active location (${escapeHTML(activeNorm)})"
+          ondragover="handleLocationTransferDragOver(event)"
+          ondragleave="handleLocationTransferDragLeave(event)"
+          ondrop="handleLocationTransferDrop(event, activeRackId)"
+        >
+          <i data-lucide="arrow-down-to-dot" class="w-3 h-3 text-indigo-400"></i>
+          <span class="hidden sm:inline">Drop to Transfer Here</span>
         </div>
 
-        <!-- Target Transfer Drop Dock & Unassigned Bin -->
-        <div class="flex items-center gap-2 shrink-0">
-          <div 
-            id="locationTransferDropTarget"
-            class="px-3 py-1.5 rounded-lg border border-dashed border-indigo-500/60 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 text-xs font-semibold flex items-center gap-1.5 transition-all select-none cursor-copy"
-            title="Drag any equipment here to transfer into active location (${escapeHTML(activeNorm)})"
-            ondragover="handleLocationTransferDragOver(event)"
-            ondragleave="handleLocationTransferDragLeave(event)"
-            ondrop="handleLocationTransferDrop(event, activeRackId)"
-          >
-            <i data-lucide="arrow-down-to-dot" class="w-3.5 h-3.5 text-indigo-400"></i>
-            <span>Drop to Transfer to Active Location</span>
-          </div>
-
-          <div 
-            class="px-3 py-1.5 rounded-lg bg-amber-950/30 hover:bg-amber-950/50 border border-dashed border-amber-600/50 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer select-none"
-            title="Drag equipment here to unmount and return to Unassigned shelf"
-            ondragover="handleLocationTransferDragOver(event)"
-            ondragleave="handleLocationTransferDragLeave(event)"
-            ondrop="handleLocationTransferDrop(event, 'Unassigned')"
-          >
-            <i data-lucide="inbox" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Unassigned Bin</span>
-            <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-amber-900/60 text-amber-200 font-bold">${unassignedCount}</span>
-          </div>
+        <div 
+          class="px-2.5 py-1 rounded-lg bg-amber-950/25 hover:bg-amber-950/50 border border-dashed border-amber-600/50 text-amber-300 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer select-none"
+          title="Drag equipment here to unmount and return to Unassigned shelf"
+          ondragover="handleLocationTransferDragOver(event)"
+          ondragleave="handleLocationTransferDragLeave(event)"
+          ondrop="handleLocationTransferDrop(event, 'Unassigned')"
+        >
+          <i data-lucide="inbox" class="w-3 h-3 text-amber-400"></i>
+          <span>Staging</span>
+          <span class="text-[9.5px] font-mono px-1.5 py-0.2 rounded bg-amber-900/60 text-amber-200 font-bold">${unassignedCount}</span>
         </div>
       </div>
     </div>
   `;
-
-  container.innerHTML = html;
 }
 
 // -----------------------------------------------------------
@@ -1710,28 +1837,24 @@ function renderEnclosureHardwareBar(activeEnc, parsed) {
   const model = activeEnc.catalogModel || activeEnc.name || "Physical Enclosure";
   const msrp = (activeEnc.msrp !== undefined) ? activeEnc.msrp : 0;
   const maxWeight = activeEnc.maxWeightLbs || (hostType === "equipment_rack" ? 3000 : 250);
-  const tareWeight = activeEnc.tareWeightLbs || (hostType === "equipment_rack" ? 275 : 45);
   const depth = activeEnc.depthInches || (hostType === "equipment_rack" ? 42 : 12);
-  const doorType = activeEnc.doorType || "Standard";
   const inBOM = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isEnclosureInBOM === "function")
     ? FacilityStore.isEnclosureInBOM(activeEnc.id)
     : Boolean(activeEnc.inBOM);
 
-  // Form factor label
   let formFactorBadge = "";
   if (hostType === "equipment_rack") {
-    formFactorBadge = `${activeEnc.heightU || activeRackHeight || 24}U EIA-310-D`;
+    formFactorBadge = `${activeEnc.heightU || activeRackHeight || 24}U EIA`;
   } else if (hostType === "security_cabinet") {
     formFactorBadge = `${activeEnc.subplateBays || 8}-Bay Subplate`;
   } else if (hostType === "industrial_din") {
-    formFactorBadge = `${activeEnc.dinRails || 2}x DIN Rail (NEMA 4X)`;
+    formFactorBadge = `${activeEnc.dinRails || 2}x DIN (NEMA 4X)`;
   } else if (hostType === "architectural_backboard") {
     formFactorBadge = `${activeEnc.widthFt || 4}'x${activeEnc.heightFt || 8}' Plywood`;
   } else {
     formFactorBadge = "Structural Mount";
   }
 
-  // Build catalog part selector options
   let optionsHtml = "";
   if (catalogRacks.length > 0) {
     optionsHtml = catalogRacks.map(r => {
@@ -1740,73 +1863,44 @@ function renderEnclosureHardwareBar(activeEnc, parsed) {
     }).join('');
   }
 
-  // If current part is custom or not in catalogRacks, add it
   const matchInList = catalogRacks.some(r => r.sku === sku);
   if (!matchInList && sku) {
     optionsHtml = `<option value="${escapeHTML(sku)}" selected>${escapeHTML(vendor)} ${escapeHTML(sku)} (Custom Model)</option>` + optionsHtml;
   }
 
   container.innerHTML = `
-    <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-indigo-500/40 rounded-xl p-3 shadow-lg select-none">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <!-- Left: Hardware Identity & Specs -->
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0 shadow-inner">
-            <i data-lucide="${hostType === 'security_cabinet' ? 'shield' : (hostType === 'industrial_din' ? 'box' : (hostType === 'architectural_backboard' ? 'layers' : 'server'))}" class="w-5 h-5"></i>
-          </div>
-          <div class="min-w-0">
-            <div class="flex items-center gap-2 flex-wrap mb-0.5">
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/60 shadow-sm flex items-center gap-1">
-                <i data-lucide="tag" class="w-2.5 h-2.5"></i>
-                ${escapeHTML(vendor)} &bull; ${escapeHTML(sku)}
-              </span>
-              <span class="text-xs font-bold text-white truncate max-w-xs md:max-w-md" title="${escapeHTML(model)}">
-                ${escapeHTML(model)}
-              </span>
-            </div>
-            <!-- Dimension & Rating Badges -->
-            <div class="flex items-center gap-1.5 flex-wrap text-[9.5px] font-mono text-slate-400">
-              <span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-slate-300 font-bold">${formFactorBadge}</span>
-              ${depth ? `<span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-cyan-300 font-bold">${depth}" Usable Depth</span>` : ''}
-              <span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-emerald-300 font-bold">${maxWeight.toLocaleString()} lbs Capacity</span>
-              <span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-slate-400">${tareWeight} lbs Tare</span>
-              ${doorType ? `<span class="px-1.5 py-0.2 rounded bg-slate-950 border border-slate-800 text-purple-300">${escapeHTML(doorType)}</span>` : ''}
-            </div>
-          </div>
-        </div>
+    <div class="bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 select-none">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-950 text-indigo-300 border border-indigo-700/60 shrink-0">
+          ${escapeHTML(vendor)} &bull; ${escapeHTML(sku)}
+        </span>
+        <span class="text-xs font-bold text-slate-200 truncate max-w-[260px]" title="${escapeHTML(model)}">
+          ${escapeHTML(model)}
+        </span>
+        <span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-300 font-semibold hidden md:inline">${formFactorBadge}</span>
+        ${depth ? `<span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-cyan-300 font-semibold hidden md:inline">${depth}"D</span>` : ''}
+        <span class="px-1.5 py-0.2 rounded bg-slate-900 border border-slate-800 text-[10px] font-mono text-emerald-300 font-semibold hidden lg:inline">${maxWeight.toLocaleString()} lbs</span>
+      </div>
 
-        <!-- Right: Real Catalog Switcher Dropdown & 1-Click BOM Toggle -->
-        <div class="flex items-center gap-2.5 ml-auto">
-          <!-- Catalog Hardware Model Switcher -->
-          <div class="flex items-center gap-1.5">
-            <label class="text-[10px] uppercase font-bold text-slate-400 font-mono hidden sm:inline">Model:</label>
-            <select 
-              id="enclosureModelSelect" 
-              onchange="window.handleEnclosureHardwareChange('${activeEnc.id}', this.value)"
-              class="bg-slate-950 border border-slate-700 hover:border-indigo-500 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 font-medium focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer max-w-[210px] sm:max-w-[260px] truncate"
-              title="Select physical enclosure hardware from catalog"
-            >
-              ${optionsHtml}
-            </select>
-          </div>
-
-          <!-- MSRP Price Display -->
-          <div class="text-right px-2 py-0.5 rounded-lg bg-slate-950 border border-slate-800/80">
-            <span class="text-[9px] uppercase font-mono text-slate-400 block leading-tight">MSRP</span>
-            <span class="text-xs font-mono font-bold text-emerald-400">$${msrp.toLocaleString()}</span>
-          </div>
-
-          <!-- 1-Click Project BOM & Quote Toggle Button -->
-          <button 
-            type="button"
-            onclick="window.toggleEnclosureBOM('${activeEnc.id}')"
-            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer ${inBOM ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/40' : 'bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700'}"
-            title="${inBOM ? 'Physical enclosure included in Project BOM Quote. Click to remove.' : 'Click to include physical enclosure frame in Project BOM & Quote'}"
-          >
-            <i data-lucide="${inBOM ? 'check' : 'plus'}" class="w-3.5 h-3.5"></i>
-            <span>${inBOM ? 'In BOM Quote' : '+ Add to Quote'}</span>
-          </button>
-        </div>
+      <div class="flex items-center gap-2 ml-auto">
+        <select 
+          id="enclosureModelSelect" 
+          onchange="window.handleEnclosureHardwareChange('${activeEnc.id}', this.value)"
+          class="bg-slate-900 border border-slate-700 hover:border-indigo-500 text-slate-200 text-[11px] rounded-lg px-2 py-1 font-medium focus:outline-none focus:border-indigo-500 transition-colors cursor-pointer max-w-[220px] truncate"
+          title="Select physical enclosure hardware from catalog"
+        >
+          ${optionsHtml}
+        </select>
+        <span class="text-[11px] font-mono font-bold text-emerald-400 px-1.5">$${msrp.toLocaleString()}</span>
+        <button 
+          type="button"
+          onclick="window.toggleEnclosureBOM('${activeEnc.id}')"
+          class="px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer ${inBOM ? 'bg-emerald-600 hover:bg-emerald-500 text-white' : 'bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700'}"
+          title="${inBOM ? 'Physical enclosure included in Project BOM Quote. Click to remove.' : 'Click to include physical enclosure frame in Project BOM & Quote'}"
+        >
+          <i data-lucide="${inBOM ? 'check' : 'plus'}" class="w-3 h-3"></i>
+          <span>${inBOM ? 'In Quote' : '+ Quote'}</span>
+        </button>
       </div>
     </div>
   `;
@@ -1910,7 +2004,6 @@ function renderRackVisualizer() {
       const itemLoc = FacilityStore.normalize(rawLoc);
 
       if (itemLoc === FacilityStore.UNASSIGNED) {
-        // Only show unassigned hardware that can actually mount to this host type (e.g. exclude cameras/radios from racks)
         const comp = checkDeviceHostCompatibility(item, hostType);
         if (comp.compatible) {
           unassignedItems.push(item);
@@ -1941,11 +2034,11 @@ function renderRackVisualizer() {
   const rearBtn = document.getElementById("rackViewBtn-rear");
   if (frontBtn && rearBtn) {
     if (rackViewOrientation === "front") {
-      frontBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
-      rearBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
+      frontBtn.className = "px-2 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
+      rearBtn.className = "px-2 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
     } else {
-      frontBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
-      rearBtn.className = "px-2.5 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
+      frontBtn.className = "px-2 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 text-slate-400 hover:text-white";
+      rearBtn.className = "px-2 py-0.5 rounded-md text-[11px] font-bold transition-all flex items-center gap-1 bg-indigo-600 text-white shadow-sm";
     }
   }
 
@@ -1960,14 +2053,11 @@ function renderRackVisualizer() {
     const orientLabel = (hostType === "equipment_rack" && rackViewOrientation === "rear") ? `Rear View & ${pduModeBadge}` : "Front Elevation";
     titleEl.innerHTML = `
       <i data-lucide="${hostTypeDef.icon || 'server'}" class="w-3.5 h-3.5 text-indigo-400"></i>
-      <span>${escapeHTML(activeRackId)} &bull; ${hostTypeDef.label} &bull; <span class="text-indigo-400 font-mono">${orientLabel}</span></span>
+      <span>${escapeHTML(activeRackId)} &bull; <span class="text-indigo-400 font-mono">${orientLabel}</span></span>
     `;
   }
 
-  // Render Enclosure Hardware Specification Bar directly above elevation
   renderEnclosureHardwareBar(activeEnc, parsed);
-
-  // Render Prominent Staging Dock at the TOP of elevation column (Requirement 2)
   renderRackUnassignedStagingDock(unassignedItems, parsed, activeEnc);
   renderHostStagingDrawer(unassignedItems, parsed, activeEnc);
 
@@ -1999,7 +2089,7 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
 
   assignedItems.forEach(item => {
     const stackUnits = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
-    const baseRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 0) : 1;
+    const baseRU = (item.rackUnits !== undefined && itRackUnits(item)) ? itRackUnits(item) : 1;
     const hasPPBetween = (stackUnits >= 2 && !!item.patchPanelBetween);
     const hasHCMBetween = (stackUnits >= 2 && !!item.cableManagerBetween);
     const isStdPod = !!item.standardPod;
@@ -2033,6 +2123,10 @@ function renderEquipmentRackFrame(frame, assignedItems, unassignedItems, parsed,
   const badgeEl = document.getElementById("rackUtilizationBadge");
   const occupiedU = Object.values(slots).filter(s => s && s.isBase).reduce((acc, s) => acc + s.span, 0);
   if (badgeEl) badgeEl.innerText = `${occupiedU} / ${activeRackHeight} U Used`;
+}
+
+function itRackUnits(item) {
+  return (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 1) : 1;
 }
 
 function isStackableSwitch(item) {
@@ -2114,6 +2208,11 @@ function getRackItemHeight(it) {
 function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, activeEnc) {
   let railHTML = "";
 
+  // Ensure PortEngine is synced so rack faceplates and patch panels reflect real-time port occupancy
+  if (typeof PortEngine !== "undefined" && typeof PortEngine.syncAllSwitchPorts === "function") {
+    PortEngine.syncAllSwitchPorts();
+  }
+
   for (let u = maxU; u >= 1; u--) {
     const slotData = slots[u];
 
@@ -2124,6 +2223,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
         const stackUnits = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
         const isSwitch = isStackableSwitch(it);
         const isCopper = isCopperSwitch(it);
+        const isFirewall = isFirewallDevice(it);
         const targetU = parseInt(it.rackSlot, 10);
         const hasHcmBelow = !!(targetU > 1 && slots[targetU - 1] && (
           slots[targetU - 1].item.sku === "HCM-1U" || 
@@ -2135,172 +2235,149 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
         const uLabel = slotData.span > 1 ? `U${u + slotData.span - 1}-U${u}` : `U${u}`;
         const portPreview = getDeviceFrontPortPreview(it);
 
+        // Live Port & Patch Panel telemetry for switches/firewalls
+        const portSummary = (isSwitch || isFirewall) && typeof PortEngine !== "undefined"
+          ? PortEngine.getPortSummary(it)
+          : null;
+        const patchMapping = (isSwitch || isFirewall) && typeof PortEngine !== "undefined"
+          ? PortEngine.resolveSwitchPatchMapping(it)
+          : null;
+
         railHTML += `
           <div 
-            class="group relative bg-slate-900 border ${compat.compatible ? 'border-indigo-500/60 hover:border-indigo-400' : 'border-amber-500/60 hover:border-amber-400'} rounded-lg px-3 py-2 flex flex-col justify-between cursor-move shadow-md transition-all select-none"
+            class="group relative bg-slate-900 border ${compat.compatible ? 'border-indigo-500/60 hover:border-indigo-400' : 'border-amber-500/60 hover:border-amber-400'} rounded-lg px-2.5 py-1.5 flex flex-col justify-between cursor-move shadow-md transition-all select-none"
             draggable="true"
             ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
             ondragover="handleRackSlotDragOver(event)"
             ondrop="handleRackSlotDrop(event, ${u + slotData.span - 1})"
-            style="min-height: ${Math.max(44, slotData.span * 46)}px;"
           >
-            <div class="flex items-center justify-between w-full">
-              <div class="flex items-center gap-3 min-w-0">
-                <span class="text-[11px] font-mono font-bold text-indigo-400 w-14 shrink-0">${uLabel}</span>
-                <div class="min-w-0">
+            <!-- Compact Top Chassis Header Bar -->
+            <div class="flex items-center justify-between w-full gap-2">
+              <div class="flex items-center gap-2 min-w-0 flex-1">
+                <span class="text-[11px] font-mono font-bold text-indigo-400 w-13 shrink-0">${uLabel}</span>
+                <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1.5 flex-wrap">
-                    ${(!isPassiveInfrastructure(it) && it.deviceNumber) ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300" title="Device Sequence ID">${escapeHTML(it.deviceNumber)}</span>` : ''}
-                    <span class="text-xs font-bold text-white truncate" title="${escapeHTML(isPassiveInfrastructure(it) ? it.model : (it.friendlyName || it.model))}">${escapeHTML(isPassiveInfrastructure(it) ? it.model : (it.friendlyName || it.model))}</span>
+                    ${(!isPassiveInfrastructure(it) && it.deviceNumber) ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300 shrink-0" title="Device Sequence ID">${escapeHTML(it.deviceNumber)}</span>` : ''}
+                    <span class="text-xs font-bold text-white truncate max-w-[260px] sm:max-w-[360px]" title="${escapeHTML(isPassiveInfrastructure(it) ? it.model : (it.friendlyName || it.model))}">
+                      ${escapeHTML(isPassiveInfrastructure(it) ? it.model : (it.friendlyName || it.model))}
+                    </span>
                     ${!isPassiveInfrastructure(it) ? `
-                      <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${it.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
+                      <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-all" title="Edit Friendly Name">
                         <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
                       </button>
                     ` : ''}
-                    <span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-slate-950 text-slate-400 border border-slate-800">FRONT</span>
-                    <!-- Status LEDs or Passive/UPS Badge -->
-                    ${(it.role === "Structured Cabling" || it.sku?.startsWith("PP-") || it.sku?.startsWith("HCM-")) ? `
-                      <span class="px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono font-bold text-[8.5px]">PASSIVE INFRA</span>
-                    ` : (it.role === "UPS" || it.category === "ups") ? `
-                      <span class="px-1.5 py-0.2 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-600/60 font-mono font-bold text-[8.5px] flex items-center gap-1 shadow-sm" title="UPS Battery Protected">
-                        <i data-lucide="zap" class="w-2.5 h-2.5 text-amber-400"></i>
-                        <span>UPS BATTERY PROTECTED</span>
-                      </span>
-                    ` : (it.role === "Battery Pack" || it.type === "ebp" || it.isEbp) ? `
-                      <span class="px-1.5 py-0.2 rounded bg-purple-950/90 text-purple-300 border border-purple-600/60 font-mono font-bold text-[8.5px] flex items-center gap-1 shadow-sm" title="External Battery Pack">
-                        <i data-lucide="battery-charging" class="w-2.5 h-2.5 text-purple-400"></i>
-                        <span>EXTENDED BATTERY PACK</span>
-                      </span>
-                    ` : `
-                      <div class="flex items-center gap-1 text-[8px] font-mono">
-                        <span class="px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold" title="Power Supply Good">PWR ●</span>
-                        <span class="px-1 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800/60 font-bold" title="System Normal">SYS ●</span>
-                        ${totalPoEWatts > 0 ? `<span class="px-1 py-0.2 rounded bg-sky-950 text-sky-400 border border-sky-800/60 font-bold" title="PoE Active">POE ●</span>` : ''}
-                      </div>
-                    `}
-                  </div>
-                  <div class="flex items-center gap-2 text-[10px] text-slate-400 font-mono mt-0.5 truncate">
-                    ${(it.friendlyName && it.friendlyName !== it.model) ? `<span>${escapeHTML(it.model)}</span><span>&bull;</span>` : ''}
-                    <span>${escapeHTML(it.vendor || 'Generic')}</span>
-                    <span>&bull;</span>
-                    <span>${slotData.span}U</span>
-                    <span>&bull;</span>
-                    ${(it.role === "Structured Cabling" || it.sku?.startsWith("PP-") || it.sku?.startsWith("HCM-")) ? `
-                      <span class="text-purple-300 font-semibold">${it.ports ? `${it.ports}x Keystone Ports` : (it.model.includes("Manager") ? "Cable Management" : "Passive Panel")}</span>
-                    ` : (it.role === "UPS" || it.category === "ups") ? `
-                      <span class="text-emerald-400 font-semibold">${it.va || 1500}VA / ${it.powerWatts || 1000}W Rated &bull; Inverter Output</span>
-                    ` : (it.role === "Battery Pack" || it.type === "ebp" || it.isEbp) ? `
-                      <span class="text-purple-300 font-semibold">${it.dcVoltage || 72}VDC Bus &bull; Multi-Hour Standby Module</span>
-                    ` : `
-                      ${portPreview ? `<span class="text-indigo-300 font-semibold">${portPreview}</span><span>&bull;</span>` : ''}
-                      <span>${totalBaseWatts}W Base${totalPoEWatts > 0 ? ` + ${totalPoEWatts}W PoE` : ''}</span>
-                    `}
+                    <span class="text-[9.5px] text-slate-400 font-mono hidden sm:inline truncate">
+                      &bull; ${escapeHTML(it.vendor || 'Generic')} &bull; ${slotData.span}U
+                      ${portPreview ? ` &bull; <span class="text-indigo-300 font-semibold">${portPreview}</span>` : ''}
+                      ${totalBaseWatts > 0 ? ` &bull; ${totalBaseWatts}W${totalPoEWatts > 0 ? `+${totalPoEWatts}W PoE` : ''}` : ''}
+                    </span>
                   </div>
                 </div>
               </div>
-              <div class="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
-                <!-- Omnipresent Cross-Navigation Action Icons -->
-                <button onclick="event.stopPropagation(); jumpToTopologyTarget('node:${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-indigo-300 transition-opacity" title="Jump to Logical Topology">
-                  <i data-lucide="network" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="event.stopPropagation(); jumpToPhysicalLayoutTarget('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-amber-300 transition-opacity" title="Jump to Physical Layout Canvas">
-                  <i data-lucide="map" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="event.stopPropagation(); jumpToBomTarget('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-emerald-300 transition-opacity" title="Jump to BOM Line Item">
-                  <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-                </button>
+
+              <!-- Right Side: Direct Faceplate Preview (for 1U Standalone Switch) + Compact Action Controls -->
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${(isSwitch && !slotData.isStdPod && stackUnits === 1) ? renderInteractiveRackSwitchFaceplateHTML(it, 1, patchMapping) : ''}
+
+                ${(isSwitch || isFirewall) ? `
+                  <button
+                    type="button"
+                    onclick="event.stopPropagation(); openPortMatrixStudio('${it.instanceId}')"
+                    class="px-2 py-0.5 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-500/60 text-sky-200 hover:text-white text-[9.5px] font-mono font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                    title="Open Switch Port Matrix &amp; Patch Panel Trace Studio (${portSummary ? `${portSummary.used}/${portSummary.total} ports active` : 'Inspect Ports'})"
+                  >
+                    <i data-lucide="cpu" class="w-2.5 h-2.5 text-sky-400"></i>
+                    <span>Patch &amp; Ports${portSummary ? ` (${portSummary.used}/${portSummary.total})` : ''}</span>
+                  </button>
+                ` : ''}
 
                 ${isSwitch ? `
                   <!-- Direct In-Rack Switch Stacking Controls -->
-                  <div class="flex items-center gap-1 bg-slate-950/90 border border-slate-800 p-0.5 rounded-lg shadow-sm">
+                  <div class="flex items-center gap-0.5 bg-slate-950/90 border border-slate-800 p-0.5 rounded-lg">
                     ${stackUnits >= 2 ? `
                       <button 
                         type="button" 
                         onclick="event.stopPropagation(); updateSwitchStackFromRack('${it.instanceId}', ${stackUnits - 1})"
-                        class="w-5 h-5 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-colors cursor-pointer"
-                        title="Decrease stack size (${stackUnits - 1 === 1 ? 'Standalone' : `${stackUnits - 1}x Stack`})"
-                      >
-                        -
-                      </button>
-                      <span class="text-[9px] font-mono font-bold px-1 text-indigo-300 flex items-center gap-1" title="${stackUnits}-Chassis Virtual Stack (${slotData.span}U total)">
-                        <i data-lucide="layers" class="w-3 h-3 text-indigo-400"></i> ${stackUnits}x
-                      </span>
+                        class="w-4 h-4 flex items-center justify-center rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-[10px] font-bold transition-colors cursor-pointer"
+                        title="Decrease stack size"
+                      >-</button>
+                      <span class="text-[9px] font-mono font-bold px-1 text-indigo-300" title="${stackUnits}-Chassis Virtual Stack">${stackUnits}x</span>
                       <button 
                         type="button" 
                         onclick="event.stopPropagation(); updateSwitchStackFromRack('${it.instanceId}', ${stackUnits + 1})"
-                        class="w-5 h-5 flex items-center justify-center rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-colors cursor-pointer"
-                        title="Add stack member (${stackUnits + 1}x Stack)"
+                        class="w-4 h-4 flex items-center justify-center rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold transition-colors cursor-pointer"
+                        title="Add stack member"
                         ${stackUnits >= 8 ? 'disabled class="opacity-50 cursor-not-allowed"' : ''}
-                      >
-                        +
-                      </button>
+                      >+</button>
                     ` : `
                       <button 
                         type="button" 
                         onclick="event.stopPropagation(); updateSwitchStackFromRack('${it.instanceId}', 2)"
-                        class="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 hover:text-white flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                        class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-indigo-300 hover:text-white flex items-center gap-1 transition-all cursor-pointer"
                         title="Configure as 2-Switch Virtual Stack"
-                      >
-                        <i data-lucide="layers" class="w-2.5 h-2.5 text-indigo-400"></i>
-                        <span>+ Stack</span>
-                      </button>
+                      >+Stack</button>
                     `}
                   </div>
 
-                  ${stackUnits >= 2 ? `
-                    <!-- In-Stack Cable Management Option -->
-                    <button 
-                      type="button" 
-                      onclick="event.stopPropagation(); toggleStackCableManager('${it.instanceId}')" 
-                      class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 ${it.cableManagerBetween ? 'bg-amber-900/90 text-amber-200 border border-amber-500 hover:bg-amber-800' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}" 
-                      title="${it.cableManagerBetween ? 'Remove 1U cable management between stacked switches' : 'Place 1U Horizontal Cable Manager between stacked switches'}"
-                    >
-                      <i data-lucide="${it.cableManagerBetween ? 'check-square' : 'align-justify'}" class="w-2.5 h-2.5 ${it.cableManagerBetween ? 'text-amber-400' : 'text-slate-400'}"></i>
-                      <span>${it.cableManagerBetween ? '1U Cable Mgr Between' : '+ 1U Cable Mgr'}</span>
-                    </button>
-                  ` : ''}
-
                   ${isCopper ? `
-                    <!-- Standard Pod: 24P Patch Panels Directly Above & Below + 6" Patch Cables -->
                     <button 
                       type="button" 
                       onclick="event.stopPropagation(); toggleSwitchStandardPod('${it.instanceId}')" 
-                      class="px-2 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 ${it.standardPod ? 'bg-emerald-900/90 text-emerald-200 border border-emerald-500 hover:bg-emerald-800 shadow-sm' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}" 
-                      title="${it.standardPod ? 'Remove standard 24P patch panels above/below' : 'Standard Rack Design: Add 1U 24P patch panels directly above & below with 6\" patch cables'}"
+                      class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${it.standardPod ? 'bg-purple-900/90 text-purple-200 border border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}" 
+                      title="${it.standardPod ? 'Remove standard 24P patch panels above/below' : 'Add 1U 24P patch panels directly above & below with 6\" patch cables'}"
                     >
-                      <i data-lucide="${it.standardPod ? 'check-circle-2' : 'panels-top-left'}" class="w-2.5 h-2.5 ${it.standardPod ? 'text-emerald-400' : 'text-slate-400'}"></i>
-                      <span>${it.standardPod ? 'Std 24P Pod Active' : '+ Std 24P Above/Below'}</span>
+                      <i data-lucide="layers" class="w-2.5 h-2.5 ${it.standardPod ? 'text-purple-300' : 'text-slate-400'}"></i>
+                      <span>${it.standardPod ? '24P Pod' : '+24P Pod'}</span>
                     </button>
                   ` : ''}
 
-                  ${isFiberOrFirewall(it) ? `
-                    <!-- Horizontal 1U Cable Management Option for Fiber Switches & Firewalls -->
+                  ${(stackUnits >= 2 && !it.standardPod) ? `
                     <button 
                       type="button" 
-                      onclick="event.stopPropagation(); toggleFiberFirewallCableManager('${it.instanceId}')" 
-                      class="px-2 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 ${hasHcmBelow ? 'bg-amber-900/90 text-amber-200 border border-amber-500 hover:bg-amber-800 shadow-sm' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}" 
-                      title="${hasHcmBelow ? 'Remove 1U horizontal cable manager below device' : 'Place 1U Horizontal Cable Manager below device (not doubled up)'}"
+                      onclick="event.stopPropagation(); toggleStackCableManager('${it.instanceId}')" 
+                      class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${it.cableManagerBetween ? 'bg-amber-900/90 text-amber-200 border border-amber-500' : 'bg-slate-800 text-slate-300 border border-slate-700'}" 
+                      title="Toggle 1U Horizontal Cable Manager between stacked switches"
                     >
-                      <i data-lucide="${hasHcmBelow ? 'check-square' : 'align-justify'}" class="w-2.5 h-2.5 ${hasHcmBelow ? 'text-amber-400' : 'text-slate-400'}"></i>
-                      <span>${hasHcmBelow ? '1U Cable Mgr Below' : '+ 1U Cable Mgr'}</span>
+                      <span>${it.cableManagerBetween ? '1U Mgr' : '+1U Mgr'}</span>
                     </button>
                   ` : ''}
                 ` : ''}
-                ${!compat.compatible ? `
-                  <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800" title="${compat.advisory}">⚠️ Bracket Req</span>
+
+                ${isFiberOrFirewall(it) ? `
+                  <button 
+                    type="button" 
+                    onclick="event.stopPropagation(); toggleFiberFirewallCableManager('${it.instanceId}')" 
+                    class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${hasHcmBelow ? 'bg-amber-900/90 text-amber-200 border border-amber-500' : 'bg-slate-800 text-slate-300 border border-slate-700'}" 
+                    title="Toggle 1U Horizontal Cable Manager below device"
+                  >
+                    <span>${hasHcmBelow ? '1U Mgr' : '+1U Mgr'}</span>
+                  </button>
                 ` : ''}
-                <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 ${getRoleColor(it.role)}">${escapeHTML(it.role || 'Hardware')}</span>
-                <button onclick="unmountRackItem('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-amber-400 transition-opacity" title="Unmount to Staging">
-                  <i data-lucide="inbox" class="w-3.5 h-3.5"></i>
-                </button>
-                <button onclick="event.stopPropagation(); deleteDeviceFromBOM('${it.instanceId}')" class="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-400 transition-opacity" title="Delete from Quote BOM">
-                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                </button>
+
+                <!-- Hover-Only Cross-Navigation & Unmount/Delete Icons -->
+                <div class="hidden group-hover:flex items-center gap-0.5 bg-slate-950/90 border border-slate-800 rounded px-1 py-0.5">
+                  <button onclick="event.stopPropagation(); jumpToTopologyTarget('node:${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-indigo-300" title="Jump to Logical Topology">
+                    <i data-lucide="network" class="w-3 h-3"></i>
+                  </button>
+                  <button onclick="event.stopPropagation(); jumpToPhysicalLayoutTarget('${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-amber-300" title="Jump to Physical Layout Canvas">
+                    <i data-lucide="map" class="w-3 h-3"></i>
+                  </button>
+                  <button onclick="event.stopPropagation(); jumpToBomTarget('${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-emerald-300" title="Jump to BOM Line Item">
+                    <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+                  </button>
+                  <button onclick="unmountRackItem('${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-amber-400" title="Unmount to Staging">
+                    <i data-lucide="inbox" class="w-3 h-3"></i>
+                  </button>
+                  <button onclick="event.stopPropagation(); deleteDeviceFromBOM('${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-rose-400" title="Delete from Quote BOM">
+                    <i data-lucide="trash-2" class="w-3 h-3"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <!-- Standard Pod Layout: 24P Panel Above -> Switch -> 24P Panel Below per stack unit -->
+            <!-- Standard Pod Layout: Crisp 19" 1U Faceplates (Upper 24P Panel -> Switch Chassis -> Lower 24P Panel) -->
             ${slotData.isStdPod ? `
-              <div class="mt-2 space-y-1.5 border-t border-slate-800/80 pt-2">
+              <div class="mt-1.5 space-y-1 border-t border-slate-800/80 pt-1.5">
                 ${Array.from({ length: stackUnits }, (_, sIdx) => {
                   const unitNum = stackUnits - sIdx;
                   const isMaster = unitNum === 1;
@@ -2310,177 +2387,107 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                   const upperPPU = unitBaseU + slotData.baseRU + 1;
 
                   const is48P = (parseInt(it.ports, 10) || 24) >= 48;
-                  const upperPortRange = is48P ? "Ports 1-24" : "Ports 1-12";
-                  const lowerPortRange = is48P ? "Ports 25-48" : "Ports 13-24";
-                  const unitLabel = stackUnits > 1 ? `Unit ${unitNum} ` : "";
+                  const upperPortRange = is48P ? "Ports 1–24" : "Ports 1–12";
+                  const lowerPortRange = is48P ? "Ports 25–48" : "Ports 13–24";
+
+                  const upperPanelId = stackUnits > 1 ? `PP-U${unitNum}-TOP` : `PP-01-TOP`;
+                  const lowerPanelId = stackUnits > 1 ? `PP-U${unitNum}-BOT` : `PP-02-BOT`;
+                  const upperPanelObj = patchMapping?.panels?.find(p => p.panelId === upperPanelId);
+                  const lowerPanelObj = patchMapping?.panels?.find(p => p.panelId === lowerPanelId);
+
+                  const upperJacks = upperPanelObj ? upperPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                  const lowerJacks = lowerPanelObj ? lowerPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                  const upperActiveCount = upperJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                  const lowerActiveCount = lowerJacks.filter(j => j.port && j.port.connectedDeviceId).length;
 
                   return `
-                    <!-- Unit ${unitNum} Pod Sandwich -->
-                    <div class="space-y-1 p-1 rounded bg-slate-950/60 border border-purple-900/40">
-                      <!-- Upper 24-Port Patch Panel Deck (Directly Above Unit ${unitNum}) -->
-                      <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
-                        <div class="flex items-center gap-2">
-                          <span class="text-purple-300 font-bold">U${upperPPU}</span>
-                          <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
-                            <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24-Port Modular Keystone Patch Panel
+                    <div class="space-y-[3px] p-1 rounded-lg bg-slate-950/75 border border-slate-800/90">
+                      <!-- 1U Upper 24-Port Keystone Patch Panel Row -->
+                      <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-purple-300 font-bold w-7 shrink-0">U${upperPPU}</span>
+                          <span class="px-1.5 py-0.2 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${upperPanelId}</span>
+                          <span class="text-slate-300 truncate">24P Keystone (${upperPortRange})</span>
+                          <span class="text-[9px] px-1.5 py-0.2 rounded ${upperActiveCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
+                            ${upperActiveCount}/24 Patched
                           </span>
-                          <span class="text-purple-400/80 text-[9px] font-semibold">PP-1U-24P-MOD (${unitLabel}Upper ${upperPortRange})</span>
                         </div>
-                        <div class="flex items-center gap-1.5">
-                          <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
-                            6" CORD DIRECT
-                          </span>
-                          <div class="flex items-center gap-0.5 bg-slate-950/80 px-2 py-0.5 rounded border border-purple-800/40">
-                            ${Array.from({ length: 12 }, (_, p) => `<span class="w-1.5 h-2 rounded-[1px] bg-slate-800 border border-purple-500/50 inline-block" title="Keystone Port ${p+1}"></span>`).join('')}
-                            <span class="w-1.5"></span>
-                            ${Array.from({ length: 12 }, (_, p) => `<span class="w-1.5 h-2 rounded-[1px] bg-slate-800 border border-purple-500/50 inline-block" title="Keystone Port ${p+13}"></span>`).join('')}
-                          </div>
-                        </div>
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, upperJacks, "upper")}
                       </div>
 
-                      <!-- Patch Jumper Direct Cords (Upper Deck) -->
-                      ${renderStandardPodPatchJumpersUpperSVG(is48P)}
-
-                      <!-- Middle Deck: Switch Chassis Unit ${unitNum} -->
-                      <div class="p-1.5 rounded bg-slate-950/90 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
-                        <div class="flex items-center gap-2">
-                          <span class="text-indigo-400 font-bold">U${switchU}</span>
-                          <span class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 font-bold border border-sky-800/60">
-                            ${stackUnits > 1 ? `Unit ${unitNum} (${isMaster ? 'Master Chassis' : 'Member Chassis'}): ` : ''}${escapeHTML(it.model)}
+                      <!-- 1U Middle Switch Chassis Row -->
+                      <div class="px-2 py-1 rounded bg-slate-900/95 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-indigo-400 font-bold w-7 shrink-0">U${switchU}</span>
+                          <span class="px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 font-bold border border-sky-700/60 shrink-0">
+                            ${stackUnits > 1 ? `SW Unit ${unitNum} (${isMaster ? 'Master' : 'Member'})` : 'Switch Faceplate'}
                           </span>
-                          <span class="text-slate-300 font-bold">${portPreview || 'Copper Switch'}</span>
+                          <span class="text-slate-200 font-semibold truncate">${escapeHTML(it.model)}</span>
+                          ${showRackPatchJumpers ? `<span class="text-[8.5px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.2 rounded hidden md:inline shrink-0">6" Slim Cat6A 1:1</span>` : ''}
                         </div>
-                        <div class="text-[9px] text-emerald-400 font-mono font-bold flex items-center gap-1">
-                          <i data-lucide="zap" class="w-3 h-3 text-emerald-400"></i>
-                          <span>Connected via ${parseInt(it.ports, 10) || 24}x 6" Cat6A Slim Patch Cables</span>
-                        </div>
+                        ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
                       </div>
 
-                      <!-- Patch Jumper Direct Cords (Lower Deck) -->
-                      ${renderStandardPodPatchJumpersLowerSVG(is48P)}
-
-                      <!-- Lower 24-Port Patch Panel Deck (Directly Below Unit ${unitNum}) -->
-                      <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
-                        <div class="flex items-center gap-2">
-                          <span class="text-purple-300 font-bold">U${lowerPPU}</span>
-                          <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
-                            <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24-Port Modular Keystone Patch Panel
+                      <!-- 1U Lower 24-Port Keystone Patch Panel Row -->
+                      <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-purple-300 font-bold w-7 shrink-0">U${lowerPPU}</span>
+                          <span class="px-1.5 py-0.2 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${lowerPanelId}</span>
+                          <span class="text-slate-300 truncate">24P Keystone (${lowerPortRange})</span>
+                          <span class="text-[9px] px-1.5 py-0.2 rounded ${lowerActiveCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
+                            ${lowerActiveCount}/24 Patched
                           </span>
-                          <span class="text-purple-400/80 text-[9px] font-semibold">PP-1U-24P-MOD (${unitLabel}Lower ${lowerPortRange})</span>
                         </div>
-                        <div class="flex items-center gap-1.5">
-                          <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
-                            6" CORD DIRECT
-                          </span>
-                          <div class="flex items-center gap-0.5 bg-slate-950/80 px-2 py-0.5 rounded border border-purple-800/40">
-                            ${Array.from({ length: 12 }, (_, p) => `<span class="w-1.5 h-2 rounded-[1px] bg-slate-800 border border-purple-500/50 inline-block" title="Keystone Port ${p+25}"></span>`).join('')}
-                            <span class="w-1.5"></span>
-                            ${Array.from({ length: 12 }, (_, p) => `<span class="w-1.5 h-2 rounded-[1px] bg-slate-800 border border-purple-500/50 inline-block" title="Keystone Port ${p+37}"></span>`).join('')}
-                          </div>
-                        </div>
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, lowerJacks, "lower")}
                       </div>
                     </div>
                   `;
                 }).join('')}
               </div>
             ` : (stackUnits >= 2) ? `
-              <!-- Multi-Chassis Stack Member Breakdown Bar with Optional In-Stack Cable Management -->
-              ${slotData.hasHCMBetween ? `
-                <div class="mt-2 space-y-1.5">
-                  ${Array.from({ length: stackUnits }, (_, sIdx) => {
-                    const unitNum = stackUnits - sIdx;
-                    const isMaster = unitNum === 1;
-                    const memberU = u + (unitNum - 1) * 2;
-                    const hcmU = memberU - 1;
-                    let memberHTML = `
-                      <div class="p-1.5 rounded bg-slate-950/90 border ${isMaster ? 'border-sky-500/40' : 'border-slate-800'} flex items-center justify-between gap-2 text-[10px] font-mono">
+              <!-- Multi-Chassis Stack Member Breakdown Bar with Interactive Switch Faceplates -->
+              <div class="mt-1.5 space-y-1 border-t border-slate-800/80 pt-1.5">
+                ${Array.from({ length: stackUnits }, (_, sIdx) => {
+                  const unitNum = stackUnits - sIdx;
+                  const isMaster = unitNum === 1;
+                  const stepU = (slotData.hasHCMBetween || slotData.hasPPBetween) ? 2 : slotData.baseRU;
+                  const memberU = u + (unitNum - 1) * stepU;
+                  const betweenU = memberU - 1;
+                  let memberHTML = `
+                    <div class="px-2 py-1 rounded bg-slate-950/90 border ${isMaster ? 'border-sky-500/40' : 'border-slate-800'} flex items-center justify-between gap-2 text-[10px] font-mono">
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span class="text-indigo-400 font-bold w-7 shrink-0">U${memberU}</span>
+                        <span class="px-1.5 py-0.2 rounded ${isMaster ? 'bg-sky-950 text-sky-300 font-bold border border-sky-800/60' : 'bg-slate-900 text-slate-300'} shrink-0">
+                          Unit ${unitNum} (${isMaster ? 'Master' : 'Member'})
+                        </span>
+                        <span class="text-slate-300 font-semibold truncate">${escapeHTML(it.model)}</span>
+                      </div>
+                      ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
+                    </div>
+                  `;
+                  if (unitNum > 1 && slotData.hasHCMBetween) {
+                    memberHTML += `
+                      <div class="px-2 py-1 rounded bg-amber-950/40 border border-amber-600/50 flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2">
-                          <span class="text-indigo-400 font-bold">U${memberU}</span>
-                          <span class="px-1.5 py-0.5 rounded ${isMaster ? 'bg-sky-950 text-sky-300 font-bold border border-sky-800/60' : 'bg-slate-900 text-slate-300'}">
-                            Unit ${unitNum} (${isMaster ? 'Master Chassis' : 'Member Chassis'})
-                          </span>
-                          <span class="text-slate-300 font-bold">${escapeHTML(it.model)}</span>
+                          <span class="text-amber-300 font-bold w-7 shrink-0">U${betweenU}</span>
+                          <span class="text-amber-200 font-bold">1U Horizontal Cable Manager (HCM-1U)</span>
                         </div>
-                        <div class="text-[9px] text-slate-400 flex items-center gap-2">
-                          ${portPreview ? `<span class="text-indigo-300 font-semibold">${portPreview}</span>` : ''}
-                          <span class="text-emerald-400 font-bold">PWR ●</span>
+                        <span class="text-[9px] text-amber-300/80">◄ Pass-Through Finger Duct ►</span>
+                      </div>
+                    `;
+                  } else if (unitNum > 1 && slotData.hasPPBetween) {
+                    memberHTML += `
+                      <div class="px-2 py-1 rounded bg-purple-950/40 border border-purple-600/50 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2">
+                          <span class="text-purple-300 font-bold w-7 shrink-0">U${betweenU}</span>
+                          <span class="text-purple-200 font-bold">1U 24-Port Modular Keystone Patch Panel (PP-1U-24P-MOD)</span>
                         </div>
                       </div>
                     `;
-                    if (unitNum > 1) {
-                      memberHTML += `
-                        <div class="p-1.5 rounded bg-amber-950/60 border border-amber-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-inner my-1">
-                          <div class="flex items-center gap-2">
-                            <span class="text-amber-300 font-bold">U${hcmU}</span>
-                            <span class="px-1.5 py-0.5 rounded bg-amber-900/90 text-amber-200 font-bold border border-amber-500/70 flex items-center gap-1">
-                              <i data-lucide="align-justify" class="w-3 h-3 text-amber-300"></i> 1U Horizontal Cable Manager
-                            </span>
-                            <span class="text-amber-400/80 text-[9px] font-semibold">HCM-1U (Dual-Hinged Cover & Pass-Through)</span>
-                          </div>
-                          <div class="flex items-center gap-1 bg-slate-950/80 px-2 py-0.5 rounded border border-amber-800/40 text-[9px] text-amber-300 font-mono">
-                            <span>◄ Cable Pass-Through ►</span>
-                          </div>
-                        </div>
-                      `;
-                    }
-                    return memberHTML;
-                  }).join('')}
-                </div>
-              ` : slotData.hasPPBetween ? `
-                <div class="mt-2 space-y-1.5">
-                  ${Array.from({ length: stackUnits }, (_, sIdx) => {
-                    const unitNum = stackUnits - sIdx;
-                    const isMaster = unitNum === 1;
-                    const memberU = u + (unitNum - 1) * 2;
-                    const ppU = memberU - 1;
-                    let memberHTML = `
-                      <div class="p-1.5 rounded bg-slate-950/90 border ${isMaster ? 'border-sky-500/40' : 'border-slate-800'} flex items-center justify-between gap-2 text-[10px] font-mono">
-                        <div class="flex items-center gap-2">
-                          <span class="text-indigo-400 font-bold">U${memberU}</span>
-                          <span class="px-1.5 py-0.5 rounded ${isMaster ? 'bg-sky-950 text-sky-300 font-bold border border-sky-800/60' : 'bg-slate-900 text-slate-300'}">
-                            Unit ${unitNum} (${isMaster ? 'Master Chassis' : 'Member Chassis'})
-                          </span>
-                          <span class="text-slate-300 font-bold">${escapeHTML(it.model)}</span>
-                        </div>
-                        <div class="text-[9px] text-slate-400 flex items-center gap-2">
-                          ${portPreview ? `<span class="text-indigo-300 font-semibold">${portPreview}</span>` : ''}
-                          <span class="text-emerald-400 font-bold">PWR ●</span>
-                        </div>
-                      </div>
-                    `;
-                    if (unitNum > 1) {
-                      memberHTML += `
-                        <div class="p-1.5 rounded bg-purple-950/60 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-inner my-1">
-                          <div class="flex items-center gap-2">
-                            <span class="text-purple-300 font-bold">U${ppU}</span>
-                            <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
-                              <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24-Port Modular Keystone Patch Panel
-                            </span>
-                            <span class="text-purple-400/80 text-[9px] font-semibold">PP-1U-24P-MOD (Inter-Switch Patching)</span>
-                          </div>
-                          <div class="flex items-center gap-0.5 bg-slate-950/80 px-2 py-0.5 rounded border border-purple-800/40">
-                            ${Array.from({ length: 12 }, (_, p) => `<span class="w-1.5 h-2 rounded-[1px] bg-slate-800 border border-purple-500/50 inline-block" title="Keystone Port ${p+1}"></span>`).join('')}
-                            <span class="w-1.5"></span>
-                            ${Array.from({ length: 12 }, (_, p) => `<span class="w-1.5 h-2 rounded-[1px] bg-slate-800 border border-purple-500/50 inline-block" title="Keystone Port ${p+13}"></span>`).join('')}
-                          </div>
-                        </div>
-                      `;
-                    }
-                    return memberHTML;
-                  }).join('')}
-                </div>
-              ` : `
-                <div class="mt-1.5 pt-1.5 border-t border-slate-800/80 flex items-center gap-1.5 flex-wrap text-[9px] font-mono text-slate-400">
-                  ${Array.from({ length: stackUnits }, (_, idx) => `
-                    <span class="px-1.5 py-0.5 rounded bg-slate-950/90 border border-slate-800 ${idx === 0 ? 'text-sky-300 font-bold border-sky-500/40' : 'text-slate-300'}">
-                      Unit ${idx + 1} (${idx === 0 ? 'Master Chassis' : 'Member Chassis'} &bull; ${(it.rackUnits !== undefined && it.rackUnits !== null) ? parseInt(it.rackUnits, 10) : 1}U)
-                    </span>
-                  `).join('')}
-                  <span class="text-indigo-400 font-semibold flex items-center gap-1">
-                    <i data-lucide="link" class="w-2.5 h-2.5"></i> ${stackUnits === 2 ? '1x 100G Stack Link' : `${stackUnits}x Ring Stack Links`}
-                  </span>
-                </div>
-              `}
+                  }
+                  return memberHTML;
+                }).join('')}
+              </div>
             ` : ''}
           </div>
         `;
@@ -2488,12 +2495,12 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
     } else {
       railHTML += `
         <div 
-          class="h-8 border border-dashed border-slate-800/80 hover:border-indigo-500/50 hover:bg-indigo-950/10 rounded-lg px-3 flex items-center justify-between transition-colors select-none"
+          class="h-7 border border-dashed border-slate-800/70 hover:border-indigo-500/50 hover:bg-indigo-950/10 rounded-lg px-3 flex items-center justify-between transition-colors select-none"
           ondragover="handleRackSlotDragOver(event)"
           ondrop="handleRackSlotDrop(event, ${u})"
         >
           <span class="text-[10px] font-mono text-slate-600 font-bold">U${u}</span>
-          <span class="text-[9px] font-mono text-slate-700 uppercase tracking-wider">Empty Front Slot</span>
+          <span class="text-[9px] font-mono text-slate-700 uppercase tracking-wider">Empty Slot</span>
         </div>
       `;
     }
@@ -5505,43 +5512,50 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     const upsRecVA = Math.round((worstCaseWatts / 0.90) * 1.25);
     const upsModel = worstCaseWatts > 1200 ? "2200VA 2U Line-Interactive" : "1500VA 2U Line-Interactive";
 
+    const accState = window.rackAccordionOpenState || { electrical: true, pdu: false, ups: true, structural: false, passive: false };
+
     container.innerHTML = `
-      <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-        <span class="flex items-center gap-1.5 text-amber-400">
-          <i data-lucide="zap" class="w-4 h-4"></i> Cabinet Electrical Load & Heat
-        </span>
-        <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC / IEEE 802.3</span>
-      </h3>
-      <div class="space-y-2 text-xs">
-        <div class="flex justify-between text-slate-400">
-          <span>Chassis Base Power:</span>
-          <span class="font-mono text-white font-semibold">${Math.round(totalBaseWatts)} W</span>
+      <details ${accState.electrical ? 'open' : ''} ontoggle="toggleRackAccordionSection('electrical', this.open)" class="group">
+        <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
+          <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-amber-400">
+            <i data-lucide="zap" class="w-4 h-4"></i> Electrical &amp; Thermal Load
+          </span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-sky-400 font-bold">${operatingAcWatts}W &bull; ${worstCaseBTU.toLocaleString()} BTU</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
+          </div>
+        </summary>
+        <div class="space-y-1.5 text-xs pt-2.5 mt-2 border-t border-slate-800/80">
+          <div class="flex justify-between text-slate-400">
+            <span>Chassis Base Power:</span>
+            <span class="font-mono text-white font-semibold">${Math.round(totalBaseWatts)} W</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Max PoE Capacity:</span>
+            <span class="font-mono text-white font-semibold">${Math.round(totalPoE).toLocaleString()} W</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Chassis Power Feeds:</span>
+            <span class="font-mono text-indigo-300 font-semibold">${totalOutlets}x AC Outlets (NEMA 5-15P)</span>
+          </div>
+          <div class="flex justify-between text-slate-400">
+            <span>Operating Design Load:</span>
+            <span class="font-mono text-sky-400 font-semibold">${operatingAcWatts} W (${operatingAmps} A @ 120V)</span>
+          </div>
+          <div class="flex justify-between text-slate-300 font-bold pt-1.5 border-t border-slate-800">
+            <span>Worst-Case Nameplate:</span>
+            <span class="font-mono text-amber-400">${worstCaseWatts.toLocaleString()} W (${worstCaseAmps} A)</span>
+          </div>
+          <div class="flex justify-between text-slate-400 text-[11px]">
+            <span>BTU Heat Output:</span>
+            <span class="font-mono text-slate-300 font-bold">${worstCaseBTU.toLocaleString()} BTU/hr (${tonsCooling} Tons AC)</span>
+          </div>
+          <div class="pt-1.5 border-t border-slate-800/80 flex items-center justify-between gap-2">
+            <span class="text-[10px] text-slate-500 uppercase font-mono">Branch Circuit:</span>
+            <span class="font-mono text-emerald-400 text-[10.5px] font-bold truncate">${circuitSpec}</span>
+          </div>
         </div>
-        <div class="flex justify-between text-slate-400">
-          <span>Max PoE Capacity:</span>
-          <span class="font-mono text-white font-semibold">${Math.round(totalPoE).toLocaleString()} W</span>
-        </div>
-        <div class="flex justify-between text-slate-400">
-          <span>Chassis Power Feeds:</span>
-          <span class="font-mono text-indigo-300 font-semibold">${totalOutlets}x AC Outlets (NEMA 5-15P)</span>
-        </div>
-        <div class="flex justify-between text-slate-400">
-          <span>Operating Design Load:</span>
-          <span class="font-mono text-sky-400 font-semibold">${operatingAcWatts} W (${operatingAmps} A @ 120V)</span>
-        </div>
-        <div class="flex justify-between text-slate-300 font-bold pt-2 border-t border-slate-800">
-          <span>Worst-Case Nameplate:</span>
-          <span class="font-mono text-amber-400">${worstCaseWatts.toLocaleString()} W (${worstCaseAmps} A)</span>
-        </div>
-        <div class="flex justify-between text-slate-400 text-[11px]">
-          <span>BTU Heat Output:</span>
-          <span class="font-mono text-slate-300 font-bold">${worstCaseBTU.toLocaleString()} BTU/hr (${tonsCooling} Tons AC)</span>
-        </div>
-        <div class="pt-2 border-t border-slate-800/80">
-          <span class="text-[10px] text-slate-500 uppercase font-mono block mb-0.5">Required Branch Circuit:</span>
-          <span class="font-mono text-emerald-400 text-[11px] font-bold block">${circuitSpec}</span>
-        </div>
-      </div>
+      </details>
     `;
 
     if (auxContainer) {
@@ -5662,197 +5676,177 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
 
       auxContainer.innerHTML = `
         <div class="space-y-3">
-          <!-- Interactive UPS Sizing Engine Panel -->
-          <div class="p-3 rounded-xl bg-slate-950/90 border border-slate-800 shadow-xl">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="zap" class="w-4 h-4 text-amber-400"></i> UPS & Battery Standby Engine
-              </h3>
-              <span class="text-[9.5px] font-mono px-2 py-0.5 rounded-md font-bold ${isUL294Passed ? 'bg-emerald-950/90 border border-emerald-600/50 text-emerald-300' : (planBreakerStatus === 'SAFE' ? 'bg-sky-950/80 border border-sky-600/40 text-sky-400' : 'bg-amber-950/80 border border-amber-600/40 text-amber-300')}">
-                ${isUL294Passed ? 'UL 294 OK' : `${planBreakerStatus} (${planLoadingPct}% Feeder)`}
+          <!-- Collapsible UPS Sizing Engine Panel -->
+          <details ${accState.ups ? 'open' : ''} ontoggle="toggleRackAccordionSection('ups', this.open)" class="group p-3 rounded-xl bg-slate-950/90 border border-slate-800 shadow-xl">
+            <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="battery-charging" class="w-4 h-4 text-amber-400"></i> UPS &amp; Standby Engine
               </span>
-            </div>
-
-            <!-- Active Connected Load vs Nameplate Capacity Toggle -->
-            <div class="mb-2 p-1 bg-slate-900 border border-slate-800 rounded-xl grid grid-cols-2 gap-1 text-[11px] font-semibold select-none">
-              <button 
-                type="button" 
-                onclick="window.handleUpsLoadModeChange('connected')" 
-                class="py-1 px-2 rounded-lg transition-all flex flex-col items-center justify-center cursor-pointer ${isConnectedMode ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'}"
-                title="Calculate battery runtime based on actual headend equipment plus active connected edge PoE devices"
-              >
-                <span>Active Connected Load</span>
-                <span class="font-mono text-[9px] opacity-80">${connectedAcWatts}W (${fieldDeviceCount} Drops)</span>
-              </button>
-              <button 
-                type="button" 
-                onclick="window.handleUpsLoadModeChange('nameplate')" 
-                class="py-1 px-2 rounded-lg transition-all flex flex-col items-center justify-center cursor-pointer ${!isConnectedMode ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'}"
-                title="Calculate battery runtime assuming switches are running at 100% full maximum PoE nameplate budget"
-              >
-                <span>Full Nameplate Budget</span>
-                <span class="font-mono text-[9px] opacity-80">${worstCaseWatts}W (100% Saturation)</span>
-              </button>
-            </div>
-
-            <!-- Parameters Grid (Runtime, Safety Margin, Standards, Aging) -->
-            <div class="grid grid-cols-2 gap-2 text-xs mb-2">
-              <div>
-                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Target Runtime</label>
-                <select onchange="window.handleUpsRuntimeChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
-                  <option value="5" ${window.currentUpsTargetRuntime === 5 ? 'selected' : ''}>5 Minutes</option>
-                  <option value="15" ${window.currentUpsTargetRuntime === 15 ? 'selected' : ''}>15 Minutes (Standard)</option>
-                  <option value="30" ${window.currentUpsTargetRuntime === 30 ? 'selected' : ''}>30 Minutes</option>
-                  <option value="60" ${window.currentUpsTargetRuntime === 60 ? 'selected' : ''}>60 Minutes (1 Hour)</option>
-                  <option value="120" ${window.currentUpsTargetRuntime === 120 ? 'selected' : ''}>120 Minutes (2 Hours)</option>
-                  <option value="240" ${window.currentUpsTargetRuntime === 240 ? 'selected' : ''}>240 Minutes (4-Hr UL 294)</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Standby Standard</label>
-                <select onchange="window.handleUpsComplianceStandardChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-medium rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
-                  <option value="ul294" ${window.currentUpsComplianceStandard === 'ul294' ? 'selected' : ''}>UL 294 / NFPA 731 (4-Hr)</option>
-                  <option value="sla_60m" ${window.currentUpsComplianceStandard === 'sla_60m' ? 'selected' : ''}>Enterprise SLA (60m)</option>
-                  <option value="sla_30m" ${window.currentUpsComplianceStandard === 'sla_30m' ? 'selected' : ''}>Graceful Shutdown (30m)</option>
-                  <option value="sla_15m" ${window.currentUpsComplianceStandard === 'sla_15m' ? 'selected' : ''}>Basic IT Backup (15m)</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs mb-2">
-              <div>
-                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Battery Aging Factor</label>
-                <select onchange="window.handleUpsAgingChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
-                  <option value="0.85" ${window.currentUpsBatteryAging === 0.85 ? 'selected' : ''}>85% (IEEE 1188 End-of-Life)</option>
-                  <option value="1.0" ${window.currentUpsBatteryAging === 1.0 ? 'selected' : ''}>100% (Factory New Battery)</option>
-                </select>
-              </div>
-              <div>
-                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Safety Headroom</label>
-                <select onchange="window.handleUpsMarginChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
-                  <option value="0.60" ${window.currentUpsSafetyMargin === 0.60 ? 'selected' : ''}>60% Max Load</option>
-                  <option value="0.75" ${window.currentUpsSafetyMargin === 0.75 ? 'selected' : ''}>75% (Recommended)</option>
-                  <option value="0.80" ${window.currentUpsSafetyMargin === 0.80 ? 'selected' : ''}>80% Standard</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- UPS Model Selector -->
-            <div class="mb-2">
-              <label class="text-[10px] font-mono text-slate-400 block mb-0.5">UPS Hardware Selection</label>
-              <select onchange="window.handleUpsModelChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-medium rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500 truncate">
-                <option value="auto" ${window.currentUpsModelSku === 'auto' ? 'selected' : ''}>⚡ Auto-Recommend Optimal (${upsPlan ? upsPlan.upsModel.sku : 'Best Fit'})</option>
-                ${upsCatalogOptionsHtml}
-              </select>
-            </div>
-
-            <!-- Scalable Multi-EBP Runtime Curve Matrix -->
-            <div class="mb-2 p-2 rounded-xl bg-slate-900/90 border border-slate-800">
-              <div class="flex items-center justify-between mb-1.5 text-[10px] font-mono">
-                <span class="text-slate-400 font-bold uppercase">Scalable Runtime Curve:</span>
-                <span class="text-indigo-300 font-bold">${planLoadWatts}W Active Load</span>
-              </div>
-              <div class="grid grid-cols-5 gap-1">
-                ${curveHtml}
-              </div>
-            </div>
-
-            <!-- UL 294 / NFPA 731 Life Safety Compliance Banner -->
-            <div class="mb-2 p-2 rounded-xl border ${isUL294Passed ? 'bg-emerald-950/60 border-emerald-600/40 text-emerald-300' : 'bg-amber-950/60 border-amber-600/40 text-amber-200'} text-xs">
-              <div class="flex items-center justify-between font-bold">
-                <span class="flex items-center gap-1.5">
-                  <i data-lucide="${isUL294Passed ? 'shield-check' : 'alert-triangle'}" class="w-4 h-4 ${isUL294Passed ? 'text-emerald-400' : 'text-amber-400'}"></i>
-                  <span>${isUL294Passed ? 'UL 294 / NFPA 731: 4-Hour Standby PASSED' : 'UL 294 Standby Deficit: Needs EBP'}</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold ${isUL294Passed ? 'bg-emerald-950/90 border border-emerald-600/50 text-emerald-300' : (planBreakerStatus === 'SAFE' ? 'bg-sky-950/80 border border-sky-600/40 text-sky-400' : 'bg-amber-950/80 border border-amber-600/40 text-amber-300')}">
+                  ${planAchievedRuntime}m &bull; ${isUL294Passed ? 'UL 294 OK' : `${planLoadPct}% Load`}
                 </span>
-                <span class="font-mono text-[11px]">${upsPlan ? upsPlan.ul294.achievedHours : (planAchievedRuntime / 60).toFixed(1)} / 4.0 Hrs</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
               </div>
-              <p class="text-[10px] opacity-90 mt-1">
-                ${isUL294Passed 
-                  ? `Rack backup system achieves ${upsPlan.ul294.achievedHours} hours continuous runtime, fully compliant with UL 294 access control standards.`
-                  : `Current runtime is ${planAchievedRuntime} mins (-${upsPlan ? upsPlan.ul294.deficitMin : 0} min shortfall vs 4-Hour code requirement). Add ${upsPlan ? upsPlan.ul294.requiredEbpQty : 1}x ${planEbpModel} external battery pack to achieve compliance.`
-                }
-              </p>
-              ${!isUL294Passed && upsPlan && upsPlan.ul294.requiredEbpQty > 0 ? `
+            </summary>
+
+            <div class="pt-2.5 mt-2 border-t border-slate-800/80">
+              <!-- Active Connected Load vs Nameplate Capacity Toggle -->
+              <div class="mb-2 p-1 bg-slate-900 border border-slate-800 rounded-xl grid grid-cols-2 gap-1 text-[11px] font-semibold select-none">
                 <button 
                   type="button" 
-                  onclick="window.addSpecificEbpCountToRack(${upsPlan.ul294.requiredEbpQty})" 
-                  class="mt-1.5 w-full py-1 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10.5px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow"
+                  onclick="window.handleUpsLoadModeChange('connected')" 
+                  class="py-1 px-2 rounded-lg transition-all flex flex-col items-center justify-center cursor-pointer ${isConnectedMode ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'}"
+                  title="Calculate battery runtime based on actual headend equipment plus active connected edge PoE devices"
                 >
-                  <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                  <span>+ Add ${upsPlan.ul294.requiredEbpQty}x ${planEbpModel} for UL 294 4-Hour Compliance</span>
+                  <span>Active Connected Load</span>
+                  <span class="font-mono text-[9px] opacity-80">${connectedAcWatts}W (${fieldDeviceCount} Drops)</span>
                 </button>
-              ` : ''}
-            </div>
-
-            <!-- Live Telemetry Readout -->
-            <div class="bg-slate-900/90 rounded-lg p-2.5 border border-slate-800 space-y-1.5 text-xs font-mono">
-              <div class="flex items-center justify-between">
-                <span class="text-slate-400 font-sans">Required Sizing:</span>
-                <span class="text-emerald-400 font-bold font-sans truncate max-w-[210px]">${planUpsQty}x ${upsPlan ? upsPlan.upsModel.sku : 'UPS'} (${upsPlan ? upsPlan.upsModel.va : 1500}VA / ${planCapWatts}W)</span>
+                <button 
+                  type="button" 
+                  onclick="window.handleUpsLoadModeChange('nameplate')" 
+                  class="py-1 px-2 rounded-lg transition-all flex flex-col items-center justify-center cursor-pointer ${!isConnectedMode ? 'bg-indigo-600 text-white shadow-sm font-bold' : 'text-slate-400 hover:text-white'}"
+                  title="Calculate battery runtime assuming switches are running at 100% full maximum PoE nameplate budget"
+                >
+                  <span>Full Nameplate Budget</span>
+                  <span class="font-mono text-[9px] opacity-80">${worstCaseWatts}W (100% Saturation)</span>
+                </button>
               </div>
 
-              <!-- Load Bar -->
-              <div>
-                <div class="flex justify-between text-[11px] mb-0.5">
-                  <span class="text-slate-400 font-sans">Unit Load (${isConnectedMode ? 'Active PoE' : 'Peak'}):</span>
-                  <span class="font-bold ${planLoadPct <= 75 ? 'text-emerald-300' : (planLoadPct <= 85 ? 'text-amber-300' : 'text-rose-400')}">
-                    ${planLoadWatts}W / ${planCapWatts}W (${planLoadPct}%)
+              <!-- Parameters Grid (Runtime, Safety Margin, Standards, Aging) -->
+              <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+                <div>
+                  <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Target Runtime</label>
+                  <select onchange="window.handleUpsRuntimeChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-bold rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                    <option value="5" ${window.currentUpsTargetRuntime === 5 ? 'selected' : ''}>5 Minutes</option>
+                    <option value="15" ${window.currentUpsTargetRuntime === 15 ? 'selected' : ''}>15 Minutes (Standard)</option>
+                    <option value="30" ${window.currentUpsTargetRuntime === 30 ? 'selected' : ''}>30 Minutes</option>
+                    <option value="60" ${window.currentUpsTargetRuntime === 60 ? 'selected' : ''}>60 Minutes (1 Hour)</option>
+                    <option value="120" ${window.currentUpsTargetRuntime === 120 ? 'selected' : ''}>120 Minutes (2 Hours)</option>
+                    <option value="240" ${window.currentUpsTargetRuntime === 240 ? 'selected' : ''}>240 Minutes (4-Hr UL 294)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Standby Standard</label>
+                  <select onchange="window.handleUpsComplianceStandardChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-medium rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                    <option value="ul294" ${window.currentUpsComplianceStandard === 'ul294' ? 'selected' : ''}>UL 294 / NFPA 731 (4-Hr)</option>
+                    <option value="sla_60m" ${window.currentUpsComplianceStandard === 'sla_60m' ? 'selected' : ''}>Enterprise SLA (60m)</option>
+                    <option value="sla_30m" ${window.currentUpsComplianceStandard === 'sla_30m' ? 'selected' : ''}>Graceful Shutdown (30m)</option>
+                    <option value="sla_15m" ${window.currentUpsComplianceStandard === 'sla_15m' ? 'selected' : ''}>Basic IT Backup (15m)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-xs mb-2">
+                <div>
+                  <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Battery Aging Factor</label>
+                  <select onchange="window.handleUpsAgingChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                    <option value="0.85" ${window.currentUpsBatteryAging === 0.85 ? 'selected' : ''}>85% (IEEE 1188 End-of-Life)</option>
+                    <option value="1.0" ${window.currentUpsBatteryAging === 1.0 ? 'selected' : ''}>100% (Factory New Battery)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="text-[10px] font-mono text-slate-400 block mb-0.5">Safety Headroom</label>
+                  <select onchange="window.handleUpsMarginChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500">
+                    <option value="0.60" ${window.currentUpsSafetyMargin === 0.60 ? 'selected' : ''}>60% Max Load</option>
+                    <option value="0.75" ${window.currentUpsSafetyMargin === 0.75 ? 'selected' : ''}>75% (Recommended)</option>
+                    <option value="0.80" ${window.currentUpsSafetyMargin === 0.80 ? 'selected' : ''}>80% Standard</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- UPS Model Selector -->
+              <div class="mb-2">
+                <label class="text-[10px] font-mono text-slate-400 block mb-0.5">UPS Hardware Selection</label>
+                <select onchange="window.handleUpsModelChange(this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-medium rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-amber-500 truncate">
+                  <option value="auto" ${window.currentUpsModelSku === 'auto' ? 'selected' : ''}>⚡ Auto-Recommend Optimal (${upsPlan ? upsPlan.upsModel.sku : 'Best Fit'})</option>
+                  ${upsCatalogOptionsHtml}
+                </select>
+              </div>
+
+              <!-- Scalable Multi-EBP Runtime Curve Matrix -->
+              <div class="mb-2 p-2 rounded-xl bg-slate-900/90 border border-slate-800">
+                <div class="flex items-center justify-between mb-1.5 text-[10px] font-mono">
+                  <span class="text-slate-400 font-bold uppercase">Scalable Runtime Curve:</span>
+                  <span class="text-indigo-300 font-bold">${planLoadWatts}W Active Load</span>
+                </div>
+                <div class="grid grid-cols-5 gap-1">
+                  ${curveHtml}
+                </div>
+              </div>
+
+              <!-- UL 294 / NFPA 731 Life Safety Compliance Banner -->
+              <div class="mb-2 p-2 rounded-xl border ${isUL294Passed ? 'bg-emerald-950/60 border-emerald-600/40 text-emerald-300' : 'bg-amber-950/60 border-amber-600/40 text-amber-200'} text-xs">
+                <div class="flex items-center justify-between font-bold">
+                  <span class="flex items-center gap-1.5">
+                    <i data-lucide="${isUL294Passed ? 'shield-check' : 'alert-triangle'}" class="w-4 h-4 ${isUL294Passed ? 'text-emerald-400' : 'text-amber-400'}"></i>
+                    <span>${isUL294Passed ? 'UL 294 / NFPA 731: 4-Hour PASSED' : 'UL 294 Standby Deficit: Needs EBP'}</span>
+                  </span>
+                  <span class="font-mono text-[11px]">${upsPlan ? upsPlan.ul294.achievedHours : (planAchievedRuntime / 60).toFixed(1)} / 4.0 Hrs</span>
+                </div>
+                ${!isUL294Passed && upsPlan && upsPlan.ul294.requiredEbpQty > 0 ? `
+                  <button 
+                    type="button" 
+                    onclick="window.addSpecificEbpCountToRack(${upsPlan.ul294.requiredEbpQty})" 
+                    class="mt-1.5 w-full py-1 px-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[10.5px] flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow"
+                  >
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                    <span>+ Add ${upsPlan.ul294.requiredEbpQty}x ${planEbpModel} for UL 294 4-Hr</span>
+                  </button>
+                ` : ''}
+              </div>
+
+              <!-- Live Telemetry Readout -->
+              <div class="bg-slate-900/90 rounded-lg p-2 border border-slate-800 space-y-1 text-xs font-mono">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 font-sans">Required Sizing:</span>
+                  <span class="text-emerald-400 font-bold font-sans truncate max-w-[210px]">${planUpsQty}x ${upsPlan ? upsPlan.upsModel.sku : 'UPS'} (${upsPlan ? upsPlan.upsModel.va : 1500}VA / ${planCapWatts}W)</span>
+                </div>
+
+                <div>
+                  <div class="flex justify-between text-[11px] mb-0.5">
+                    <span class="text-slate-400 font-sans">Unit Load (${isConnectedMode ? 'Active PoE' : 'Peak'}):</span>
+                    <span class="font-bold ${planLoadPct <= 75 ? 'text-emerald-300' : (planLoadPct <= 85 ? 'text-amber-300' : 'text-rose-400')}">
+                      ${planLoadWatts}W / ${planCapWatts}W (${planLoadPct}%)
+                    </span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full transition-all duration-300 ${planLoadPct <= 75 ? 'bg-emerald-500' : (planLoadPct <= 85 ? 'bg-amber-500' : 'bg-rose-500')}" style="width: ${Math.min(100, planLoadPct)}%"></div>
+                  </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 font-sans font-bold">
+                  <span class="text-slate-200">Achieved Runtime:</span>
+                  <span class="text-emerald-400 flex items-center gap-1 font-mono">
+                    <i data-lucide="clock" class="w-3.5 h-3.5 text-emerald-400"></i> ${planAchievedRuntime} min (${(planAchievedRuntime / 60).toFixed(1)} hrs)
                   </span>
                 </div>
-                <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div class="h-full rounded-full transition-all duration-300 ${planLoadPct <= 75 ? 'bg-emerald-500' : (planLoadPct <= 85 ? 'bg-amber-500' : 'bg-rose-500')}" style="width: ${Math.min(100, planLoadPct)}%"></div>
-                </div>
               </div>
 
-              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
-                <span class="text-slate-400 font-sans">Internal Battery:</span>
-                <span class="text-sky-300 font-bold">${planIntRuntime} minutes</span>
-              </div>
-
-              <div class="flex items-center justify-between">
-                <span class="text-slate-400 font-sans">Battery Modules:</span>
-                <span class="${planEbpQty > 0 ? 'text-purple-300 font-bold' : 'text-slate-500'}">
-                  ${planEbpQty > 0 ? `${planEbpQty}x ${planEbpModel} (${upsPlan.rackSpace.ebpRU}U)` : 'None (Internal Only)'}
-                </span>
-              </div>
-
-              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 font-sans font-bold">
-                <span class="text-slate-200">Achieved Runtime:</span>
-                <span class="text-emerald-400 flex items-center gap-1 font-mono">
-                  <i data-lucide="clock" class="w-3.5 h-3.5 text-emerald-400"></i> ${planAchievedRuntime} min (${(planAchievedRuntime / 60).toFixed(1)} hrs)
-                </span>
-              </div>
-
-              <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">
-                <span class="font-sans">Branch Feeder:</span>
-                <span class="text-slate-300 font-bold">${upsPlan ? upsPlan.feederCircuit.actualInputAmps : operatingAmps}A Continuous (${upsPlan ? upsPlan.feederCircuit.breakerAmps : 20}A Breaker)</span>
-              </div>
-
-              <div class="flex items-center justify-between text-[11px] text-slate-400">
-                <span class="font-sans">Power Footprint:</span>
-                <span class="text-indigo-300 font-bold">${upsPlan ? upsPlan.rackSpace.totalRU : 2}U Total Space</span>
+              <!-- Auto-Slot Action Button -->
+              <div class="pt-2">
+                <button onclick="window.addRecommendedUpsAndEbpToRack()" class="w-full py-1.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 cursor-pointer transition-all active:scale-[0.98]">
+                  <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-200"></i>
+                  <span>Slot ${planUpsQty}x UPS ${planEbpQty > 0 ? `+ ${planEbpQty}x EBP` : ''} to Rack (U1+)</span>
+                </button>
               </div>
             </div>
+          </details>
 
-            <!-- Auto-Slot Action Button -->
-            <div class="pt-2">
-              <button onclick="window.addRecommendedUpsAndEbpToRack()" class="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-950/40 cursor-pointer transition-all active:scale-[0.98]">
-                <i data-lucide="zap" class="w-4 h-4 text-emerald-200"></i>
-                <span>Slot ${planUpsQty}x UPS ${planEbpQty > 0 ? `+ ${planEbpQty}x EBP` : ''} to Rack (U1+)</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="pt-2.5 border-t border-slate-800">
-            <div class="flex items-center justify-between mb-1.5">
-              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <i data-lucide="scale" class="w-4 h-4 text-purple-400"></i> Structural Load & Capacity
-              </h3>
-              <span class="text-[9.5px] font-mono px-2 py-0.5 rounded font-bold ${isWeightOverload ? 'bg-rose-950/80 border border-rose-600 text-rose-300' : 'bg-slate-900 border border-slate-700 text-slate-300'}">
-                ${activeEnc?.catalogSku || 'Custom Frame'}
+          <!-- Collapsible Structural Load & Capacity Panel -->
+          <details ${accState.structural ? 'open' : ''} ontoggle="toggleRackAccordionSection('structural', this.open)" class="group p-3 rounded-xl bg-slate-950/90 border border-slate-800 shadow-xl">
+            <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2">
+              <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="scale" class="w-4 h-4 text-purple-400"></i> Structural Load &amp; Clearances
               </span>
-            </div>
-            <div class="space-y-1.5 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded font-bold ${isWeightOverload || depthViolations.length > 0 ? 'bg-rose-950/80 border border-rose-600 text-rose-300' : 'bg-slate-900 border border-slate-700 text-purple-300'}">
+                  ${Math.round(totalEquipmentWeightLbs)} lbs (${weightPct}%)
+                </span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
+              </div>
+            </summary>
+            <div class="space-y-1.5 text-xs pt-2.5 mt-2 border-t border-slate-800/80">
               <div>
                 <div class="flex justify-between text-slate-400 mb-1">
                   <span>Equipment Payload:</span>
@@ -5877,15 +5871,13 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 <span class="font-mono ${depthViolations.length > 0 ? 'text-amber-400 font-bold' : 'text-cyan-300'}">${enclosureDepth}" Usable Space</span>
               </div>
 
-              <!-- Overload Alert -->
               ${isWeightOverload ? `
                 <div class="p-2 rounded-lg bg-rose-950/80 border border-rose-500/80 text-[10.5px] text-rose-200 flex items-start gap-1.5 mt-1.5">
                   <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-400 shrink-0 mt-0.5"></i>
-                  <span><strong>STRUCTURAL OVERLOAD:</strong> Payload (${Math.round(totalEquipmentWeightLbs)} lbs) exceeds rated capacity (${maxWeight.toLocaleString()} lbs) for ${escapeHTML(activeEnc?.catalogModel || 'this enclosure')}.</span>
+                  <span><strong>STRUCTURAL OVERLOAD:</strong> Payload (${Math.round(totalEquipmentWeightLbs)} lbs) exceeds rated capacity (${maxWeight.toLocaleString()} lbs).</span>
                 </div>
               ` : ''}
 
-              <!-- Depth Clearance Warning -->
               ${depthViolations.length > 0 ? `
                 <div class="p-2 rounded-lg bg-amber-950/80 border border-amber-500/80 text-[10.5px] text-amber-200 flex items-start gap-1.5 mt-1.5">
                   <i data-lucide="alert-triangle" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
@@ -5907,7 +5899,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 ` : '')}
               </div>
             </div>
-          </div>
+          </details>
         </div>
       `;
     }
@@ -5915,60 +5907,68 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
     if (fieldContainer) {
       const fieldItems = assignedItems.filter(i => !i.rackSlot);
       fieldContainer.innerHTML = `
-        <div class="flex items-center justify-between">
-          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-            <i data-lucide="radio-tower" class="w-4 h-4 text-amber-400"></i> Unslotted Modules & Passive Infra
-          </h3>
-        </div>
-
-        <!-- Quick-Add Passive Infrastructure Strip -->
-        <div class="flex items-center gap-1 mt-2 mb-2.5 flex-wrap">
-          <button onclick="addPassiveToActiveRack('pp24')" class="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 24-Port Modular Keystone Patch Panel">
-            <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 24P Panel
-          </button>
-          <button onclick="addPassiveToActiveRack('pp48')" class="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 2U 48-Port Modular Keystone Patch Panel">
-            <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 48P Panel
-          </button>
-          <button onclick="addPassiveToActiveRack('hcm1u')" class="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/60 rounded text-[10px] font-bold text-indigo-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U Horizontal Cable Manager">
-            <i data-lucide="plus" class="w-3 h-3 text-indigo-400"></i> 1U Cable Mgr
-          </button>
-          <button onclick="addPassiveToActiveRack('blank1u')" class="px-2 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U Blank Panel">
-            <i data-lucide="plus" class="w-3 h-3 text-slate-400"></i> Blank
-          </button>
-        </div>
-
-        <div class="space-y-1.5 pt-1">
-          ${fieldItems.length === 0 ? `
-            <span class="text-slate-500 text-[11px] block py-1">All hardware is slotted into 19" EIA units.</span>
-          ` : fieldItems.map(it => {
-            const comp = checkDeviceHostCompatibility(it, hostType);
-            return `
-            <div 
-              draggable="${comp.compatible ? 'true' : 'false'}"
-              ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
-              class="bg-slate-950 p-2 rounded-xl border ${comp.compatible ? 'border-indigo-500/40 hover:border-indigo-400 cursor-grab active:cursor-grabbing' : 'border-slate-800'} flex items-center justify-between text-xs transition-colors"
-              title="${comp.compatible ? 'Drag to rack slot or click Mount' : (comp.advisory || 'Unslotted module')}"
-            >
-              <div class="min-w-0 pr-2">
-                <span class="font-bold text-white block truncate max-w-[190px]">${escapeHTML(it.model)}</span>
-                <span class="text-[10px] text-amber-400 font-mono">${it.role || 'Accessory'}</span>
-              </div>
-              <div class="flex items-center gap-1.5 shrink-0">
-                ${comp.compatible ? `
-                  <button 
-                    onclick="mountItemToFirstAvailableSlot('${it.instanceId}')"
-                    class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow transition-colors cursor-pointer"
-                    title="Mount into first free slot"
-                  >
-                    Mount
-                  </button>
-                ` : ''}
-                <span class="font-mono text-[11px] text-slate-400 font-bold">${it.qty || 1}x</span>
-              </div>
+        <details ${(accState.passive || fieldItems.length > 0) ? 'open' : ''} ontoggle="toggleRackAccordionSection('passive', this.open)" class="group">
+          <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
+            <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i> Passive Infra &amp; Unslotted
+            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded ${fieldItems.length > 0 ? 'bg-amber-950/80 border border-amber-600/60 text-amber-300 font-bold' : 'bg-slate-950 border border-slate-800 text-slate-400'}">${fieldItems.length} Unslotted</span>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
             </div>
-            `;
-          }).join('')}
-        </div>
+          </summary>
+
+          <div class="pt-2.5 mt-2 border-t border-slate-800/80">
+            <!-- Quick-Add Passive Infrastructure Strip -->
+            <div class="flex items-center gap-1 mb-2.5 flex-wrap">
+              <button onclick="addPassiveToActiveRack('pp24')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 24-Port Modular Keystone Patch Panel">
+                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 24P Panel
+              </button>
+              <button onclick="addPassiveToActiveRack('pp48')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 2U 48-Port Modular Keystone Patch Panel">
+                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 48P Panel
+              </button>
+              <button onclick="addPassiveToActiveRack('hcm1u')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/60 rounded text-[10px] font-bold text-indigo-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U Horizontal Cable Manager">
+                <i data-lucide="plus" class="w-3 h-3 text-indigo-400"></i> 1U Cable Mgr
+              </button>
+              <button onclick="addPassiveToActiveRack('blank1u')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-slate-500 rounded text-[10px] font-bold text-slate-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U Blank Panel">
+                <i data-lucide="plus" class="w-3 h-3 text-slate-400"></i> Blank
+              </button>
+            </div>
+
+            <div class="space-y-1.5">
+              ${fieldItems.length === 0 ? `
+                <span class="text-slate-500 text-[11px] block py-1">All hardware is slotted into 19" EIA units.</span>
+              ` : fieldItems.map(it => {
+                const comp = checkDeviceHostCompatibility(it, hostType);
+                return `
+                <div 
+                  draggable="${comp.compatible ? 'true' : 'false'}"
+                  ondragstart="handleRackItemDragStart(event, '${it.instanceId}')"
+                  class="bg-slate-950 p-2 rounded-xl border ${comp.compatible ? 'border-indigo-500/40 hover:border-indigo-400 cursor-grab active:cursor-grabbing' : 'border-slate-800'} flex items-center justify-between text-xs transition-colors"
+                  title="${comp.compatible ? 'Drag to rack slot or click Mount' : (comp.advisory || 'Unslotted module')}"
+                >
+                  <div class="min-w-0 pr-2">
+                    <span class="font-bold text-white block truncate max-w-[190px]">${escapeHTML(it.model)}</span>
+                    <span class="text-[10px] text-amber-400 font-mono">${it.role || 'Accessory'}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0">
+                    ${comp.compatible ? `
+                      <button 
+                        onclick="mountItemToFirstAvailableSlot('${it.instanceId}')"
+                        class="px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold shadow transition-colors cursor-pointer"
+                        title="Mount into first free slot"
+                      >
+                        Mount
+                      </button>
+                    ` : ''}
+                    <span class="font-mono text-[11px] text-slate-400 font-bold">${it.qty || 1}x</span>
+                  </div>
+                </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </details>
       `;
     }
   }
@@ -5980,105 +5980,78 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
       pduContainer.classList.remove("hidden");
       const pduMetrics = calculateRackPduMetrics(assignedItems, activeEnc);
       const pduConfig = getRackPduConfig();
+      const accState = window.rackAccordionOpenState || { pdu: false };
 
       const pduAColor = pduMetrics.pduA.pct > 80 ? "text-rose-400" : (pduMetrics.pduA.pct > 70 ? "text-amber-400" : "text-emerald-400");
       const pduABarColor = pduMetrics.pduA.pct > 80 ? "bg-rose-500" : (pduMetrics.pduA.pct > 70 ? "bg-amber-500" : "bg-emerald-500");
 
       if (pduConfig === "horizontal") {
         pduContainer.innerHTML = `
-          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-            <span class="flex items-center gap-1.5 text-indigo-400">
-              <i data-lucide="zap" class="w-4 h-4"></i> Horizontal 1U Rackmount PDU
-            </span>
-            <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
-          </h3>
-
-          <div class="space-y-3 pt-1">
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-bold text-indigo-300 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 1U PDU Load (120V Circuit)
-                </span>
-                <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+          <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
+            <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
+              <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-indigo-400">
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> 1U Rackmount PDU
+              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / 16A (${pduMetrics.pduA.outletsUsed}/8)</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
               </div>
-              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
-                <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+            </summary>
+            <div class="space-y-2.5 pt-2.5 mt-2 border-t border-slate-800/80">
+              <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                <div class="flex items-center justify-between text-xs mb-1">
+                  <span class="font-bold text-indigo-300 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 1U PDU Load (120V Circuit)
+                  </span>
+                  <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+                  <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                  <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+                  <span>${pduMetrics.pduA.outletsUsed} / 8 Receptacles</span>
+                </div>
               </div>
-              <div class="flex justify-between text-[10px] font-mono text-slate-400">
-                <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-                <span>${pduMetrics.pduA.outletsUsed} / 8 Receptacles</span>
-              </div>
+              <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+                <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i> View Rear Receptacles
+              </button>
             </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Form Factor:</span>
-              <span class="font-mono font-bold text-indigo-300 text-[11px]">1U Horizontal 19" Rackmount</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Input Plug:</span>
-              <span class="font-mono text-slate-300 text-[11px]">NEMA 5-20P (120V 20A)</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Receptacles:</span>
-              <span class="font-mono text-slate-300 text-[11px]">8x NEMA 5-20R Outlets</span>
-            </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800">
-            <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
-              <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-indigo-400"></i> View Rear Receptacles
-            </button>
-          </div>
+          </details>
         `;
       } else if (pduConfig === "single_vertical") {
         pduContainer.innerHTML = `
-          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-            <span class="flex items-center gap-1.5 text-emerald-400">
-              <i data-lucide="zap" class="w-4 h-4"></i> Single 0U Vertical PDU
-            </span>
-            <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
-          </h3>
-
-          <div class="space-y-3 pt-1">
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Primary 0U PDU (Feed A)
-                </span>
-                <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+          <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
+            <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
+              <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> Single 0U Vertical PDU
+              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / 16A (${pduMetrics.pduA.outletsUsed}/24)</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
               </div>
-              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
-                <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+            </summary>
+            <div class="space-y-2.5 pt-2.5 mt-2 border-t border-slate-800/80">
+              <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
+                <div class="flex items-center justify-between text-xs mb-1">
+                  <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Primary 0U PDU (Feed A)
+                  </span>
+                  <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
+                  <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+                </div>
+                <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                  <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+                  <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+                </div>
               </div>
-              <div class="flex justify-between text-[10px] font-mono text-slate-400">
-                <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-                <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
-              </div>
+              <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
+                <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-emerald-400"></i> View Rear Channels
+              </button>
             </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Form Factor:</span>
-              <span class="font-mono font-bold text-emerald-300 text-[11px]">Single 0U Vertical Strip</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Circuit:</span>
-              <span class="font-mono text-slate-300 text-[11px]">1x 20A 120V Circuit</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Connected Units:</span>
-              <span class="font-mono text-emerald-400 text-[11px]">${assignedItems.length} Mounted Units</span>
-            </div>
-          </div>
-
-          <div class="pt-2 border-t border-slate-800">
-            <button onclick="switchRackOrientation('rear')" class="w-full py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-all">
-              <i data-lucide="rotate-cw" class="w-3.5 h-3.5 text-emerald-400"></i> View Rear Channels
-            </button>
-          </div>
+          </details>
         `;
       } else {
         // Dual 0U PDUs (A+B)
@@ -6090,88 +6063,87 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
         const pduBBarColor = pduMetrics.pduB.pct > 80 ? "bg-rose-500" : (pduMetrics.pduB.pct > 70 ? "bg-amber-500" : "bg-sky-500");
 
         pduContainer.innerHTML = `
-          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-            <span class="flex items-center gap-1.5 text-indigo-400">
-              <i data-lucide="zap" class="w-4 h-4"></i> Dual 0U PDUs &amp; Power Feeds
-            </span>
-            <span class="text-[10px] font-mono text-slate-500 uppercase font-normal">NEC 80% (16A / 20A)</span>
-          </h3>
-
-          <!-- PDU Load Meters -->
-          <div class="space-y-3 pt-1">
-            <!-- Feed A (Utility) -->
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Feed A (Primary Utility)
-                </span>
-                <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
-              </div>
-              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
-                <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
-              </div>
-              <div class="flex justify-between text-[10px] font-mono text-slate-400">
-                <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-                <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
-              </div>
-            </div>
-
-            <!-- Feed B (UPS / Generator) -->
-            <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div class="flex items-center justify-between text-xs mb-1">
-                <span class="font-bold text-sky-400 flex items-center gap-1.5">
-                  <span class="w-2 h-2 rounded-full bg-sky-400"></span> Feed B (Secondary / UPS)
-                </span>
-                <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
-              </div>
-              <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
-                <div class="${pduBBarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduB.pct}%"></div>
-              </div>
-              <div class="flex justify-between text-[10px] font-mono text-slate-400">
-                <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}% continuous)</span>
-                <span>${pduMetrics.pduB.outletsUsed} / 24 Receptacles</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- A+B Redundancy Diagnostic Breakdown -->
-          <div class="pt-2 border-t border-slate-800 space-y-1.5 text-xs">
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">A+B Dual-Feed Redundant:</span>
-              <span class="font-mono font-bold text-emerald-400 text-[11px]">${redundantCount} Unit${redundantCount === 1 ? '' : 's'}</span>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Single Point of Failure (SPOF):</span>
-              <span class="font-mono font-bold ${spofCount > 0 ? 'text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80' : 'text-slate-500'} text-[11px]">
-                ${spofCount > 0 ? `⚠️ ${spofCount} Unit${spofCount === 1 ? '' : 's'}` : '0 None'}
+          <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
+            <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
+              <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-indigo-400">
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> Dual 0U PDUs (Feed A+B)
               </span>
-            </div>
-
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400 text-[11px]">Single-Corded Devices:</span>
-              <span class="font-mono text-slate-400 text-[11px]">${singleCount} Unit${singleCount === 1 ? '' : 's'}</span>
-            </div>
-
-            ${spofCount > 0 ? `
-              <div class="text-[10px] text-amber-400/90 bg-amber-950/30 p-2 rounded-lg border border-amber-800/50 mt-1">
-                <strong>SPOF Warning:</strong> ${spofCount} dual-PSU device(s) have both cords plugged into the same PDU feed. Use Auto-Balance to split across Feed A &amp; B.
+              <div class="flex items-center gap-1.5">
+                <span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-emerald-400 font-bold">A:${pduMetrics.pduA.amps}A &bull; B:${pduMetrics.pduB.amps}A</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180"></i>
               </div>
-            ` : ''}
-          </div>
+            </summary>
 
-          <!-- Auto-Balance Action & Orientation Link -->
-          <div class="pt-2 border-t border-slate-800 space-y-1.5">
-            <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
-              <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance Power Feeds
-            </button>
-            <div class="text-center pt-0.5">
-              <button onclick="switchRackOrientation('rear')" class="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto">
-                <i data-lucide="rotate-cw" class="w-3 h-3 text-indigo-400"></i>
-                <span>Inspect Receptacles in Rear Elevation</span>
-              </button>
+            <div class="space-y-2.5 pt-2.5 mt-2 border-t border-slate-800/80">
+              <!-- PDU Load Meters -->
+              <div class="space-y-2">
+                <!-- Feed A (Utility) -->
+                <div class="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="font-bold text-emerald-400 flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> Feed A (Primary Utility)
+                    </span>
+                    <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+                  </div>
+                  <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1">
+                    <div class="${pduABarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduA.pct}%"></div>
+                  </div>
+                  <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
+                    <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+                  </div>
+                </div>
+
+                <!-- Feed B (UPS / Generator) -->
+                <div class="p-2 rounded-xl bg-slate-950 border border-slate-800">
+                  <div class="flex items-center justify-between text-xs mb-1">
+                    <span class="font-bold text-sky-400 flex items-center gap-1.5">
+                      <span class="w-2 h-2 rounded-full bg-sky-400"></span> Feed B (Secondary / UPS)
+                    </span>
+                    <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
+                  </div>
+                  <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1">
+                    <div class="${pduBBarColor} h-1.5 rounded-full transition-all" style="width: ${pduMetrics.pduB.pct}%"></div>
+                  </div>
+                  <div class="flex justify-between text-[10px] font-mono text-slate-400">
+                    <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}% continuous)</span>
+                    <span>${pduMetrics.pduB.outletsUsed} / 24 Receptacles</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- A+B Redundancy Diagnostic Breakdown -->
+              <div class="pt-2 border-t border-slate-800 space-y-1 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 text-[11px]">A+B Dual-Feed Redundant:</span>
+                  <span class="font-mono font-bold text-emerald-400 text-[11px]">${redundantCount} Unit${redundantCount === 1 ? '' : 's'}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 text-[11px]">Single Point of Failure (SPOF):</span>
+                  <span class="font-mono font-bold ${spofCount > 0 ? 'text-amber-400 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/80' : 'text-slate-500'} text-[11px]">
+                    ${spofCount > 0 ? `⚠️ ${spofCount} Unit${spofCount === 1 ? '' : 's'}` : '0 None'}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 text-[11px]">Single-Corded Devices:</span>
+                  <span class="font-mono text-slate-400 text-[11px]">${singleCount} Unit${singleCount === 1 ? '' : 's'}</span>
+                </div>
+              </div>
+
+              <!-- Auto-Balance Action & Orientation Link -->
+              <div class="pt-2 border-t border-slate-800 space-y-1.5">
+                <button onclick="autoBalanceRackPowerFeeds()" class="w-full py-1.5 px-3 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/50 hover:border-indigo-400 text-indigo-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm">
+                  <i data-lucide="scale" class="w-3.5 h-3.5 text-indigo-400"></i> Auto-Balance Power Feeds
+                </button>
+                <div class="text-center pt-0.5">
+                  <button onclick="switchRackOrientation('rear')" class="text-[10px] text-slate-400 hover:text-white transition-colors flex items-center justify-center gap-1 mx-auto">
+                    <i data-lucide="rotate-cw" class="w-3 h-3 text-indigo-400"></i>
+                    <span>Inspect Receptacles in Rear Elevation</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </details>
         `;
       }
     } else {

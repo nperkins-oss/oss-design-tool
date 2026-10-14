@@ -80,7 +80,7 @@ function quickAddDefaultSwitchToProject() {
   if (typeof recalculateAllTelemetry === "function") recalculateAllTelemetry();
 }
 
-function openPortMatrixStudio(targetSwitchIdOrLoc) {
+function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
   if (typeof projectBOM === "undefined") return;
 
   const switches = getProjectSwitches();
@@ -148,6 +148,9 @@ function openPortMatrixStudio(targetSwitchIdOrLoc) {
   }
 
   activePortMatrixSwitchId = selectedSw.instanceId;
+  if (focusPortNumber !== null && focusPortNumber !== undefined) {
+    window.activePortTraceNumber = parseInt(focusPortNumber, 10);
+  }
 
   const switchOptions = switches.map(sw => {
     const loc = FacilityStore.normalize(sw.closetName || sw.rackId);
@@ -177,12 +180,29 @@ function openPortMatrixStudio(targetSwitchIdOrLoc) {
     }
   }
   if (window.lucide) lucide.createIcons();
+
+  if (focusPortNumber !== null && focusPortNumber !== undefined) {
+    setTimeout(() => {
+      highlightMatrixPort(parseInt(focusPortNumber, 10));
+    }, 80);
+  }
 }
 
 function closePortMatrixStudio() {
   const modal = document.getElementById("portMatrixStudioModal");
   if (modal) {
     modal.classList.add("hidden");
+  }
+}
+
+if (typeof window.portMatrixFilterMode === "undefined") {
+  window.portMatrixFilterMode = "all"; // 'all' | 'active'
+}
+
+function setPortMatrixFilterMode(mode) {
+  window.portMatrixFilterMode = mode === "active" ? "active" : "all";
+  if (activePortMatrixSwitchId) {
+    renderPortMatrixStudioContent(activePortMatrixSwitchId);
   }
 }
 
@@ -216,10 +236,30 @@ function renderPortMatrixStudioContent(switchInstanceId) {
     PortEngine.syncSwitchEdgePorts(sw);
   }
   const ports = (typeof PortEngine !== "undefined") ? PortEngine.initSwitchPorts(sw) : [];
+  const patchData = (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function")
+    ? PortEngine.resolveSwitchPatchMapping(sw)
+    : { mappings: {}, panels: [], isStandardPod: true };
+  const patchMappings = patchData.mappings || {};
+
   const copperPorts = ports.filter(p => !p.connector || p.connector === "RJ-45");
   const opticalPorts = ports.filter(p => p.connector && p.connector !== "RJ-45");
   const usedCopper = copperPorts.filter(p => p.connectedDeviceId || p.poeOutputWatts > 0).length;
   const usedOptical = opticalPorts.filter(p => p.connectedDeviceId).length;
+
+  // Ensure an active traced port is selected for the End-to-End Signal Trace Inspector
+  let tracePortNum = window.activePortTraceNumber;
+  if (!tracePortNum || !ports.some(p => p.portNumber === tracePortNum)) {
+    const firstConnected = ports.find(p => p.connectedDeviceId);
+    tracePortNum = firstConnected ? firstConnected.portNumber : (ports[0] ? ports[0].portNumber : 1);
+    window.activePortTraceNumber = tracePortNum;
+  }
+  const tracedPort = ports.find(p => p.portNumber === tracePortNum) || ports[0] || { portNumber: 1, speed: "1G" };
+  const tracedPatch = patchMappings[tracePortNum] || null;
+  const tracedDev = tracedPort.connectedDeviceId ? projectBOM.find(i => i.instanceId === tracedPort.connectedDeviceId) : null;
+  const tracedIsOptical = tracedPort.connector && tracedPort.connector !== "RJ-45";
+  const tracedVlan = (typeof getProjectVlanForDevice === "function")
+    ? getProjectVlanForDevice(tracedDev, tracedPort, Boolean(tracedPort.isUplink || tracedIsOptical))
+    : (tracedPort.vlan || "Untagged");
 
   const badgeText = `${ports.length}-Port ${poeBudget > 0 ? 'PoE+' : 'Data'} (${isStacked ? `${stackUnits}-Switch Stack` : 'Standalone'})`;
   const badgeEl = document.getElementById("matrixStudioSwitchBadge");
@@ -230,6 +270,68 @@ function renderPortMatrixStudioContent(switchInstanceId) {
   if (facilityBadgeEl) {
     facilityBadgeEl.textContent = badgeText;
   }
+
+  const renderKeystoneJackCell = (p) => {
+    const pm = patchMappings[p.portNumber] || {};
+    const jackLbl = pm.keystoneJackLabel || `J${String(((p.unitPortNumber || p.portNumber) - 1) % 24 + 1).padStart(2, '0')}`;
+    const hasDev = !!p.connectedDeviceId;
+    const isPoE = (p.poeOutputWatts || 0) > 0;
+    const isUp = p.isUplink || p.role === "uplink";
+    const isTraced = p.portNumber === tracePortNum;
+
+    let styleCls = "bg-slate-950/90 border-slate-800 text-slate-600 hover:border-slate-600";
+    if (isUp) styleCls = "bg-sky-500/20 border-sky-500/70 text-sky-300 font-bold";
+    else if (isPoE) styleCls = "bg-purple-500/25 border-purple-400/80 text-purple-200 font-bold";
+    else if (hasDev) styleCls = "bg-amber-500/20 border-amber-500/70 text-amber-200 font-bold";
+
+    if (isTraced) {
+      styleCls += " ring-2 ring-cyan-400 border-cyan-300 scale-105 z-10 shadow-md shadow-cyan-950/80";
+    }
+
+    const devName = p.connectedDeviceModel || "Unpatched Spare Keystone";
+    const cblId = pm.horizontalCableId || "No Drop";
+    return `
+      <div 
+        onclick="highlightMatrixPort(${p.portNumber})"
+        class="h-7 rounded border ${styleCls} flex flex-col items-center justify-center font-mono text-[8px] cursor-pointer transition-all select-none"
+        title="${escapeHTML(pm.fullPatchCoordinate || jackLbl)} &bull; ${escapeHTML(devName)}${hasDev ? ` (${escapeHTML(cblId)})` : ''} &rarr; Switch Port ${p.portNumber}"
+      >
+        <span class="leading-none">${escapeHTML(jackLbl)}</span>
+        <span class="text-[6.5px] leading-none mt-0.5 ${hasDev ? 'text-emerald-300' : 'text-slate-600'}">${hasDev ? `P${p.unitPortNumber || p.portNumber}` : '&bull;'}</span>
+      </div>
+    `;
+  };
+
+  const renderSwitchCopperCell = (p) => {
+    const isPoE = (p.poeOutputWatts || 0) > 0;
+    const isUp = p.isUplink || p.role === "uplink";
+    const isData = p.connectedDeviceId && !isPoE;
+    const isTraced = p.portNumber === tracePortNum;
+    const pm = patchMappings[p.portNumber] || {};
+
+    let bg = "bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600";
+    if (isUp) bg = "bg-sky-500/20 border-sky-500/70 text-sky-300 font-bold";
+    else if (isPoE) bg = "bg-emerald-500/20 border-emerald-500/70 text-emerald-300 font-bold";
+    else if (isData) bg = "bg-amber-500/20 border-amber-500/70 text-amber-300 font-bold";
+
+    if (isTraced) {
+      bg += " ring-2 ring-cyan-400 border-cyan-300 scale-105 z-10 shadow-md shadow-cyan-950/80";
+    }
+
+    return `
+      <div 
+        class="h-9 rounded-lg border ${bg} flex flex-col items-center justify-center font-mono text-[9px] cursor-pointer transition-all hover:scale-105 select-none"
+        title="${p.label}: ${escapeHTML(p.connectedDeviceModel || 'Free Port')} [${p.speedLabel || p.speed}] ${isPoE ? `(${p.poeOutputWatts}W)` : ''} ${pm.fullPatchCoordinate ? `via ${pm.fullPatchCoordinate}` : ''}"
+        onclick="highlightMatrixPort(${p.portNumber})"
+      >
+        <div class="flex items-center gap-0.5 leading-none">
+          <span>${p.unitPortNumber || p.portNumber}</span>
+          ${p.speed && p.speed !== '1G' ? `<span class="text-[7px] font-bold ${p.speed === '10G' ? 'text-amber-400' : 'text-emerald-400'}">${p.speed}</span>` : ''}
+        </div>
+        ${isPoE ? `<span class="text-[7px] text-emerald-400 leading-none mt-0.5">${p.poeOutputWatts}W</span>` : (p.connectedDeviceId ? `<span class="text-[6.5px] text-sky-300 leading-none mt-0.5">${escapeHTML(pm.keystoneJackLabel || 'LINK')}</span>` : '')}
+      </div>
+    `;
+  };
 
   const matrixHtml = `
     <!-- Switch Specs & Telemetry Overview Cards -->
@@ -244,11 +346,11 @@ function renderPortMatrixStudioContent(switchInstanceId) {
           ${sw.deviceNumber ? `<span class="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-950 border border-indigo-700 text-indigo-300">${sw.deviceNumber}</span>` : ''}
         </div>
         <div class="text-[10px] text-slate-400 font-mono">${escapeHTML(sw.model)} &bull; SKU: ${escapeHTML(sw.sku)}</div>
-        <div class="text-cyan-400 font-mono text-[11px] font-medium pt-0.5">Location: ${escapeHTML(loc)}</div>
+        <div class="text-cyan-400 font-mono text-[11px] font-medium pt-0.5">Location: ${escapeHTML(loc)}${sw.rackSlot ? ` [Rack U${sw.rackSlot}]` : ''}</div>
       </div>
 
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-        <span class="text-slate-500 text-[10px] uppercase font-mono block">Electrical & PoE Budget</span>
+        <span class="text-slate-500 text-[10px] uppercase font-mono block">Electrical &amp; PoE Budget</span>
         <div class="font-bold text-amber-400 text-sm font-mono">${poeBudget} W PoE Budget</div>
         <div class="text-[10px] text-slate-400 font-mono">Draw: ${consumedPoE}W (${poePercent}%) &bull; Free: ${freePoE}W</div>
         <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mt-1 border border-slate-800">
@@ -257,132 +359,208 @@ function renderPortMatrixStudioContent(switchInstanceId) {
       </div>
 
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-        <span class="text-slate-500 text-[10px] uppercase font-mono block">Port Utilization</span>
+        <span class="text-slate-500 text-[10px] uppercase font-mono block">Port &amp; Patch Utilization</span>
         <div class="font-bold text-sky-400 text-sm font-mono">${usedCopper + usedOptical} / ${ports.length} In-Use</div>
-        <div class="text-[10px] text-slate-400 font-mono">Copper: ${usedCopper}/${copperPorts.length} &bull; SFP/QSFP: ${usedOptical}/${opticalPorts.length}</div>
+        <div class="text-[10px] text-slate-400 font-mono">Keystones Patched: ${usedCopper}/${copperPorts.length} &bull; SFP/QSFP: ${usedOptical}/${opticalPorts.length}</div>
         <div class="text-emerald-400 font-mono text-[11px] font-semibold pt-0.5">${ports.length - (usedCopper + usedOptical)} Free Ports Available</div>
       </div>
 
       <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1">
-        <span class="text-slate-500 text-[10px] uppercase font-mono block">Architecture & Stacking</span>
-        <div class="font-bold text-indigo-300 text-sm font-mono">${isStacked ? `${stackUnits}-Switch Resilient Stack` : 'Standalone (1 Chassis)'}</div>
-        <div class="text-[10px] text-slate-400 font-mono">${isStacked ? (hasDedicatedStack ? 'Dedicated Rear Hardware Stack Ports' : 'Uplink Cages in use for Stacking') : '1x AC Outlet Drop'}</div>
-        <div class="text-slate-400 font-mono text-[11px] pt-0.5">Footprint: ${parseInt(sw.rackUnits || 1, 10) * stackUnits}U Total Height</div>
+        <span class="text-slate-500 text-[10px] uppercase font-mono block">Patch Panel Pairing</span>
+        <div class="font-bold text-purple-300 text-sm font-mono">${patchData.panels ? patchData.panels.length : 1}x 24-Port Modular Panels</div>
+        <div class="text-[10px] text-slate-400 font-mono">${patchData.isStandardPod ? 'Orion TOW Standard 6U Pod (6" Slim Cords)' : '1:1 Keystone-to-Switch Port Mapping'}</div>
+        <div class="text-slate-400 font-mono text-[11px] pt-0.5">Click any Keystone or Port below to trace</div>
       </div>
     </div>
 
-    <!-- High-Resolution Hardware Faceplate Port Matrix -->
-    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-      <div class="flex items-center justify-between">
+    <!-- Interactive End-to-End Signal & Patch Path Trace Inspector -->
+    <div id="portMatrixSignalTraceBanner" class="bg-gradient-to-r from-slate-950 via-indigo-950/30 to-slate-950 p-3.5 rounded-xl border border-indigo-500/40 shadow-lg">
+      <div class="flex items-center justify-between flex-wrap gap-2 mb-2.5">
         <div class="flex items-center gap-2">
-          <i data-lucide="cpu" class="w-4 h-4 text-sky-400"></i>
-          <span class="text-xs font-bold text-white uppercase tracking-wider">Hardware Faceplate & Physical Ports</span>
+          <span class="px-2 py-0.5 rounded bg-cyan-500/20 border border-cyan-500/50 text-cyan-300 font-mono text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+            <i data-lucide="activity" class="w-3 h-3"></i> End-to-End Patch Path Inspector
+          </span>
+          <span class="text-xs font-bold text-white font-mono">Tracing ${escapeHTML(tracedPort.shortLabel || `Port ${tracedPort.portNumber}`)}</span>
         </div>
-        <div class="flex items-center gap-3 text-[10px] font-mono">
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/40 border border-emerald-500"></span> PoE Active</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-sky-500/40 border border-sky-500"></span> Uplink / Trunk</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-indigo-500/40 border border-indigo-500"></span> Stacking DAC</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500/40 border border-amber-500"></span> Data-Only</span>
-          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-900 border border-slate-700"></span> Unused</span>
+        <div class="flex items-center gap-2 text-[10px] font-mono">
+          <span class="text-slate-400">Click any Keystone Jack, Switch Port, or Table Row to inspect its physical path</span>
+          ${tracedPatch && !tracedIsOptical ? `
+            <button onclick="promptOverridePortPatchMapping('${sw.instanceId}', ${tracedPort.portNumber})" class="px-2 py-0.5 rounded bg-purple-950/80 hover:bg-purple-900 border border-purple-700/70 text-purple-200 font-semibold flex items-center gap-1 cursor-pointer transition-colors" title="Customize Patch Panel ID or Keystone Jack # for this port">
+              <i data-lucide="edit-2" class="w-3 h-3 text-purple-300"></i> Edit Patch Jack
+            </button>
+          ` : ''}
         </div>
       </div>
 
-      ${isStacked ? `
-        <!-- Stacking Interconnect Fabric Banner -->
-        <div class="bg-indigo-950/40 border border-indigo-500/40 rounded-xl p-3.5 space-y-2">
-          <div class="flex items-center justify-between flex-wrap gap-2">
-            <div class="flex items-center gap-2">
-              <div class="p-1.5 rounded-lg bg-indigo-500/20 border border-indigo-500/40 text-indigo-300">
-                <i data-lucide="layers" class="w-4 h-4"></i>
-              </div>
-              <div>
-                <span class="text-xs font-bold text-white tracking-wide">High-Speed Resilient Stacking Interconnect Fabric</span>
-                <span class="text-[10px] text-indigo-300 font-mono block">
-                  ${hasDedicatedStack ? 'Dedicated Rear Hardware Stack Ports' : `Uplink-Based Stacking (${sw.vendor || 'UniFi'} uses optical cages with high-speed DAC loop)`}
-                </span>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 rounded bg-emerald-950 border border-emerald-700 text-emerald-300 text-[10px] font-mono font-bold flex items-center gap-1">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                RING CLOSED / REDUNDANT
-              </span>
-              <span class="text-[10px] font-mono text-indigo-300 bg-indigo-900/60 px-2 py-0.5 rounded border border-indigo-700/60">
-                ${hasDedicatedStack ? `${stackUnits}x Dedicated Stacking DACs` : `${stackUnits * 2}x Uplink Cages Form Stacking Ring`}
-              </span>
-            </div>
+      <div class="grid grid-cols-1 md:grid-cols-5 gap-2 items-center text-xs font-mono">
+        <!-- Node 1: Field Device -->
+        <div class="p-2.5 rounded-xl bg-slate-900/90 border ${tracedPort.connectedDeviceId ? 'border-emerald-500/50' : 'border-slate-800'} flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg ${tracedPort.connectedDeviceId ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300' : 'bg-slate-800 text-slate-500'} flex items-center justify-center shrink-0">
+            <i data-lucide="${tracedIsOptical ? 'network' : 'video'}" class="w-4 h-4"></i>
           </div>
-
-          <!-- Stacking Ring Topology Visualizer -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(stackUnits, 4)} gap-2 pt-1 border-t border-indigo-900/60">
-            ${Array.from({ length: stackUnits }, (_, uIdx) => {
-    const u = uIdx + 1;
-    const nextU = u === stackUnits ? 1 : u + 1;
-    const prevU = u === 1 ? stackUnits : u - 1;
-    return `
-                <div class="bg-slate-950/80 p-2 rounded-lg border border-indigo-800/40 text-[10px] font-mono space-y-1">
-                  <div class="flex items-center justify-between text-indigo-300 font-bold">
-                    <span>Unit ${u} Stack Fabric</span>
-                    <span class="text-emerald-400 font-normal">LINK UP</span>
-                  </div>
-                  <div class="text-slate-400 text-[9px] flex items-center justify-between">
-                    <span>DAC Ring Out:</span>
-                    <span class="text-sky-300 font-bold">&rarr; Unit ${nextU}</span>
-                  </div>
-                  <div class="text-slate-400 text-[9px] flex items-center justify-between">
-                    <span>DAC Ring Return:</span>
-                    <span class="text-purple-300 font-bold">&larr; Unit ${prevU}</span>
-                  </div>
-                </div>
-              `;
-  }).join('')}
+          <div class="min-w-0">
+            <div class="text-[9px] uppercase text-slate-400">1. Field Device / Peer</div>
+            <div class="font-bold ${tracedPort.connectedDeviceId ? 'text-white' : 'text-slate-500'} truncate" title="${escapeHTML(tracedDev ? (tracedDev.friendlyName || tracedDev.model) : (tracedPort.connectedDeviceModel || 'Unassigned / Spare'))}">
+              ${escapeHTML(tracedDev ? (tracedDev.friendlyName || tracedDev.model) : (tracedPort.connectedDeviceModel || 'Unconnected Spare'))}
+            </div>
+            <div class="text-[10px] text-slate-400 truncate">
+              ${tracedDev && tracedDev.deviceNumber ? `<span class="text-indigo-300 font-bold">${escapeHTML(tracedDev.deviceNumber)}</span> &bull; ` : ''}${escapeHTML(tracedDev ? (tracedDev.closetName || tracedDev.rackId || loc) : loc)}
+            </div>
           </div>
         </div>
-      ` : ''}
 
-      <!-- Render units (if stacked, multiple faceplates) -->
+        <!-- Link 1: Horizontal Cable Run -->
+        <div class="flex flex-col items-center justify-center px-2 text-center">
+          <div class="text-[9.5px] font-bold ${tracedPort.connectedDeviceId ? 'text-amber-300' : 'text-slate-600'}">
+            ${tracedIsOptical ? 'Fiber Backbone Trunk' : (tracedPatch && tracedPatch.horizontalCableId ? escapeHTML(tracedPatch.horizontalCableId) : 'No Horizontal Drop')}
+          </div>
+          <div class="w-full flex items-center gap-1 my-1">
+            <div class="h-0.5 flex-1 ${tracedPort.connectedDeviceId ? 'bg-gradient-to-r from-emerald-500 to-purple-500' : 'bg-slate-800'}"></div>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 ${tracedPort.connectedDeviceId ? 'text-purple-400' : 'text-slate-700'}"></i>
+          </div>
+          <div class="text-[9px] text-slate-400">
+            ${tracedIsOptical ? escapeHTML(tracedPort.connector || 'SFP+ Fiber') : 'Cat6A Horizontal Run'}
+          </div>
+        </div>
+
+        <!-- Node 2: Patch Panel & Keystone Jack -->
+        <div class="p-2.5 rounded-xl bg-slate-900/90 border ${tracedIsOptical ? 'border-cyan-500/40' : 'border-purple-500/50'} flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg ${tracedIsOptical ? 'bg-cyan-500/20 border border-cyan-500/40 text-cyan-300' : 'bg-purple-500/20 border border-purple-500/40 text-purple-300'} flex items-center justify-center shrink-0 font-bold text-xs">
+            ${tracedIsOptical ? 'LIU' : escapeHTML(tracedPatch ? tracedPatch.keystoneJackLabel : 'J01')}
+          </div>
+          <div class="min-w-0">
+            <div class="text-[9px] uppercase text-purple-300">2. Patch Panel &amp; Jack</div>
+            <div class="font-bold text-white truncate">
+              ${tracedIsOptical ? 'Fiber LIU Housing' : escapeHTML(tracedPatch ? `${tracedPatch.patchPanelId} • Jack ${tracedPatch.keystoneJackLabel}` : 'Direct / Unpatched')}
+            </div>
+            <div class="text-[10px] text-slate-400 truncate">
+              ${tracedIsOptical ? 'LC Duplex Bulkhead' : (tracedPatch && tracedPatch.patchPanelSlotU ? `Mounted at ${escapeHTML(tracedPatch.patchPanelSlotU)}` : 'Closet Patch Panel')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Link 2: Short Patch Cord -->
+        <div class="flex flex-col items-center justify-center px-2 text-center">
+          <div class="text-[9.5px] font-bold ${tracedPort.connectedDeviceId ? 'text-sky-300' : 'text-slate-500'}">
+            ${tracedIsOptical ? 'LC-LC Fiber Jumper' : escapeHTML(tracedPatch ? tracedPatch.patchCordSpec : '6" Cat6A Slim Patch')}
+          </div>
+          <div class="w-full flex items-center gap-1 my-1">
+            <div class="h-0.5 flex-1 ${tracedPort.connectedDeviceId ? 'bg-gradient-to-r from-purple-500 to-sky-500' : 'bg-slate-800'}"></div>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5 ${tracedPort.connectedDeviceId ? 'text-sky-400' : 'text-slate-700'}"></i>
+          </div>
+          <div class="text-[9px] text-slate-400">
+            1:1 Vertical Patching
+          </div>
+        </div>
+
+        <!-- Node 3: Switch Physical Port -->
+        <div class="p-2.5 rounded-xl bg-slate-900/90 border border-sky-500/50 flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/40 text-sky-300 flex items-center justify-center shrink-0 font-bold text-xs">
+            P${tracedPort.unitPortNumber || tracedPort.portNumber}
+          </div>
+          <div class="min-w-0">
+            <div class="text-[9px] uppercase text-sky-300">3. Switch Port</div>
+            <div class="font-bold text-white truncate">
+              ${escapeHTML(sw.friendlyName || sw.model)} &bull; ${escapeHTML(tracedPort.shortLabel || `P${tracedPort.portNumber}`)}
+            </div>
+            <div class="text-[10px] text-emerald-400 truncate">
+              ${tracedPort.speed || '1G'} &bull; ${(tracedPort.poeOutputWatts || 0) > 0 ? `${tracedPort.poeOutputWatts}W PoE` : 'Data'} &bull; ${escapeHTML(tracedVlan)}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- High-Resolution Paired Patch Panel & Switch Hardware Faceplate -->
+    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="cpu" class="w-4 h-4 text-sky-400"></i>
+          <span class="text-xs font-bold text-white uppercase tracking-wider">Paired Patch Panel Keystones &amp; Switch Faceplate</span>
+        </div>
+        <div class="flex items-center gap-3 text-[10px] font-mono flex-wrap">
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-purple-500/40 border border-purple-400"></span> Patched Keystone</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-emerald-500/40 border border-emerald-500"></span> Switch PoE Active</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-sky-500/40 border border-sky-500"></span> Uplink / Trunk</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-500/40 border border-amber-500"></span> Data-Only</span>
+          <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-slate-900 border border-slate-700"></span> Spare</span>
+        </div>
+      </div>
+
+      <!-- Render units (with paired top/bottom 24-port patch panels) -->
       <div class="space-y-4">
         ${Array.from({ length: stackUnits }, (_, uIdx) => {
     const u = uIdx + 1;
     const unitCopper = copperPorts.filter(p => (p.unitIndex || 1) === u);
     const unitOptical = opticalPorts.filter(p => (p.unitIndex || 1) === u);
+    const topBank = unitCopper.slice(0, 24);
+    const botBank = unitCopper.slice(24, 48);
+    const topPm = topBank[0] ? patchMappings[topBank[0].portNumber] : null;
+    const botPm = botBank[0] ? patchMappings[botBank[0].portNumber] : null;
 
     return `
-            <div class="p-3 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2">
+            <div class="p-3.5 bg-slate-900/80 rounded-xl border border-slate-800 space-y-2.5">
               <div class="flex items-center justify-between text-xs font-mono">
                 <span class="font-bold ${u === 1 ? 'text-sky-400' : 'text-indigo-400'} flex items-center gap-1.5">
                   <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-                  ${isStacked ? `Chassis Unit ${u} (${u === 1 ? 'Master / Active' : 'Member / Standby'}) &bull; ${unitCopper.length} Copper + ${unitOptical.length} Optical` : `${sw.friendlyName || sw.model} Faceplate (${unitCopper.length} Copper + ${unitOptical.length} Optical)`}
+                  ${isStacked ? `Chassis Unit ${u} (${u === 1 ? 'Master / Active' : 'Member / Standby'})` : `${escapeHTML(sw.friendlyName || sw.model)}`} &bull; Paired Patch &amp; Switch Deck
                 </span>
-                <span class="text-slate-400 text-[11px]">${u === 1 ? 'PSU 1 & 2 Active' : `Member ${u} Power Feed OK`}</span>
+                <span class="text-slate-400 text-[11px]">${unitCopper.length} Copper + ${unitOptical.length} Optical</span>
               </div>
 
-              <!-- Copper Port Bank -->
-              <div class="grid grid-cols-12 sm:grid-cols-24 gap-1.5 pt-1">
-                ${unitCopper.map(p => {
-      const isPoE = (p.poeOutputWatts || 0) > 0;
-      const isUp = p.isUplink || p.role === "uplink";
-      const isData = p.connectedDeviceId && !isPoE;
-      let bg = "bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-600";
-      if (isUp) bg = "bg-sky-500/20 border-sky-500/70 text-sky-300 font-bold";
-      else if (isPoE) bg = "bg-emerald-500/20 border-emerald-500/70 text-emerald-300 font-bold";
-      else if (isData) bg = "bg-amber-500/20 border-amber-500/70 text-amber-300 font-bold";
+              <!-- Top 24-Port Patch Panel Strip (J01 - J24 -> Switch Ports 1 - 24) -->
+              ${topBank.length > 0 ? `
+                <div class="p-2 rounded-lg bg-slate-950/90 border border-purple-500/30 space-y-1">
+                  <div class="flex items-center justify-between text-[10px] font-mono">
+                    <span class="text-purple-300 font-bold flex items-center gap-1.5">
+                      <span class="px-1.5 py-0.2 rounded bg-purple-950 border border-purple-700/70 text-purple-200">${escapeHTML(topPm ? topPm.patchPanelId : `PP-U${u}-TOP`)}</span>
+                      <span>24-Port Modular Keystone Patch Panel (J01&ndash;J${String(topBank.length).padStart(2, '0')})</span>
+                      ${topPm && topPm.patchPanelSlotU ? `<span class="text-slate-400">[${escapeHTML(topPm.patchPanelSlotU)}]</span>` : ''}
+                    </span>
+                    <span class="text-slate-400">6" Slim Cat6A &darr; Ports 1&ndash;${topBank.length}</span>
+                  </div>
+                  <div class="grid grid-cols-12 sm:grid-cols-24 gap-1">
+                    ${topBank.map(p => renderKeystoneJackCell(p)).join('')}
+                  </div>
+                </div>
+              ` : ''}
 
-      return `
-                    <div 
-                      class="h-9 rounded-lg border ${bg} flex flex-col items-center justify-center font-mono text-[9px] cursor-pointer transition-all hover:scale-105"
-                      title="${p.label}: ${p.connectedDeviceModel || 'Free Port'} [${p.speedLabel || p.speed}] ${isPoE ? `(${p.poeOutputWatts}W)` : ''}"
-                      onclick="highlightMatrixPort(${p.portNumber})"
-                    >
-                      <div class="flex items-center gap-0.5">
-                        <span>${p.unitPortNumber || p.portNumber}</span>
-                        ${p.speed && p.speed !== '1G' ? `<span class="text-[7px] font-bold ${p.speed === '10G' ? 'text-amber-400' : 'text-emerald-400'}">${p.speed}</span>` : ''}
-                      </div>
-                      ${isPoE ? `<span class="text-[7px] text-emerald-400 leading-none">${p.poeOutputWatts}W</span>` : ''}
-                    </div>
-                  `;
-    }).join('')}
+              <!-- Switch Copper Port Bank -->
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-sky-500/30 space-y-1.5">
+                <div class="flex items-center justify-between text-[10px] font-mono">
+                  <span class="text-sky-300 font-bold flex items-center gap-1.5">
+                    <span class="px-1.5 py-0.2 rounded bg-sky-950 border border-sky-700/70 text-sky-200">SWITCH UNIT ${u}</span>
+                    <span>${escapeHTML(sw.model)} RJ45 Matrix</span>
+                    ${sw.rackSlot ? `<span class="text-slate-400">[Rack U${sw.rackSlot}]</span>` : ''}
+                  </span>
+                  <span class="text-emerald-400">${unitCopper.filter(p => p.connectedDeviceId).length} / ${unitCopper.length} Ports Active</span>
+                </div>
+                <div class="grid grid-cols-12 sm:grid-cols-24 gap-1">
+                  ${topBank.map(p => renderSwitchCopperCell(p)).join('')}
+                </div>
+                ${botBank.length > 0 ? `
+                  <div class="grid grid-cols-12 sm:grid-cols-24 gap-1 pt-1 border-t border-slate-900">
+                    ${botBank.map(p => renderSwitchCopperCell(p)).join('')}
+                  </div>
+                ` : ''}
               </div>
+
+              <!-- Bottom 24-Port Patch Panel Strip (J01 - J24 -> Switch Ports 25 - 48) -->
+              ${botBank.length > 0 ? `
+                <div class="p-2 rounded-lg bg-slate-950/90 border border-purple-500/30 space-y-1">
+                  <div class="flex items-center justify-between text-[10px] font-mono">
+                    <span class="text-purple-300 font-bold flex items-center gap-1.5">
+                      <span class="px-1.5 py-0.2 rounded bg-purple-950 border border-purple-700/70 text-purple-200">${escapeHTML(botPm ? botPm.patchPanelId : `PP-U${u}-BOT`)}</span>
+                      <span>24-Port Modular Keystone Patch Panel (J01&ndash;J${String(botBank.length).padStart(2, '0')})</span>
+                      ${botPm && botPm.patchPanelSlotU ? `<span class="text-slate-400">[${escapeHTML(botPm.patchPanelSlotU)}]</span>` : ''}
+                    </span>
+                    <span class="text-slate-400">6" Slim Cat6A &uarr; Ports 25&ndash;${24 + botBank.length}</span>
+                  </div>
+                  <div class="grid grid-cols-12 sm:grid-cols-24 gap-1">
+                    ${botBank.map(p => renderKeystoneJackCell(p)).join('')}
+                  </div>
+                </div>
+              ` : ''}
 
               <!-- Optical Transceiver Cages Bank -->
               ${unitOptical.length > 0 ? `
@@ -392,9 +570,11 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                     ${unitOptical.map((p, idx) => {
       const isConnected = !!p.connectedDeviceId;
       const isStack = !!p.isStackPort;
+      const isTraced = p.portNumber === tracePortNum;
       let bg = "bg-slate-950 border-slate-800 text-slate-500";
       if (isStack) bg = "bg-indigo-500/20 border-indigo-500 text-indigo-200 font-bold shadow-sm";
       else if (isConnected) bg = "bg-cyan-500/20 border-cyan-500 text-cyan-300 font-bold";
+      if (isTraced) bg += " ring-2 ring-cyan-400 border-cyan-300";
 
       return `
                         <div 
@@ -442,27 +622,37 @@ function renderPortMatrixStudioContent(switchInstanceId) {
       </div>
     </div>
 
-    <!-- Active Port Assignments & Connections Table -->
+    <!-- Active Port Assignments, Patch Panel Schedule & Connections Table -->
     <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between flex-wrap gap-2">
         <div class="flex items-center gap-2">
           <i data-lucide="list" class="w-4 h-4 text-emerald-400"></i>
-          <span class="text-xs font-bold text-white uppercase tracking-wider">Connected Devices & Interconnects</span>
+          <span class="text-xs font-bold text-white uppercase tracking-wider">End-to-End Patch Schedule &amp; Connected Devices</span>
+          <span class="text-[11px] font-mono text-slate-400">(${ports.filter(p => p.connectedDeviceId || p.isStackPort).length + (isStacked && hasDedicatedStack ? stackUnits : 0)} Active / ${ports.length} Total)</span>
         </div>
-        <span class="text-xs font-mono text-slate-400">${ports.filter(p => p.connectedDeviceId || p.isStackPort).length + (isStacked && hasDedicatedStack ? stackUnits : 0)} Active Connections</span>
+        <div class="flex items-center gap-1.5">
+          <div class="bg-slate-900 p-0.5 rounded-lg border border-slate-800 flex items-center text-[10px] font-mono">
+            <button type="button" onclick="setPortMatrixFilterMode('all')" class="px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${window.portMatrixFilterMode !== 'active' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}">
+              All Ports (${ports.length})
+            </button>
+            <button type="button" onclick="setPortMatrixFilterMode('active')" class="px-2.5 py-1 rounded-md font-bold transition-colors cursor-pointer ${window.portMatrixFilterMode === 'active' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}">
+              Active Patched Only (${ports.filter(p => p.connectedDeviceId || p.isStackPort).length})
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left text-xs text-slate-300 font-mono">
           <thead class="bg-slate-900 border-b border-slate-800 text-[10px] uppercase text-slate-400">
             <tr>
-              <th class="p-2.5">Port</th>
-              <th class="p-2.5">Type & Speed</th>
+              <th class="p-2.5">Switch Port</th>
+              <th class="p-2.5">Patch Panel &amp; Jack</th>
               <th class="p-2.5">Status</th>
               <th class="p-2.5">Connected Device</th>
-              <th class="p-2.5">Target Location</th>
+              <th class="p-2.5">Horizontal Run &amp; Location</th>
               <th class="p-2.5">VLAN</th>
-              <th class="p-2.5">Cabling & Media</th>
+              <th class="p-2.5">Cabling &amp; Patch Cord</th>
               <th class="p-2.5">PoE Delivery</th>
               <th class="p-2.5 text-right">Actions</th>
             </tr>
@@ -475,10 +665,10 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                 <tr class="bg-indigo-950/20 hover:bg-indigo-950/40 transition-colors">
                   <td class="p-2.5 font-bold text-indigo-300 flex items-center gap-1.5">
                     <i data-lucide="link" class="w-3.5 h-3.5 text-indigo-400"></i>
-                    Unit ${u} Stk-1 &bull; Stacking Port 1
+                    Unit ${u} Stk-1
                   </td>
-                  <td class="p-2.5 text-indigo-200">
-                    Dedicated Hardware Stacking Bus (Bi-Dir)
+                  <td class="p-2.5 text-indigo-300 text-[10px]">
+                    Rear Stack Bus
                   </td>
                   <td class="p-2.5">
                     <span class="px-1.5 py-0.5 rounded bg-indigo-950 border border-indigo-700 text-emerald-400 font-bold text-[9px] flex items-center gap-1 w-fit">
@@ -526,7 +716,21 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                   })
                 : [];
 
-              return ports.map(p => {
+              const visiblePorts = window.portMatrixFilterMode === "active"
+                ? ports.filter(p => p.connectedDeviceId || p.isStackPort)
+                : ports;
+
+              if (visiblePorts.length === 0) {
+                return `
+                  <tr>
+                    <td colspan="9" class="p-6 text-center text-slate-500">
+                      No active patched ports on this switch yet. Switch to <strong>All Ports</strong> or plug in a device below.
+                    </td>
+                  </tr>
+                `;
+              }
+
+              return visiblePorts.map(p => {
                 const hasDev = !!p.connectedDeviceId;
                 const targetDev = hasDev ? projectBOM.find(i => i.instanceId === p.connectedDeviceId) : null;
                 const targetLoc = targetDev ? (targetDev.closetName || targetDev.rackId || 'Space') : (p.connectedLocation || (p.isStackPort ? `${loc} [Stack Ring]` : 'Unassigned'));
@@ -538,28 +742,61 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                   ? getProjectVlanForDevice(targetDev, p, isUplinkPort)
                   : "Untagged (Flat)";
                 const curPortVlan = p.vlan || "auto";
+                const pm = patchMappings[p.portNumber] || null;
+                const isTraced = p.portNumber === tracePortNum;
 
                 return `
-                  <tr id="matrix-row-${p.portNumber}" class="hover:bg-slate-900/60 transition-colors ${hasDev || isStack ? '' : 'opacity-60'}">
-                    <td class="p-2.5 font-bold ${isStack ? 'text-indigo-300' : (isOptical ? 'text-cyan-400' : 'text-white')}">
-                      ${p.shortLabel || `Port ${p.portNumber}`}
-                    </td>
+                  <tr id="matrix-row-${p.portNumber}" onclick="selectMatrixTracePort('${sw.instanceId}', ${p.portNumber}, event)" class="hover:bg-slate-900/80 transition-colors cursor-pointer ${isTraced ? 'bg-cyan-950/30 ring-1 ring-inset ring-cyan-500/50' : ''} ${hasDev || isStack ? '' : 'opacity-65'}">
                     <td class="p-2.5">
-                      <span class="font-medium ${isStack ? 'text-indigo-300 font-bold' : (p.speed === '10G' ? 'text-amber-300' : (p.speed === '2.5G' ? 'text-emerald-300' : (isOptical ? 'text-cyan-300' : 'text-slate-300')))}">
+                      <div class="font-bold ${isStack ? 'text-indigo-300' : (isOptical ? 'text-cyan-400' : 'text-white')} flex items-center gap-1.5">
+                        <span>${p.shortLabel || `Port ${p.portNumber}`}</span>
+                        ${isTraced ? `<span class="w-1.5 h-1.5 rounded-full bg-cyan-400" title="Currently traced in Patch Inspector"></span>` : ''}
+                      </div>
+                      <div class="text-[10px] ${isStack ? 'text-indigo-300' : (p.speed === '10G' ? 'text-amber-300' : (p.speed === '2.5G' ? 'text-emerald-300' : 'text-slate-500'))}">
                         ${p.speedLabel || (isOptical ? `${p.connector || 'Optical'} (${p.speed})` : `${p.speed} Base-T`)}
-                      </span>
+                      </div>
                     </td>
+
+                    <!-- Dedicated Patch Panel & Keystone Jack Column -->
+                    <td class="p-2.5">
+                      ${isStack ? `
+                        <span class="text-[10px] text-indigo-400">Direct Stack DAC</span>
+                      ` : (isOptical ? `
+                        <div class="flex items-center gap-1">
+                          <span class="px-1.5 py-0.5 rounded bg-cyan-950/80 border border-cyan-800/70 text-cyan-300 text-[10px] font-bold">FIBER-LIU</span>
+                          <span class="text-[10px] text-slate-400">LC Port ${p.unitPortNumber || p.portNumber}</span>
+                        </div>
+                      ` : (pm ? `
+                        <div class="flex items-center gap-1.5 group/pp">
+                          <div>
+                            <div class="flex items-center gap-1">
+                              <span class="px-1.5 py-0.2 rounded bg-purple-950/90 border border-purple-700/70 text-purple-200 text-[10px] font-bold">${escapeHTML(pm.patchPanelId)}</span>
+                              <span class="px-1.5 py-0.2 rounded ${hasDev ? 'bg-emerald-950/90 border border-emerald-700/70 text-emerald-300' : 'bg-slate-900 border border-slate-700 text-slate-400'} text-[10px] font-bold">${escapeHTML(pm.keystoneJackLabel)}</span>
+                              ${pm.patchPanelSlotU ? `<span class="text-[9.5px] text-slate-400">[${escapeHTML(pm.patchPanelSlotU)}]</span>` : ''}
+                            </div>
+                            <div class="text-[9.5px] text-slate-500 mt-0.5">
+                              ${escapeHTML(pm.patchPanelLabel || '24P Modular Patch Panel')}
+                            </div>
+                          </div>
+                          <button type="button" onclick="event.stopPropagation(); promptOverridePortPatchMapping('${sw.instanceId}', ${p.portNumber})" class="opacity-0 group-hover/pp:opacity-100 p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-purple-300 transition-opacity cursor-pointer" title="Customize Patch Panel ID or Keystone Jack #">
+                            <i data-lucide="edit-2" class="w-3 h-3"></i>
+                          </button>
+                        </div>
+                      ` : `<span class="text-slate-600">-</span>`))}
+                    </td>
+
                     <td class="p-2.5">
                       ${(hasDev || isStack) ? `
                         <span class="px-1.5 py-0.5 rounded ${isStack ? 'bg-indigo-950 border border-indigo-700 text-indigo-300' : 'bg-emerald-950/80 border border-emerald-800 text-emerald-400'} font-bold text-[9px]">
-                          ${isStack ? 'STACK UP' : 'LINK UP'}
+                          ${isStack ? 'STACK UP' : 'PATCHED'}
                         </span>
                       ` : `
                         <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-500 text-[9px]">
-                          IDLE
+                          SPARE
                         </span>
                       `}
                     </td>
+
                     <td class="p-2.5">
                       ${isStack ? `
                         <div class="font-bold text-indigo-300 flex items-center gap-1.5">
@@ -574,13 +811,18 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                         </div>
                         <div class="text-[10px] text-slate-500">${escapeHTML(targetDev ? (targetDev.model || targetDev.role) : 'Uplink Peer')}</div>
                       ` : `
-                        <span class="text-slate-600">Unconnected / Spare</span>
+                        <span class="text-slate-600">Unconnected / Spare Jack</span>
                       `)}
                     </td>
-                    <td class="p-2.5 text-slate-400">
-                      ${(hasDev || isStack) ? escapeHTML(targetLoc) : '-'}
-                    </td>
+
                     <td class="p-2.5">
+                      ${(hasDev || isStack) ? `
+                        <div class="text-slate-200 font-semibold">${pm && pm.horizontalCableId ? `<span class="text-amber-300">${escapeHTML(pm.horizontalCableId)}</span> &bull; ` : ''}${escapeHTML(targetLoc)}</div>
+                        <div class="text-[9.5px] text-slate-500">${isOptical ? 'Backbone Fiber Trunk' : 'Horizontal Drop to Keystone Rear'}</div>
+                      ` : '<span class="text-slate-600">-</span>'}
+                    </td>
+
+                    <td class="p-2.5" onclick="event.stopPropagation()">
                       ${isStack ? `<span class="text-indigo-400/80 text-[10px]">Stack Ring</span>` : `
                         <select onchange="updateMatrixPortVlan('${sw.instanceId}', ${p.portNumber}, this.value)" class="bg-slate-900 hover:bg-slate-800 border border-slate-700/80 rounded px-1.5 py-0.5 text-[10px] text-slate-200 font-mono focus:outline-none focus:border-indigo-500 cursor-pointer max-w-[135px]">
                           <option value="auto" ${curPortVlan === 'auto' ? 'selected' : ''}>Auto (${escapeHTML(resolvedVlan)})</option>
@@ -595,6 +837,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                         </select>
                       `}
                     </td>
+
                     <td class="p-2.5">
                       ${isStack ? `
                         <div class="flex items-center gap-1.5 text-indigo-300">
@@ -612,29 +855,31 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                           : { color: "Yellow", category: "Cat6A", hex: "#eab308" };
                         const patchStd = (typeof getProjectCablingStandard === "function") 
                           ? getProjectCablingStandard(targetDev, "patch") 
-                          : { color: "Yellow", lengthFt: 1, hex: "#eab308" };
+                          : { color: "Yellow", lengthFt: 0.5, hex: "#eab308" };
                         return `
-                          <div class="space-y-1">
-                            <div class="flex items-center gap-1.5" title="Cable Run Standard: ${escapeHTML(runStd.category)} (${escapeHTML(runStd.color)})">
+                          <div class="space-y-0.5">
+                            <div class="flex items-center gap-1.5" title="Horizontal Run: ${escapeHTML(runStd.category)} (${escapeHTML(runStd.color)})">
                               <span class="w-2 h-2 rounded-full shrink-0 shadow-sm" style="background-color: ${runStd.hex}; border: 1px solid rgba(255,255,255,0.3);"></span>
-                              <span class="text-[11px] text-slate-200">Run: <span class="font-bold text-white">${escapeHTML(runStd.category || 'Cat6A')}</span> <span class="text-slate-400">(${escapeHTML(runStd.color)})</span></span>
+                              <span class="text-[10.5px] text-slate-200">Run: <span class="font-bold text-white">${escapeHTML(runStd.category || 'Cat6A')}</span></span>
                             </div>
-                            <div class="flex items-center gap-1.5" title="Patch Cord Standard: ${escapeHTML(String(patchStd.lengthFt || 1))}ft (${escapeHTML(patchStd.color)})">
+                            <div class="flex items-center gap-1.5" title="Rack Patch Cord: ${escapeHTML(pm ? pm.patchCordSpec : '6" Cat6A Slim')}">
                               <span class="w-2 h-2 rounded-full shrink-0 shadow-sm" style="background-color: ${patchStd.hex}; border: 1px solid rgba(255,255,255,0.3);"></span>
-                              <span class="text-[10px] text-slate-400">Patch: <span class="text-slate-300">${patchStd.lengthFt ? `${escapeHTML(String(patchStd.lengthFt))}ft` : '1ft'}</span> (${escapeHTML(patchStd.color)})</span>
+                              <span class="text-[10px] text-sky-300">${escapeHTML(pm ? pm.patchCordSpec : '6" Slim Cat6A')}</span>
                             </div>
                           </div>
                         `;
                       })() : `
-                        <span class="text-slate-600">-</span>
+                        <span class="text-slate-600 text-[10px]">${pm ? escapeHTML(pm.patchCordSpec) : '-'}</span>
                       `))}
                     </td>
+
                     <td class="p-2.5">
                       ${isPoE ? `
                         <span class="text-amber-400 font-bold font-mono">${p.poeOutputWatts} W (${p.poeStandard === 'bt90' ? '802.3bt-90W' : (p.poeStandard === 'bt60' ? '802.3bt-60W' : (p.poeStandard === 'af' ? '802.3af' : '802.3at'))})</span>
                       ` : (isStack ? `<span class="text-indigo-400/80 text-[10px]">DAC Copper</span>` : (hasDev ? `<span class="text-slate-500">Data Only</span>` : '-'))}
                     </td>
-                    <td class="p-2.5 text-right">
+
+                    <td class="p-2.5 text-right" onclick="event.stopPropagation()">
                       ${hasDev && !isStack ? `
                         <div class="flex items-center justify-end gap-1">
                           <button onclick="closePortMatrixStudio(); jumpToTopologyTarget('node:${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800 text-indigo-300 text-[10px] cursor-pointer" title="Focus in Topology">
@@ -675,6 +920,53 @@ function renderPortMatrixStudioContent(switchInstanceId) {
   if (window.lucide) lucide.createIcons();
 }
 
+function selectMatrixTracePort(switchInstanceId, portNum, event) {
+  window.activePortTraceNumber = parseInt(portNum, 10);
+  renderPortMatrixStudioContent(switchInstanceId);
+}
+
+function promptOverridePortPatchMapping(switchInstanceId, portNum) {
+  const sw = projectBOM.find(i => i.instanceId === switchInstanceId);
+  if (!sw) return;
+  const ports = (typeof PortEngine !== "undefined") ? PortEngine.initSwitchPorts(sw) : (sw.physicalPorts || []);
+  const p = ports.find(pt => pt.portNumber === parseInt(portNum, 10));
+  if (!p) return;
+
+  const patchData = (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function")
+    ? PortEngine.resolveSwitchPatchMapping(sw)
+    : { mappings: {} };
+  const pm = (patchData.mappings && patchData.mappings[portNum]) || {};
+
+  const currentPanel = p.customPatchPanelId || pm.patchPanelId || "PP-U1-TOP";
+  const currentJack = p.customKeystoneJack || pm.keystoneJackNumber || (((p.unitPortNumber || p.portNumber) - 1) % 24) + 1;
+
+  const newPanel = prompt(`Custom Patch Panel ID for ${p.shortLabel || `Port ${portNum}`} (leave blank to reset to automatic):`, currentPanel);
+  if (newPanel === null) return;
+
+  const newJackStr = prompt(`Keystone Jack # (1-48) on ${newPanel.trim() || currentPanel}:`, String(currentJack));
+  if (newJackStr === null) return;
+
+  if (!newPanel.trim()) {
+    delete p.customPatchPanelId;
+    delete p.customKeystoneJack;
+  } else {
+    p.customPatchPanelId = newPanel.trim().toUpperCase();
+    const parsedJack = parseInt(newJackStr, 10);
+    if (!isNaN(parsedJack) && parsedJack >= 1 && parsedJack <= 48) {
+      p.customKeystoneJack = parsedJack;
+    }
+  }
+
+  if (typeof StorageService !== "undefined") {
+    StorageService.queueAutoSave();
+  }
+  window.activePortTraceNumber = parseInt(portNum, 10);
+  renderPortMatrixStudioContent(switchInstanceId);
+  if (typeof renderRackVisualizer === "function") {
+    renderRackVisualizer();
+  }
+}
+
 function updateMatrixPortVlan(switchInstanceId, portNumber, vlanVal) {
   const sw = projectBOM.find(i => i.instanceId === switchInstanceId);
   if (!sw) return;
@@ -694,6 +986,10 @@ function updateMatrixPortVlan(switchInstanceId, portNumber, vlanVal) {
 }
 
 function highlightMatrixPort(portNum) {
+  window.activePortTraceNumber = parseInt(portNum, 10);
+  if (activePortMatrixSwitchId) {
+    renderPortMatrixStudioContent(activePortMatrixSwitchId);
+  }
   const row = document.getElementById(`matrix-row-${portNum}`);
   if (row) {
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -799,6 +1095,7 @@ function connectDeviceFromMatrix(switchInstanceId, portNumber, deviceInstanceId)
     FacilityStore.notifyWorkspaceChange();
   }
 
+  window.activePortTraceNumber = parseInt(portNumber, 10);
   renderPortMatrixStudioContent(switchInstanceId);
 
   if (typeof renderTopology === "function") renderTopology();
@@ -818,6 +1115,9 @@ window.closePortMatrixStudio = closePortMatrixStudio;
 window.renderPortMatrixStudioContent = renderPortMatrixStudioContent;
 window.updateMatrixPortVlan = updateMatrixPortVlan;
 window.highlightMatrixPort = highlightMatrixPort;
+window.selectMatrixTracePort = selectMatrixTracePort;
+window.promptOverridePortPatchMapping = promptOverridePortPatchMapping;
+window.setPortMatrixFilterMode = setPortMatrixFilterMode;
 window.jumpFromMatrixStudioToElevation = jumpFromMatrixStudioToElevation;
 window.jumpFromMatrixStudioToTopology = jumpFromMatrixStudioToTopology;
 window.disconnectMatrixPort = disconnectMatrixPort;
