@@ -28,8 +28,10 @@ const ACCESSORY_DATABASE = [
       "Pass-through PoE to remote camera",
       "-40°C to +75°C Industrial Operating Temp",
       "DIN-Rail & Surface Mounting Brackets Included"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
+        image: "assets/images/products/amg-eoc-7501.webp"
+    },
   {
     id: "amg-sfp-conv-7111",
     sku: "AMG7111-1S-1C",
@@ -50,8 +52,10 @@ const ACCESSORY_DATABASE = [
       "12-48VDC Redundant Terminal Power Input",
       "-40°C to +75°C Industrial Operating Temp",
       "DIN-Rail Mountable"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
+        image: "assets/images/products/amg-350-4g-1c-1s.webp"
+    },
   {
     id: "amg-140-1gr",
     sku: "AMG140-1GR",
@@ -73,8 +77,9 @@ const ACCESSORY_DATABASE = [
       "Link Fault Pass-Through (LFPT) for fast link loss notification",
       "-40°C to +75°C wide industrial operating temperature range",
       "Dual 12-48VDC redundant power inputs with reverse polarity protection"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-140-1gr.webp"
+    },
   {
     id: "amg-160-1f-1ec",
     sku: "AMG160-1F-1EC",
@@ -96,8 +101,9 @@ const ACCESSORY_DATABASE = [
       "Pass-through IEEE 802.3af/at PoE to remote cameras",
       "-40°C to +75°C fanless hardened operation",
       "Plug-and-play installation without IP configuration"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-160-1f-1ec.webp"
+    },
   {
     id: "amg-172-1g-1v",
     sku: "AMG172-1G-1V",
@@ -119,8 +125,9 @@ const ACCESSORY_DATABASE = [
       "Up to 300Mbps aggregate bandwidth depending on wire gauge and distance",
       "-40°C to +75°C operating range for outdoor perimeter security",
       "DIP switches for Symmetric/Asymmetric and Master/Slave modes"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-172-1g-1v.webp"
+    },
   {
     id: "amg-210m-1g-1s",
     sku: "AMG210M-1G-1S",
@@ -142,8 +149,9 @@ const ACCESSORY_DATABASE = [
       "1x 1G RJ45 + 1x 100/1000M SFP slot",
       "-40°C to +75°C fanless operation",
       "12-48VDC terminal block power input"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-210m-1g-1s.webp"
+    },
   {
     id: "amg-260m-1g-1s",
     sku: "AMG260M-1G-1S",
@@ -165,8 +173,9 @@ const ACCESSORY_DATABASE = [
       "1x 10/100/1000Base-T(x) RJ45 + 1x 100/1000Base-X SFP slot",
       "-40°C to +75°C industrial operating temperature",
       "Link Fault Pass-Through (LFPT) and jumbo frame support"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-210m-1g-1s.webp"
+    },
   {
     id: "amg-260m-1gbt-1s-p90",
     sku: "AMG260M-1GBT-1S-P90",
@@ -188,8 +197,9 @@ const ACCESSORY_DATABASE = [
       "1x 1G RJ45 PoE + 1x 100/1000Base-X SFP slot",
       "-40°C to +75°C fanless passive cooling",
       "52-56VDC dual power inputs"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-210m-1g-1s.webp"
+    },
   {
     id: "amg-265m-1g-1s",
     sku: "AMG265M-1G-1S",
@@ -211,8 +221,9 @@ const ACCESSORY_DATABASE = [
       "1x 10/100/1000Base-T(x) RJ45 + 1x 100/1000Base-X SFP slot",
       "-40°C to +75°C fanless passive cooling",
       "Integrated surge and transient protection"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-210m-1g-1s.webp"
+    },
   {
     id: "amg-250-1g-1s",
     sku: "AMG250-1G-1S",
@@ -234,8 +245,9 @@ const ACCESSORY_DATABASE = [
       "Dual redundant 10-36VDC power inputs with fault alarm relay",
       "-40°C to +75°C fanless hardened industrial operation",
       "Link Fault Pass-Through (LFPT) and 9.2KB jumbo frames"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250-1g-1s.webp"
+    },
   {
     id: "amg-250-1gat-1s",
     sku: "AMG250-1GAT-1S-P30",
@@ -257,8 +269,9 @@ const ACCESSORY_DATABASE = [
       "Powers remote IP cameras directly over Cat6 up to 100m",
       "48-56VDC dual terminal power inputs with reverse polarity protection",
       "-40°C to +75°C fanless passive cooling"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250-1g-1s.webp"
+    },
   {
     id: "amg-250-1gbt-1s",
     sku: "AMG250-1GBT-1S-P90",
@@ -280,8 +293,9 @@ const ACCESSORY_DATABASE = [
       "Powers ultra-demanding outdoor PTZ cameras with wipers/blowers",
       "52-56VDC dual redundant power inputs with alarm contact",
       "-40°C to +75°C extreme temperature hardened IP40 aluminum casing"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250-1g-1s.webp"
+    },
   {
     id: "amg-250-1xbt-1xs",
     sku: "AMG250-1XBT-1XS-P90",
@@ -303,8 +317,9 @@ const ACCESSORY_DATABASE = [
       "Transparent to VLAN, multicast, and jumbo frame traffic",
       "52-56VDC dual power inputs with reverse polarity protection",
       "-40°C to +75°C fanless industrial rated"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250-1xbt-1xs.webp"
+    },
   {
     id: "amg-250-2g-1s",
     sku: "AMG250-2G-1S",
@@ -326,8 +341,9 @@ const ACCESSORY_DATABASE = [
       "Aggregates two co-located cameras over a single fiber strand/pair",
       "-40°C to +75°C fanless passive cooling",
       "Dual redundant 10-36VDC power inputs"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250-2g-1s.webp"
+    },
   {
     id: "amg-250-2g-2s",
     sku: "AMG250-2G-2S",
@@ -349,8 +365,9 @@ const ACCESSORY_DATABASE = [
       "Two independent channels providing total physical data separation",
       "Dual redundant 10-36VDC power inputs with fault alarm relay",
       "-40°C to +75°C industrial temperature rated"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250-2g-2s.webp"
+    },
   {
     id: "amg-250r-1g-1s",
     sku: "AMG250R-1G-1S",
@@ -373,8 +390,9 @@ const ACCESSORY_DATABASE = [
       "Hot-swappable card powered directly from chassis redundant backplane",
       "-40°C to +75°C operating range in high-density rack card cages",
       "Compatible with AMG2031 1U (3-slot) and AMG2015 3U (14-slot) chassis"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250r-1g-1s.webp"
+    },
   {
     id: "amg-250r-4g-4s",
     sku: "AMG250R-4G-4S",
@@ -397,8 +415,9 @@ const ACCESSORY_DATABASE = [
       "High-density head-end convergence (up to 56 channels in a 3U AMG2015 chassis)",
       "Hot-swappable blade powered by redundant chassis PSUs",
       "Full physical channel isolation across all 4 channels"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-250r-1g-1s.webp"
+    },
   {
     id: "amg-255-2gbt-1s",
     sku: "AMG255-2GBT-1S-P120",
@@ -420,8 +439,9 @@ const ACCESSORY_DATABASE = [
       "2x 1G RJ45 (90W 802.3bt PoE, 120W total budget) + 1x 100/1000M SFP",
       "-40°C to +75°C fanless passive cooling",
       "Designed for rapid deployment in electrical panels and NEMA enclosures"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-255-2gbt-1s.webp"
+    },
 
   {
     id: "unifi-uacc-lre",
@@ -444,8 +464,9 @@ const ACCESSORY_DATABASE = [
       "802.3af/at/bt PoE passthrough up to 43W",
       "IPX6 rated weatherproof housing",
       "10kA+ ESD and surge protection"
-    ]
-  },
+    ],
+        image: "assets/images/products/unifi_uacc_lre.webp"
+    },
 
     // ==========================================
   // 2. UNIFI RACK POWER & BACKUP (RACKMOUNT)
@@ -502,8 +523,10 @@ const ACCESSORY_DATABASE = [
       "High-density Lithium Iron Phosphate (LiFePO4) battery chemistry",
       "Native UniFi Network integration with automatic graceful shutdown",
       "8x NEMA 5-15R battery-backed output receptacles"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi UPS 2U Pro - Tech Specs.pdf",
+        image: "assets/images/products/unifi_ups_2u_pro.webp"
+    },
   {
     id: "unifi-usw-mission-critical",
     sku: "USW-Mission-Critical",
@@ -552,8 +575,10 @@ const ACCESSORY_DATABASE = [
       "4x 802.3bt PoE++ output ports (up to 60W per port) to keep critical cameras running",
       "4x Gigabit Ethernet data ports and 2x 120V AC backup outlets",
       "Keeps core router, switches, and security cameras online through power outages"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi UPS PoE Switch - Tech Specs.pdf",
+        image: "assets/images/products/unifi_usw_mission_critical.webp"
+    },
   {
     id: "unifi-usp-rps",
     sku: "USP-RPS",
@@ -577,8 +602,9 @@ const ACCESSORY_DATABASE = [
       "Zero interruption failover if an attached switch's internal PSU fails",
       "Supplies up to 950W of total DC power",
       "1.3-inch color touchscreen LCM management display"
-    ]
-  },
+    ],
+        image: "assets/images/products/unifi_usp_rps.webp"
+    },
   {
     id: "unifi-usp-cable",
     sku: "USP-Cable",
@@ -597,8 +623,9 @@ const ACCESSORY_DATABASE = [
       "Proprietary SmartPower DC connector on both ends",
       "1.5 meter (4.9 ft) reach for standard 19-inch racks",
       "Braided exterior jacket for high tensile durability"
-    ]
-  },// ==========================================
+    ],
+        image: "assets/images/products/unifi_usp_cable.webp"
+    },// ==========================================
   // 3. HOT-SWAPPABLE POWER SUPPLY MODULES
   // ==========================================
   {
@@ -617,8 +644,9 @@ const ACCESSORY_DATABASE = [
     description: "Hot-swappable 1,200W 54V AC/DC power supply module for UniFi Enterprise Campus switches (ECS-48-PoE) for full PoE++ 1,440W redundancy.",
     baseWatts: 0,
     powerWatts: 1200,
-    keyFeatures: ["1,200W continuous DC output", "Hot-swappable tool-less sled insertion", "Enables full secondary PSU redundancy on ECS switches"]
-  },
+    keyFeatures: ["1,200W continuous DC output", "Hot-swappable tool-less sled insertion", "Enables full secondary PSU redundancy on ECS switches"],
+        image: "assets/images/products/unifi_uacc_psu_54v_1200w.webp"
+    },
   {
     id: "unifi-uacc-psu-54v-600w",
     sku: "UACC-PSU-54V-600W",
@@ -635,8 +663,9 @@ const ACCESSORY_DATABASE = [
     description: "Hot-swappable 600W 54V AC/DC power supply module for UniFi Enterprise Campus switches (ECS-24-PoE, ECS-48S-PoE).",
     baseWatts: 0,
     powerWatts: 600,
-    keyFeatures: ["600W continuous DC output", "Hot-swappable tool-less sled insertion"]
-  },
+    keyFeatures: ["600W continuous DC output", "Hot-swappable tool-less sled insertion"],
+        image: "assets/images/products/unifi_uacc_psu_54v_600w.webp"
+    },
   {
     id: "unifi-uacc-psu-12v-550w",
     sku: "UACC-PSU-12V-550W",
@@ -652,8 +681,9 @@ const ACCESSORY_DATABASE = [
     msrp: 149,
     description: "Hot-swappable 550W 12V AC/DC power supply module for ECS-Core, ECS-Aggregation, and Enterprise Firewall Core appliances.",
     baseWatts: 0,
-    powerWatts: 550
-  },
+    powerWatts: 550,
+        image: "assets/images/products/unifi_uacc_psu_12v_550w.webp"
+    },
   {
     id: "unifi-uacc-psu-12v-150w",
     sku: "UACC-PSU-12V-150W",
@@ -669,8 +699,9 @@ const ACCESSORY_DATABASE = [
     msrp: 99,
     description: "Hot-swappable 150W 12V AC/DC power supply module for UniFi Enterprise Firewall (EFG).",
     baseWatts: 0,
-    powerWatts: 150
-  },
+    powerWatts: 150,
+        image: "assets/images/products/unifi_uacc_psu_12v_150w.webp"
+    },
   {
     id: "unifi-uacc-adapter-210w",
     sku: "UACC-Adapter-210W",
@@ -686,8 +717,9 @@ const ACCESSORY_DATABASE = [
     msrp: 89,
     description: "External 210W AC to 54V DC desktop power supply brick, upgrading the USW-Ultra switch to a 202W PoE budget.",
     baseWatts: 0,
-    powerWatts: 210
-  },
+    powerWatts: 210,
+        image: "assets/images/products/unifi_uacc_adapter_60w.webp"
+    },
   {
     id: "unifi-uacc-adapter-60w",
     sku: "UACC-Adapter-60W",
@@ -703,8 +735,9 @@ const ACCESSORY_DATABASE = [
     msrp: 39,
     description: "External 60W AC to 54V DC desktop power supply brick, providing a 52W PoE budget on USW-Ultra.",
     baseWatts: 0,
-    powerWatts: 60
-  },
+    powerWatts: 60,
+        image: "assets/images/products/unifi_uacc_adapter_60w.webp"
+    },
 
   // ==========================================
   // 4. POE MIDSPAN ADAPTERS & INJECTORS
@@ -725,8 +758,9 @@ const ACCESSORY_DATABASE = [
     description: "Multi-Gigabit 10GbE 802.3bt Type 4 PoE injector delivering up to 90W for PTZ cameras and high-capacity wireless APs.",
     baseWatts: 0,
     powerWatts: 90,
-    keyFeatures: ["1x 10GbE Data In + 1x 10GbE 90W PoE Out", "802.3bt Type 4 (90W) certified", "Integrated surge and ESD protection"]
-  },
+    keyFeatures: ["1x 10GbE Data In + 1x 10GbE 90W PoE Out", "802.3bt Type 4 (90W) certified", "Integrated surge and ESD protection"],
+        image: "assets/images/products/unifi_uacc_poe_plus_plus_10g.webp"
+    },
   {
     id: "unifi-uacc-poe-bt",
     sku: "U-PoE++",
@@ -743,8 +777,9 @@ const ACCESSORY_DATABASE = [
     description: "Gigabit 802.3bt (Type 3) power injector delivering up to 60W for multi-sensor cameras and 60GHz wireless backhaul radios.",
     baseWatts: 0,
     powerWatts: 60,
-    keyFeatures: ["1x GbE Data In + 1x GbE PoE Out", "54VDC @ 1.2A (60W Output)", "802.3bt Type 3 Compliant"]
-  },
+    keyFeatures: ["1x GbE Data In + 1x GbE PoE Out", "54VDC @ 1.2A (60W Output)", "802.3bt Type 3 Compliant"],
+        image: "assets/images/products/unifi_uacc_poe_bt.webp"
+    },
   {
     id: "unifi-uacc-poe-at",
     sku: "U-PoE+",
@@ -761,8 +796,9 @@ const ACCESSORY_DATABASE = [
     description: "Gigabit 802.3at PoE+ midspan power injector delivering up to 30W. Suitable for standalone cameras, wireless links, or VoIP phones.",
     baseWatts: 0,
     powerWatts: 30,
-    keyFeatures: ["1x GbE Data In + 1x GbE PoE Out", "48VDC @ 0.65A (30W Output)", "Integrated Grounding & Surge Protection"]
-  },
+    keyFeatures: ["1x GbE Data In + 1x GbE PoE Out", "48VDC @ 0.65A (30W Output)", "Integrated Grounding & Surge Protection"],
+        image: "assets/images/products/unifi_uacc_poe_at.webp"
+    },
   {
     id: "unifi-u-poe-af",
     sku: "U-PoE",
@@ -778,8 +814,9 @@ const ACCESSORY_DATABASE = [
     msrp: 15,
     description: "Gigabit 802.3af PoE midspan power injector delivering up to 15W.",
     baseWatts: 0,
-    powerWatts: 15
-  },
+    powerWatts: 15,
+        image: "assets/images/products/unifi_u_poe_af.webp"
+    },
 
   // ==========================================
   // 5. INDUSTRIAL DIN-RAIL POWER SUPPLIES
@@ -799,8 +836,10 @@ const ACCESSORY_DATABASE = [
     description: "Universal 90-264VAC to 48VDC @ 2.5A industrial power supply. Ideal for powering DIN-rail PoE switches inside pole-mounted NEMA cabinets.",
     baseWatts: 0,
     powerWatts: 120,
-    keyFeatures: ["48VDC Output @ 2.5A (120W Max)", "Slim 40mm DIN-Rail Form Factor", "-20°C to +70°C Operating Temperature"]
-  },
+    keyFeatures: ["48VDC Output @ 2.5A (120W Max)", "Slim 40mm DIN-Rail Form Factor", "-20°C to +70°C Operating Temperature"],
+        datasheetPath: "Datasheets/Infrastructure/Mean Well/Mean Well NDR-120 Series - Datasheet.pdf",
+        image: "assets/images/products/meanwell_ndr_120_48.webp"
+    },
   {
     id: "meanwell-ndr-240-48",
     sku: "NDR-240-48",
@@ -816,8 +855,10 @@ const ACCESSORY_DATABASE = [
     description: "High-capacity 240W 48VDC power supply for hardened field switches powering multiple high-draw PTZ cameras and illuminators.",
     baseWatts: 0,
     powerWatts: 240,
-    keyFeatures: ["48VDC Output @ 5.0A (240W Max)", "High 88.5% Efficiency", "-20°C to +70°C Operating Temperature"]
-  },
+    keyFeatures: ["48VDC Output @ 5.0A (240W Max)", "High 88.5% Efficiency", "-20°C to +70°C Operating Temperature"],
+        datasheetPath: "Datasheets/Infrastructure/Mean Well/Mean Well NDR-240 Series - Datasheet.pdf",
+        image: "assets/images/products/meanwell_ndr_240_48.webp"
+    },
 
   // ==========================================
   // 6. RACKS, CABINETS & ENCLOSURES
@@ -838,8 +879,10 @@ const ACCESSORY_DATABASE = [
     depthInches: 31.5,
     msrp: 1499,
     description: "42U full-height server rack cabinet with tempered glass front door and integrated cable management.",
-    keyFeatures: ["42U 19-inch EIA-310 compliant capacity", "800mm (31.5-inch) depth for deep enterprise switches and short-depth servers", "Tempered glass front door with key lock", "Removable locking side panels"]
-  },
+    keyFeatures: ["42U 19-inch EIA-310 compliant capacity", "800mm (31.5-inch) depth for deep enterprise switches and short-depth servers", "Tempered glass front door with key lock", "Removable locking side panels"],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi 42U Rack Cabinet 800mm - Tech Specs.pdf",
+        image: "assets/images/products/unifi_rack_42u_800_g.webp"
+    },
   {
     id: "unifi-rack-42u-1000-p",
     sku: "UACC-Rack-42U-1000-P",
@@ -856,8 +899,10 @@ const ACCESSORY_DATABASE = [
     depthInches: 39.4,
     msrp: 1699,
     description: "42U full-depth datacenter server cabinet with high-airflow perforated doors front and rear.",
-    keyFeatures: ["42U 19-inch EIA-310 capacity", "1,000mm (39.4-inch) extra-deep depth for high-density enterprise servers and storage", "75% open perforated airflow doors", "Integrated high-volume vertical cable management"]
-  },
+    keyFeatures: ["42U 19-inch EIA-310 capacity", "1,000mm (39.4-inch) extra-deep depth for high-density enterprise servers and storage", "75% open perforated airflow doors", "Integrated high-volume vertical cable management"],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi 42U Rack Cabinet 1000mm - Tech Specs.pdf",
+        image: "assets/images/products/unifi_rack_42u_1000_p.webp"
+    },
   {
     id: "unifi-rack-12u-wall-sw-g",
     sku: "UACC-Rack-12U-Wall-SW-G",
@@ -874,8 +919,10 @@ const ACCESSORY_DATABASE = [
     depthInches: 23.6,
     msrp: 599,
     description: "12U dual-hinge swing-out wall-mount cabinet allowing full rear access to patch panels and switch cabling.",
-    keyFeatures: ["12U capacity with dual-hinge rear swing-out design", "600mm (23.6-inch) depth accommodates full-depth switches and UPS units", "Locking front glass door and locking rear swing frame"]
-  },
+    keyFeatures: ["12U capacity with dual-hinge rear swing-out design", "600mm (23.6-inch) depth accommodates full-depth switches and UPS units", "Locking front glass door and locking rear swing frame"],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi 12U Wall Swing-Out Cabinet Glass - Tech Specs.pdf",
+        image: "assets/images/products/unifi_rack_12u_wall_sw_g.webp"
+    },
   {
     id: "unifi-rack-12u-wall-sw-p",
     sku: "UACC-Rack-12U-Wall-SW-P",
@@ -891,8 +938,10 @@ const ACCESSORY_DATABASE = [
     rackUnits: 12,
     depthInches: 23.6,
     msrp: 599,
-    description: "12U dual-hinge swing-out wall cabinet with ventilated perforated front door for active equipment cooling."
-  },
+    description: "12U dual-hinge swing-out wall cabinet with ventilated perforated front door for active equipment cooling.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi 12U Wall Swing-Out Cabinet Perforated - Tech Specs.pdf",
+        image: "assets/images/products/unifi_rack_12u_wall_sw_p.webp"
+    },
   {
     id: "unifi-u-rack-6u-tl",
     sku: "U-Rack-6U-TL",
@@ -910,8 +959,9 @@ const ACCESSORY_DATABASE = [
     depthInches: 18.1,
     msrp: 299,
     description: "6U open frame toolless equipment rack on lockable castors with 24-port blank patch panel included.",
-    keyFeatures: ["6U tool-less cage nut free mounting", "Lockable smooth-rolling castor wheels and carry handles", "Built-in 24-port blank keystone patch panel"]
-  },
+    keyFeatures: ["6U tool-less cage nut free mounting", "Lockable smooth-rolling castor wheels and carry handles", "Built-in 24-port blank keystone patch panel"],
+        image: "assets/images/products/unifi_toolless_mini_rack.webp"
+    },
 
   // ==========================================
   // 7. CABLE MANAGEMENT, RAILS, SHELVES & PANELS
@@ -929,8 +979,10 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 99,
-    description: "Tool-less sliding rail kit for UniFi Enterprise switches, firewalls, and server appliances in 4-post racks."
-  },
+    description: "Tool-less sliding rail kit for UniFi Enterprise switches, firewalls, and server appliances in 4-post racks.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Sliding Rack Rails - Tech Specs.pdf",
+        image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+    },
   {
     id: "unifi-uacc-rack-hcm",
     sku: "UACC-Rack-HCM",
@@ -944,8 +996,10 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 39,
-    description: "1U horizontal rack cable manager with removable hinged cover and high-density passthrough fingers."
-  },
+    description: "1U horizontal rack cable manager with removable hinged cover and high-density passthrough fingers.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Horizontal Cable Manager - Tech Specs.pdf",
+        image: "assets/images/products/unifi_uacc_rack_hcm.webp"
+    },
   {
     id: "unifi-uacc-rack-42u-vcm",
     sku: "UACC-Rack-42U-VCM",
@@ -959,8 +1013,10 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 0,
     msrp: 149,
-    description: "Full-height vertical cable management duct channel for 42U server cabinets."
-  },
+    description: "Full-height vertical cable management duct channel for 42U server cabinets.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi 42U Vertical Cable Manager - Tech Specs.pdf",
+        image: "assets/images/products/unifi_uacc_rack_42u_vcm.webp"
+    },
   {
     id: "unifi-uacc-rack-panel-ocd",
     sku: "UACC-Rack-Panel-OCD",
@@ -975,8 +1031,9 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 19,
-    description: "1U silver powder-coated blanking panel matching the sleek industrial aesthetics of UniFi switches."
-  },
+    description: "1U silver powder-coated blanking panel matching the sleek industrial aesthetics of UniFi switches.",
+        image: "assets/images/products/unifi_uacc_rack_panel_ocd.webp"
+    },
   {
     id: "unifi-uacc-rack-panel-patch-blank-24",
     sku: "UACC-Rack-Panel-Patch-Blank-24",
@@ -991,8 +1048,9 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 29,
-    description: "1U 24-port keystone patch panel with integrated rear cable management bar."
-  },
+    description: "1U 24-port keystone patch panel with integrated rear cable management bar.",
+        image: "assets/images/products/unifi_uacc_rack_panel_patch_blank_24.webp"
+    },
   {
     id: "unifi-uacc-rack-shelf-fd",
     sku: "UACC-Rack-Shelf-FD",
@@ -1006,8 +1064,10 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 79,
-    description: "Heavy-duty vented 4-post rack shelf supporting up to 100 lbs of non-rackmount equipment."
-  },
+    description: "Heavy-duty vented 4-post rack shelf supporting up to 100 lbs of non-rackmount equipment.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Fixed Depth Rack Shelf - Tech Specs.pdf",
+        image: "assets/images/products/unifi_uacc_rack_shelf_fd.webp"
+    },
   {
     id: "unifi-uacc-rack-shelf-sd",
     sku: "UACC-Rack-Shelf-SD",
@@ -1021,8 +1081,10 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 49,
-    description: "Compact 2-post cantilever rack shelf ideal for shallow wall racks."
-  },
+    description: "Compact 2-post cantilever rack shelf ideal for shallow wall racks.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Sliding Rack Shelf - Tech Specs.pdf",
+        image: "assets/images/products/unifi_uacc_rack_shelf_sd.webp"
+    },
   {
     id: "unifi-uacc-din-rail",
     sku: "UACC-DIN-Rail",
@@ -1043,8 +1105,10 @@ const ACCESSORY_DATABASE = [
       "Standard 35mm TS-35 DIN rail snap-in mounting",
       "Compatible with USW-Ultra, USW-Lite-8/16-PoE, and USW-Flex-Mini switches",
       "Durable powder-coated steel bracket with quick-release spring latch"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
+        image: "assets/images/products/meanwell_ndr_120_48.webp"
+    },
   {
     id: "unifi-uacc-flex-din",
     sku: "UACC-Flex-DIN",
@@ -1065,8 +1129,10 @@ const ACCESSORY_DATABASE = [
       "Secure TS-35 DIN rail locking bracket for USW-Flex",
       "Enables clean industrial cabinet and NEMA enclosure installation",
       "Corrosion-resistant polycarbonate and steel assembly"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Flex - Tech Specs  - Accessories.pdf",
+        image: "assets/images/products/meanwell_ndr_120_48.webp"
+    },
   {
     id: "unifi-uacc-pro-max-16-rm",
     sku: "UACC-Pro-Max-16-RM",
@@ -1080,8 +1146,10 @@ const ACCESSORY_DATABASE = [
     mounting: "Rack",
     rackUnits: 1,
     msrp: 29,
-    description: "Custom 1U rackmount adapter shelf specifically contoured for the USW-Pro-Max-16 switch."
-  },
+    description: "Custom 1U rackmount adapter shelf specifically contoured for the USW-Pro-Max-16 switch.",
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Pro Max 16 Rackmount Kit - Tech Specs.pdf",
+        image: "assets/images/products/unifi_uacc_pro_max_16_rm.webp"
+    },
   {
     id: "unifi-usw-flex-utility",
     sku: "USW-Flex-Utility",
@@ -1103,8 +1171,9 @@ const ACCESSORY_DATABASE = [
       "Weatherproof IPX5 enclosure for light poles and exterior walls",
       "Includes 60W internal power injector delivering 46W PoE output",
       "Tamper-resistant screw lock housing and cable management glands"
-    ]
-  },
+    ],
+        image: "assets/images/products/unifi_usw_flex_utility.webp"
+    },
   {
     id: "altelix-nf141208",
     sku: "NF141208",
@@ -1126,8 +1195,10 @@ const ACCESSORY_DATABASE = [
       "Finished aluminum equipment sub-plate for mounting switches and DIN rails",
       "Dual gasketed cable glands and lockable latch",
       "Universal pole and wall mount bracket included"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Altelix/Altelix NF141208 - Datasheet.pdf",
+        image: "assets/images/products/altelix_nf141208.webp"
+    },
   {
     id: "altronix-trove1wp1",
     sku: "Trove1WP1",
@@ -1149,8 +1220,10 @@ const ACCESSORY_DATABASE = [
       "Removable backplane for access controllers, power supplies, and network switches",
       "Accommodates up to two 12VDC/7AH batteries",
       "Cam lock and tamper switch included"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Altronix/Altronix Trove1WP - Datasheet.pdf",
+        image: "assets/images/products/altronix_trove1wp.webp"
+    },
   {
     id: "ubnt-eth-sp-g2",
     sku: "ETH-SP-G2",
@@ -1199,8 +1272,10 @@ const ACCESSORY_DATABASE = [
       "High-strength extruded aluminum construction (1,000 lb static load rating)",
       "Integrated floor mounting holes and top cable runway brackets",
       "Double-sided 12-24 tapped holes on 5/8\"-5/8\"-1/2\" EIA universal spacing"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Chatsworth/Chatsworth 55053-703 Standard Rack - Datasheet.pdf",
+        image: "assets/images/products/chatsworth_55053_703.webp"
+    },
   {
     id: "tripplite-srw12us-12u",
     sku: "SRW12US",
@@ -1222,8 +1297,10 @@ const ACCESSORY_DATABASE = [
       "Dual-hinge chassis swings away from wall for full rear access",
       "Perforated locking front door and side panels for active airflow",
       "250 lb load rating for edge switches and network equipment"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SRW12US - Datasheet.pdf",
+        image: "assets/images/products/tripplite_srw12us.webp"
+    },
   {
     id: "middle-atlantic-dwr-18-26",
     sku: "DWR-18-26",
@@ -1245,8 +1322,10 @@ const ACCESSORY_DATABASE = [
       "Center sectional chassis swings open 90° for maintenance",
       "Solid steel construction supporting up to 300 lbs",
       "Laser knockouts for conduit and cable pass-throughs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Middle Atlantic/Middle Atlantic DWR Series - Datasheet.pdf",
+        image: "assets/images/products/middle_atlantic_dwr.webp"
+    },
   {
     id: "apc-netshelter-42u",
     sku: "AR3100",
@@ -1268,8 +1347,10 @@ const ACCESSORY_DATABASE = [
       "Perforated front and split-rear doors for maximum thermal management",
       "Toolless vertical zero-U PDU and cable mounting channels",
       "3,000 lb static / 2,250 lb dynamic load rating"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC NetShelter SX AR3100 - Datasheet.pdf",
+        image: "assets/images/products/apc_ar3100.webp"
+    },
   {
     id: "apc-netshelter-24u",
     sku: "AR3104",
@@ -1292,8 +1373,10 @@ const ACCESSORY_DATABASE = [
       "Full 1,070mm (42.1-inch) depth accommodates high-density deep servers and UPS units",
       "Perforated doors front and rear for active ventilation",
       "2,250 lb static load capacity with lockable casters and levelers"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC NetShelter SX AR3100 - Datasheet.pdf",
+        image: "assets/images/products/apc_ar3100.webp"
+    },
   {
     id: "apc-netshelter-48u",
     sku: "AR3107",
@@ -1316,8 +1399,10 @@ const ACCESSORY_DATABASE = [
       "High-density zero-U toolless PDU and vertical cable management bays",
       "3,000 lb static / 2,250 lb dynamic load rating",
       "Multi-point lockable perforated front and split rear doors"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC NetShelter SX AR3100 - Datasheet.pdf",
+        image: "assets/images/products/apc_ar3100.webp"
+    },
   {
     id: "tripplite-sr42ub",
     sku: "SR42UB",
@@ -1340,8 +1425,10 @@ const ACCESSORY_DATABASE = [
       "Massive 3,000 lb stationary / 2,250 lb rolling load rating",
       "Toolless zero-U mounting slots for vertical PDUs and cable managers",
       "Modular split rear doors and removable locking side panels"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SR42UB - Datasheet.pdf",
+        image: "assets/images/products/tripplite_sr42ub.webp"
+    },
   {
     id: "tripplite-sr24ub",
     sku: "SR24UB",
@@ -1364,8 +1451,10 @@ const ACCESSORY_DATABASE = [
       "1,000 lb stationary load rating on heavy-duty casters",
       "Pre-installed cable routing ports with removable brush strips",
       "Locking front door and removable side panels"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SR24UB - Datasheet.pdf",
+        image: "assets/images/products/tripplite_sr24ub.webp"
+    },
   {
     id: "tripplite-srw6us",
     sku: "SRW6US",
@@ -1388,8 +1477,10 @@ const ACCESSORY_DATABASE = [
       "Dual-hinge swing chassis swings 90° for full rear cable access",
       "Locking reversible front door and ventilated side panels",
       "200 lb weight capacity for switches, patch panels, and compact UPS"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SRW12US - Datasheet.pdf",
+        image: "assets/images/products/tripplite_srw12us.webp"
+    },
   {
     id: "tripplite-srw18us",
     sku: "SRW18US",
@@ -1412,8 +1503,10 @@ const ACCESSORY_DATABASE = [
       "Dual-hinge rear swing-out design for rapid punch-down access",
       "Perforated locking steel door and keyed side panels",
       "250 lb wall load capacity"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SRW18US - Datasheet.pdf",
+        image: "assets/images/products/tripplite_srw18us.webp"
+    },
   {
     id: "tripplite-srw26us",
     sku: "SRW26US",
@@ -1436,8 +1529,10 @@ const ACCESSORY_DATABASE = [
       "Heavy-duty dual-hinge rear swing frame supporting 250 lbs",
       "Locking perforated steel construction",
       "Top and bottom knockouts for 3\" conduit feeds"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Tripp Lite/Tripp Lite SRW26US - Datasheet.pdf",
+        image: "assets/images/products/tripplite_srw26us.webp"
+    },
   {
     id: "cpi-rack-45u-4post",
     sku: "CPI-50110-703",
@@ -1460,8 +1555,10 @@ const ACCESSORY_DATABASE = [
       "Depth adjustable from 24\" to 36\" in 1\" increments",
       "2,000 lb static load capacity with floor mounting anchors",
       "Unrestricted open-air cooling for switches and modular headends"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Chatsworth/Chatsworth 55053-703 Standard Rack - Datasheet.pdf",
+        image: "assets/images/products/chatsworth_55053_703.webp"
+    },
   {
     id: "middle-atlantic-dwr-24-26",
     sku: "DWR-24-26",
@@ -1484,8 +1581,10 @@ const ACCESSORY_DATABASE = [
       "Center sectional chassis swings 90° on heavy-duty pivot pins",
       "300 lb commercial load rating",
       "Laser knockouts for conduit and cable pass-throughs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Middle Atlantic/Middle Atlantic DWR Series - Datasheet.pdf",
+        image: "assets/images/products/middle_atlantic_dwr.webp"
+    },
   {
     id: "altronix-trove1v1",
     sku: "T1KV14",
@@ -1507,8 +1606,10 @@ const ACCESSORY_DATABASE = [
       "Removable backplane with pre-tapped standoffs for Mercury / Lenel / Software House",
       "Cam lock and dual tamper switches included",
       "UL 294 Listed for Access Control Systems"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Altronix/Altronix Trove1 - Datasheet.pdf",
+        image: "assets/images/products/altronix_trove1.webp"
+    },
   {
     id: "altronix-trove2v2",
     sku: "T2KV78",
@@ -1530,8 +1631,10 @@ const ACCESSORY_DATABASE = [
       "16-gauge steel construction with ample wire management room and duct channels",
       "Houses up to four 12VDC/12AH rechargeable batteries in base",
       "UL 294 / UL 1481 / ULC-S319 compliant"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Altronix/Altronix Trove2 - Datasheet.pdf",
+        image: "assets/images/products/altronix_trove2.webp"
+    },
   {
     id: "altronix-trove3v3",
     sku: "T3KV712",
@@ -1553,8 +1656,10 @@ const ACCESSORY_DATABASE = [
       "Includes wire management brackets, battery shelf, and conduit knockouts",
       "Houses up to four 12VDC/18AH backup batteries",
       "UL 294 / NFPA 731 compliant"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Altronix/Altronix Trove3 - Datasheet.pdf",
+        image: "assets/images/products/altronix_trove3.webp"
+    },
   {
     id: "lsp-fpo75-2e2",
     sku: "FPO75/250-2E2",
@@ -1623,8 +1728,10 @@ const ACCESSORY_DATABASE = [
       "Dual 350mm TS-35 DIN-rails pre-installed on aluminum backplane",
       "Gasketed door with dual stainless steel quick-release latches and padlock hasps",
       "Universal pole and wall mounting hardware included"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Altelix/Altelix NF141208 - Datasheet.pdf",
+        image: "assets/images/products/altelix_nf141208.webp"
+    },
   {
     id: "hoffman-a242008lp",
     sku: "A242008LP",
@@ -1647,8 +1754,10 @@ const ACCESSORY_DATABASE = [
       "Seams continuously welded and ground smooth with ANSI 61 gray polyester finish",
       "Pre-drilled white back panel with dual 35mm DIN-rails",
       "UL 508A Listed industrial control panel enclosure"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Hoffman/Hoffman A242008LP - Datasheet.pdf",
+        image: "assets/images/products/hoffman_a242008lp.webp"
+    },
   {
     id: "superior-bb-4x8-fr",
     sku: "BB-4X8-FR",
@@ -1758,8 +1867,10 @@ const ACCESSORY_DATABASE = [
       "2U Rail Kit Included"
     ],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS X SMX3000RMLV2UNC - Datasheet.pdf",
+        image: "assets/images/products/apc_smx3000rmlv2unc.webp"
+    },
 {
     id: "apc-smt1500rm2uc",
     sku: "SMT1500RM2UC",
@@ -1814,8 +1925,10 @@ const ACCESSORY_DATABASE = [
       "2U Rail Kit Included"
     ],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS SMT3000RM2U - Datasheet.pdf",
+        image: "assets/images/products/apc_smt3000rm2u.webp"
+    },
 {
     id: "tripplite-su5000rt",
     sku: "SU5000RT",
@@ -2692,8 +2805,10 @@ description: "Rack (3U) Online Double-Conversion (0ms) UPS providing 3000VA / 27
     managementProtocols: ["SmartConnect Cloud", "Optional NMC3"],
     compatibleAccessories: ["AP9641 (Optional NMC3)"],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS SMT3000RM2U - Datasheet.pdf",
+        image: "assets/images/products/apc_smt3000rm2u.webp"
+    },
 {
     id: "apc-smt1500i",
     sku: "SMT1500I",
@@ -2742,8 +2857,10 @@ description: "Rack (3U) Online Double-Conversion (0ms) UPS providing 3000VA / 27
     managementProtocols: ["SmartConnect Cloud", "Optional NMC3"],
     compatibleAccessories: ["AP9641 (Optional NMC3)"],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS SMT3000RM2U - Datasheet.pdf",
+        image: "assets/images/products/apc_smt3000rm2u.webp"
+    },
 {
     id: "apc-smt2200rm2u",
     sku: "SMT2200RM2U",
@@ -2799,8 +2916,10 @@ description: "Rack (3U) Online Double-Conversion (0ms) UPS providing 3000VA / 27
     ],
     compatibleAccessories: ["AP9641 (NMC3)", "2U Rail Kit Included"],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS SMT3000RM2U - Datasheet.pdf",
+        image: "assets/images/products/apc_smt3000rm2u.webp"
+    },
 {
     id: "apc-smt3000rm2u",
     sku: "SMT3000RM2U",
@@ -2856,8 +2975,10 @@ description: "Rack (3U) Online Double-Conversion (0ms) UPS providing 3000VA / 27
     ],
     compatibleAccessories: ["AP9641 (NMC3)", "2U Rail Kit Included"],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS SMT3000RM2U - Datasheet.pdf",
+        image: "assets/images/products/apc_smt3000rm2u.webp"
+    },
 {
     id: "tripplite-su3000lcd2uhv",
     sku: "SU3000LCD2UHV",
@@ -3034,8 +3155,10 @@ description: "Rack (6U) Online Double-Conversion (0ms) UPS providing 5000VA / 45
       "AP9641 (NMC3)"
     ],
     requiredLicenses: "None",
-    phase: "Single Phase"
-  },
+    phase: "Single Phase",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS X SMX3000RMLV2UNC - Datasheet.pdf",
+        image: "assets/images/products/apc_smx3000rmlv2unc.webp"
+    },
 {
     id: "eaton-5px2000rtng2",
     sku: "5PX2000RTNG2",
@@ -3782,8 +3905,10 @@ description: "2U 72VDC external battery pack specifically paired with Tripp Lite
       "Heavy-Duty DC Interconnect Cable Included",
       "2U Rackmount Rail Kit Included"
     ],
-    requiredLicenses: "None"
-  },
+    requiredLicenses: "None",
+        datasheetPath: "Datasheets/Infrastructure/APC/APC Smart-UPS X SMX3000RMLV2UNC - Datasheet.pdf",
+        image: "assets/images/products/apc_smx3000rmlv2unc.webp"
+    },
 {
     id: "apc-surt192xlbp",
     sku: "SURT192XLBP",
@@ -4043,8 +4168,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "Network-manageable via Web GUI, SNMP v3, and Telnet/SSH",
       "1U horizontal rackmount or zero-U vertical toolless bracket",
       "Remote individual outlet power cycling and user-defined power-up sequencing"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP7920B Rack PDU - Datasheet.pdf",
+        image: "assets/images/products/apc_ap7920b.webp"
+    },
 {
     id: "apc-ap7902b",
     sku: "AP7902B",
@@ -4096,8 +4223,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "120V 30A locking L5-30P input cord for high continuous capacity",
       "Dual 20A branch circuit breakers for overload protection",
       "Remote individual outlet power cycling and user-defined power-up sequencing"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP7920B Rack PDU - Datasheet.pdf",
+        image: "assets/images/products/apc_ap7920b.webp"
+    },
 {
     id: "apc-ap7911a",
     sku: "AP7911A",
@@ -4150,8 +4279,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "208V 30A locking L6-30P plug delivers high electrical efficiency",
       "Independent outlet load management to prevent circuit breaker tripping",
       "Remote outlet rebooting over SNMP and secure web interface"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP7920B Rack PDU - Datasheet.pdf",
+        image: "assets/images/products/apc_ap7920b.webp"
+    },
 {
     id: "apc-ap8841",
     sku: "AP8841",
@@ -4205,8 +4336,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "Ultra-slim Zero-U vertical form factor saves EIA rack space in 42U cabinets",
       "Real-time local digital LED display of current, voltage, and active power (kW)",
       "Gigabit Ethernet network management with user-configurable alarm thresholds"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP8841 Rack PDU 2G - Datasheet.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "apc-ap8941",
     sku: "AP8941",
@@ -4261,8 +4394,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "Zero-U vertical toolless mounting leaves all horizontal rack space for active gear",
       "Per-outlet power state memory preserves state after power disruptions",
       "Integrated environmental monitoring port for optional temperature/humidity probes"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP8841 Rack PDU 2G - Datasheet.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "apc-ap8832",
     sku: "AP8832",
@@ -4309,8 +4444,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "120V 30A locking L5-30P input plug with 10ft cord (2.88kW rated capacity)",
       "Two 20A branch circuit breakers with independent status monitoring",
       "Real-time local and remote network load monitoring"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP8841 Rack PDU 2G - Datasheet.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "apc-ap9562",
     sku: "AP9562",
@@ -4356,8 +4493,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "120V 15A capacity with attached 12ft 5-15P power cord",
       "1U horizontal rackmount or zero-U vertical toolless bracket",
       "Resettable 15A circuit breaker prevents rack power overdraw"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP7920B Rack PDU - Datasheet.pdf",
+        image: "assets/images/products/apc_ap7920b.webp"
+    },
 {
     id: "apc-ap7752",
     sku: "AP7752",
@@ -4404,8 +4543,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "Dual independent 120V 20A inputs for utility / UPS redundant A/B feed failover",
       "Network manageable with real-time current display and source selection",
       "Eliminates downtime for single-corded core edge switches and NVR appliances"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP7752 ATS - Datasheet.pdf",
+        image: "assets/images/products/apc_ap7752.webp"
+    },
 {
     id: "apc-ap7753",
     sku: "AP7753",
@@ -4453,8 +4594,10 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "Seamless < 10ms transfer time between dual primary and secondary 208V inputs",
       "Remote management via SNMP and HTTPS with customizable alarm notifications",
       "Digital ammeter display showing real-time aggregate current load"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/APC/APC AP7752 ATS - Datasheet.pdf",
+        image: "assets/images/products/apc_ap7752.webp"
+    },
 {
     id: "tripplite-pdumh15net",
     sku: "PDUMH15NET",
@@ -4888,8 +5031,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Multi-function LCD and LED display shows current, voltage, and kW load",
       "Network card allows rebooting locked servers and switches remotely",
       "12ft power cord with L5-20P twist-lock plug and 5-20P straight blade adapter"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/CyberPower/CyberPower Switched PDU Series - Datasheet.pdf",
+        image: "assets/images/products/cyberpower_pdu20sw8rnet.webp"
+    },
 {
     id: "cyberpower-pdu30svt24f",
     sku: "PDU30SVT24F",
@@ -4938,8 +5083,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "30A capacity via 10ft attached cord with NEMA L5-30P locking plug",
       "Interactive LCD display rotates 90/180 degrees for orientation flexibility",
       "Remote outlet rebooting and power event notifications via SNMP"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/CyberPower/CyberPower Switched PDU Series - Datasheet.pdf",
+        image: "assets/images/products/cyberpower_pdu20sw8rnet.webp"
+    },
 {
     id: "unifi-usp-pdu-hd",
     sku: "USP-PDU-HD",
@@ -4991,8 +5138,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Dual redundant AC power inputs with seamless automatic source transfer",
       "4.3-inch touchscreen for local diagnostics, voltage, and per-outlet control",
       "Integrated with UniFi Network application for remote power scheduling and reboot"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Power Distribution Hi-Density - Tech Specs.pdf",
+        image: "assets/images/products/unifi_usp_pdu_hd.webp"
+    },
 {
     id: "unifi-usp-pdu-pro",
     sku: "USP-PDU-Pro",
@@ -5043,8 +5192,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "4x USB-C PD power ports for console cables and peripheral devices",
       "Automatic internet outage recovery: cycles power on ISP modem upon ping drop",
       "UniFi Network application integration with energy usage analytics"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Power Distribution Pro - Tech Specs.pdf",
+        image: "assets/images/products/unifi_usp_pdu_pro.webp"
+    },
 {
     id: "eaton-ema004",
     sku: "EMA004",
@@ -5932,8 +6083,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Black jacket for A/B redundant circuit identification",
       "10A 250V rated with heavy 17 AWG conductors",
       "Compatible with standard IEC inlets and APC locking PDUs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-lock-c14-c13-6ft-blk",
     sku: "PLC13-006-BLK",
@@ -5968,8 +6121,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Black jacket for A/B redundant circuit identification",
       "10A 250V rated with heavy 17 AWG conductors",
       "Compatible with standard IEC inlets and APC locking PDUs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-lock-c14-c13-3ft-blu",
     sku: "PLC13-003-BLU",
@@ -6004,8 +6159,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Blue jacket for A/B redundant circuit identification",
       "10A 250V rated with heavy 17 AWG conductors",
       "Compatible with standard IEC inlets and APC locking PDUs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-lock-c14-c13-6ft-blu",
     sku: "PLC13-006-BLU",
@@ -6040,8 +6197,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Blue jacket for A/B redundant circuit identification",
       "10A 250V rated with heavy 17 AWG conductors",
       "Compatible with standard IEC inlets and APC locking PDUs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-lock-c14-c13-3ft-red",
     sku: "PLC13-003-RED",
@@ -6076,8 +6235,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Red jacket for A/B redundant circuit identification",
       "10A 250V rated with heavy 17 AWG conductors",
       "Compatible with standard IEC inlets and APC locking PDUs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-lock-c14-c13-6ft-red",
     sku: "PLC13-006-RED",
@@ -6112,8 +6273,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Red jacket for A/B redundant circuit identification",
       "10A 250V rated with heavy 17 AWG conductors",
       "Compatible with standard IEC inlets and APC locking PDUs"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-c14-c15-3ft-blk",
     sku: "P018-003-BLK",
@@ -6544,8 +6707,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "16A 250V high-capacity load rating",
       "Compatible with APC locking PDUs and standard IEC sockets",
       "Premium enterprise reliability"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/LINECORD-IEC-LOCK Secure Locking Power Cables Datasheet D39295-00.pdf",
+        image: "assets/images/products/apc_ap8841.webp"
+    },
 {
     id: "pwr-c20-c13-6ft-blk",
     sku: "P094-006",
@@ -7072,8 +7237,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Accommodates up to 50x 4-pair Cat6 or Cat6A cables",
       "TIA-569 and cULus listed pathway compliance",
       "Pre-galvanized finish with rounded burr-free edges"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Caddy/Caddy CAT HP J-Hook Series - Datasheet.pdf",
+        image: "assets/images/products/caddy_cat_hp_jhook.webp"
+    },
   {
     id: "erico-caddy-cat32hp-bat",
     sku: "CAT32HPBC200",
@@ -7092,8 +7259,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Supports up to 90x Cat6A horizontal network drops",
       "Rotates 360° for multi-directional pathway alignment",
       "Integral retainer strap keeps cables seated during pulling"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Caddy/Caddy CAT HP J-Hook Series - Datasheet.pdf",
+        image: "assets/images/products/caddy_cat_hp_jhook.webp"
+    },
   {
     id: "erico-caddy-cat64hp",
     sku: "CAT64HP",
@@ -7112,8 +7281,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Accommodates up to 300x Cat6 cables or 200x shielded Cat6A cables",
       "Replaces expensive wire basket tray in secondary hallway corridors",
       "Heavy gauge galvanized steel with cable safety latch"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Infrastructure/Caddy/Caddy CAT HP J-Hook Series - Datasheet.pdf",
+        image: "assets/images/products/caddy_cat_hp_jhook.webp"
+    },
   {
     id: "cablofil-cf54-300",
     sku: "CF54-300-EZ",
@@ -7159,8 +7330,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "48-56VDC dual redundant terminal inputs",
       "-40°C to +75°C fanless passive cooling",
       "Integrated 6kV surge and ESD protection"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-1gat-p30.webp"
+    },
   {
     id: "amg-150-1gbt-p90",
     sku: "AMG150-1GBT-P90",
@@ -7182,8 +7354,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "52-56VDC dual redundant terminal block power inputs",
       "-40°C to +75°C fanless passive cooling",
       "Hardware DIP switches for PoE standard and Legacy mode selection"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-1gat-p30.webp"
+    },
   {
     id: "amg-150-1xbt-p90",
     sku: "AMG150-1XBT-P90",
@@ -7205,8 +7378,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Supports latest Wi-Fi 6E/7 APs and Multi-Gigabit edge nodes",
       "-40°C to +75°C fanless operation",
       "Dual 52-56VDC terminal block inputs"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-1gat-p30.webp"
+    },
   {
     id: "amg-150-2gbt-p180",
     sku: "AMG150-2GBT-P180",
@@ -7228,8 +7402,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Independent channel power isolation and surge protection",
       "-40°C to +75°C fanless passive cooling",
       "Dual 52-56VDC terminal inputs"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-2gbt-p180.webp"
+    },
   {
     id: "amg-150-4gat-p120",
     sku: "AMG150-4GAT-P120",
@@ -7251,8 +7426,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Replaces multiple individual power injectors in pole cabinets",
       "-40°C to +75°C fanless passive cooling",
       "Dual 48-56VDC terminal inputs"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-4gat-p120.webp"
+    },
   {
     id: "amg-150-8gat-p240",
     sku: "AMG150-8GAT-P240",
@@ -7274,8 +7450,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "High density DIN mounting with dual DC power inputs",
       "-40°C to +75°C fanless operation",
       "Per-port LED status indicators and surge protection"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-8gat-p240.webp"
+    },
   {
     id: "amg-150-1gbt-p90-lv",
     sku: "AMG150-1GBT-P90-LV",
@@ -7297,8 +7474,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Generates regulated 54VDC 90W 802.3bt PoE without separate power supply",
       "Essential for mobile surveillance trailers, solar poles, and transit vehicles",
       "-40°C to +75°C fanless passive cooling"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-150-1gbt-p90-lv.webp"
+    },
   {
     id: "amg-155-1gat-p30",
     sku: "AMG155-1GAT-P30",
@@ -7320,8 +7498,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Powers legacy non-PoE readers, sensors, and intercoms over standard Cat6",
       "-40°C to +75°C fanless operation",
       "Short-circuit and overload protection"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-155-1gat-p30.webp"
+    },
   {
     id: "amg-156-1gbt-p90",
     sku: "AMG156-1GBT-P90",
@@ -7343,8 +7522,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Selectable 12V, 24V, or 48VDC terminal block output",
       "-40°C to +75°C fanless passive cooling",
       "High EMI immunity for industrial automation"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-156-1gbt-p90.webp"
+    },
 
   // ==========================================
   // AMG INDUSTRIAL RACK CHASSIS & MOUNTING
@@ -7369,8 +7549,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Dual redundant power supply options for maximum reliability",
       "Hot-swappable card slots allow maintenance without network disruption",
       "Integrated power failure alarm relay contacts"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-2015.webp"
+    },
   {
     id: "amg-2015-dr",
     sku: "AMG2015-DR",
@@ -7391,8 +7572,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Recessed design allows ample space for cable bend radius and patch leads",
       "Rear cable tie-down points for organized loom management",
       "Rugged steel construction with durable powder coat finish"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-2015-dr.webp"
+    },
   {
     id: "amg-2031",
     sku: "AMG2031",
@@ -7413,8 +7595,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Ultra-shallow 5.5\\\" depth fits standard 12\\\" wall cabinets",
       "Accommodates up to 3 AMG compact DIN switches or media converters",
       "Rigid steel chassis with cable management slots"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-2031.webp"
+    },
   {
     id: "juniper-ex-4pst-rmk",
     sku: "EX-4PST-RMK",
@@ -7434,8 +7617,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Adjustable rail depth from 24 inches to 36 inches",
       "Compatible with deep chassis EX3400, EX4100, EX4300, EX4400, and SRX models",
       "Prevents chassis sag in heavy PoE enterprise rack installations"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
+        image: "assets/images/products/juniper-ex2300-24mp.webp"
+    },
   {
     id: "amg-2035",
     sku: "AMG2035",
@@ -7456,8 +7641,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Includes extension brackets to mount both a switch and DIN PSU together",
       "Anodized aluminum construction matching AMG industrial chassis",
       "Hardware kit includes all necessary mounting screws and clips"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-2035.webp"
+    },
   {
     id: "amg-2036-rp-aa",
     sku: "AMG2036-RP-AA",
@@ -7480,8 +7666,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Dual hot-swappable redundant 100-240VAC power supplies",
       "Centralized power distribution eliminating individual power adapters",
       "Active fan cooling with smart speed control"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-2036-rp-aa.webp"
+    },
   {
     id: "amg-mnt-mag-04",
     sku: "AMGMNT-MAG-04",
@@ -7502,8 +7689,9 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Eliminates drilling or screw tapping into outdoor NEMA cabinets",
       "Rubberized magnet coating prevents cabinet scratch and corrosion",
       "Compatible with all AMG570, AMG560, and AMG350 series products"
-    ]
-  },
+    ],
+        image: "assets/images/products/amg-mnt-mag-04.webp"
+    },
   {
     id: "amg-816-1f-rp-ad",
     sku: "AMG816-1F-RP-AD",
@@ -7533,8 +7721,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Guarantees legal admissibility of CCTV video timestamps across disparate systems",
       "Dual hot-swappable AC/DC redundant power supplies",
       "Eliminates reliance on external public internet NTP servers"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/AMG816 Series Datasheet D35161-02.pdf",
+        image: "assets/images/products/amg-816-1f-rp-ad.webp"
+    },
 
   // ==========================================
   // 16. WIRELESS PRECISION MOUNTS, SURGE & POWER
@@ -7557,8 +7747,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Cast aluminum weather-treated alloy resistant to high winds",
       "Supports 25mm to 76.2mm (1\" to 3\") outer diameter mast poles",
       "Compatible with Wave-AP, Wave-Pro, Wave-LR, and AF60-XR"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/Ubiquiti Wave Pro - Tech Specs.pdf",
+        image: "assets/images/products/wave_precision_mount.webp"
+    },
   {
     id: "unifi-ubb-xg-mount",
     sku: "UBB-XG-Mount",
@@ -7576,8 +7768,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Precision fine tilt and pan adjustment",
       "Compatible with UBB and UBB-XG",
       "Outdoor UV stabilized and powder-coated steel hardware"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
+        image: "assets/images/products/unifi-5g-max.webp"
+    },
   {
     id: "cambium-v3000-mount",
     sku: "N000045L002A",
@@ -7595,8 +7789,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Sub-degree azimuth and elevation fine tuning for long-range mmWave links",
       "Ruggedized galvanized steel construction survives 200 km/h winds",
       "Supports 40mm to 90mm pole diameters"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cambium/Cambium cnWave 60 GHz V3000 - Tech Specs.pdf",
+        image: "assets/images/products/n000045l002a.webp"
+    },
   {
     id: "cambium-v1000-mount",
     sku: "N000000L125A",
@@ -7614,8 +7810,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "±30° azimuth and ±30° elevation tilt adjustment",
       "Supports street furniture, lighting poles, and wall anchors",
       "Corrosion-resistant powder-coated finish"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cambium/Cambium cnWave 60 GHz V1000 - Tech Specs.pdf",
+        image: "assets/images/products/n000000l125a.webp"
+    },
   {
     id: "siklu-ax-mk-1ft",
     sku: "AX-MK-1FT-B",
@@ -7633,8 +7831,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Micrometer adjustment screws for precise pencil-beam millimeter wave alignment",
       "Essential for 70/80 GHz E-Band links operating across multi-kilometer distances",
       "Survives 220 km/h hurricane-force winds with zero beam deflection"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
+        image: "assets/images/products/ax_mk_1ft_b.webp"
+    },
   {
     id: "siklu-eh-mk-sm",
     sku: "EH-MK-SM",
@@ -7652,8 +7852,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Compact footprint for discreet municipal and building façade installations",
       "Tilt and pan ball-joint adjustment with locking clamp",
       "Includes hose clamps for mast poles up to 3 inches"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Siklu/Siklu MultiHaul TG Terminal Unit T260 - Tech Specs.pdf",
+        image: "assets/images/products/eh_mk_sm.webp"
+    },
   {
     id: "amg-8870f-wall",
     sku: "AMG8870F-WALL",
@@ -7671,8 +7873,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Provides stand-off clearance for wall-mounted wireless links",
       "Compatible with AMG8870F-06, AMG8870F-03-90, and AMG8870F-M-E",
       "Integrated cable routing conduit passage"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/AMG8870F-WALL Datasheet D26093-00.pdf",
+        image: "assets/images/products/amg8870f_wall.webp"
+    },
   {
     id: "cambium-surge-c000000l065a",
     sku: "C000000L065A",
@@ -7690,8 +7894,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Supports 10/100/1000Base-T with high-power 56V PoE pass-through",
       "IP55 weatherproof housing with integrated ground wire lug",
       "Meets GR-1089 and IEC 61000-4-5 lightning protection standards"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cambium/Cambium ePMP Force 300-25 - Tech Specs.pdf",
+        image: "assets/images/products/c000000l065a.webp"
+    },
   {
     id: "siklu-ax-sp-01",
     sku: "AX-SP-01",
@@ -7709,8 +7915,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Supports high-draw 802.3bt PoE power levels up to 90W",
       "Heavy-duty cast aluminum enclosure with IP67 sealing",
       "Protects all 8 signal/power conductors"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
+        image: "assets/images/products/ax_sp_01.webp"
+    },
   {
     id: "cambium-psu-n000065l001c",
     sku: "N000065L001C",
@@ -7730,8 +7938,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "54VDC 1.1A high-power output (60W total budget)",
       "Gigabit data pass-through with low insertion loss",
       "Includes AC line cord and integrated mounting ears"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cambium/Cambium cnWave 60 GHz V5000 - Tech Specs.pdf",
+        image: "assets/images/products/n000065l001c.webp"
+    },
   {
     id: "siklu-eh-poe-ac-60w",
     sku: "EH-POE-AC-60W",
@@ -7751,8 +7961,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "Universal 100-240VAC input with IP67 weatherproof cable gland seals",
       "Delivers up to 60W 802.3bt power to remote radio units",
       "Wide operating temperature range (-40°C to +60°C)"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
+        image: "assets/images/products/eh_poe_ac_60w.webp"
+    },
   {
     id: "amg-psu-t24-p24",
     sku: "AMGPSU-T24-P24",
@@ -7772,8 +7984,10 @@ description: "1U unmanaged 20A 120V basic rack PDU with 13 NEMA 5-15/20R outlets
       "24VDC 1A (24W) passive power delivery",
       "10/100/1000Base-T Gigabit Ethernet pass-through",
       "Includes grounding plug and surge suppression circuitry"
-    ]
-  }
+    ],
+        datasheetPath: "Datasheets/Network/AMG/AMG8870F-06 Datasheet D26090-04.pdf",
+        image: "assets/images/products/amgpsu_t24_p24.webp"
+    }
 ,
   // ==========================================
   // 17. POWER ACCESSORIES, NETWORK CARDS, PROBES, BYPASS SWITCHES & LICENSES

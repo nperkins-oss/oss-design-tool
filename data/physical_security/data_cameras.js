@@ -39,8 +39,10 @@ const CAMERAS_DATABASE = [
       "OptimizedIR up to 40 meters (130 ft) without ambient light",
       "Axis ARTPEC-8 chip with deep learning processing unit (DLPU) for object classification",
       "Standard 802.3af PoE Class 3 (7.7W nominal draw)"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Physical Security/Axis/Axis P3265-LVE - Datasheet.pdf",
+        image: "assets/images/products/axis_p3265_lve.webp"
+    },
   {
     id: "axis-q3538-lve-4k-dome",
     vendor: "Axis Communications",
@@ -76,8 +78,10 @@ const CAMERAS_DATABASE = [
       "Built-in heater and defroster for harsh sub-zero Arctic deployments",
       "Electronic image stabilization (EIS) for high-vibration bridge and pole mounts",
       "PoE+ 802.3at Class 4 power delivery (14.2W nominal, 25.5W with heater active)"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Physical Security/Axis/Axis Q3538-LVE - Datasheet.pdf",
+        image: "assets/images/products/axis_q3538_lve.webp"
+    },
   {
     id: "hanwha-xnv-8081z-4k-ptz",
     vendor: "Hanwha Vision",
@@ -113,8 +117,10 @@ const CAMERAS_DATABASE = [
       "120dB true Forensic WDR with extreme low-noise sensor",
       "Dual SD/SDHC/SDXC memory slots for up to 512GB edge recording redundancy",
       "PoE+ 802.3at Class 4 certified power consumption"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Physical Security/Hanwha/Hanwha XNV-8081Z - Datasheet.pdf",
+        image: "assets/images/products/hanwha_xnv_8081z.webp"
+    },
   {
     id: "hanwha-xno-6080r-bullet",
     vendor: "Hanwha Vision",
@@ -187,8 +193,10 @@ const CAMERAS_DATABASE = [
       "High Definition Stream Management (HDSM) SmartCodec drastically minimizes bandwidth without fidelity loss",
       "Impact-resistant cast aluminum housing rated IK10",
       "Operates seamlessly on IEEE 802.3af Class 3 PoE"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Physical Security/Avigilon/Avigilon H5A Dome Series - Datasheet.pdf",
+        image: "assets/images/products/avigilon_h5a_dome.webp"
+    },
   {
     id: "bosch-flexidome-5100i-4k",
     vendor: "Bosch",
@@ -224,8 +232,10 @@ const CAMERAS_DATABASE = [
       "High Dynamic Range (HDR) 8MP UHD sensor for challenging architectural lighting",
       "Modular design for rapid tool-less field installation",
       "IEEE 802.3af Class 3 PoE power consumption"
-    ]
-  }
+    ],
+        datasheetPath: "Datasheets/Physical Security/Bosch/Bosch FLEXIDOME IP 5000i - Datasheet.pdf",
+        image: "assets/images/products/bosch_ndv_5704_al.webp"
+    }
 ];
 
 if (typeof window !== "undefined") {

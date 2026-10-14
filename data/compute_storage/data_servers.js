@@ -42,8 +42,10 @@ const SERVERS_DATABASE = [
       "Redundant 800W hot-plug Platinum power supplies with failover",
       "High-throughput 850 Mbps continuous recording ingress with dedicated OS SSDs",
       "Integrated Dell Remote Access Controller 9 (iDRAC9 Enterprise) with out-of-band IPMI"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Compute/Dell/Dell PowerEdge R760 - Datasheet.pdf",
+        image: "assets/images/products/dell_poweredge_r760.webp"
+    },
   {
     id: "bcd-aurora-1u-nvr",
     vendor: "BCDVideo",
@@ -82,8 +84,10 @@ const SERVERS_DATABASE = [
       "Dedicated 24TB RAID-5 video archive with 450 Mbps recording throughput",
       "Dual hot-swap 500W power supplies with active power factor correction",
       "5-Year Next Business Day on-site hardware warranty"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Compute/BCDVideo/BCDVideo Aurora BCD104-E 1U NVR - Datasheet.pdf",
+        image: "assets/images/products/bcdvideo_bcd104_1u.webp"
+    },
   {
     id: "supermicro-4u-san-storage",
     vendor: "Supermicro",
@@ -122,8 +126,10 @@ const SERVERS_DATABASE = [
       "High-speed 25G SFP28 redundant uplinks supporting up to 2.4 Gbps concurrent ingress",
       "Dual 1200W Titanium-Level (96% efficiency) redundant power supplies",
       "Integrated IPMI 2.0 with virtual media over LAN and KVM-over-LAN support"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Compute/Supermicro/Supermicro SuperStorage 6049P-E1CR24H - Datasheet.pdf",
+        image: "assets/images/products/supermicro_6049p.webp"
+    },
   {
     id: "hpe-dl380-access-security-host",
     vendor: "HPE",
@@ -162,8 +168,10 @@ const SERVERS_DATABASE = [
       "High-IOPS all-flash RAID-10 storage for sub-millisecond card badge authorization",
       "HPE iLO 6 Silicon Root of Trust security architecture preventing unauthorized firmware",
       "Dual redundant 800W Flex Slot Platinum hot-plug power supplies"
-    ]
-  }
+    ],
+        datasheetPath: "Datasheets/Compute/HPE/HPE ProLiant DL380 Gen11 - Datasheet.pdf",
+        image: "assets/images/products/hpe_dl380_gen11.webp"
+    }
 ];
 
 if (typeof window !== "undefined") {

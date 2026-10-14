@@ -40,8 +40,10 @@ const FIREWALL_DATABASE = [
       "25 Gbps routing with 12.5 Gbps full IPS/IDS filtering",
       "Dual hot-swappable 150W CRPS redundant power supplies",
       "Shadow Mode High Availability support"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Enterprise Firewall - Tech Specs.pdf",
+        image: "assets/images/products/efg.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Enterprise Gateway (UXG-Enterprise)",
@@ -73,8 +75,10 @@ const FIREWALL_DATABASE = [
       "12.5 Gbps full IDS/IPS inspection with NeXT AI decryption",
       "Dual hot-swappable 150W CRPS redundant power supplies",
       "Shadow Mode High Availability (VRRP)"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Enterprise Firewall - Tech Specs.pdf",
+        image: "assets/images/products/uxg-enterprise.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Dream Machine Special Edition (UDM-SE)",
@@ -109,8 +113,10 @@ const FIREWALL_DATABASE = [
       "Single 3.5\" NVR HDD bay + 128GB integrated SSD for Protect CCTV",
       "2.5 GbE RJ-45 + 10G SFP+ high-speed WAN interfaces",
       "SmartPower RPS DC backup connection"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Dream Machine Special Edition - Tech Specs.pdf",
+        image: "assets/images/products/udm-se.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Dream Machine Beast",
@@ -143,8 +149,10 @@ const FIREWALL_DATABASE = [
       "Wire-speed 25 Gbps full IDS/IPS threat protection",
       "Dual 3.5\" NVR HDD bays + 128GB SSD for UniFi Protect",
       "USP-RPS DC input port for redundant backup power"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Dream Machine Beast - Tech Specs.pdf",
+        image: "assets/images/products/udm-beast.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Dream Machine Pro Max",
@@ -177,8 +185,10 @@ const FIREWALL_DATABASE = [
       "Dual 3.5\" HDD bays for RAID-1 NVR surveillance video retention",
       "Integrated 128GB SSD for UniFi OS application storage",
       "SmartPower RPS DC failover support"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Dream Machine Pro Max - Tech Specs.pdf",
+        image: "assets/images/products/udm-pro-max.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Dream Machine Pro",
@@ -211,8 +221,10 @@ const FIREWALL_DATABASE = [
       "Single 3.5\" HDD bay for UniFi Protect CCTV cameras",
       "10G SFP+ LAN & WAN uplink interfaces",
       "SmartPower RPS DC failover support"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Dream Machine Pro - Tech Specs.pdf",
+        image: "assets/images/products/udm-pro.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Gateway Pro",
@@ -245,8 +257,10 @@ const FIREWALL_DATABASE = [
       "Adopts into self-hosted, cloud-hosted, or CloudKey controllers",
       "SmartPower RPS redundant DC backup input",
       "Multi-WAN load balancing and failover"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Gateway Pro - Tech Specs.pdf",
+        image: "assets/images/products/uxg-pro.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Cloud Gateway Max (NVMe Bay)",
@@ -279,8 +293,10 @@ const FIREWALL_DATABASE = [
       "Internal NVMe M.2 SSD bay for local Protect camera storage",
       "1.5 Gbps line-rate IPS/IDS routing",
       "All 2.5GbE RJ-45 copper interfaces"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Cloud Gateway Max - Tech Specs.pdf",
+        image: "assets/images/products/ucg-max.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Cloud Gateway Ultra",
@@ -313,8 +329,10 @@ const FIREWALL_DATABASE = [
       "1 Gbps line-rate IDS/IPS threat protection",
       "Multi-WAN load balancing and failover",
       "Runs full UniFi Network application"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs.pdf",
+        image: "assets/images/products/ucg-ultra.webp"
+    },
 
   {
     vendor: "UniFi",
@@ -352,8 +370,10 @@ const FIREWALL_DATABASE = [
       "NeXT AI deep packet inspection & SSL/TLS decryption engine",
       "Dual hot-swappable redundant power supplies included",
       "High-availability stateful clustering (Active/Passive VRRP)"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Enterprise Firewall Core - Tech Specs.pdf",
+        image: "assets/images/products/ef-core.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Cloud Gateway Fiber",
@@ -388,8 +408,10 @@ const FIREWALL_DATABASE = [
       "5 Gbps IPS/IDS line-rate threat management",
       "Internal NVMe M.2 slot for camera video recording",
       "Full UniFi OS controller built-in"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Cloud Gateway Fiber - Tech Specs.pdf",
+        image: "assets/images/products/ucg-fiber.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Cloud Gateway Industrial",
@@ -426,8 +448,10 @@ const FIREWALL_DATABASE = [
       "Dual 12-48VDC terminal block inputs with reverse polarity protection",
       "4x 2.5GbE PoE+ output ports for industrial IP cameras and sensors",
       "5 Gbps full IPS/IDS threat inspection"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Industrial - Tech Specs.pdf",
+        image: "assets/images/products/ucg-industrial.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Express (UX)",
@@ -461,8 +485,10 @@ const FIREWALL_DATABASE = [
       "Runs UniFi Network application managing up to 4 additional UniFi devices",
       "Gigabit routing with integrated firewall and traffic identification",
       "0.96-inch status display screen"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Express - Tech Specs.pdf",
+        image: "assets/images/products/ux.webp"
+    },
   {
     vendor: "UniFi",
     model: "UniFi Dream Wall (UDW)",
@@ -501,8 +527,10 @@ const FIREWALL_DATABASE = [
       "Integrated dual hot-swappable power supplies with 420W PoE availability",
       "Built-in WiFi 6 access point and 4.7-inch color touchscreen display",
       "3.5 Gbps full IDS/IPS routing and internal storage for Protect cameras"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Dream Wall - Tech Specs.pdf",
+        image: "assets/images/products/udw.webp"
+    },
 
   // ==========================================
   // CISCO MERAKI MX & TELEWORKER SECURITY
@@ -539,8 +567,10 @@ const FIREWALL_DATABASE = [
       "5 Gbps Advanced Threat Protection (Snort IDS/AMP)",
       "Dual hot-swappable 1+1 redundant power supplies",
       "High-speed 10G SFP+ WAN and LAN interfaces"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx450-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX250 Mid-Campus Firewall",
@@ -573,8 +603,10 @@ const FIREWALL_DATABASE = [
       "Dual hot-swappable load-sharing power supplies",
       "Active-Passive High Availability pairing",
       "Automated cloud firmware management"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx250-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX105 Branch Firewall",
@@ -607,8 +639,10 @@ const FIREWALL_DATABASE = [
       "2.5G mGig copper + 10G SFP+ WAN fiber connectivity",
       "2 Gbps Snort IPS/IDS throughput",
       "Zero-touch SD-WAN interconnectivity"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx105-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX95 Branch Firewall",
@@ -641,8 +675,10 @@ const FIREWALL_DATABASE = [
       "1.5 Gbps threat inspection throughput",
       "Native 10G SFP+ uplinks into IDF core switches",
       "Dynamic path selection with performance failover"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx95-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX85 Small Branch Firewall",
@@ -675,8 +711,10 @@ const FIREWALL_DATABASE = [
       "500 Mbps IPS throughput with Snort & Cisco Talos rules",
       "SFP fiber WAN interfaces for direct metro fiber handoff",
       "Integrated SD-WAN traffic steering"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx85-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MG51 5G Cellular Gateway (IP67)",
@@ -714,8 +752,10 @@ const FIREWALL_DATABASE = [
       "5G Sub-6GHz with Cat 20 LTE failover (2 Gbps DL / 300 Mbps UL)",
       "Powered via 802.3at PoE+ (no AC power required at antenna point)",
       "Dual SIM auto-failover with cloud management via Meraki Dashboard"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mg51-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX75 Desktop Firewall",
@@ -750,8 +790,10 @@ const FIREWALL_DATABASE = [
       "500 Mbps Advanced Threat Protection throughput",
       "2x 802.3at PoE+ ports (30W budget) to power local APs or cameras",
       "Automated Auto VPN mesh connectivity"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx75-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX68CW Cellular & Wi-Fi Gateway",
@@ -786,8 +828,10 @@ const FIREWALL_DATABASE = [
       "Integrated dual-band 802.11ac Wave 2 Wi-Fi",
       "2x 802.3at PoE+ ports on local LAN to power cameras/phones",
       "Ideal for remote guard shacks, kiosks, and trailer offices"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx68cw-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki MX67 Desktop Firewall",
@@ -820,8 +864,10 @@ const FIREWALL_DATABASE = [
       "300 Mbps IPS throughput with Cisco Talos threat intelligence",
       "Dual WAN Ethernet ports for dual-ISP failover",
       "Centralized cloud configuration and firmware pushes"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/mx67-hw.webp"
+    },
   {
     vendor: "Meraki",
     model: "Meraki Z4C Teleworker Security Gateway",
@@ -856,8 +902,10 @@ const FIREWALL_DATABASE = [
       "Integrated Cat 12 LTE cellular modem + dual-band Wi-Fi 6",
       "1x PoE port to directly power an IP telephone or CCTV camera",
       "Zero-touch Auto VPN tunnel back to the physical security headend"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/z4c-hw.webp"
+    },
 
   // ==========================================
   // ALLIED TELESIS AR-SERIES SECURE ROUTERS
@@ -894,8 +942,10 @@ const FIREWALL_DATABASE = [
       "Deep packet inspection with application control and web filtering",
       "Autonomous Management Framework (AMF) node support",
       "BGP, OSPF, and hardware-accelerated IPsec encryption"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Allied Telesis/ati-ar4050s-5g-ds.pdf",
+        image: "assets/images/products/at-ar2050v-10.webp"
+    },
   {
     vendor: "Allied Telesis",
     model: "Allied Telesis AR4050S-5G Cellular Router",
@@ -928,8 +978,10 @@ const FIREWALL_DATABASE = [
       "Failover between physical fiber/copper and 5G wireless",
       "IPsec & OpenVPN remote operator access",
       "Ruggedized design for industrial branches and substation perimeters"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Allied Telesis/ati-ar4050s-5g-ds.pdf",
+        image: "assets/images/products/at-ar2050v-10.webp"
+    },
   {
     vendor: "Allied Telesis",
     model: "Allied Telesis AR3050S Branch Router",
@@ -962,8 +1014,10 @@ const FIREWALL_DATABASE = [
       "Hardware-based AES-256 encryption engine",
       "Stateful firewall inspection with NAT and QoS",
       "Managed via AlliedWare Plus CLI or Vista Manager"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Allied Telesis/ati-ar4050s-5g-ds.pdf",
+        image: "assets/images/products/at-ar2050v-10.webp"
+    },
   {
     vendor: "Allied Telesis",
     model: "Allied Telesis AR2050V Compact Branch Gateway",
@@ -996,8 +1050,10 @@ const FIREWALL_DATABASE = [
       "Fanless silent operation",
       "Dynamic routing and VPN tunneling",
       "Supports AMF centralized zero-touch recovery"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/Allied Telesis/ati-ar4050s-5g-ds.pdf",
+        image: "assets/images/products/at-ar2050v-10.webp"
+    },
 
   // ==========================================
   // AMG SYSTEMS INDUSTRIAL & SPECIALTY
@@ -1037,8 +1093,10 @@ const FIREWALL_DATABASE = [
       "Dual SIM auto-failover between cellular carriers (AT&T/Verizon)",
       "4x 802.3at PoE+ ports (120W budget) to directly power cameras",
       "Direct 12-56VDC terminal block inputs for solar/battery systems"
-    ]
-  },
+    ],
+        datasheetPath: "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
+        image: "assets/images/products/amg-eoc-7501.webp"
+    },
 
   // ==========================================
   // JUNIPER NETWORKS SRX SERIES SECURITY GATEWAYS
