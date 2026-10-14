@@ -3077,6 +3077,15 @@ function renderFacilityManager() {
                   </div>
 
                   <div class="flex items-center gap-1.5 shrink-0">
+                    ${hostType === 'equipment_rack' ? `
+                      <button 
+                        onclick="window.TabManager ? TabManager.openTab('power_matrix', { targetRackId: '${locName}' }) : (typeof openRackPowerMatrixModal === 'function' && openRackPowerMatrixModal(null, null, null, '${locName}'))"
+                        class="px-2.5 py-1.5 bg-emerald-600/25 hover:bg-emerald-600 text-emerald-200 hover:text-white text-[10px] font-bold rounded-xl border border-emerald-500/40 transition-all flex items-center gap-1.5 shadow-sm"
+                        title="Open Power Matrix Studio for ${escapeHTML(e.name)}"
+                      >
+                        <i data-lucide="plug-zap" class="w-3.5 h-3.5"></i> Power Matrix
+                      </button>
+                    ` : ''}
                     <button 
                       onclick="openRackViewerFor('${locName}')"
                       class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white text-[10px] font-bold rounded-xl border border-indigo-500/40 transition-all flex items-center gap-1.5 shadow-sm"

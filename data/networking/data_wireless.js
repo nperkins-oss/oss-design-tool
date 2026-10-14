@@ -831,7 +831,7 @@ const WIRELESS_DATABASE = [
     powerConsumptionWatts: 10,
     powerSource: "poe_switch",
     rackUnits: 0,
-    weightLbs: 0.93.88,
+    weightLbs: 0.88,
     depthInches: 1.6,
     weatherRating: "IP67 Rated",
     mounting: "Wall / Pole Mount Included",

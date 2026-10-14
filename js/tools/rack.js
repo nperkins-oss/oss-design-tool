@@ -2042,20 +2042,45 @@ window.calculateRackPduMetrics = calculateRackPduMetrics;
 // Interactive End-to-End Power Chain Trace, Catalog PDU Faceplates,
 // and Orion 2-Line Brady (M21-750-499) Power Cord Schedule
 // =========================================================================
-function openRackPowerMatrixModal(focusPduKey = null, focusOutletNum = null, focusInstanceId = null) {
+function openRackPowerMatrixModal(focusPduKey = null, focusOutletNum = null, focusInstanceId = null, targetRackId = null) {
   let modal = document.getElementById("rackPowerMatrixModal");
   if (!modal) {
+    const viewport = document.getElementById("workspaceMainViewport") || document.body;
     modal = document.createElement("div");
     modal.id = "rackPowerMatrixModal";
-    modal.className = "fixed inset-0 z-[75] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6";
-    document.body.appendChild(modal);
+    modal.className = "hidden absolute inset-0 z-30 bg-slate-950 flex flex-col transition-all";
+    viewport.appendChild(modal);
   }
+
+  if (targetRackId) {
+    activeRackId = FacilityStore.normalize(targetRackId);
+    syncRackSelectorOptions();
+  } else {
+    // Ensure activeRackId points to an equipment_rack if possible
+    const locations = FacilityStore.getLocations().filter(l => l.hostType === "equipment_rack");
+    const currentNormalized = FacilityStore.normalize(activeRackId);
+    const isCurrentRack = locations.some(l => FacilityStore.normalize(l.name) === currentNormalized);
+    if (!isCurrentRack && locations.length > 0) {
+      activeRackId = FacilityStore.normalize(locations[0].name);
+      syncRackSelectorOptions();
+    }
+  }
+
   modal.classList.remove("hidden");
+
+  // Calculate fresh metrics for activeRackId so focusInstanceId lookup is accurate
+  const assignedItems = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+    ? projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === activeRackId)
+    : [];
+  const parsed = FacilityStore.parse(activeRackId);
+  const enclosures = FacilityStore.getEnclosures();
+  const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === (parsed.hostName || "").toLowerCase()) || null;
+  const metrics = calculateRackPduMetrics(assignedItems, activeEnc);
 
   if (focusPduKey && focusOutletNum) {
     window._rackPowerMatrixSelected = { pduKey: focusPduKey, outletNumber: parseInt(focusOutletNum, 10) };
-  } else if (focusInstanceId && window._lastRackPduMetrics?.byDeviceId?.[focusInstanceId]) {
-    const devPwr = window._lastRackPduMetrics.byDeviceId[focusInstanceId];
+  } else if (focusInstanceId && metrics?.byDeviceId?.[focusInstanceId]) {
+    const devPwr = metrics.byDeviceId[focusInstanceId];
     const firstPsu = devPwr.psus?.psu1 || devPwr.psus?.psu2;
     if (firstPsu && firstPsu.connected) {
       window._rackPowerMatrixSelected = { pduKey: firstPsu.feed, outletNumber: firstPsu.outletNumber };
@@ -2065,12 +2090,36 @@ function openRackPowerMatrixModal(focusPduKey = null, focusOutletNum = null, foc
   renderRackPowerMatrixModalContent();
 }
 window.openRackPowerMatrixModal = openRackPowerMatrixModal;
+window.openPowerMatrixStudio = openRackPowerMatrixModal;
 
 function closeRackPowerMatrixModal() {
   const modal = document.getElementById("rackPowerMatrixModal");
   if (modal) modal.classList.add("hidden");
 }
 window.closeRackPowerMatrixModal = closeRackPowerMatrixModal;
+
+function switchPowerMatrixRack(newRackName) {
+  if (!newRackName) return;
+  activeRackId = FacilityStore.normalize(newRackName);
+  window._rackPowerMatrixSelected = null;
+  syncRackSelectorOptions();
+  renderRackPowerMatrixModalContent();
+}
+window.switchPowerMatrixRack = switchPowerMatrixRack;
+
+function jumpFromPowerMatrixToRack(rackSlot = null, instanceId = null) {
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("rack", { locationName: activeRackId });
+  } else if (typeof openRackModal === "function") {
+    openRackModal();
+  }
+  if (rackSlot !== null && instanceId && typeof selectRackSlotItem === "function") {
+    setTimeout(() => {
+      selectRackSlotItem(parseInt(rackSlot, 10), instanceId);
+    }, 60);
+  }
+}
+window.jumpFromPowerMatrixToRack = jumpFromPowerMatrixToRack;
 
 function selectRackPowerMatrixOutlet(pduKey, outletNumber) {
   window._rackPowerMatrixSelected = { pduKey, outletNumber: parseInt(outletNumber, 10) };
@@ -2156,6 +2205,12 @@ function renderRackPowerMatrixModalContent() {
   const modal = document.getElementById("rackPowerMatrixModal");
   if (!modal) return;
 
+  const allLocations = FacilityStore.getLocations();
+  const rackLocations = allLocations.filter(l => l.hostType === "equipment_rack");
+  const selectorLocations = rackLocations.length > 0
+    ? rackLocations
+    : allLocations.filter(l => l.hostType !== "field" && !l.isField);
+
   const assignedItems = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
     ? projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === activeRackId)
     : [];
@@ -2168,7 +2223,10 @@ function renderRackPowerMatrixModalContent() {
   const isHorizMode = (metrics.pduConfig === "horizontal");
 
   const allCatalogPdus = getCatalogPdusList();
-  const compatibleCatalogPdus = allCatalogPdus.filter(p => isHorizMode ? (parseInt(p.rackUnits, 10) || 0) >= 1 : (parseInt(p.rackUnits, 10) || 0) === 0);
+  let compatibleCatalogPdus = allCatalogPdus.filter(p => isHorizMode ? (parseInt(p.rackUnits, 10) || 0) >= 1 : (parseInt(p.rackUnits, 10) || 0) === 0);
+  if (compatibleCatalogPdus.length === 0 && allCatalogPdus.length > 0) {
+    compatibleCatalogPdus = allCatalogPdus;
+  }
 
   // Default selected outlet to first occupied outlet if not set
   let sel = window._rackPowerMatrixSelected;
@@ -2185,10 +2243,21 @@ function renderRackPowerMatrixModalContent() {
   const selOutletObj = selPduObj.outlets[Math.min(selPduObj.outlets.length - 1, Math.max(0, (sel.outletNumber || 1) - 1))] || selPduObj.outlets[0];
   const selAssign = selOutletObj ? selOutletObj.assignment : null;
 
-  const buildPduSelectOptions = (selectedSku) => compatibleCatalogPdus.map(p => {
-    const ruTag = (p.rackUnits || 0) === 0 ? "0U" : `${p.rackUnits}U`;
-    const cktTag = `${p.inputVoltage || 120}V/${p.inputCircuitAmps || 20}A ${p.inputConnector || '5-20P'}`;
-    return `<option value="${escapeHTML(p.sku)}" ${p.sku === selectedSku ? 'selected' : ''}>${escapeHTML(p.vendor)} ${escapeHTML(p.sku)} — ${ruTag} • ${p.outletsCount} Outlets (${escapeHTML(p.receptacles)}) • ${cktTag} ($${p.msrp})</option>`;
+  const buildPduSelectOptions = (selectedSku, fallbackPduObj) => {
+    if (compatibleCatalogPdus.length === 0 && fallbackPduObj) {
+      const ruTag = (fallbackPduObj.rackUnits || 0) === 0 ? "0U" : `${fallbackPduObj.rackUnits}U`;
+      return `<option class="bg-slate-900 text-white" value="${escapeHTML(fallbackPduObj.sku)}" selected>${escapeHTML(fallbackPduObj.vendor)} ${escapeHTML(fallbackPduObj.sku)} — ${ruTag} • ${fallbackPduObj.totalOutlets} Outlets (${escapeHTML(fallbackPduObj.receptaclesSummary)}) ($${fallbackPduObj.msrp || 385})</option>`;
+    }
+    return compatibleCatalogPdus.map(p => {
+      const ruTag = (p.rackUnits || 0) === 0 ? "0U" : `${p.rackUnits}U`;
+      const cktTag = `${p.inputVoltage || 120}V/${p.inputCircuitAmps || 20}A ${p.inputConnector || '5-20P'}`;
+      return `<option class="bg-slate-900 text-white" value="${escapeHTML(p.sku)}" ${p.sku === selectedSku ? 'selected' : ''}>${escapeHTML(p.vendor)} ${escapeHTML(p.sku)} — ${ruTag} • ${p.outletsCount} Outlets (${escapeHTML(p.receptacles)}) • ${cktTag} ($${p.msrp})</option>`;
+    }).join("");
+  };
+
+  const rackSelectorOptionsHtml = selectorLocations.map(loc => {
+    const normName = FacilityStore.normalize(loc.name);
+    return `<option class="bg-slate-900 text-white" value="${escapeHTML(normName)}" ${normName === activeRackId ? 'selected' : ''}>${escapeHTML(normName)}</option>`;
   }).join("");
 
   const renderPduStripCard = (pduObj, isFeedA) => {
@@ -2279,24 +2348,56 @@ function renderRackPowerMatrixModalContent() {
     .sort((a, b) => (parseInt(b.rackSlot, 10) || 0) - (parseInt(a.rackSlot, 10) || 0));
 
   modal.innerHTML = `
-    <div class="bg-slate-900 border border-slate-700/90 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-      <!-- Modal Header -->
-      <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div class="flex items-center gap-3">
+    <div class="bg-slate-900 w-full h-full flex flex-col overflow-hidden">
+      <!-- Studio Workspace Tab Header -->
+      <div class="px-5 py-3 border-b border-slate-800 bg-slate-950/90 flex flex-wrap items-center justify-between gap-3 shrink-0">
+        <div class="flex items-center gap-3 flex-wrap">
           <div class="p-2 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
             <i data-lucide="plug-zap" class="w-5 h-5"></i>
           </div>
           <div>
             <div class="flex items-center gap-2 flex-wrap">
-              <h2 class="text-sm sm:text-base font-bold text-white">Rack Power &amp; PDU Receptacle Matrix Studio</h2>
-              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[10px] font-mono font-bold">${escapeHTML(activeRackId)}</span>
+              <h2 class="text-sm sm:text-base font-bold text-white">Power Matrix Studio</h2>
               <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono font-bold">${escapeHTML(metrics.pduA.vendor)} ${escapeHTML(metrics.pduA.sku)}${!isSingleFeedMode && metrics.pduB.sku !== metrics.pduA.sku ? ` + ${escapeHTML(metrics.pduB.sku)}` : ''}</span>
             </div>
             <p class="text-[11px] text-slate-400">Catalog-Driven PDU Receptacles (R01–R${metrics.pduA.totalOutlets}), Power Cord Part Numbers, &amp; Orion 2-Line Brady Labels</p>
           </div>
+
+          <!-- Active Rack Selector -->
+          <div class="flex items-center gap-2 ml-1 pl-3 border-l border-slate-800">
+            <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400">Active Rack:</span>
+            <select
+              onchange="switchPowerMatrixRack(this.value)"
+              class="bg-slate-900 border border-emerald-500/50 hover:border-emerald-400 text-emerald-300 rounded-xl px-2.5 py-1.5 text-xs font-mono font-bold focus:outline-none cursor-pointer"
+            >
+              ${rackSelectorOptionsHtml}
+            </select>
+          </div>
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
+          <!-- Cross-Navigation Links -->
+          <button
+            type="button"
+            onclick="jumpFromPowerMatrixToRack()"
+            class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Open ${escapeHTML(activeRackId)} in the Rack Elevation Visualizer"
+          >
+            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>Rack Elevation</span>
+          </button>
+          <button
+            type="button"
+            onclick="window.TabManager ? TabManager.openTab('port_matrix') : (typeof openPortMatrixStudio === 'function' && openPortMatrixStudio())"
+            class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Switch to Port Matrix Studio"
+          >
+            <i data-lucide="grid" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Port Matrix</span>
+          </button>
+
+          <div class="h-5 w-px bg-slate-800 mx-0.5"></div>
+
           <button
             type="button"
             onclick="syncRackPdusAndCordsToBom()"
@@ -2324,18 +2425,10 @@ function renderRackPowerMatrixModalContent() {
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>Export Power CSV</span>
           </button>
-          <button
-            type="button"
-            onclick="closeRackPowerMatrixModal()"
-            class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-            title="Close Power Matrix"
-          >
-            <i data-lucide="x" class="w-5 h-5"></i>
-          </button>
         </div>
       </div>
 
-      <!-- Modal Scrollable Body -->
+      <!-- Studio Scrollable Body -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
         <!-- Catalog PDU Hardware Part Number Selector Bar -->
         <div class="p-3.5 rounded-2xl bg-slate-950 border border-indigo-500/40 flex flex-wrap items-center justify-between gap-3">
@@ -2344,8 +2437,8 @@ function renderRackPowerMatrixModalContent() {
               <i data-lucide="cpu" class="w-4 h-4"></i>
             </div>
             <div>
-              <div class="text-xs font-bold text-white flex items-center gap-2">
-                <span>Catalog PDU Hardware Selection (${isHorizMode ? '1U/2U Horizontal Rackmount' : '0U Vertical Strip'})</span>
+              <div class="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
+                <span>Catalog PDU Hardware Selection (${isHorizMode ? '1U/2U Horizontal Rackmount' : '0U Vertical Strip'} &bull; ${compatibleCatalogPdus.length} Models)</span>
                 <span class="px-1.5 py-0.2 rounded text-[9px] font-mono ${metrics.isSyncedInBom ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
                   ${metrics.isSyncedInBom ? '✓ In Project BOM' : 'Not Yet Synced to BOM'}
                 </span>
@@ -2362,7 +2455,7 @@ function renderRackPowerMatrixModalContent() {
                   onchange="setRackPduCatalogSku('PDU-A', this.value)"
                   class="w-full bg-slate-900 border border-emerald-500/50 text-white rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold focus:outline-none cursor-pointer"
                 >
-                  ${buildPduSelectOptions(metrics.pduA.sku)}
+                  ${buildPduSelectOptions(metrics.pduA.sku, metrics.pduA)}
                 </select>
               </div>
             ` : `
@@ -2372,7 +2465,7 @@ function renderRackPowerMatrixModalContent() {
                   onchange="setRackPduCatalogSku('PDU-A', this.value)"
                   class="w-full bg-slate-900 border border-emerald-500/50 text-white rounded-lg px-2 py-1 text-[11px] font-mono font-bold focus:outline-none cursor-pointer"
                 >
-                  ${buildPduSelectOptions(metrics.pduA.sku)}
+                  ${buildPduSelectOptions(metrics.pduA.sku, metrics.pduA)}
                 </select>
               </div>
               <div class="w-full sm:w-auto flex-1">
@@ -2381,7 +2474,7 @@ function renderRackPowerMatrixModalContent() {
                   onchange="setRackPduCatalogSku('PDU-B', this.value)"
                   class="w-full bg-slate-900 border border-sky-500/50 text-white rounded-lg px-2 py-1 text-[11px] font-mono font-bold focus:outline-none cursor-pointer"
                 >
-                  ${buildPduSelectOptions(metrics.pduB.sku)}
+                  ${buildPduSelectOptions(metrics.pduB.sku, metrics.pduB)}
                 </select>
               </div>
               <button
@@ -2421,7 +2514,7 @@ function renderRackPowerMatrixModalContent() {
               </div>
             ` : `
               <div class="text-xs font-bold text-amber-300 mt-1 font-mono">No UPS Slotted in Rack</div>
-              <button type="button" onclick="closeRackPowerMatrixModal(); window.addRecommendedUpsAndEbpToRack()" class="text-[10px] text-indigo-400 hover:underline font-mono mt-0.5 cursor-pointer">
+              <button type="button" onclick="window.addRecommendedUpsAndEbpToRack(); renderRackPowerMatrixModalContent();" class="text-[10px] text-indigo-400 hover:underline font-mono mt-0.5 cursor-pointer">
                 + Auto-Slot Recommended UPS at U1
               </button>
             `}
@@ -2489,7 +2582,17 @@ function renderRackPowerMatrixModalContent() {
             <div class="matrix-trace-grid text-xs font-mono">
               <!-- Box 1: Chassis PSU -->
               <div class="p-2.5 rounded-xl bg-slate-900 border border-indigo-500/50">
-                <div class="text-[9px] text-indigo-400 uppercase font-bold">1. Rack Device PSU</div>
+                <div class="text-[9px] text-indigo-400 uppercase font-bold flex items-center justify-between">
+                  <span>1. Rack Device PSU</span>
+                  <button
+                    type="button"
+                    onclick="jumpFromPowerMatrixToRack(${selAssign.rackSlot}, '${selAssign.instanceId}')"
+                    class="text-[9px] text-indigo-300 hover:text-white underline cursor-pointer"
+                    title="Highlight U${selAssign.rackSlot} in Rack Elevation Visualizer"
+                  >
+                    View U${selAssign.rackSlot} ↗
+                  </button>
+                </div>
                 <div class="text-xs font-bold text-white truncate mt-0.5">${escapeHTML(selAssign.devicePsuTag)} (U${selAssign.rackSlot})</div>
                 <div class="text-[10px] text-slate-300 truncate">${escapeHTML(selAssign.deviceModel)}</div>
                 <div class="text-[9px] text-slate-400 mt-0.5">Inlet: ${escapeHTML(selAssign.inletType)} &bull; ${selAssign.watts}W (${selAssign.amps}A)</div>
@@ -2605,12 +2708,21 @@ function renderRackPowerMatrixModalContent() {
                       const sockBadge = slotObj ? slotObj.shortSocket : "5-20R";
                       const occByOther = slotObj && slotObj.occupied && slotObj.assignment && !(slotObj.assignment.instanceId === item.instanceId && slotObj.assignment.psuNum === pNum);
                       const occLabel = occByOther ? ` • [${slotObj.assignment.devicePsuTag}]` : "";
-                      return `<option value="${rNum}" ${p.outletNumber === rNum ? 'selected' : ''}>${targetPdu.code}-${rCode} (${sockBadge})${occLabel}</option>`;
+                      return `<option class="bg-slate-900 text-white" value="${rNum}" ${p.outletNumber === rNum ? 'selected' : ''}>${targetPdu.code}-${rCode} (${sockBadge})${occLabel}</option>`;
                     }).join("");
 
                     return `
                       <tr class="hover:bg-slate-900/50 transition-colors">
-                        <td class="py-2 px-3 font-bold text-indigo-400">U${item.rackSlot}</td>
+                        <td class="py-2 px-3">
+                          <button
+                            type="button"
+                            onclick="jumpFromPowerMatrixToRack(${item.rackSlot}, '${item.instanceId}')"
+                            class="font-bold text-indigo-400 hover:text-indigo-200 underline cursor-pointer"
+                            title="View U${item.rackSlot} in Rack Elevation Visualizer"
+                          >
+                            U${item.rackSlot}
+                          </button>
+                        </td>
                         <td class="py-2 px-3">
                           <div class="flex items-center gap-1.5">
                             <span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-bold text-brand-300">${escapeHTML(devInfo.deviceShortTag)}</span>
@@ -2626,9 +2738,9 @@ function renderRackPowerMatrixModalContent() {
                             onchange="setDevicePsuFeedDirect('${item.instanceId}', ${pNum}, this.value)"
                             class="bg-slate-900 border ${p.feed === 'PDU-A' ? 'border-emerald-500/60 text-emerald-300' : (p.feed === 'PDU-B' ? 'border-sky-500/60 text-sky-300' : 'border-slate-700 text-slate-400')} rounded px-2 py-1 text-[10px] font-bold focus:outline-none cursor-pointer"
                           >
-                            <option value="PDU-A" ${p.feed === "PDU-A" ? "selected" : ""}>${escapeHTML(metrics.pduA.fullId)} (${escapeHTML(metrics.pduA.sku)})</option>
-                            ${!isSingleFeedMode ? `<option value="PDU-B" ${p.feed === "PDU-B" ? "selected" : ""}>${escapeHTML(metrics.pduB.fullId)} (${escapeHTML(metrics.pduB.sku)})</option>` : ''}
-                            <option value="None" ${p.feed === "None" ? "selected" : ""}>Unplugged (None)</option>
+                            <option class="bg-slate-900 text-white" value="PDU-A" ${p.feed === "PDU-A" ? "selected" : ""}>${escapeHTML(metrics.pduA.fullId)} (${escapeHTML(metrics.pduA.sku)})</option>
+                            ${!isSingleFeedMode ? `<option class="bg-slate-900 text-white" value="PDU-B" ${p.feed === "PDU-B" ? "selected" : ""}>${escapeHTML(metrics.pduB.fullId)} (${escapeHTML(metrics.pduB.sku)})</option>` : ''}
+                            <option class="bg-slate-900 text-white" value="None" ${p.feed === "None" ? "selected" : ""}>Unplugged (None)</option>
                           </select>
                         </td>
                         <td class="py-2 px-3">

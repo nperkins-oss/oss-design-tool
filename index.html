@@ -608,6 +608,10 @@
               <i data-lucide="cpu" class="w-3.5 h-3.5 text-purple-400"></i>
               <span>Port Matrix</span>
             </button>
+            <button onclick="TabManager.openTab('power_matrix'); toggleFacilityExpand(false)" id="facility-nav-powermatrix" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Rack Power &amp; PDU Receptacle Matrix Studio">
+              <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Power Matrix</span>
+            </button>
           </div>
         </div>
 
@@ -1232,6 +1236,9 @@
           <button type="button" onclick="openCablePullScheduleModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Cable Pull Schedule &amp; Field Labels">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-400"></i> Cable Schedule
           </button>
+          <button type="button" onclick="openRackPowerMatrixModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Open Rack Power &amp; PDU Receptacle Matrix Studio">
+            <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i> Power Matrix
+          </button>
           <button type="button" onclick="jumpFromMatrixStudioToElevation()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
             <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> View in Rack
           </button>
@@ -1247,6 +1254,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Dedicated Widescreen Rack Power & PDU Receptacle Matrix Studio Workspace Tab -->
+  <div id="rackPowerMatrixModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col transition-all"></div>
 
   <!-- Physical Layout & Cable Pathways Workspace Tab -->
   <div id="cableLayoutModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col transition-all">

@@ -8,6 +8,8 @@ const TabManager = (() => {
   // Capture raw original window functions to prevent recursive call stack loops
   const _rawOrigOpenPortMatrixStudio = window.openPortMatrixStudio;
   const _rawOrigClosePortMatrixStudio = window.closePortMatrixStudio;
+  const _rawOrigOpenRackPowerMatrixModal = window.openRackPowerMatrixModal;
+  const _rawOrigCloseRackPowerMatrixModal = window.closeRackPowerMatrixModal;
   const _rawOrigOpenFacilityModal = window.openFacilityModal;
   const _rawOrigOpenRackViewerFor = window.openRackViewerFor;
 
@@ -238,8 +240,9 @@ const TabManager = (() => {
       modalId: "portMatrixStudioModal",
       openFn: (ctx) => {
         const swId = ctx ? ctx.switchInstanceId : null;
+        const focusPort = ctx ? ctx.focusPortNumber : null;
         if (typeof _rawOrigOpenPortMatrixStudio === "function") {
-          _rawOrigOpenPortMatrixStudio(swId);
+          _rawOrigOpenPortMatrixStudio(swId, focusPort);
         } else {
           const m = document.getElementById("portMatrixStudioModal");
           if (m) m.classList.remove("hidden");
@@ -250,6 +253,32 @@ const TabManager = (() => {
         const m = document.getElementById("portMatrixStudioModal");
         if (m) m.classList.add("hidden");
         if (typeof _rawClosePortMatrixStudio === "function") _rawClosePortMatrixStudio();
+      }
+    },
+    power_matrix: {
+      id: "power_matrix",
+      title: "Power Matrix Studio",
+      icon: "plug-zap",
+      color: "emerald",
+      closable: true,
+      modalId: "rackPowerMatrixModal",
+      openFn: (ctx) => {
+        const pduKey = ctx ? ctx.focusPduKey : null;
+        const outletNum = ctx ? ctx.focusOutletNum : null;
+        const instanceId = ctx ? ctx.focusInstanceId : null;
+        const rackId = ctx ? ctx.targetRackId : null;
+        if (typeof _rawOrigOpenRackPowerMatrixModal === "function") {
+          _rawOrigOpenRackPowerMatrixModal(pduKey, outletNum, instanceId, rackId);
+        } else {
+          const m = document.getElementById("rackPowerMatrixModal");
+          if (m) m.classList.remove("hidden");
+        }
+        if (window.lucide) lucide.createIcons();
+      },
+      closeFn: () => {
+        const m = document.getElementById("rackPowerMatrixModal");
+        if (m) m.classList.add("hidden");
+        if (typeof _rawOrigCloseRackPowerMatrixModal === "function") _rawOrigCloseRackPowerMatrixModal();
       }
     },
     bom: {
@@ -397,6 +426,7 @@ const TabManager = (() => {
       "topologyModal",
       "facilityModal",
       "portMatrixStudioModal",
+      "rackPowerMatrixModal",
       "bomModal",
       "cableScheduleModal",
       "projectHealthModal",
@@ -571,7 +601,7 @@ const TabManager = (() => {
       },
       {
         title: "Layout & Infrastructure",
-        keys: ["physical_layout", "topology", "facility", "enclosures", "port_matrix"]
+        keys: ["physical_layout", "topology", "facility", "enclosures", "port_matrix", "power_matrix"]
       },
       {
         title: "Project Delivery & Engineering",
@@ -696,8 +726,8 @@ const TabManager = (() => {
     };
 
     // Port Matrix Studio
-    window.openPortMatrixStudio = function(swId) {
-      openTab("port_matrix", { switchInstanceId: swId });
+    window.openPortMatrixStudio = function(swId, focusPortNumber = null) {
+      openTab("port_matrix", { switchInstanceId: swId, focusPortNumber });
     };
     window.closePortMatrixStudio = function() {
       if (activeTabId === "port_matrix") {
@@ -706,6 +736,21 @@ const TabManager = (() => {
         const m = document.getElementById("portMatrixStudioModal");
         if (m) m.classList.add("hidden");
         if (typeof _rawClosePortMatrixStudio === "function") _rawClosePortMatrixStudio();
+      }
+    };
+
+    // Power Matrix Studio
+    window.openRackPowerMatrixModal = function(focusPduKey = null, focusOutletNum = null, focusInstanceId = null, targetRackId = null) {
+      openTab("power_matrix", { focusPduKey, focusOutletNum, focusInstanceId, targetRackId });
+    };
+    window.openPowerMatrixStudio = window.openRackPowerMatrixModal;
+    window.closeRackPowerMatrixModal = function() {
+      if (activeTabId === "power_matrix") {
+        closeTab("power_matrix");
+      } else {
+        const m = document.getElementById("rackPowerMatrixModal");
+        if (m) m.classList.add("hidden");
+        if (typeof _rawOrigCloseRackPowerMatrixModal === "function") _rawOrigCloseRackPowerMatrixModal();
       }
     };
   }

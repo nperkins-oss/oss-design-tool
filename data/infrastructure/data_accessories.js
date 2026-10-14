@@ -4006,7 +4006,7 @@ description: "2U 72V extended battery module for Eaton 9PX 3000VA online UPS. Pr
       "2U Rackmount Rail Kit Included"
     ],
     requiredLicenses: "None"
-  }
+  },
   {
     id: "eaton-5pxebm72rtg2",
     sku: "5PXEBM72RTG2",
