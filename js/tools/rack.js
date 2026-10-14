@@ -665,17 +665,19 @@ function renderVerticalChannelHtml(slotKey, type, pduMetrics, isRear) {
   if (type === "pdu") {
     const isFeedA = (slotKey === "rearLeft" || slotKey === "frontLeft");
     const feed = isFeedA
-      ? (pduMetrics ? pduMetrics.pduA : { id: "PDU-A", amps: 0, watts: 0, pct: 0, outletsUsed: 0, totalOutlets: 24, outlets: [] })
-      : (pduMetrics ? pduMetrics.pduB : { id: "PDU-B", amps: 0, watts: 0, pct: 0, outletsUsed: 0, totalOutlets: 24, outlets: [] });
+      ? (pduMetrics ? pduMetrics.pduA : { id: "PDU-A", sku: "EMI001", vendor: "Eaton", amps: 0, maxSafeAmps: 16.0, watts: 0, pct: 0, outletsUsed: 0, totalOutlets: 24, outlets: [] })
+      : (pduMetrics ? pduMetrics.pduB : { id: "PDU-B", sku: "EMI001", vendor: "Eaton", amps: 0, maxSafeAmps: 16.0, watts: 0, pct: 0, outletsUsed: 0, totalOutlets: 24, outlets: [] });
     const feedKey = isFeedA ? "PDU-A" : "PDU-B";
     const feedName = feed.fullId || (isFeedA ? (isRear ? "PDU-A" : "PDU-FL") : (isRear ? "PDU-B" : "PDU-FR"));
     const feedSubtitle = feed.upstreamShort || (isFeedA ? (isRear ? "Feed A (Util)" : "Front Feed A") : (isRear ? "Feed B (UPS)" : "Front Feed B"));
     const feedColor = isFeedA ? "text-emerald-400" : "text-sky-400";
     const barBg = feed.pct > 80 ? "bg-rose-500" : (isFeedA ? "bg-emerald-500" : "bg-sky-500");
     const totalOutlets = feed.totalOutlets || 24;
+    const maxSafeAmps = feed.maxSafeAmps || 16;
+    const pduSkuBadge = `${feed.vendor || "Eaton"} ${feed.sku || "EMI001"}`;
     const outletsArr = Array.isArray(feed.outlets) && feed.outlets.length > 0
       ? feed.outlets
-      : Array.from({ length: totalOutlets }, (_, idx) => ({ outletNumber: idx + 1, occupied: idx < (feed.outletsUsed || 0) }));
+      : Array.from({ length: totalOutlets }, (_, idx) => ({ outletNumber: idx + 1, socketType: "NEMA 5-20R", shortSocket: "5-20R", occupied: idx < (feed.outletsUsed || 0) }));
 
     return `
       <!-- 0U Vertical PDU Channel (${slotTitle}) -->
@@ -698,26 +700,28 @@ function renderVerticalChannelHtml(slotKey, type, pduMetrics, isRear) {
             <i data-lucide="zap" class="w-3 h-3"></i>
             <span class="truncate">${escapeHTML(feedName)}</span>
           </button>
+          <span class="px-1 py-0.2 rounded bg-indigo-950/80 border border-indigo-700/60 text-[8px] font-mono font-bold text-indigo-300 block truncate" title="${escapeHTML(feed.model || pduSkuBadge)}">${escapeHTML(pduSkuBadge)}</span>
           <span class="text-[8px] text-slate-400 uppercase font-mono block truncate" title="${escapeHTML(feedSubtitle)}">${escapeHTML(feedSubtitle)}</span>
-          <span class="text-[10px] font-mono font-bold text-white block">${feed.amps}A / 16A</span>
+          <span class="text-[10px] font-mono font-bold text-white block">${feed.amps}A / ${maxSafeAmps}A</span>
           <span class="text-[9px] font-mono text-slate-400 block">${feed.watts}W (${feed.pct}%)</span>
           <div class="w-full bg-slate-900 rounded-full h-1 mt-1 overflow-hidden">
             <div class="${barBg} h-1 rounded-full" style="width: ${feed.pct}%"></div>
           </div>
         </div>
 
-        <!-- Interactive 24-Receptacle Visualizer (R01-R24) -->
+        <!-- Interactive Catalog Receptacle Visualizer (R01-R${totalOutlets}) -->
         <div class="py-2 flex-1 flex flex-col justify-center">
           <div class="rack-pdu-grid">
             ${outletsArr.map(o => {
               const rNumStr = String(o.outletNumber).padStart(2, "0");
               const isOcc = Boolean(o.occupied);
+              const sock = o.socketType || "NEMA 5-20R";
               const stateCls = isOcc
                 ? (o.isSpof ? "spof-warn" : (isFeedA ? "occupied-a" : "occupied-b"))
                 : "";
               const tip = isOcc && o.assignment
-                ? `${o.assignment.pduReceptacleTag} ⟷ ${o.assignment.powerCordId} ⟷ U${o.assignment.rackSlot} ${o.assignment.devicePsuTag} (${o.assignment.deviceModel} • ${o.assignment.watts}W / ${o.assignment.amps}A) — Click to inspect in Power Matrix`
-                : `${feedName}-R${rNumStr} (NEMA 5-20R / IEC C13) — Open Receptacle — Click to assign`;
+                ? `${o.assignment.pduReceptacleTag} (${sock}) ⟷ ${o.assignment.powerCordId} [${o.assignment.cordSku}] ⟷ U${o.assignment.rackSlot} ${o.assignment.devicePsuTag} (${o.assignment.deviceModel} • ${o.assignment.watts}W / ${o.assignment.amps}A) — Click to inspect in Power Matrix`
+                : `${feedName}-R${rNumStr} (${sock}) — Open Receptacle on ${pduSkuBadge} — Click to assign`;
               return `
                 <button
                   type="button"
@@ -726,7 +730,7 @@ function renderVerticalChannelHtml(slotKey, type, pduMetrics, isRear) {
                   title="${escapeHTML(tip)}"
                 >
                   <span>R${rNumStr}</span>
-                  <span>${isOcc ? '●' : '○'}</span>
+                  <span>${isOcc ? '●' : (o.isHighCurrentSocket ? '◆' : '○')}</span>
                 </button>
               `;
             }).join('')}
@@ -1185,19 +1189,435 @@ function setDevicePsuOutlet(instanceId, psuNum, targetOutletNumber) {
 }
 window.setDevicePsuOutlet = setDevicePsuOutlet;
 
+function getCatalogPdusList() {
+  let list = [];
+  if (typeof CatalogRegistry !== "undefined" && CatalogRegistry.infrastructure && Array.isArray(CatalogRegistry.infrastructure.pdus)) {
+    list = CatalogRegistry.infrastructure.pdus.filter(p => p && (p.isPdu || p.category === "pdus" || p.type === "pdu"));
+  }
+  if (list.length === 0 && typeof ACCESSORY_DATABASE !== "undefined" && Array.isArray(ACCESSORY_DATABASE)) {
+    list = ACCESSORY_DATABASE.filter(p => p && (p.isPdu || p.category === "pdus" || p.type === "pdu"));
+  }
+  return list;
+}
+window.getCatalogPdusList = getCatalogPdusList;
+
+function getCatalogPowerCordsList() {
+  let list = [];
+  if (typeof CatalogRegistry !== "undefined" && CatalogRegistry.infrastructure && Array.isArray(CatalogRegistry.infrastructure.power_cords)) {
+    list = CatalogRegistry.infrastructure.power_cords;
+  }
+  if (list.length === 0 && typeof ACCESSORY_DATABASE !== "undefined" && Array.isArray(ACCESSORY_DATABASE)) {
+    list = ACCESSORY_DATABASE.filter(c => c && (c.category === "power_cords" || c.type === "power_cord"));
+  }
+  return list;
+}
+window.getCatalogPowerCordsList = getCatalogPowerCordsList;
+
+function shortSocketLabel(socketType) {
+  const s = String(socketType || "NEMA 5-20R").toUpperCase();
+  if (s.includes("L5-20R")) return "L5-20R";
+  if (s.includes("L6-20R")) return "L6-20R";
+  if (s.includes("L6-30R")) return "L6-30R";
+  if (s.includes("5-15/20R")) return "5-15/20R";
+  if (s.includes("5-20R")) return "5-20R";
+  if (s.includes("5-15R")) return "5-15R";
+  if (s.includes("C19")) return "IEC C19";
+  if (s.includes("C13")) return "IEC C13";
+  if (s.includes("USB")) return "USB-C";
+  return socketType || "5-20R";
+}
+
+function resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig) {
+  const allPdus = getCatalogPdusList();
+  const isHoriz = (pduConfig === "horizontal");
+  const defaultZeroU = allPdus.find(p => p.sku === "EMI001") || allPdus.find(p => (p.rackUnits || 0) === 0) || null;
+  const defaultHoriz = allPdus.find(p => p.sku === "PDUMH20NET2") || allPdus.find(p => (p.rackUnits || 0) >= 1) || null;
+
+  // Check if any PDU items are already in projectBOM for this rack
+  const bomPdus = (assignedItems || []).filter(it => it && (it.isPdu || it.category === "pdus" || it.type === "pdu"));
+  const matchingBomPdus = bomPdus.filter(it => isHoriz ? (parseInt(it.rackUnits, 10) || 0) >= 1 : (parseInt(it.rackUnits, 10) || 0) === 0);
+
+  const savedSkuA = (activeEnc && (isHoriz ? activeEnc.pduHorizSku : activeEnc.pduASku))
+    || localStorage.getItem(`rack_pdu_sku_${isHoriz ? 'horiz' : 'a'}_${activeRackId}`)
+    || (matchingBomPdus[0] && matchingBomPdus[0].sku)
+    || (bomPdus[0] && bomPdus[0].sku)
+    || null;
+
+  const savedSkuB = (activeEnc && activeEnc.pduBSku)
+    || localStorage.getItem(`rack_pdu_sku_b_${activeRackId}`)
+    || (matchingBomPdus[1] ? matchingBomPdus[1].sku : (matchingBomPdus[0] && matchingBomPdus[0].sku))
+    || savedSkuA
+    || null;
+
+  let pduADef = savedSkuA ? allPdus.find(p => p.sku.toLowerCase() === String(savedSkuA).toLowerCase()) : null;
+  if (!pduADef || (isHoriz && (pduADef.rackUnits || 0) === 0) || (!isHoriz && (pduADef.rackUnits || 0) >= 1)) {
+    pduADef = isHoriz ? defaultHoriz : defaultZeroU;
+  }
+
+  let pduBDef = savedSkuB ? allPdus.find(p => p.sku.toLowerCase() === String(savedSkuB).toLowerCase()) : null;
+  if (!pduBDef || (pduBDef.rackUnits || 0) >= 1) {
+    pduBDef = pduADef && (pduADef.rackUnits || 0) === 0 ? pduADef : defaultZeroU;
+  }
+
+  return { pduADef, pduBDef, bomPdus };
+}
+
+function buildPduSpecFromCatalog(pduDef, pduFullId, pduCode) {
+  const fallback = {
+    sku: "EMI001",
+    vendor: "Eaton",
+    model: "Eaton ePDU G3 Metered Input 0U Vertical (120V 20A 1.92kW)",
+    rackUnits: 0,
+    msrp: 849,
+    inputVoltage: 120,
+    outputVoltage: 120,
+    inputCircuitAmps: 20,
+    powerWatts: 1920,
+    inputConnector: "5-20P",
+    plugType: "NEMA 5-20P (120V 20A)",
+    receptacles: "24x NEMA 5-20R",
+    outletsCount: 24,
+    pduType: "Metered Input",
+    receptacleBreakdown: [{ type: "NEMA 5-20R", count: 24 }]
+  };
+  const d = pduDef || fallback;
+  const voltage = parseInt(d.outputVoltage || d.inputVoltage, 10) || 120;
+  const inputVoltage = parseInt(d.inputVoltage || voltage, 10) || 120;
+  const circuitBreakerAmps = parseInt(d.inputCircuitAmps, 10) || 20;
+  const maxSafeAmps = parseFloat((circuitBreakerAmps * 0.8).toFixed(1));
+  const maxSafeWatts = parseInt(d.powerWatts || d.maxCapacityWatts, 10) || Math.round(voltage * maxSafeAmps);
+
+  // Build individual outlet socket types from receptacleBreakdown (excluding USB-C auxiliary ports unless needed)
+  const breakdown = Array.isArray(d.receptacleBreakdown) && d.receptacleBreakdown.length > 0
+    ? d.receptacleBreakdown.filter(b => !String(b.type || "").toUpperCase().includes("USB"))
+    : [{ type: d.receptacles || "NEMA 5-20R", count: parseInt(d.outletsCount || d.portCount, 10) || 24 }];
+
+  const socketTypesList = [];
+  breakdown.forEach(group => {
+    const cnt = parseInt(group.count, 10) || 0;
+    for (let i = 0; i < cnt; i++) {
+      socketTypesList.push(group.type || "NEMA 5-20R");
+    }
+  });
+  const totalOutlets = socketTypesList.length || parseInt(d.outletsCount || d.portCount, 10) || 24;
+  while (socketTypesList.length < totalOutlets) {
+    socketTypesList.push("NEMA 5-20R");
+  }
+
+  const outlets = Array.from({ length: totalOutlets }, (_, idx) => {
+    const rawSocket = socketTypesList[idx] || "NEMA 5-20R";
+    const shortSocket = shortSocketLabel(rawSocket);
+    return {
+      outletNumber: idx + 1,
+      outletCode: `R${String(idx + 1).padStart(2, "0")}`,
+      receptacleTag: `${pduFullId}-R${String(idx + 1).padStart(2, "0")}`,
+      shortTag: `${pduCode}-R${String(idx + 1).padStart(2, "0")}`,
+      socketType: rawSocket,
+      shortSocket,
+      isHighCurrentSocket: shortSocket.includes("C19") || shortSocket.includes("L5-20R"),
+      occupied: false,
+      isSpof: false,
+      assignment: null
+    };
+  });
+
+  return {
+    sku: d.sku || "EMI001",
+    id: d.id || "eaton-emi001",
+    vendor: d.vendor || "Eaton",
+    model: d.model || d.name || "Rack PDU",
+    rackUnits: parseInt(d.rackUnits, 10) || 0,
+    msrp: parseFloat(d.msrp) || 849,
+    weightLbs: parseFloat(d.weightLbs) || 12.0,
+    depthInches: parseFloat(d.depthInches) || 2.1,
+    pduType: d.pduType || d.networkType || "Metered",
+    isNetworked: Boolean(d.isNetworked),
+    inputVoltage,
+    outputVoltage: voltage,
+    circuitBreakerAmps,
+    maxSafeAmps,
+    maxSafeWatts,
+    inputConnector: d.inputConnector || "5-20P",
+    plugType: d.plugType || `${d.inputConnector || "5-20P"} (${inputVoltage}V ${circuitBreakerAmps}A)`,
+    receptaclesSummary: d.receptacles || `${totalOutlets}x NEMA 5-20R`,
+    receptacleBreakdown: breakdown,
+    totalOutlets,
+    outlets
+  };
+}
+
+function resolveCatalogPowerCord(deviceInletType, outletSocketType, isFeedA, pduVendor) {
+  const cords = getCatalogPowerCordsList();
+  const inlet = String(deviceInletType || "IEC C14").toUpperCase();
+  const socket = String(outletSocketType || "NEMA 5-20R").toUpperCase();
+  const colorTarget = isFeedA ? "Black" : "Blue";
+
+  let targetSku = "P006-006";
+  if (socket.includes("C19")) {
+    if (inlet.includes("C20")) {
+      targetSku = isFeedA ? "P005-006" : "P005-006-BLU";
+    } else {
+      targetSku = "P094-006"; // C20-to-C13 adapter cord
+    }
+  } else if (socket.includes("C13")) {
+    if (inlet.includes("C15")) {
+      targetSku = isFeedA ? "P018-006-BLK" : "P018-006-BLU";
+    } else if (String(pduVendor || "").toUpperCase().includes("APC")) {
+      targetSku = isFeedA ? "PLC13-006-BLK" : "PLC13-006-BLU";
+    } else {
+      targetSku = isFeedA ? "P004-006" : "P004-006-BLU";
+    }
+  } else if (socket.includes("L5-20R")) {
+    targetSku = "P040-010"; // L5-20P to C19
+  } else {
+    // NEMA 5-15R or 5-20R or 5-15/20R
+    if (inlet.includes("C20")) {
+      targetSku = "P049-006"; // 5-20P to C19
+    } else if (inlet.includes("C15")) {
+      targetSku = "P019-006"; // 5-15P to C15 High-Temp
+    } else {
+      targetSku = isFeedA ? "P006-006" : "P006-006-BLU"; // 5-15P to C13
+    }
+  }
+
+  const found = cords.find(c => c.sku === targetSku);
+  if (found) {
+    return {
+      cordSku: found.sku,
+      cordId: found.id,
+      cordVendor: found.vendor || "Tripp Lite",
+      cordModel: found.model || found.name,
+      cordColor: found.color || colorTarget,
+      cordLengthFt: found.lengthFt || 6,
+      cordGauge: found.gauge || "14 AWG",
+      plugToConnector: `${found.inputConnector || found.plugType} ➔ ${found.outputConnector || deviceInletType}`,
+      cordSpec: `${found.sku} • ${found.lengthFt || 6}ft ${found.gauge || '16 AWG'} ${found.plugType} (${found.color || colorTarget})`,
+      msrp: found.msrp || 9.5
+    };
+  }
+
+  return {
+    cordSku: targetSku,
+    cordId: targetSku.toLowerCase(),
+    cordVendor: "Tripp Lite",
+    cordModel: `6ft ${socket} to ${deviceInletType} Power Cord (${colorTarget})`,
+    cordColor: colorTarget,
+    cordLengthFt: 6,
+    cordGauge: "14 AWG",
+    plugToConnector: `${shortSocketLabel(outletSocketType)} ➔ ${deviceInletType}`,
+    cordSpec: `${targetSku} • 6ft 14 AWG (${colorTarget})`,
+    msrp: 9.5
+  };
+}
+
+function setRackPduCatalogSku(feedTarget, newSku) {
+  if (!newSku) return;
+  const pduConfig = getRackPduConfig();
+  const isHoriz = (pduConfig === "horizontal");
+  const parsed = FacilityStore.parse(activeRackId);
+
+  if (isHoriz) {
+    localStorage.setItem(`rack_pdu_sku_horiz_${activeRackId}`, newSku);
+    if (parsed && parsed.hostId) {
+      FacilityStore.updateHost(parsed.hostId, { pduHorizSku: newSku });
+    }
+  } else if (feedTarget === "PDU-A") {
+    localStorage.setItem(`rack_pdu_sku_a_${activeRackId}`, newSku);
+    if (parsed && parsed.hostId) {
+      FacilityStore.updateHost(parsed.hostId, { pduASku: newSku });
+    }
+  } else if (feedTarget === "PDU-B") {
+    localStorage.setItem(`rack_pdu_sku_b_${activeRackId}`, newSku);
+    if (parsed && parsed.hostId) {
+      FacilityStore.updateHost(parsed.hostId, { pduBSku: newSku });
+    }
+  } else {
+    localStorage.setItem(`rack_pdu_sku_a_${activeRackId}`, newSku);
+    localStorage.setItem(`rack_pdu_sku_b_${activeRackId}`, newSku);
+    if (parsed && parsed.hostId) {
+      FacilityStore.updateHost(parsed.hostId, { pduASku: newSku, pduBSku: newSku });
+    }
+  }
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (document.getElementById("rackPowerMatrixModal") && !document.getElementById("rackPowerMatrixModal").classList.contains("hidden")) {
+    renderRackPowerMatrixModalContent();
+  }
+  const pduObj = getCatalogPdusList().find(p => p.sku === newSku);
+  if (typeof showToast === "function" && pduObj) {
+    showToast(`Updated ${feedTarget === 'BOTH' ? 'Rack PDUs (A+B)' : feedTarget} to ${pduObj.vendor} ${pduObj.sku} (${pduObj.outletsCount} outlets, ${pduObj.inputVoltage}V/${pduObj.inputCircuitAmps}A)`);
+  }
+}
+window.setRackPduCatalogSku = setRackPduCatalogSku;
+
+function syncRackPdusAndCordsToBom() {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const metrics = window._lastRackPduMetrics;
+  if (!metrics) return;
+
+  const hostNorm = FacilityStore.normalize(activeRackId);
+  const isSingleFeedMode = (metrics.pduConfig === "single_vertical" || metrics.pduConfig === "horizontal");
+
+  // Remove existing PDU and power_cord items for this rack
+  for (let i = projectBOM.length - 1; i >= 0; i--) {
+    const it = projectBOM[i];
+    const itNorm = FacilityStore.normalize(it.closetName || it.location || it.rackId);
+    if (itNorm === hostNorm && (it.isPdu || it.category === "pdus" || it.type === "pdu" || it.category === "power_cords" || it.type === "power_cord")) {
+      projectBOM.splice(i, 1);
+    }
+  }
+
+  const allPdus = getCatalogPdusList();
+  const pduADef = allPdus.find(p => p.sku === metrics.pduA.sku);
+  const pduBDef = !isSingleFeedMode ? allPdus.find(p => p.sku === metrics.pduB.sku) : null;
+
+  const addedSummary = [];
+
+  if (pduADef) {
+    const sameSkuDual = (!isSingleFeedMode && pduBDef && pduBDef.sku === pduADef.sku);
+    const pduQty = sameSkuDual ? 2 : 1;
+    projectBOM.push({
+      instanceId: `inst-pdu-a-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      id: pduADef.id || pduADef.sku,
+      sku: pduADef.sku,
+      model: pduADef.model || pduADef.name,
+      name: pduADef.name || pduADef.model,
+      vendor: pduADef.vendor || "Eaton",
+      category: "pdus",
+      type: "pdu",
+      role: "PDU",
+      isPdu: true,
+      rackUnits: pduADef.rackUnits || 0,
+      rackSlot: null,
+      closetName: activeRackId,
+      location: activeRackId,
+      rackId: activeRackId,
+      msrp: pduADef.msrp || 849,
+      qty: pduQty,
+      baseWatts: pduADef.baseWatts || 10,
+      powerWatts: pduADef.powerWatts || 1920,
+      weightLbs: pduADef.weightLbs || 12.0,
+      receptacles: pduADef.receptacles,
+      inputConnector: pduADef.inputConnector
+    });
+    addedSummary.push(`${pduQty}x ${pduADef.sku}`);
+
+    if (!isSingleFeedMode && pduBDef && !sameSkuDual) {
+      projectBOM.push({
+        instanceId: `inst-pdu-b-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        id: pduBDef.id || pduBDef.sku,
+        sku: pduBDef.sku,
+        model: pduBDef.model || pduBDef.name,
+        name: pduBDef.name || pduBDef.model,
+        vendor: pduBDef.vendor || "Eaton",
+        category: "pdus",
+        type: "pdu",
+        role: "PDU",
+        isPdu: true,
+        rackUnits: pduBDef.rackUnits || 0,
+        rackSlot: null,
+        closetName: activeRackId,
+        location: activeRackId,
+        rackId: activeRackId,
+        msrp: pduBDef.msrp || 849,
+        qty: 1,
+        baseWatts: pduBDef.baseWatts || 10,
+        powerWatts: pduBDef.powerWatts || 1920,
+        weightLbs: pduBDef.weightLbs || 12.0,
+        receptacles: pduBDef.receptacles,
+        inputConnector: pduBDef.inputConnector
+      });
+      addedSummary.push(`1x ${pduBDef.sku}`);
+    }
+  }
+
+  // Aggregate active power cords by catalog SKU
+  const allCords = getCatalogPowerCordsList();
+  const cordCounts = {};
+  (metrics.powerCords || []).forEach(c => {
+    if (!c.cordSku) return;
+    cordCounts[c.cordSku] = (cordCounts[c.cordSku] || 0) + 1;
+  });
+
+  Object.keys(cordCounts).forEach(cSku => {
+    const qty = cordCounts[cSku];
+    const cordDef = allCords.find(c => c.sku === cSku);
+    if (cordDef && qty > 0) {
+      projectBOM.push({
+        instanceId: `inst-pwrcord-${cSku}-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: cordDef.id || cordDef.sku,
+        sku: cordDef.sku,
+        model: cordDef.model || cordDef.name,
+        name: cordDef.name || cordDef.model,
+        vendor: cordDef.vendor || "Tripp Lite",
+        category: "power_cords",
+        type: "power_cord",
+        role: "Power Cord",
+        isPdu: false,
+        rackUnits: 0,
+        rackSlot: null,
+        closetName: activeRackId,
+        location: activeRackId,
+        rackId: activeRackId,
+        msrp: cordDef.msrp || 9.5,
+        qty,
+        baseWatts: 0,
+        powerWatts: 0,
+        weightLbs: cordDef.weightLbs || 0.65
+      });
+      addedSummary.push(`${qty}x ${cordDef.sku}`);
+    }
+  });
+
+  FacilityStore.notifyWorkspaceChange();
+  renderRackVisualizer();
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof renderBOM === "function") renderBOM();
+  if (document.getElementById("rackPowerMatrixModal") && !document.getElementById("rackPowerMatrixModal").classList.contains("hidden")) {
+    renderRackPowerMatrixModalContent();
+  }
+  if (typeof showToast === "function") {
+    showToast(`Synced to BOM for ${activeRackId}: ${addedSummary.join(", ")}`);
+  }
+}
+window.syncRackPdusAndCordsToBom = syncRackPdusAndCordsToBom;
+
+function findPreferredOutletForDevice(outletsArr, inletType, startFromIndex = 1) {
+  const wantsHighCurrent = String(inletType || "").toUpperCase().includes("C20");
+  // First try matching socket class starting from startFromIndex
+  for (let i = Math.max(1, startFromIndex) - 1; i < outletsArr.length; i++) {
+    const o = outletsArr[i];
+    if (!o.occupied && Boolean(o.isHighCurrentSocket) === wantsHighCurrent) {
+      return o.outletNumber;
+    }
+  }
+  // Next try any unoccupied outlet from startFromIndex
+  for (let i = Math.max(1, startFromIndex) - 1; i < outletsArr.length; i++) {
+    if (!outletsArr[i].occupied) return outletsArr[i].outletNumber;
+  }
+  // Fallback to any unoccupied outlet from 1
+  const anyFree = outletsArr.find(o => !o.occupied);
+  return anyFree ? anyFree.outletNumber : outletsArr.length;
+}
+
 function autoBalanceRackPowerFeeds() {
   if (typeof projectBOM === "undefined") return;
-  const assigned = projectBOM
-    .filter(i => (FacilityStore.normalize(i.closetName || i.rackId) === activeRackId) && isPoweredRackEquipment(i))
+  const allRackItems = projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === activeRackId);
+  const assigned = allRackItems
+    .filter(i => isPoweredRackEquipment(i))
     .sort((a, b) => (parseInt(b.rackSlot, 10) || 0) - (parseInt(a.rackSlot, 10) || 0));
 
   const pduConfig = getRackPduConfig();
   const isSingleFeedMode = (pduConfig === "single_vertical" || pduConfig === "horizontal");
-  const maxOutlets = pduConfig === "horizontal" ? 8 : 24;
+  const parsed = FacilityStore.parse(activeRackId);
+  const enclosures = FacilityStore.getEnclosures();
+  const activeEnc = enclosures.find(e => e.id === parsed.hostId) || null;
+  const { pduADef, pduBDef } = resolveRackCatalogPdus(allRackItems, activeEnc, pduConfig);
+  const specA = buildPduSpecFromCatalog(pduADef, "PDUA", "PDUA");
+  const specB = buildPduSpecFromCatalog(pduBDef, "PDUB", "PDUB");
 
   let singleCounter = 0;
-  let nextOutletA = 1;
-  let nextOutletB = 1;
 
   assigned.forEach(item => {
     const specs = getDevicePsuSpecs(item);
@@ -1205,35 +1625,60 @@ function autoBalanceRackPowerFeeds() {
     item.powerOutlets = {};
 
     if (isSingleFeedMode) {
-      item.powerConnections.psu1 = "PDU-A";
-      item.powerOutlets.psu1 = Math.min(maxOutlets, nextOutletA++);
-      if (specs.psuCount >= 2) {
-        for (let p = 2; p <= specs.psuCount; p++) {
-          item.powerConnections[`psu${p}`] = "PDU-A";
-          item.powerOutlets[`psu${p}`] = Math.min(maxOutlets, nextOutletA++);
-        }
+      for (let p = 1; p <= specs.psuCount; p++) {
+        item.powerConnections[`psu${p}`] = "PDU-A";
+        const outNum = findPreferredOutletForDevice(specA.outlets, specs.inletType, 1);
+        specA.outlets[outNum - 1].occupied = true;
+        item.powerOutlets[`psu${p}`] = outNum;
       }
     } else {
       if (specs.psuCount >= 2) {
-        // Symmetric A+B numbering so PSU1 (PDU-A) and PSU2 (PDU-B) share matching receptacle index R##
-        const symOutlet = Math.min(maxOutlets, Math.max(nextOutletA, nextOutletB));
+        // Find symmetrical outlet number available on both PDU-A and PDU-B matching socket class
+        const wantsHigh = String(specs.inletType || "").toUpperCase().includes("C20");
+        const maxShared = Math.min(specA.outlets.length, specB.outlets.length);
+        let symOutlet = null;
+        for (let r = 1; r <= maxShared; r++) {
+          const oa = specA.outlets[r - 1];
+          const ob = specB.outlets[r - 1];
+          if (!oa.occupied && !ob.occupied && Boolean(oa.isHighCurrentSocket) === wantsHigh) {
+            symOutlet = r;
+            break;
+          }
+        }
+        if (!symOutlet) {
+          for (let r = 1; r <= maxShared; r++) {
+            if (!specA.outlets[r - 1].occupied && !specB.outlets[r - 1].occupied) {
+              symOutlet = r;
+              break;
+            }
+          }
+        }
+        const outA = symOutlet || findPreferredOutletForDevice(specA.outlets, specs.inletType, 1);
+        const outB = symOutlet || findPreferredOutletForDevice(specB.outlets, specs.inletType, 1);
+        specA.outlets[outA - 1].occupied = true;
+        specB.outlets[outB - 1].occupied = true;
+
         item.powerConnections.psu1 = "PDU-A";
         item.powerConnections.psu2 = "PDU-B";
-        item.powerOutlets.psu1 = symOutlet;
-        item.powerOutlets.psu2 = symOutlet;
-        nextOutletA = symOutlet + 1;
-        nextOutletB = symOutlet + 1;
+        item.powerOutlets.psu1 = outA;
+        item.powerOutlets.psu2 = outB;
 
         for (let p = 3; p <= specs.psuCount; p++) {
           const isOdd = (p % 2 === 1);
+          const targetSpec = isOdd ? specA : specB;
+          const oNum = findPreferredOutletForDevice(targetSpec.outlets, specs.inletType, 1);
+          targetSpec.outlets[oNum - 1].occupied = true;
           item.powerConnections[`psu${p}`] = isOdd ? "PDU-A" : "PDU-B";
-          item.powerOutlets[`psu${p}`] = Math.min(maxOutlets, isOdd ? nextOutletA++ : nextOutletB++);
+          item.powerOutlets[`psu${p}`] = oNum;
         }
       } else {
         singleCounter++;
         const toA = (singleCounter % 2 === 1);
+        const targetSpec = toA ? specA : specB;
+        const oNum = findPreferredOutletForDevice(targetSpec.outlets, specs.inletType, 1);
+        targetSpec.outlets[oNum - 1].occupied = true;
         item.powerConnections.psu1 = toA ? "PDU-A" : "PDU-B";
-        item.powerOutlets.psu1 = Math.min(maxOutlets, toA ? nextOutletA++ : nextOutletB++);
+        item.powerOutlets.psu1 = oNum;
         delete item.powerConnections.psu2;
       }
     }
@@ -1245,18 +1690,13 @@ function autoBalanceRackPowerFeeds() {
     renderRackPowerMatrixModalContent();
   }
   if (typeof showToast === "function") {
-    showToast(`Balanced power feeds & aligned A/B receptacle numbers across ${assigned.length} units.`);
+    showToast(`Balanced power feeds & aligned A/B receptacles on ${specA.sku}${!isSingleFeedMode ? ' / ' + specB.sku : ''}.`);
   }
 }
 window.autoBalanceRackPowerFeeds = autoBalanceRackPowerFeeds;
 
 function calculateRackPduMetrics(assignedItems, activeEnc) {
   const pduConfig = getRackPduConfig();
-  const voltage = 120;
-  const circuitBreakerAmps = 20;
-  const maxSafeAmps = 16.0; // 80% continuous NEC
-  const maxSafeWatts = 1920;
-  const totalOutlets = (pduConfig === "horizontal") ? 8 : 24;
   const isSingleFeedMode = (pduConfig === "single_vertical" || pduConfig === "horizontal");
 
   // Resolve OSS Standard Closet Prefix (e.g., MDF, IDFA, 2-IDFB, 1-2-IDFC)
@@ -1270,15 +1710,25 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
   const pduAFullId = `${closetPrefix}-${pduACode}`;
   const pduBFullId = `${closetPrefix}-${pduBCode}`;
 
+  // Resolve Real Catalog PDU Specifications for PDU-A and PDU-B
+  const { pduADef, pduBDef, bomPdus } = resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig);
+  const specA = buildPduSpecFromCatalog(pduADef, pduAFullId, pduACode);
+  const specB = buildPduSpecFromCatalog(pduBDef, pduBFullId, pduBCode);
+
+  const pduAOutlets = specA.outlets;
+  const pduBOutlets = specB.outlets;
+
   // Discover Mounted UPS Units in this Rack (sorted from bottom U1 upward)
   const mountedUps = (assignedItems || [])
     .filter(it => it.rackSlot && isMountedUpsUnit(it))
     .sort((a, b) => (parseInt(a.rackSlot, 10) || 0) - (parseInt(b.rackSlot, 10) || 0))
     .map((u, idx) => {
       const upsTag = `${closetPrefix}-UPS${String(idx + 1).padStart(2, "0")}`;
+      const upsVolt = parseInt(u.outputVoltage || u.inputVoltage, 10) || specA.inputVoltage || 120;
+      const upsAmps = parseInt(u.inputCircuitAmps, 10) || specA.circuitBreakerAmps || 20;
       const circuitTag = (idx % 2 === 0 && !isSingleFeedMode && (assignedItems || []).filter(x => x.rackSlot && isMountedUpsUnit(x)).length === 1)
-        ? `${closetPrefix}-CKT-B (120V/20A)`
-        : `${closetPrefix}-CKT-${idx % 2 === 0 ? 'A' : 'B'} (120V/20A)`;
+        ? `${closetPrefix}-CKT-B (${upsVolt}V/${upsAmps}A)`
+        : `${closetPrefix}-CKT-${idx % 2 === 0 ? 'A' : 'B'} (${upsVolt}V/${upsAmps}A)`;
       return {
         instanceId: u.instanceId,
         upsTag,
@@ -1292,49 +1742,31 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       };
     });
 
-  // Determine Upstream Power Chain for PDU-A and PDU-B
-  let pduAUpstream = `${closetPrefix}-CKT-A (120V/20A Utility)`;
-  let pduAUpstreamShort = "CKT-A (Utility)";
-  let pduBUpstream = `${closetPrefix}-CKT-B (120V/20A Secondary)`;
-  let pduBUpstreamShort = "CKT-B (Utility)";
+  // Determine Upstream Power Chain for PDU-A and PDU-B using actual PDU voltage & breaker amperage
+  const cktASpec = `${specA.inputVoltage}V/${specA.circuitBreakerAmps}A ${specA.inputConnector}`;
+  const cktBSpec = `${specB.inputVoltage}V/${specB.circuitBreakerAmps}A ${specB.inputConnector}`;
+
+  let pduAUpstream = `${closetPrefix}-CKT-A (${cktASpec})`;
+  let pduAUpstreamShort = `CKT-A (${specA.inputVoltage}V/${specA.circuitBreakerAmps}A)`;
+  let pduBUpstream = `${closetPrefix}-CKT-B (${cktBSpec})`;
+  let pduBUpstreamShort = `CKT-B (${specB.inputVoltage}V/${specB.circuitBreakerAmps}A)`;
 
   if (mountedUps.length >= 2) {
-    pduAUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-A (120V/20A)`;
-    pduAUpstreamShort = `${mountedUps[0].upsTag} (UPS A)`;
-    pduBUpstream = `${mountedUps[1].upsTag} ➔ ${closetPrefix}-CKT-B (120V/20A)`;
-    pduBUpstreamShort = `${mountedUps[1].upsTag} (UPS B)`;
+    pduAUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-A (${cktASpec})`;
+    pduAUpstreamShort = `${mountedUps[0].upsTag} (${specA.inputConnector})`;
+    pduBUpstream = `${mountedUps[1].upsTag} ➔ ${closetPrefix}-CKT-B (${cktBSpec})`;
+    pduBUpstreamShort = `${mountedUps[1].upsTag} (${specB.inputConnector})`;
   } else if (mountedUps.length === 1) {
     if (isSingleFeedMode) {
-      pduAUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-A (120V/20A)`;
-      pduAUpstreamShort = `${mountedUps[0].upsTag} (UPS)`;
+      pduAUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-A (${cktASpec})`;
+      pduAUpstreamShort = `${mountedUps[0].upsTag} (${specA.inputConnector})`;
     } else {
-      pduAUpstream = `${closetPrefix}-CKT-A (120V/20A Utility)`;
-      pduAUpstreamShort = "CKT-A (Utility)";
-      pduBUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-B (120V/20A)`;
-      pduBUpstreamShort = `${mountedUps[0].upsTag} (UPS B)`;
+      pduAUpstream = `${closetPrefix}-CKT-A (${cktASpec})`;
+      pduAUpstreamShort = `CKT-A (${specA.inputConnector})`;
+      pduBUpstream = `${mountedUps[0].upsTag} ➔ ${closetPrefix}-CKT-B (${cktBSpec})`;
+      pduBUpstreamShort = `${mountedUps[0].upsTag} (${specB.inputConnector})`;
     }
   }
-
-  // Initialize Receptacle Arrays for PDU-A (1..totalOutlets) and PDU-B (1..24)
-  const pduAOutlets = Array.from({ length: totalOutlets }, (_, idx) => ({
-    outletNumber: idx + 1,
-    outletCode: `R${String(idx + 1).padStart(2, "0")}`,
-    receptacleTag: `${pduAFullId}-R${String(idx + 1).padStart(2, "0")}`,
-    shortTag: `${pduACode}-R${String(idx + 1).padStart(2, "0")}`,
-    occupied: false,
-    isSpof: false,
-    assignment: null
-  }));
-
-  const pduBOutlets = Array.from({ length: 24 }, (_, idx) => ({
-    outletNumber: idx + 1,
-    outletCode: `R${String(idx + 1).padStart(2, "0")}`,
-    receptacleTag: `${pduBFullId}-R${String(idx + 1).padStart(2, "0")}`,
-    shortTag: `${pduBCode}-R${String(idx + 1).padStart(2, "0")}`,
-    occupied: false,
-    isSpof: false,
-    assignment: null
-  }));
 
   let pduALoadWatts = 0;
   let pduBLoadWatts = 0;
@@ -1351,15 +1783,15 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
   const byDeviceId = {};
   const powerCords = [];
 
-  // Helper to claim a receptacle on PDU-A or PDU-B
-  const claimOutlet = (targetPduKey, preferredOutletNum) => {
+  // Helper to claim a receptacle on PDU-A or PDU-B (preferring socket class match when auto-claiming)
+  const claimOutlet = (targetPduKey, preferredOutletNum, inletType) => {
     const arr = targetPduKey === "PDU-B" ? pduBOutlets : pduAOutlets;
     if (preferredOutletNum && preferredOutletNum >= 1 && preferredOutletNum <= arr.length) {
       const slot = arr[preferredOutletNum - 1];
       if (!slot.occupied) return slot;
     }
-    const freeSlot = arr.find(s => !s.occupied);
-    return freeSlot || arr[arr.length - 1];
+    const autoNum = findPreferredOutletForDevice(arr, inletType, 1);
+    return arr[autoNum - 1] || arr[arr.length - 1];
   };
 
   poweredDevices.forEach(item => {
@@ -1394,9 +1826,8 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
     else singleCordedCount++;
 
     const perPsuWatts = activePsus.length > 0 ? Math.round(itemOperatingWatts / activePsus.length) : 0;
-    const perPsuAmps = parseFloat((perPsuWatts / voltage).toFixed(2));
 
-    // Check if dual-PSU A+B can claim a symmetrical outlet number when no manual outlet override exists
+    // Symmetrical A+B outlet assignment when no manual outlet override exists
     if (
       !isSingleFeedMode &&
       specs.psuCount >= 2 &&
@@ -1406,11 +1837,22 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       !item.powerOutlets.psu1 &&
       !item.powerOutlets.psu2
     ) {
-      for (let r = 1; r <= Math.min(pduAOutlets.length, pduBOutlets.length); r++) {
-        if (!pduAOutlets[r - 1].occupied && !pduBOutlets[r - 1].occupied) {
+      const wantsHigh = String(specs.inletType || "").toUpperCase().includes("C20");
+      const maxShared = Math.min(pduAOutlets.length, pduBOutlets.length);
+      for (let r = 1; r <= maxShared; r++) {
+        if (!pduAOutlets[r - 1].occupied && !pduBOutlets[r - 1].occupied && Boolean(pduAOutlets[r - 1].isHighCurrentSocket) === wantsHigh) {
           item.powerOutlets.psu1 = r;
           item.powerOutlets.psu2 = r;
           break;
+        }
+      }
+      if (!item.powerOutlets.psu1) {
+        for (let r = 1; r <= maxShared; r++) {
+          if (!pduAOutlets[r - 1].occupied && !pduBOutlets[r - 1].occupied) {
+            item.powerOutlets.psu1 = r;
+            item.powerOutlets.psu2 = r;
+            break;
+          }
         }
       }
     }
@@ -1437,8 +1879,9 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       }
 
       const isFeedA = (feed === "PDU-A");
+      const activePduSpec = isFeedA ? specA : specB;
       const preferredOutlet = parseInt(item.powerOutlets[pKey], 10) || null;
-      const slot = claimOutlet(feed, preferredOutlet);
+      const slot = claimOutlet(feed, preferredOutlet, specs.inletType);
       const rNum = slot.outletNumber;
       const rStr = String(rNum).padStart(2, "0");
       item.powerOutlets[pKey] = rNum;
@@ -1448,9 +1891,11 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       const pduReceptacleTag = `${pduFullId}-R${rStr}`;
       const pduShortReceptacle = `${pduCode}-R${rStr}`;
       const powerCordId = `PWR-${closetPrefix}-${pduCode}-${rStr}`;
-      const cordColor = isFeedA ? "Black" : "Blue";
-      const cordSpec = `6ft 14AWG ${specs.cordType} (${cordColor})`;
       const upstreamSource = isFeedA ? pduAUpstream : pduBUpstream;
+
+      // Resolve exact Catalog Power Cord SKU based on PDU Receptacle Socket + Device PSU Inlet
+      const cordInfo = resolveCatalogPowerCord(specs.inletType, slot.socketType, isFeedA, activePduSpec.vendor);
+      const perPsuAmps = parseFloat((perPsuWatts / activePduSpec.outputVoltage).toFixed(2));
 
       // Orion 2-Line Brady (M21-750-499) Power Cord Labels
       const bradyPsuLine1 = powerCordId;
@@ -1467,10 +1912,20 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
         psuKey: pKey,
         psuCount: specs.psuCount,
         inletType: specs.inletType,
-        cordType: specs.cordType,
-        cordColor,
-        cordSpec,
+        outletSocketType: slot.socketType,
+        outletShortSocket: slot.shortSocket,
+        cordSku: cordInfo.cordSku,
+        cordVendor: cordInfo.cordVendor,
+        cordModel: cordInfo.cordModel,
+        cordType: cordInfo.plugToConnector,
+        cordColor: cordInfo.cordColor,
+        cordSpec: cordInfo.cordSpec,
+        cordMsrp: cordInfo.msrp,
         feed,
+        pduSku: activePduSpec.sku,
+        pduVendor: activePduSpec.vendor,
+        pduModel: activePduSpec.model,
+        pduVoltage: activePduSpec.outputVoltage,
         pduCode,
         pduFullId,
         outletNumber: rNum,
@@ -1520,26 +1975,30 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
     };
   });
 
-  const pduAAmps = parseFloat((pduALoadWatts / voltage).toFixed(1));
-  const pduBAmps = parseFloat((pduBLoadWatts / voltage).toFixed(1));
-  const pduAPct = Math.min(100, Math.round((pduAAmps / maxSafeAmps) * 100));
-  const pduBPct = Math.min(100, Math.round((pduBAmps / maxSafeAmps) * 100));
+  const pduAAmps = parseFloat((pduALoadWatts / specA.outputVoltage).toFixed(1));
+  const pduBAmps = parseFloat((pduBLoadWatts / specB.outputVoltage).toFixed(1));
+  const pduAPct = Math.min(100, Math.round((pduAAmps / specA.maxSafeAmps) * 100));
+  const pduBPct = Math.min(100, Math.round((pduBAmps / specB.maxSafeAmps) * 100));
+
+  const isSyncedInBom = bomPdus.some(b => b.sku === specA.sku);
 
   const metricsResult = {
     closetPrefix,
-    voltage,
-    circuitBreakerAmps,
-    maxSafeAmps,
-    maxSafeWatts,
+    voltage: specA.outputVoltage,
+    circuitBreakerAmps: specA.circuitBreakerAmps,
+    maxSafeAmps: specA.maxSafeAmps,
+    maxSafeWatts: specA.maxSafeWatts,
     pduConfig,
+    isSyncedInBom,
     mountedUps,
     byDeviceId,
     powerCords,
     pduA: {
+      ...specA,
       id: "PDU-A",
       code: pduACode,
       fullId: pduAFullId,
-      label: (pduConfig === "horizontal") ? `1U PDU (${pduAFullId})` : (pduConfig === "single_vertical" ? `0U PDU (${pduAFullId})` : pduAFullId),
+      label: (pduConfig === "horizontal") ? `${specA.rackUnits || 1}U PDU (${pduAFullId})` : (pduConfig === "single_vertical" ? `0U PDU (${pduAFullId})` : pduAFullId),
       subLabel: pduAUpstreamShort,
       upstreamFull: pduAUpstream,
       upstreamShort: pduAUpstreamShort,
@@ -1548,11 +2007,10 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       amps: pduAAmps,
       pct: pduAPct,
       outletsUsed: pduAOutletCount,
-      totalOutlets,
-      outlets: pduAOutlets,
-      isOverloaded: pduAAmps > maxSafeAmps
+      isOverloaded: pduAAmps > specA.maxSafeAmps
     },
     pduB: {
+      ...specB,
       id: "PDU-B",
       code: pduBCode,
       fullId: pduBFullId,
@@ -1565,9 +2023,7 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
       amps: pduBAmps,
       pct: pduBPct,
       outletsUsed: pduBOutletCount,
-      totalOutlets: 24,
-      outlets: pduBOutlets,
-      isOverloaded: pduBAmps > maxSafeAmps
+      isOverloaded: pduBAmps > specB.maxSafeAmps
     },
     redundancy: {
       redundantDeviceCount,
@@ -1583,7 +2039,7 @@ window.calculateRackPduMetrics = calculateRackPduMetrics;
 
 // =========================================================================
 // RACK POWER & PDU RECEPTACLE MATRIX STUDIO MODAL
-// Interactive End-to-End Power Chain Trace, 24-Receptacle PDU Faceplates,
+// Interactive End-to-End Power Chain Trace, Catalog PDU Faceplates,
 // and Orion 2-Line Brady (M21-750-499) Power Cord Schedule
 // =========================================================================
 function openRackPowerMatrixModal(focusPduKey = null, focusOutletNum = null, focusInstanceId = null) {
@@ -1631,18 +2087,22 @@ function exportRackPowerScheduleCSV() {
 
   const headers = [
     "Power Cord ID",
+    "Catalog Cord SKU",
+    "Cord Description & Color",
     "Enclosure / Rack",
     "Rack Slot",
     "Device Tag",
     "Device Model",
     "Chassis PSU Tag",
-    "Inlet Type",
-    "Cord Spec & Color",
+    "PSU Inlet Type",
     "PDU ID",
+    "Catalog PDU SKU",
+    "PDU Model",
     "PDU Receptacle Tag",
+    "PDU Socket Type",
     "Upstream UPS / Circuit",
     "Operating Watts",
-    "Amps @ 120V",
+    "Operating Amps",
     "Redundancy Status",
     "Brady PSU End (Line 1)",
     "Brady PSU End (Line 2)",
@@ -1653,18 +2113,22 @@ function exportRackPowerScheduleCSV() {
   const escapeCsv = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
   const rows = metrics.powerCords.map(c => [
     c.powerCordId,
+    c.cordSku,
+    c.cordModel,
     activeRackId,
     `U${c.rackSlot}`,
     c.deviceShortTag,
     c.deviceModel,
     c.devicePsuTag,
     c.inletType,
-    c.cordSpec,
     c.pduFullId,
+    c.pduSku,
+    c.pduModel,
     c.pduReceptacleTag,
+    c.outletSocketType,
     c.upstreamSource,
     `${c.watts}W`,
-    `${c.amps}A`,
+    `${c.amps}A @ ${c.pduVoltage}V`,
     c.isDualRedundant ? "Dual-Feed A+B Redundant" : (c.isSpof ? "SPOF Warning (Same PDU)" : "Single-Corded"),
     c.bradyPsuLine1,
     c.bradyPsuLine2,
@@ -1683,7 +2147,7 @@ function exportRackPowerScheduleCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   if (typeof showToast === "function") {
-    showToast(`Exported ${metrics.powerCords.length} power cords & Brady labels for ${activeRackId}`);
+    showToast(`Exported ${metrics.powerCords.length} power cords & catalog SKUs for ${activeRackId}`);
   }
 }
 window.exportRackPowerScheduleCSV = exportRackPowerScheduleCSV;
@@ -1701,6 +2165,10 @@ function renderRackPowerMatrixModalContent() {
 
   const metrics = calculateRackPduMetrics(assignedItems, activeEnc);
   const isSingleFeedMode = (metrics.pduConfig === "single_vertical" || metrics.pduConfig === "horizontal");
+  const isHorizMode = (metrics.pduConfig === "horizontal");
+
+  const allCatalogPdus = getCatalogPdusList();
+  const compatibleCatalogPdus = allCatalogPdus.filter(p => isHorizMode ? (parseInt(p.rackUnits, 10) || 0) >= 1 : (parseInt(p.rackUnits, 10) || 0) === 0);
 
   // Default selected outlet to first occupied outlet if not set
   let sel = window._rackPowerMatrixSelected;
@@ -1717,29 +2185,43 @@ function renderRackPowerMatrixModalContent() {
   const selOutletObj = selPduObj.outlets[Math.min(selPduObj.outlets.length - 1, Math.max(0, (sel.outletNumber || 1) - 1))] || selPduObj.outlets[0];
   const selAssign = selOutletObj ? selOutletObj.assignment : null;
 
+  const buildPduSelectOptions = (selectedSku) => compatibleCatalogPdus.map(p => {
+    const ruTag = (p.rackUnits || 0) === 0 ? "0U" : `${p.rackUnits}U`;
+    const cktTag = `${p.inputVoltage || 120}V/${p.inputCircuitAmps || 20}A ${p.inputConnector || '5-20P'}`;
+    return `<option value="${escapeHTML(p.sku)}" ${p.sku === selectedSku ? 'selected' : ''}>${escapeHTML(p.vendor)} ${escapeHTML(p.sku)} — ${ruTag} • ${p.outletsCount} Outlets (${escapeHTML(p.receptacles)}) • ${cktTag} ($${p.msrp})</option>`;
+  }).join("");
+
   const renderPduStripCard = (pduObj, isFeedA) => {
     const pduKey = isFeedA ? "PDU-A" : "PDU-B";
     const accentText = isFeedA ? "text-emerald-400" : "text-sky-400";
     const accentBorder = isFeedA ? "border-emerald-500/40" : "border-sky-500/40";
     const barColor = pduObj.pct > 80 ? "bg-rose-500" : (isFeedA ? "bg-emerald-500" : "bg-sky-500");
-    const gridClass = pduObj.totalOutlets <= 8 ? "pdu-strip-8col" : "pdu-strip-12col";
+    const gridClass = (pduObj.totalOutlets === 9 || pduObj.totalOutlets === 10)
+      ? "pdu-strip-10col"
+      : ((pduObj.totalOutlets <= 8 || pduObj.totalOutlets === 16) ? "pdu-strip-8col" : "pdu-strip-12col");
 
     return `
       <div class="p-3.5 rounded-2xl bg-slate-950 border ${accentBorder} space-y-2.5 shadow-lg">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <span class="px-2 py-0.5 rounded bg-slate-900 border ${accentBorder} font-mono text-xs font-bold ${accentText} flex items-center gap-1">
               <i data-lucide="plug-zap" class="w-3.5 h-3.5"></i>
               <span>${escapeHTML(pduObj.fullId)}</span>
             </span>
-            <span class="text-xs text-slate-300 font-semibold">${escapeHTML(pduObj.upstreamFull)}</span>
+            <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/40 font-mono text-[10px] font-bold text-indigo-300" title="${escapeHTML(pduObj.model)}">
+              SKU: ${escapeHTML(pduObj.vendor)} ${escapeHTML(pduObj.sku)}
+            </span>
+            <span class="text-[11px] font-mono text-slate-300 font-semibold">${escapeHTML(pduObj.receptaclesSummary)}</span>
+            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-amber-300">
+              Input: ${escapeHTML(pduObj.plugType)}
+            </span>
             <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
-              Cord Color: <strong class="${isFeedA ? 'text-slate-200' : 'text-sky-300'}">${pduObj.cordColor}</strong>
+              Cords: <strong class="${isFeedA ? 'text-slate-200' : 'text-sky-300'}">${pduObj.cordColor}</strong>
             </span>
           </div>
           <div class="flex items-center gap-3 text-xs font-mono">
             <span class="text-slate-400">Outlets: <strong class="text-white">${pduObj.outletsUsed}/${pduObj.totalOutlets}</strong></span>
-            <span class="${pduObj.pct > 80 ? 'text-rose-400 font-bold' : accentText} font-bold">${pduObj.amps}A / 16.0A (${pduObj.watts}W &bull; ${pduObj.pct}%)</span>
+            <span class="${pduObj.pct > 80 ? 'text-rose-400 font-bold' : accentText} font-bold">${pduObj.amps}A / ${pduObj.maxSafeAmps}A NEC (${pduObj.watts}W / ${pduObj.maxSafeWatts}W &bull; ${pduObj.pct}%)</span>
           </div>
         </div>
 
@@ -1747,13 +2229,15 @@ function renderRackPowerMatrixModalContent() {
           <div class="${barColor} h-full rounded-full transition-all" style="width: ${pduObj.pct}%"></div>
         </div>
 
-        <!-- Interactive Numbered Receptacles R01..R24 -->
+        <!-- Interactive Numbered Receptacles R01..RN with Exact Catalog Socket Type -->
         <div class="${gridClass} pt-1">
           ${pduObj.outlets.map(o => {
             const isSelected = (sel.pduKey === pduKey && sel.outletNumber === o.outletNumber);
             const isOcc = Boolean(o.occupied && o.assignment);
             const a = o.assignment;
-            let boxStyle = "bg-slate-900/90 border-slate-800 text-slate-500 hover:border-slate-600";
+            let boxStyle = o.isHighCurrentSocket
+              ? "bg-slate-900/95 border-amber-700/50 text-slate-400 hover:border-amber-500"
+              : "bg-slate-900/90 border-slate-800 text-slate-500 hover:border-slate-600";
             if (isOcc) {
               if (o.isSpof) {
                 boxStyle = "bg-rose-950/60 border-rose-500/70 text-rose-200";
@@ -1770,17 +2254,17 @@ function renderRackPowerMatrixModalContent() {
                 type="button"
                 onclick="selectRackPowerMatrixOutlet('${pduKey}', ${o.outletNumber})"
                 class="p-1.5 rounded-lg border ${boxStyle} ${ringStyle} flex flex-col items-center justify-between text-center font-mono transition-all cursor-pointer select-none"
-                title="${escapeHTML(isOcc ? `${a.pduReceptacleTag} ⟷ ${a.powerCordId} ⟷ U${a.rackSlot} ${a.devicePsuTag} (${a.deviceModel} • ${a.watts}W)` : `${pduObj.fullId}-${o.outletCode} — Open Receptacle`)}"
+                title="${escapeHTML(isOcc ? `${a.pduReceptacleTag} (${o.socketType}) ⟷ ${a.powerCordId} [${a.cordSku}] ⟷ U${a.rackSlot} ${a.devicePsuTag} (${a.deviceModel} • ${a.watts}W)` : `${pduObj.fullId}-${o.outletCode} (${o.socketType}) — Open Receptacle`)}"
               >
                 <div class="w-full flex items-center justify-between text-[9px] font-bold">
                   <span>${o.outletCode}</span>
-                  <span class="${isOcc ? (isFeedA ? 'text-emerald-400' : 'text-sky-400') : 'text-slate-700'}">${isOcc ? '●' : '○'}</span>
+                  <span class="${o.isHighCurrentSocket ? 'text-amber-400' : (isOcc ? (isFeedA ? 'text-emerald-400' : 'text-sky-400') : 'text-slate-600')}">${o.shortSocket}</span>
                 </div>
                 <div class="text-[9px] font-bold truncate w-full mt-0.5 ${isOcc ? 'text-white' : 'text-slate-600'}">
                   ${isOcc ? escapeHTML(a.devicePsuTag) : 'OPEN'}
                 </div>
                 <div class="text-[8px] text-slate-400 truncate w-full">
-                  ${isOcc ? `U${a.rackSlot} &bull; ${a.watts}W` : '5-20R/C13'}
+                  ${isOcc ? `U${a.rackSlot} &bull; ${a.watts}W` : escapeHTML(o.socketType)}
                 </div>
               </button>
             `;
@@ -1806,27 +2290,36 @@ function renderRackPowerMatrixModalContent() {
             <div class="flex items-center gap-2 flex-wrap">
               <h2 class="text-sm sm:text-base font-bold text-white">Rack Power &amp; PDU Receptacle Matrix Studio</h2>
               <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/60 text-[10px] font-mono font-bold">${escapeHTML(activeRackId)}</span>
-              <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono font-bold">Orion 2-Line Brady Power Standard</span>
+              <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono font-bold">${escapeHTML(metrics.pduA.vendor)} ${escapeHTML(metrics.pduA.sku)}${!isSingleFeedMode && metrics.pduB.sku !== metrics.pduA.sku ? ` + ${escapeHTML(metrics.pduB.sku)}` : ''}</span>
             </div>
-            <p class="text-[11px] text-slate-400">End-to-End Power Chain: Chassis PSU ⟷ Power Cord (PWR-${escapeHTML(metrics.closetPrefix)}-*) ⟷ PDU Receptacle (R01–R24) ⟷ UPS ⟷ Branch Breaker</p>
+            <p class="text-[11px] text-slate-400">Catalog-Driven PDU Receptacles (R01–R${metrics.pduA.totalOutlets}), Power Cord Part Numbers, &amp; Orion 2-Line Brady Labels</p>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onclick="syncRackPdusAndCordsToBom()"
+            class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/60 text-amber-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Add/Update selected Catalog PDU SKUs and Power Jumper Cord SKUs in the Project BOM"
+          >
+            <i data-lucide="package-check" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Sync PDUs &amp; Cords to BOM</span>
+          </button>
           <button
             type="button"
             onclick="autoBalanceRackPowerFeeds()"
             class="px-3 py-1.5 rounded-xl bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Auto-balance dual-PSU devices symmetrically across PDU-A and PDU-B with matching R01..R24 outlet numbers"
+            title="Auto-balance dual-PSU devices symmetrically across PDU-A and PDU-B matching socket types"
           >
             <i data-lucide="scale" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>Auto-Balance &amp; Align A+B</span>
+            <span>Auto-Balance A+B</span>
           </button>
           <button
             type="button"
             onclick="exportRackPowerScheduleCSV()"
             class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow transition-colors cursor-pointer"
-            title="Export Orion Rack Power &amp; 2-Line Brady Label Schedule to CSV"
+            title="Export Orion Rack Power, Catalog SKUs &amp; 2-Line Brady Label Schedule to CSV"
           >
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>Export Power CSV</span>
@@ -1844,6 +2337,65 @@ function renderRackPowerMatrixModalContent() {
 
       <!-- Modal Scrollable Body -->
       <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+        <!-- Catalog PDU Hardware Part Number Selector Bar -->
+        <div class="p-3.5 rounded-2xl bg-slate-950 border border-indigo-500/40 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2.5">
+            <div class="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-400">
+              <i data-lucide="cpu" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white flex items-center gap-2">
+                <span>Catalog PDU Hardware Selection (${isHorizMode ? '1U/2U Horizontal Rackmount' : '0U Vertical Strip'})</span>
+                <span class="px-1.5 py-0.2 rounded text-[9px] font-mono ${metrics.isSyncedInBom ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
+                  ${metrics.isSyncedInBom ? '✓ In Project BOM' : 'Not Yet Synced to BOM'}
+                </span>
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono">Selecting a catalog PDU automatically updates receptacle count, socket types (5-15R / 5-20R / L5-20R / C13 / C19), voltage (120V/208V), and NEC 80% load limits.</div>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[280px] justify-end">
+            ${isSingleFeedMode ? `
+              <div class="w-full sm:w-auto flex-1 max-w-xl">
+                <label class="text-[9px] font-mono uppercase text-emerald-400 block mb-0.5">${escapeHTML(metrics.pduA.fullId)} Catalog Part Number</label>
+                <select
+                  onchange="setRackPduCatalogSku('PDU-A', this.value)"
+                  class="w-full bg-slate-900 border border-emerald-500/50 text-white rounded-lg px-2.5 py-1.5 text-xs font-mono font-bold focus:outline-none cursor-pointer"
+                >
+                  ${buildPduSelectOptions(metrics.pduA.sku)}
+                </select>
+              </div>
+            ` : `
+              <div class="w-full sm:w-auto flex-1">
+                <label class="text-[9px] font-mono uppercase text-emerald-400 block mb-0.5">PDU-A (${escapeHTML(metrics.pduA.fullId)}) Catalog SKU</label>
+                <select
+                  onchange="setRackPduCatalogSku('PDU-A', this.value)"
+                  class="w-full bg-slate-900 border border-emerald-500/50 text-white rounded-lg px-2 py-1 text-[11px] font-mono font-bold focus:outline-none cursor-pointer"
+                >
+                  ${buildPduSelectOptions(metrics.pduA.sku)}
+                </select>
+              </div>
+              <div class="w-full sm:w-auto flex-1">
+                <label class="text-[9px] font-mono uppercase text-sky-400 block mb-0.5">PDU-B (${escapeHTML(metrics.pduB.fullId)}) Catalog SKU</label>
+                <select
+                  onchange="setRackPduCatalogSku('PDU-B', this.value)"
+                  class="w-full bg-slate-900 border border-sky-500/50 text-white rounded-lg px-2 py-1 text-[11px] font-mono font-bold focus:outline-none cursor-pointer"
+                >
+                  ${buildPduSelectOptions(metrics.pduB.sku)}
+                </select>
+              </div>
+              <button
+                type="button"
+                onclick="setRackPduCatalogSku('BOTH', '${escapeHTML(metrics.pduA.sku)}')"
+                class="mt-3 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-pointer"
+                title="Match PDU-B to the same catalog SKU as PDU-A"
+              >
+                Match B=A
+              </button>
+            `}
+          </div>
+        </div>
+
         <!-- 1. End-to-End Power Chain KPI Strip -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
@@ -1852,7 +2404,7 @@ function renderRackPowerMatrixModalContent() {
               <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
             </div>
             <div class="text-xs font-bold text-white mt-1 font-mono">${escapeHTML(metrics.closetPrefix)}-CKT-A ${!isSingleFeedMode ? `&amp; CKT-B` : ''}</div>
-            <div class="text-[10px] text-slate-400 font-mono mt-0.5">120V / 20A Dedicated (16.0A NEC Continuous)</div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">${metrics.pduA.inputVoltage}V / ${metrics.pduA.circuitBreakerAmps}A (${metrics.pduA.maxSafeAmps}A NEC Continuous &bull; ${escapeHTML(metrics.pduA.inputConnector)})</div>
           </div>
 
           <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
@@ -1877,15 +2429,15 @@ function renderRackPowerMatrixModalContent() {
 
           <div class="p-3 rounded-xl bg-slate-950 border border-slate-800">
             <div class="text-[10px] font-mono uppercase text-slate-400 flex items-center justify-between">
-              <span>3. Rack PDU Receptacles</span>
+              <span>3. Catalog PDU Receptacles</span>
               <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-sky-400"></i>
             </div>
             <div class="text-xs font-bold text-white mt-1 font-mono">
-              ${escapeHTML(metrics.pduA.fullId)}: ${metrics.pduA.outletsUsed}/${metrics.pduA.totalOutlets}
-              ${!isSingleFeedMode ? ` &bull; ${escapeHTML(metrics.pduB.fullId)}: ${metrics.pduB.outletsUsed}/${metrics.pduB.totalOutlets}` : ''}
+              ${escapeHTML(metrics.pduA.sku)}: ${metrics.pduA.outletsUsed}/${metrics.pduA.totalOutlets}
+              ${!isSingleFeedMode ? ` &bull; ${escapeHTML(metrics.pduB.sku)}: ${metrics.pduB.outletsUsed}/${metrics.pduB.totalOutlets}` : ''}
             </div>
-            <div class="text-[10px] text-slate-400 font-mono mt-0.5">
-              Feed A: ${metrics.pduA.amps}A (${metrics.pduA.watts}W)${!isSingleFeedMode ? ` &bull; Feed B: ${metrics.pduB.amps}A (${metrics.pduB.watts}W)` : ''}
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+              ${escapeHTML(metrics.pduA.receptaclesSummary)}
             </div>
           </div>
 
@@ -1895,7 +2447,7 @@ function renderRackPowerMatrixModalContent() {
               <i data-lucide="shield-check" class="w-3.5 h-3.5 ${metrics.redundancy.singlePointFailureCount > 0 ? 'text-rose-400' : 'text-emerald-400'}"></i>
             </div>
             <div class="text-xs font-bold text-white mt-1 font-mono">
-              ${metrics.powerCords.length} Active Power Cords
+              ${metrics.powerCords.length} Catalog Power Cords
             </div>
             <div class="text-[10px] font-mono mt-0.5 ${metrics.redundancy.singlePointFailureCount > 0 ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
               ${metrics.redundancy.redundantDeviceCount} A+B Redundant &bull; ${metrics.redundancy.singleCordedCount} Single &bull; ${metrics.redundancy.singlePointFailureCount} SPOF
@@ -1912,24 +2464,24 @@ function renderRackPowerMatrixModalContent() {
         <!-- 3. Selected Receptacle End-to-End Power Trace & Orion 2-Line Brady Label Preview -->
         <div class="p-4 rounded-2xl bg-slate-950 border border-indigo-500/40 space-y-3 shadow-inner">
           <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
               <span class="px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-700/60 text-[10px] font-mono font-bold">
                 SELECTED RECEPTACLE TRACE
               </span>
               <span class="text-xs font-mono font-bold text-white">
-                ${escapeHTML(selOutletObj.receptacleTag)}
+                ${escapeHTML(selOutletObj.receptacleTag)} (${escapeHTML(selOutletObj.socketType)})
               </span>
               ${selAssign ? `
                 <span class="px-2 py-0.5 rounded bg-emerald-950/90 text-emerald-300 border border-emerald-600/50 text-[10px] font-mono font-bold">
-                  ${escapeHTML(selAssign.powerCordId)}
+                  ${escapeHTML(selAssign.powerCordId)} &bull; SKU: ${escapeHTML(selAssign.cordSku)}
                 </span>
               ` : `
                 <span class="px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-mono">
-                  UNOCCUPIED SPARE OUTLET
+                  UNOCCUPIED SPARE OUTLET (${escapeHTML(selOutletObj.socketType)})
                 </span>
               `}
             </div>
-            <span class="text-[10px] font-mono text-slate-400">Click any outlet R01–R24 above to inspect its full power chain &amp; Brady labels</span>
+            <span class="text-[10px] font-mono text-slate-400">Click any outlet R01–R${selPduObj.totalOutlets} above to inspect its full power chain &amp; Brady labels</span>
           </div>
 
           ${selAssign ? `
@@ -1943,33 +2495,34 @@ function renderRackPowerMatrixModalContent() {
                 <div class="text-[9px] text-slate-400 mt-0.5">Inlet: ${escapeHTML(selAssign.inletType)} &bull; ${selAssign.watts}W (${selAssign.amps}A)</div>
               </div>
 
-              <!-- Arrow 1 -->
+              <!-- Arrow 1: Catalog Power Cord -->
               <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
                 <div class="text-[9px] text-amber-300 font-bold">${escapeHTML(selAssign.powerCordId)}</div>
+                <div class="text-indigo-300 text-[9px] font-bold">SKU: ${escapeHTML(selAssign.cordSku)}</div>
                 <div class="text-slate-500 text-[10px]">◄───────►</div>
-                <div class="text-[8.5px] text-slate-400">${escapeHTML(selAssign.cordSpec)}</div>
+                <div class="text-[8.5px] text-slate-400">${escapeHTML(selAssign.cordType)} (${escapeHTML(selAssign.cordColor)})</div>
               </div>
 
-              <!-- Box 2: PDU Receptacle -->
+              <!-- Box 2: Catalog PDU Receptacle -->
               <div class="p-2.5 rounded-xl bg-slate-900 border ${selAssign.feed === 'PDU-A' ? 'border-emerald-500/60' : 'border-sky-500/60'}">
                 <div class="text-[9px] ${selAssign.feed === 'PDU-A' ? 'text-emerald-400' : 'text-sky-400'} uppercase font-bold">2. PDU Receptacle</div>
                 <div class="text-xs font-bold text-white mt-0.5">${escapeHTML(selAssign.pduReceptacleTag)}</div>
-                <div class="text-[10px] text-slate-300">${escapeHTML(selAssign.pduFullId)} &bull; Outlet ${selAssign.outletCode}</div>
-                <div class="text-[9px] text-slate-400 mt-0.5">NEMA 5-20R / IEC C13</div>
+                <div class="text-[10px] text-slate-300">${escapeHTML(selAssign.pduVendor)} ${escapeHTML(selAssign.pduSku)} &bull; ${selAssign.outletCode}</div>
+                <div class="text-[9px] text-amber-300 mt-0.5">Socket: ${escapeHTML(selAssign.outletSocketType)}</div>
               </div>
 
               <!-- Arrow 2 -->
               <div class="p-2 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-                <div class="text-[9px] text-cyan-300 font-bold">Upstream Feed</div>
+                <div class="text-[9px] text-cyan-300 font-bold">PDU Input Cord</div>
                 <div class="text-slate-500 text-[10px]">◄───────►</div>
-                <div class="text-[8.5px] text-slate-400">120V AC 20A</div>
+                <div class="text-[8.5px] text-slate-400">${escapeHTML(selPduObj.plugType)}</div>
               </div>
 
               <!-- Box 3: Upstream UPS & Branch Circuit -->
               <div class="p-2.5 rounded-xl bg-slate-900 border border-amber-500/50">
                 <div class="text-[9px] text-amber-400 uppercase font-bold">3. UPS &amp; Branch Circuit</div>
                 <div class="text-xs font-bold text-white truncate mt-0.5">${escapeHTML(selAssign.upstreamSource)}</div>
-                <div class="text-[10px] text-slate-300">Breaker: 20A (16.0A NEC Safe)</div>
+                <div class="text-[10px] text-slate-300">Breaker: ${selPduObj.circuitBreakerAmps}A (${selPduObj.maxSafeAmps}A NEC Safe)</div>
                 <div class="text-[9px] ${selAssign.isDualRedundant ? 'text-emerald-400' : (selAssign.isSpof ? 'text-rose-400' : 'text-slate-400')} mt-0.5">
                   ${selAssign.isDualRedundant ? '✓ Dual-Feed A+B Protected' : (selAssign.isSpof ? '⚠️ SPOF: Both PSUs on same PDU' : 'Single-Feed')}
                 </div>
@@ -1981,7 +2534,7 @@ function renderRackPowerMatrixModalContent() {
               <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
                 <div>
                   <span class="text-[9px] font-mono uppercase text-slate-400 block">Orion 2-Line Brady Label (Chassis PSU End)</span>
-                  <span class="text-[10px] text-slate-500 font-mono">Brady M21-750-499 Wrap Label</span>
+                  <span class="text-[10px] text-slate-500 font-mono">Brady M21-750-499 &bull; Cord SKU: ${escapeHTML(selAssign.cordSku)}</span>
                 </div>
                 <div class="px-3 py-1.5 rounded bg-amber-50 text-slate-950 font-mono text-[11px] font-bold leading-tight border-2 border-amber-400 shadow">
                   <div>L1: ${escapeHTML(selAssign.bradyPsuLine1)}</div>
@@ -1992,7 +2545,7 @@ function renderRackPowerMatrixModalContent() {
               <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3">
                 <div>
                   <span class="text-[9px] font-mono uppercase text-slate-400 block">Orion 2-Line Brady Label (PDU Receptacle End)</span>
-                  <span class="text-[10px] text-slate-500 font-mono">Brady M21-750-499 Wrap Label</span>
+                  <span class="text-[10px] text-slate-500 font-mono">Brady M21-750-499 &bull; PDU SKU: ${escapeHTML(selAssign.pduSku)}</span>
                 </div>
                 <div class="px-3 py-1.5 rounded bg-amber-50 text-slate-950 font-mono text-[11px] font-bold leading-tight border-2 border-amber-400 shadow">
                   <div>L1: ${escapeHTML(selAssign.bradyPduLine1)}</div>
@@ -2002,7 +2555,7 @@ function renderRackPowerMatrixModalContent() {
             </div>
           ` : `
             <div class="py-3 text-center text-xs text-slate-400 font-mono">
-              Receptacle <strong>${escapeHTML(selOutletObj.receptacleTag)}</strong> is currently open. Assign any device PSU to outlet <strong>${selOutletObj.outletCode}</strong> in the table below.
+              Receptacle <strong>${escapeHTML(selOutletObj.receptacleTag)} (${escapeHTML(selOutletObj.socketType)})</strong> on <strong>${escapeHTML(selPduObj.vendor)} ${escapeHTML(selPduObj.sku)}</strong> is currently open. Assign any device PSU to outlet <strong>${selOutletObj.outletCode}</strong> in the table below.
             </div>
           `}
         </div>
@@ -2014,7 +2567,7 @@ function renderRackPowerMatrixModalContent() {
               <i data-lucide="list-checks" class="w-4 h-4 text-emerald-400"></i>
               Rack Equipment Power Cord &amp; Receptacle Schedule (${poweredDevices.length} Powered Units)
             </span>
-            <span class="text-[10px] font-mono text-slate-400">Assign Feed (PDU-A / PDU-B) &amp; Exact Receptacle (R01–R${metrics.pduA.totalOutlets})</span>
+            <span class="text-[10px] font-mono text-slate-400">Assign Feed (${escapeHTML(metrics.pduA.sku)}${!isSingleFeedMode ? ' / ' + escapeHTML(metrics.pduB.sku) : ''}) &amp; Exact Receptacle</span>
           </div>
 
           <div class="overflow-x-auto">
@@ -2024,9 +2577,9 @@ function renderRackPowerMatrixModalContent() {
                   <th class="py-2 px-3">U-Slot</th>
                   <th class="py-2 px-3">Device &amp; Tag</th>
                   <th class="py-2 px-3">Chassis PSU</th>
-                  <th class="py-2 px-3">Power Feed</th>
-                  <th class="py-2 px-3">PDU Receptacle #</th>
-                  <th class="py-2 px-3">Power Cord ID &amp; Spec</th>
+                  <th class="py-2 px-3">PDU Feed (SKU)</th>
+                  <th class="py-2 px-3">PDU Receptacle &amp; Socket</th>
+                  <th class="py-2 px-3">Power Cord ID &amp; Catalog SKU</th>
                   <th class="py-2 px-3">Load</th>
                   <th class="py-2 px-3">Orion 2-Line Brady Label (PSU End)</th>
                 </tr>
@@ -2040,18 +2593,19 @@ function renderRackPowerMatrixModalContent() {
                   const devInfo = metrics.byDeviceId[item.instanceId];
                   if (!devInfo) return "";
                   const psuKeys = Object.keys(devInfo.psus);
-                  return psuKeys.map((pKey, idx) => {
+                  return psuKeys.map((pKey) => {
                     const p = devInfo.psus[pKey];
                     const pNum = p.psuNum;
-                    const maxOut = (p.feed === "PDU-B") ? 24 : metrics.pduA.totalOutlets;
+                    const targetPdu = (p.feed === "PDU-B") ? metrics.pduB : metrics.pduA;
+                    const maxOut = targetPdu.totalOutlets;
                     const outletOptions = Array.from({ length: maxOut }, (_, oIdx) => {
                       const rNum = oIdx + 1;
                       const rCode = `R${String(rNum).padStart(2, "0")}`;
-                      const targetPdu = (p.feed === "PDU-B") ? metrics.pduB : metrics.pduA;
                       const slotObj = targetPdu.outlets[oIdx];
+                      const sockBadge = slotObj ? slotObj.shortSocket : "5-20R";
                       const occByOther = slotObj && slotObj.occupied && slotObj.assignment && !(slotObj.assignment.instanceId === item.instanceId && slotObj.assignment.psuNum === pNum);
-                      const occLabel = occByOther ? ` (${slotObj.assignment.devicePsuTag})` : "";
-                      return `<option value="${rNum}" ${p.outletNumber === rNum ? 'selected' : ''}>${targetPdu.code}-${rCode}${occLabel}</option>`;
+                      const occLabel = occByOther ? ` • [${slotObj.assignment.devicePsuTag}]` : "";
+                      return `<option value="${rNum}" ${p.outletNumber === rNum ? 'selected' : ''}>${targetPdu.code}-${rCode} (${sockBadge})${occLabel}</option>`;
                     }).join("");
 
                     return `
@@ -2060,20 +2614,20 @@ function renderRackPowerMatrixModalContent() {
                         <td class="py-2 px-3">
                           <div class="flex items-center gap-1.5">
                             <span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-bold text-brand-300">${escapeHTML(devInfo.deviceShortTag)}</span>
-                            <span class="font-sans font-bold text-white truncate max-w-[180px]" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
+                            <span class="font-sans font-bold text-white truncate max-w-[170px]" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
                           </div>
                         </td>
                         <td class="py-2 px-3">
                           <span class="font-bold text-slate-200">${escapeHTML(p.devicePsuTag)}</span>
-                          <span class="text-[9px] text-slate-500 block">${escapeHTML(devInfo.inletType)}</span>
+                          <span class="text-[9px] text-slate-500 block">Inlet: ${escapeHTML(devInfo.inletType)}</span>
                         </td>
                         <td class="py-2 px-3">
                           <select
                             onchange="setDevicePsuFeedDirect('${item.instanceId}', ${pNum}, this.value)"
                             class="bg-slate-900 border ${p.feed === 'PDU-A' ? 'border-emerald-500/60 text-emerald-300' : (p.feed === 'PDU-B' ? 'border-sky-500/60 text-sky-300' : 'border-slate-700 text-slate-400')} rounded px-2 py-1 text-[10px] font-bold focus:outline-none cursor-pointer"
                           >
-                            <option value="PDU-A" ${p.feed === "PDU-A" ? "selected" : ""}>${escapeHTML(metrics.pduA.fullId)} (Feed A)</option>
-                            ${!isSingleFeedMode ? `<option value="PDU-B" ${p.feed === "PDU-B" ? "selected" : ""}>${escapeHTML(metrics.pduB.fullId)} (Feed B)</option>` : ''}
+                            <option value="PDU-A" ${p.feed === "PDU-A" ? "selected" : ""}>${escapeHTML(metrics.pduA.fullId)} (${escapeHTML(metrics.pduA.sku)})</option>
+                            ${!isSingleFeedMode ? `<option value="PDU-B" ${p.feed === "PDU-B" ? "selected" : ""}>${escapeHTML(metrics.pduB.fullId)} (${escapeHTML(metrics.pduB.sku)})</option>` : ''}
                             <option value="None" ${p.feed === "None" ? "selected" : ""}>Unplugged (None)</option>
                           </select>
                         </td>
@@ -2089,14 +2643,17 @@ function renderRackPowerMatrixModalContent() {
                         </td>
                         <td class="py-2 px-3">
                           ${p.connected ? `
-                            <span class="text-amber-300 font-bold block">${escapeHTML(p.powerCordId)}</span>
-                            <span class="text-[9px] text-slate-400">${escapeHTML(p.cordSpec)}</span>
+                            <div class="flex items-center gap-1.5">
+                              <span class="text-amber-300 font-bold">${escapeHTML(p.powerCordId)}</span>
+                              <span class="px-1.5 py-0.2 rounded bg-indigo-950 border border-indigo-700/60 text-[9px] text-indigo-300 font-bold">${escapeHTML(p.cordSku)}</span>
+                            </div>
+                            <span class="text-[9px] text-slate-400 block">${escapeHTML(p.cordType)} (${escapeHTML(p.cordColor)})</span>
                           ` : `<span class="text-slate-600">—</span>`}
                         </td>
                         <td class="py-2 px-3">
                           ${p.connected ? `
                             <span class="text-white font-bold">${p.watts}W</span>
-                            <span class="text-[9px] text-slate-400 block">${p.amps}A</span>
+                            <span class="text-[9px] text-slate-400 block">${p.amps}A @ ${p.pduVoltage}V</span>
                           ` : `<span class="text-slate-600">0W</span>`}
                         </td>
                         <td class="py-2 px-3">
@@ -3841,8 +4398,12 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
   const leftColHtml = renderVerticalChannelHtml("rearLeft", vertChannels.rearLeft, pduMetrics, true);
   const rightColHtml = renderVerticalChannelHtml("rearRight", vertChannels.rearRight, pduMetrics, true);
 
+  const horizGridClass = (pduMetrics.pduA.totalOutlets === 9 || pduMetrics.pduA.totalOutlets === 10)
+    ? "pdu-strip-10col"
+    : ((pduMetrics.pduA.totalOutlets <= 8 || pduMetrics.pduA.totalOutlets === 16) ? "pdu-strip-8col" : "pdu-strip-12col");
+
   const topHorizontalPduHtml = isHorizontalPdu ? `
-    <!-- 1U Horizontal Rackmount PDU Strip Bar -->
+    <!-- ${pduMetrics.pduA.rackUnits || 1}U Horizontal Rackmount PDU Strip Bar -->
     <div class="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-indigo-500/50 rounded-xl p-3 shadow-xl select-none mb-3">
       <div class="flex flex-wrap items-center justify-between gap-3 mb-2.5">
         <div class="flex items-center gap-2.5">
@@ -3850,19 +4411,20 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
             <i data-lucide="zap" class="w-4 h-4"></i>
           </div>
           <div>
-            <div class="text-xs font-bold text-white flex items-center gap-2">
-              <span>1U Horizontal Rackmount PDU (${escapeHTML(pduMetrics.pduA.fullId)})</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-600 font-bold">${escapeHTML(pduMetrics.pduA.upstreamFull)}</span>
-              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600 font-bold">${pduMetrics.pduA.outletsUsed}/8 Outlets</span>
+            <div class="text-xs font-bold text-white flex items-center gap-2 flex-wrap">
+              <span>${pduMetrics.pduA.rackUnits || 1}U Horizontal Rackmount PDU (${escapeHTML(pduMetrics.pduA.fullId)})</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-indigo-950 text-indigo-300 border border-indigo-600 font-bold" title="${escapeHTML(pduMetrics.pduA.model)}">SKU: ${escapeHTML(pduMetrics.pduA.vendor)} ${escapeHTML(pduMetrics.pduA.sku)}</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-slate-900 text-amber-300 border border-slate-700 font-bold">${escapeHTML(pduMetrics.pduA.upstreamFull)}</span>
+              <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-600 font-bold">${pduMetrics.pduA.outletsUsed}/${pduMetrics.pduA.totalOutlets} Outlets</span>
             </div>
-            <span class="text-[10px] text-slate-400 font-mono">19" EIA Rackmount Bar &bull; NEMA 5-20R Receptacles &bull; 16A Continuous NEC Max</span>
+            <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(pduMetrics.pduA.receptaclesSummary)} &bull; Input: ${escapeHTML(pduMetrics.pduA.plugType)} &bull; ${pduMetrics.pduA.maxSafeAmps}A Continuous NEC Max</span>
           </div>
         </div>
 
         <div class="flex items-center gap-4 text-right">
           <div>
             <span class="text-[9px] text-slate-400 uppercase font-mono block">Load Amps</span>
-            <span class="text-xs font-mono font-bold ${pduMetrics.pduA.pct > 80 ? 'text-rose-400' : 'text-white'}">${pduMetrics.pduA.amps}A / 16.0A</span>
+            <span class="text-xs font-mono font-bold ${pduMetrics.pduA.pct > 80 ? 'text-rose-400' : 'text-white'}">${pduMetrics.pduA.amps}A / ${pduMetrics.pduA.maxSafeAmps}A</span>
           </div>
           <div>
             <span class="text-[9px] text-slate-400 uppercase font-mono block">Power Draw</span>
@@ -3879,8 +4441,8 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
         </div>
       </div>
 
-      <!-- Interactive Receptacle Grid across width (R01-R08) -->
-      <div class="pdu-strip-8col pt-2 border-t border-slate-800/80">
+      <!-- Interactive Receptacle Grid across width (R01-R${pduMetrics.pduA.totalOutlets}) -->
+      <div class="${horizGridClass} pt-2 border-t border-slate-800/80">
         ${pduMetrics.pduA.outlets.map(o => {
           const isOccupied = Boolean(o.occupied && o.assignment);
           const a = o.assignment;
@@ -3889,11 +4451,11 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
               type="button"
               onclick="openRackPowerMatrixModal('PDU-A', ${o.outletNumber})"
               class="px-2 py-1.5 rounded-lg bg-slate-950 border ${isOccupied ? 'border-indigo-500/70 bg-indigo-950/40 text-indigo-300 hover:border-indigo-400' : 'border-slate-800 text-slate-600 hover:border-slate-600'} text-center font-mono text-[9px] transition-all cursor-pointer"
-              title="${escapeHTML(isOccupied ? `${a.pduReceptacleTag} ⟷ ${a.powerCordId} ⟷ U${a.rackSlot} ${a.devicePsuTag} (${a.watts}W)` : `${o.receptacleTag} — Open`)}"
+              title="${escapeHTML(isOccupied ? `${a.pduReceptacleTag} (${o.socketType}) ⟷ ${a.powerCordId} [${a.cordSku}] ⟷ U${a.rackSlot} ${a.devicePsuTag} (${a.watts}W)` : `${o.receptacleTag} (${o.socketType}) — Open`)}"
             >
               <div class="text-[8px] text-slate-400 uppercase font-bold">${o.outletCode}</div>
               <div class="text-[10px] mt-0.5 truncate ${isOccupied ? 'text-white font-bold' : 'text-slate-600'}">${isOccupied ? escapeHTML(a.devicePsuTag) : 'OPEN'}</div>
-              <div class="text-[8px] ${isOccupied ? 'text-indigo-300' : 'text-slate-700'}">${isOccupied ? `${a.watts}W` : '5-20R'}</div>
+              <div class="text-[8px] ${isOccupied ? 'text-indigo-300' : 'text-slate-700'}">${isOccupied ? `${a.watts}W` : escapeHTML(o.shortSocket || '5-20R')}</div>
             </button>
           `;
         }).join('')}
@@ -6964,9 +7526,38 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
       const pduMetrics = calculateRackPduMetrics(assignedItems, activeEnc);
       const pduConfig = getRackPduConfig();
       const accState = window.rackAccordionOpenState || { pdu: false };
+      const isHorizPduMode = (pduConfig === "horizontal");
+      const allCatalogPdus = getCatalogPdusList().filter(p => isHorizPduMode ? (parseInt(p.rackUnits, 10) || 0) >= 1 : (parseInt(p.rackUnits, 10) || 0) === 0);
 
       const pduAColor = pduMetrics.pduA.pct > 80 ? "text-rose-400" : (pduMetrics.pduA.pct > 70 ? "text-amber-400" : "text-emerald-400");
       const pduABarColor = pduMetrics.pduA.pct > 80 ? "bg-rose-500" : (pduMetrics.pduA.pct > 70 ? "bg-amber-500" : "bg-emerald-500");
+
+      const pduSkuSelectHtml = `
+        <div class="p-2 rounded-xl bg-slate-950 border border-indigo-500/30 space-y-1.5">
+          <div class="flex items-center justify-between text-[10px] font-mono">
+            <span class="text-slate-400 uppercase font-bold">Catalog PDU Model</span>
+            <span class="${pduMetrics.isSyncedInBom ? 'text-emerald-400' : 'text-amber-400'} font-bold">${pduMetrics.isSyncedInBom ? '✓ In BOM' : 'Unsynced'}</span>
+          </div>
+          <select
+            onchange="setRackPduCatalogSku('BOTH', this.value)"
+            class="w-full bg-slate-900 border border-slate-700 text-slate-200 font-mono text-[10px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500 truncate cursor-pointer"
+          >
+            ${allCatalogPdus.map(p => `<option value="${escapeHTML(p.sku)}" ${p.sku === pduMetrics.pduA.sku ? 'selected' : ''}>${escapeHTML(p.vendor)} ${escapeHTML(p.sku)} (${p.outletsCount}x • ${p.inputVoltage}V/${p.inputCircuitAmps}A)</option>`).join("")}
+          </select>
+          <div class="text-[9px] font-mono text-slate-400 truncate" title="${escapeHTML(pduMetrics.pduA.receptaclesSummary)}">
+            Sockets: <strong class="text-slate-200">${escapeHTML(pduMetrics.pduA.receptaclesSummary)}</strong> &bull; Plug: <strong class="text-amber-300">${escapeHTML(pduMetrics.pduA.inputConnector)}</strong>
+          </div>
+          <button
+            type="button"
+            onclick="syncRackPdusAndCordsToBom()"
+            class="w-full py-1 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 hover:text-white text-[10px] font-mono font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+            title="Add/update selected Catalog PDU SKUs and active Power Jumper Cord SKUs in Project BOM"
+          >
+            <i data-lucide="package-check" class="w-3 h-3 text-amber-400"></i>
+            <span>Sync PDU &amp; ${pduMetrics.powerCords.length} Cords to BOM</span>
+          </button>
+        </div>
+      `;
 
       const cordPreviewHtml = (pduMetrics.powerCords && pduMetrics.powerCords.length > 0) ? `
         <div class="pt-2 border-t border-slate-800 space-y-1">
@@ -6980,9 +7571,9 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 type="button"
                 onclick="openRackPowerMatrixModal('${c.feed}', ${c.outletNumber})"
                 class="w-full px-2 py-1 rounded bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/50 flex items-center justify-between text-[10px] font-mono transition-colors cursor-pointer"
-                title="Brady L1: ${escapeHTML(c.bradyPsuLine1)} | L2: ${escapeHTML(c.bradyPsuLine2)}"
+                title="Cord SKU: ${escapeHTML(c.cordSku)} | Brady L1: ${escapeHTML(c.bradyPsuLine1)} | L2: ${escapeHTML(c.bradyPsuLine2)}"
               >
-                <span class="text-amber-300 font-bold truncate">${escapeHTML(c.powerCordId)}</span>
+                <span class="text-amber-300 font-bold truncate">${escapeHTML(c.powerCordId)} <span class="text-indigo-300">[${escapeHTML(c.cordSku)}]</span></span>
                 <span class="text-slate-300 truncate">${escapeHTML(c.devicePsuTag)} ➔ <strong class="${c.feed === 'PDU-A' ? 'text-emerald-400' : 'text-sky-400'}">${escapeHTML(c.pduShortReceptacle)}</strong></span>
               </button>
             `).join("")}
@@ -6995,20 +7586,21 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
           <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
             <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
               <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-indigo-400">
-                <i data-lucide="plug-zap" class="w-4 h-4"></i> 1U PDU (${escapeHTML(pduMetrics.pduA.fullId)})
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> ${pduMetrics.pduA.rackUnits || 1}U PDU (${escapeHTML(pduMetrics.pduA.sku)})
               </span>
               <div class="flex items-center gap-1.5">
-                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / 16A (${pduMetrics.pduA.outletsUsed}/8)</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / ${pduMetrics.pduA.maxSafeAmps}A (${pduMetrics.pduA.outletsUsed}/${pduMetrics.pduA.totalOutlets})</span>
                 <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 rack-acc-chevron"></i>
               </div>
             </summary>
             <div class="space-y-2.5 pt-2.5 mt-2 border-t border-slate-800/80">
+              ${pduSkuSelectHtml}
               <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
                 <div class="flex items-center justify-between text-xs mb-1">
-                  <span class="font-bold text-indigo-300 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)}
+                  <span class="font-bold text-indigo-300 flex items-center gap-1.5 font-mono">
+                    <span class="w-2 h-2 rounded-full bg-indigo-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)} (${escapeHTML(pduMetrics.pduA.sku)})
                   </span>
-                  <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+                  <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / ${pduMetrics.pduA.maxSafeAmps} A</span>
                 </div>
                 <div class="text-[10px] font-mono text-slate-400 mb-1.5">Upstream: <strong class="text-slate-200">${escapeHTML(pduMetrics.pduA.upstreamFull)}</strong></div>
                 <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
@@ -7016,7 +7608,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 </div>
                 <div class="flex justify-between text-[10px] font-mono text-slate-400">
                   <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-                  <span>${pduMetrics.pduA.outletsUsed} / 8 Receptacles</span>
+                  <span>${pduMetrics.pduA.outletsUsed} / ${pduMetrics.pduA.totalOutlets} Receptacles</span>
                 </div>
               </div>
               ${cordPreviewHtml}
@@ -7036,20 +7628,21 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
           <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
             <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
               <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-emerald-400">
-                <i data-lucide="plug-zap" class="w-4 h-4"></i> 0U PDU (${escapeHTML(pduMetrics.pduA.fullId)})
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> 0U PDU (${escapeHTML(pduMetrics.pduA.sku)})
               </span>
               <div class="flex items-center gap-1.5">
-                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / 16A (${pduMetrics.pduA.outletsUsed}/24)</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 ${pduAColor} font-bold">${pduMetrics.pduA.amps}A / ${pduMetrics.pduA.maxSafeAmps}A (${pduMetrics.pduA.outletsUsed}/${pduMetrics.pduA.totalOutlets})</span>
                 <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400 rack-acc-chevron"></i>
               </div>
             </summary>
             <div class="space-y-2.5 pt-2.5 mt-2 border-t border-slate-800/80">
+              ${pduSkuSelectHtml}
               <div class="p-2.5 rounded-xl bg-slate-950 border border-slate-800">
                 <div class="flex items-center justify-between text-xs mb-1">
-                  <span class="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)} (Feed A)
+                  <span class="font-bold text-emerald-400 flex items-center gap-1.5 font-mono">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)} (${escapeHTML(pduMetrics.pduA.sku)})
                   </span>
-                  <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+                  <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / ${pduMetrics.pduA.maxSafeAmps} A</span>
                 </div>
                 <div class="text-[10px] font-mono text-slate-400 mb-1.5">Upstream: <strong class="text-slate-200">${escapeHTML(pduMetrics.pduA.upstreamFull)}</strong></div>
                 <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1.5">
@@ -7057,7 +7650,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 </div>
                 <div class="flex justify-between text-[10px] font-mono text-slate-400">
                   <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}% continuous)</span>
-                  <span>${pduMetrics.pduA.outletsUsed} / 24 Receptacles</span>
+                  <span>${pduMetrics.pduA.outletsUsed} / ${pduMetrics.pduA.totalOutlets} Receptacles</span>
                 </div>
               </div>
               ${cordPreviewHtml}
@@ -7085,7 +7678,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
           <details ${accState.pdu ? 'open' : ''} ontoggle="toggleRackAccordionSection('pdu', this.open)" class="group">
             <summary class="list-none cursor-pointer select-none flex items-center justify-between gap-2 py-0.5">
               <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 text-indigo-400">
-                <i data-lucide="plug-zap" class="w-4 h-4"></i> Dual 0U PDUs (Feed A+B)
+                <i data-lucide="plug-zap" class="w-4 h-4"></i> Dual 0U PDUs (${escapeHTML(pduMetrics.pduA.sku)})
               </span>
               <div class="flex items-center gap-1.5">
                 <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-950 border border-slate-800 text-emerald-400 font-bold">A:${pduMetrics.pduA.amps}A &bull; B:${pduMetrics.pduB.amps}A</span>
@@ -7094,15 +7687,17 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
             </summary>
 
             <div class="space-y-2.5 pt-2.5 mt-2 border-t border-slate-800/80">
+              ${pduSkuSelectHtml}
+
               <!-- PDU Load Meters -->
               <div class="space-y-2">
                 <!-- Feed A (Utility) -->
                 <div class="p-2 rounded-xl bg-slate-950 border border-slate-800">
                   <div class="flex items-center justify-between text-xs mb-0.5">
                     <span class="font-bold text-emerald-400 flex items-center gap-1.5 font-mono">
-                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)}
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span> ${escapeHTML(pduMetrics.pduA.fullId)} (${escapeHTML(pduMetrics.pduA.sku)})
                     </span>
-                    <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / 16.0 A</span>
+                    <span class="font-mono font-bold ${pduAColor}">${pduMetrics.pduA.amps} A / ${pduMetrics.pduA.maxSafeAmps} A</span>
                   </div>
                   <div class="text-[9.5px] font-mono text-slate-400 mb-1 truncate">Feed: <strong class="text-slate-300">${escapeHTML(pduMetrics.pduA.upstreamFull)}</strong></div>
                   <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1">
@@ -7110,7 +7705,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                   </div>
                   <div class="flex justify-between text-[10px] font-mono text-slate-400">
                     <span>${pduMetrics.pduA.watts} W (${pduMetrics.pduA.pct}%)</span>
-                    <span>${pduMetrics.pduA.outletsUsed} / 24 Outlets (Black)</span>
+                    <span>${pduMetrics.pduA.outletsUsed} / ${pduMetrics.pduA.totalOutlets} Outlets (Black)</span>
                   </div>
                 </div>
 
@@ -7118,9 +7713,9 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                 <div class="p-2 rounded-xl bg-slate-950 border border-slate-800">
                   <div class="flex items-center justify-between text-xs mb-0.5">
                     <span class="font-bold text-sky-400 flex items-center gap-1.5 font-mono">
-                      <span class="w-2 h-2 rounded-full bg-sky-400"></span> ${escapeHTML(pduMetrics.pduB.fullId)}
+                      <span class="w-2 h-2 rounded-full bg-sky-400"></span> ${escapeHTML(pduMetrics.pduB.fullId)} (${escapeHTML(pduMetrics.pduB.sku)})
                     </span>
-                    <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / 16.0 A</span>
+                    <span class="font-mono font-bold ${pduBColor}">${pduMetrics.pduB.amps} A / ${pduMetrics.pduB.maxSafeAmps} A</span>
                   </div>
                   <div class="text-[9.5px] font-mono text-slate-400 mb-1 truncate">Feed: <strong class="text-slate-300">${escapeHTML(pduMetrics.pduB.upstreamFull)}</strong></div>
                   <div class="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden mb-1">
@@ -7128,7 +7723,7 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
                   </div>
                   <div class="flex justify-between text-[10px] font-mono text-slate-400">
                     <span>${pduMetrics.pduB.watts} W (${pduMetrics.pduB.pct}%)</span>
-                    <span>${pduMetrics.pduB.outletsUsed} / 24 Outlets (Blue)</span>
+                    <span>${pduMetrics.pduB.outletsUsed} / ${pduMetrics.pduB.totalOutlets} Outlets (Blue)</span>
                   </div>
                 </div>
               </div>

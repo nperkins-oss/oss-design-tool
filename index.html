@@ -310,6 +310,16 @@
         grid-template-columns: repeat(4, minmax(0, 1fr));
       }
     }
+    .pdu-strip-10col {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: 5px;
+    }
+    @media (max-width: 900px) {
+      .pdu-strip-10col {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+    }
     .py-0\.2 {
       padding-top: 1px;
       padding-bottom: 1px;
