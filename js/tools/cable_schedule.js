@@ -467,15 +467,18 @@ function createCableScheduleModalDOM() {
               <p class="text-[11px] text-slate-400">TOW_Structured Cabling Standards: 2-Line Field Labels, T568-B Solid-Core, CMP Plenum, and 90° Pathway Routing.</p>
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="if(window.TabManager) TabManager.openTab('physical_layout'); else if(typeof toggleCableLayoutModal==='function') toggleCableLayoutModal();" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer" title="Open Physical Layout &amp; Pathways Canvas">
+              <i data-lucide="map" class="w-3.5 h-3.5 text-amber-400"></i> Physical Layout
+            </button>
+            <button onclick="if(window.TabManager) TabManager.openTab('port_matrix'); else if(typeof openPortMatrixStudio==='function') openPortMatrixStudio();" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer" title="Open Switch Port Matrix Studio">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i> Port Matrix
+            </button>
             <button onclick="exportCableScheduleCSV()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold rounded-xl border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer" title="Export complete cable schedule workbook to CSV for Brady / Brother label printers and Excel">
               <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV (Labels)
             </button>
             <button onclick="printCableSchedule()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition-all cursor-pointer" title="Print formal field pull sheet for installation technicians">
               <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print Pull Sheet
-            </button>
-            <button onclick="closeCablePullScheduleModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer" title="Close (Esc)">
-              <i data-lucide="x" class="w-4 h-4"></i>
             </button>
           </div>
         </div>

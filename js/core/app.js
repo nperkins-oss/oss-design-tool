@@ -2255,11 +2255,12 @@ function updateFacilitySubNavUI() {
   const bHierarchy = document.getElementById("facility-nav-hierarchy");
   const bEnclosures = document.getElementById("facility-nav-enclosures");
   const bPortMatrix = document.getElementById("facility-nav-portmatrix");
+  const bPowerMatrix = document.getElementById("facility-nav-powermatrix");
 
   const activeClasses = "bg-slate-800 text-white font-bold border-sky-500/50 shadow-sm";
   const inactiveClasses = "border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/60";
 
-  [bHierarchy, bEnclosures, bPortMatrix].forEach(b => {
+  [bHierarchy, bEnclosures, bPortMatrix, bPowerMatrix].forEach(b => {
     if (!b) return;
     b.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${inactiveClasses}`;
   });
@@ -2270,6 +2271,8 @@ function updateFacilitySubNavUI() {
     bEnclosures.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeClasses}`;
   } else if (activeTab === "port_matrix" && bPortMatrix) {
     bPortMatrix.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeClasses}`;
+  } else if (activeTab === "power_matrix" && bPowerMatrix) {
+    bPowerMatrix.className = `px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeClasses}`;
   }
 }
 
@@ -2280,7 +2283,7 @@ function handleFacilityNavClick() {
   }
   if (typeof TabManager !== "undefined") {
     const cur = TabManager.getActiveTabId();
-    if (cur !== "facility" && cur !== "enclosures" && cur !== "port_matrix") {
+    if (cur !== "facility" && cur !== "enclosures" && cur !== "port_matrix" && cur !== "power_matrix") {
       TabManager.openTab("facility");
       toggleFacilityExpand(false);
       return;

@@ -444,15 +444,19 @@ const WalkReconciliationEngine = {
   },
 
   /**
-   * Opens the Walk Audit & Reconciliation Modal
+   * Opens the Walk Audit & Reconciliation Studio Workspace Tab
    */
   openModal() {
+    const viewport = document.getElementById("workspaceMainViewport") || document.body;
     let modal = document.getElementById("walkAuditModal");
     if (!modal) {
       modal = document.createElement("div");
       modal.id = "walkAuditModal";
-      modal.className = "fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md";
-      document.body.appendChild(modal);
+      modal.className = "hidden absolute inset-0 z-30 bg-slate-950 flex flex-col p-1 sm:p-2 animate-fade-in";
+      viewport.appendChild(modal);
+    } else if (modal.parentElement !== viewport) {
+      modal.className = "hidden absolute inset-0 z-30 bg-slate-950 flex flex-col p-1 sm:p-2 animate-fade-in";
+      viewport.appendChild(modal);
     }
     modal.classList.remove("hidden");
     this.loadStoredAudit();
@@ -467,7 +471,7 @@ const WalkReconciliationEngine = {
   },
 
   /**
-   * Renders the complete Reconciliation Studio Modal
+   * Renders the complete Reconciliation Studio Workspace Tab
    */
   renderModal() {
     const modal = document.getElementById("walkAuditModal");
@@ -494,24 +498,31 @@ const WalkReconciliationEngine = {
     });
 
     modal.innerHTML = `
-      <div class="bg-slate-900 border border-slate-700/80 w-full max-w-6xl max-h-[92vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
+      <div class="bg-slate-900 border border-slate-800 w-full h-full rounded-xl shadow-2xl flex flex-col overflow-hidden text-slate-200">
         <!-- Header -->
-        <div class="px-6 py-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between shrink-0">
+        <div class="px-6 py-4 border-b border-slate-800 bg-slate-950/70 flex items-center justify-between gap-3 shrink-0 flex-wrap">
           <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <i data-lucide="clipboard-check" class="w-5 h-5"></i>
             </div>
             <div>
               <h2 class="text-base font-bold text-white flex items-center gap-2">
-                Onsite Camera Walk Audit & Blueprint Reconciliation Studio
-                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 text-emerald-300">ACC & Bluebeam Aligned</span>
+                Onsite Camera Walk Audit &amp; Blueprint Reconciliation Studio
+                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 text-emerald-300">ACC &amp; Bluebeam Aligned</span>
               </h2>
               <p class="text-xs text-slate-400 mt-0.5">Reconcile field walk audits with project BOM and blueprint drops. Mates cameras, uncovers unmapped devices, and catches discrepancies.</p>
             </div>
           </div>
-          <button onclick="WalkReconciliationEngine.closeModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <button onclick="if(window.TabManager) TabManager.openTab('physical_layout'); else if(typeof toggleCableLayoutModal==='function') toggleCableLayoutModal();" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer" title="Return to Physical Layout &amp; Pathways Canvas">
+              <i data-lucide="map" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Physical Layout</span>
+            </button>
+            <button onclick="if(window.TabManager) TabManager.openTab('bom'); else if(typeof toggleBomModal==='function') toggleBomModal();" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer" title="Open Quote BOM">
+              <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-brand-400"></i>
+              <span>Quote BOM</span>
+            </button>
+          </div>
         </div>
 
         <!-- Telemetry Banners & Filters -->
@@ -693,13 +704,11 @@ const WalkReconciliationEngine = {
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-3.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs shrink-0">
+        <div class="px-6 py-3 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs shrink-0">
           <div class="text-slate-400">
             Total Reconciled Items: <span class="font-bold text-white">${this.reconciledResults.length}</span> (Mated: <span class="text-emerald-400 font-bold">${matedCount}</span>, Unmapped: <span class="text-amber-400 font-bold">${unmappedCount}</span>, Missing: <span class="text-rose-400 font-bold">${missingCount}</span>)
           </div>
-          <button onclick="WalkReconciliationEngine.closeModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 text-white font-semibold transition-colors">
-            Close
-          </button>
+          <span class="font-mono text-[11px] text-slate-500">ACC &bull; Bluebeam &bull; Field Walk Verification Engine</span>
         </div>
       </div>
     `;

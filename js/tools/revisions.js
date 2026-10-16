@@ -371,13 +371,14 @@ function createRevisionModalDOM() {
           </div>
         </div>
 
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <button onclick="if(window.TabManager) TabManager.openTab('bom'); else if(typeof toggleBomModal==='function') toggleBomModal();" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer" title="Open Quote BOM">
+            <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-brand-400"></i>
+            <span>Quote BOM</span>
+          </button>
           <button onclick="promptCreateRevisionSnapshot()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer">
             <i data-lucide="camera" class="w-4 h-4"></i>
             <span>Create Milestone Snapshot</span>
-          </button>
-          <button onclick="closeRevisionModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
-            <i data-lucide="x" class="w-5 h-5"></i>
           </button>
         </div>
       </div>

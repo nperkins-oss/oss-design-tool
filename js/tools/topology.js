@@ -3094,7 +3094,7 @@ function renderTopologyInspector() {
           <!-- Action Buttons -->
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button 
-              onclick="if (typeof TabManager !== 'undefined' && typeof TabManager.openTab === 'function') { TabManager.openTab('layout'); } else if (typeof openCableLayoutModal === 'function') { toggleTopologyModal(); openCableLayoutModal(); }"
+              onclick="if (typeof TabManager !== 'undefined' && typeof TabManager.openTab === 'function') { TabManager.openTab('physical_layout'); } else if (typeof openCableLayoutModal === 'function') { toggleTopologyModal(); openCableLayoutModal(); }"
               class="px-2.5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group"
               title="Open Floor in Physical Layout Tool"
             >

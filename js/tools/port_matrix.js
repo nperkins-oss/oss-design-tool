@@ -143,6 +143,9 @@ function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
     selectedSw = switches.find(s => s.instanceId === targetSwitchIdOrLoc) ||
       switches.find(s => FacilityStore.normalize(s.closetName || s.rackId) === FacilityStore.normalize(targetSwitchIdOrLoc));
   }
+  if (!selectedSw && activePortMatrixSwitchId) {
+    selectedSw = switches.find(s => s.instanceId === activePortMatrixSwitchId) || null;
+  }
   if (!selectedSw) {
     selectedSw = switches[0];
   }
@@ -1000,37 +1003,45 @@ function highlightMatrixPort(portNum) {
   }
 }
 
+function jumpFromMatrixStudioToPowerMatrix() {
+  const sw = activePortMatrixSwitchId ? projectBOM.find(i => i.instanceId === activePortMatrixSwitchId) : null;
+  const swLoc = sw ? (sw.closetName || sw.rackId) : (typeof activeRackId !== "undefined" ? activeRackId : null);
+  if (typeof openRackPowerMatrixModal === "function") {
+    openRackPowerMatrixModal(null, null, activePortMatrixSwitchId || null, swLoc);
+  } else if (window.TabManager) {
+    window.TabManager.openTab("power_matrix", { focusInstanceId: activePortMatrixSwitchId || null, targetRackId: swLoc });
+  }
+}
+window.jumpFromMatrixStudioToPowerMatrix = jumpFromMatrixStudioToPowerMatrix;
+
 function jumpFromMatrixStudioToElevation() {
-  if (!activePortMatrixSwitchId) return;
-  const sw = projectBOM.find(i => i.instanceId === activePortMatrixSwitchId);
-  closePortMatrixStudio();
-  const swLoc = sw ? (sw.closetName || sw.rackId) : null;
-  const facilityModal = document.getElementById("facilityModal");
-  if (facilityModal && !facilityModal.classList.contains("hidden") && typeof switchFacilityView === "function") {
-    switchFacilityView("visualizer", swLoc);
-  } else if (sw && typeof openRackViewerFor === "function") {
+  const sw = activePortMatrixSwitchId ? projectBOM.find(i => i.instanceId === activePortMatrixSwitchId) : null;
+  const swLoc = sw ? (sw.closetName || sw.rackId) : (typeof activeRackId !== "undefined" ? activeRackId : null);
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("enclosures", swLoc ? { locationName: swLoc } : null);
+  } else if (typeof openRackViewerFor === "function") {
     openRackViewerFor(swLoc);
   }
 }
 
 function jumpFromMatrixStudioToTopology() {
-  if (!activePortMatrixSwitchId) return;
-  closePortMatrixStudio();
-  const facilityModal = document.getElementById("facilityModal");
-  if (facilityModal && !facilityModal.classList.contains("hidden")) {
-    facilityModal.classList.add("hidden");
-  }
-  if (typeof toggleTopologyModal === "function") {
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("topology");
+  } else if (typeof toggleTopologyModal === "function") {
     const modal = document.getElementById("topologyModal");
     if (modal && modal.classList.contains("hidden")) {
       toggleTopologyModal();
     }
-    if (typeof selectTopologyNode === "function") {
-      selectTopologyNode(activePortMatrixSwitchId);
-    }
-    if (typeof panNodeIntoView === "function") {
-      panNodeIntoView(activePortMatrixSwitchId);
-    }
+  }
+  if (activePortMatrixSwitchId) {
+    setTimeout(() => {
+      if (typeof selectTopologyNode === "function") {
+        selectTopologyNode(activePortMatrixSwitchId);
+      }
+      if (typeof panNodeIntoView === "function") {
+        panNodeIntoView(activePortMatrixSwitchId);
+      }
+    }, 80);
   }
 }
 

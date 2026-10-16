@@ -268,7 +268,15 @@ function createSubmittalModalDOM() {
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button onclick="if(window.TabManager) TabManager.openTab('bom'); else if(typeof toggleBomModal==='function') toggleBomModal();" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer" title="Return to Quote BOM">
+            <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-brand-400"></i>
+            <span>Quote BOM</span>
+          </button>
+          <button onclick="if(typeof exportComprehensiveProjectCSV==='function') exportComprehensiveProjectCSV();" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer" title="Export complete multi-section project CSV workbook">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Full CSV</span>
+          </button>
           <button onclick="exportProjectEngineeringWorkbook()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer" title="Export Multi-Tab Excel Engineering Workbook with BOM, Cable Schedule, Port Matrix, and Rack Elevations">
             <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
             <span>Export Multi-Tab Excel (.XLS)</span>
@@ -276,9 +284,6 @@ function createSubmittalModalDOM() {
           <button onclick="printSubmittalPackage()" class="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
             <i data-lucide="printer" class="w-4 h-4"></i>
             <span>Print / Save as PDF</span>
-          </button>
-          <button onclick="closeSubmittalModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer">
-            <i data-lucide="x" class="w-5 h-5"></i>
           </button>
         </div>
       </div>
@@ -342,11 +347,96 @@ function renderSubmittalPreview() {
   const data = SubmittalGenerator.gatherProjectData();
   const m = data.metrics;
   const health = data.healthAudit;
+  const engData = typeof compileProjectEngineeringData === "function" ? compileProjectEngineeringData() : null;
+
+  const renderInteractiveSubsystemTable = (title, icon, items) => {
+    if (!items || items.length === 0) return "";
+    let subtotalCost = 0;
+    let subtotalWatts = 0;
+    items.forEach(it => {
+      subtotalCost += (it.msrp || 0) * (it.qty || 1);
+      subtotalWatts += ((it.baseWatts || it.powerWatts || 0) + (it.poeBudget || 0)) * (it.qty || 1);
+    });
+
+    const rows = items.map((i, idx) => {
+      const rawLoc = i.closetName || i.rackId || (typeof FacilityStore !== "undefined" ? FacilityStore.UNASSIGNED : "Unassigned");
+      const normalizedLoc = (typeof FacilityStore !== "undefined" && typeof FacilityStore.normalize === "function") ? FacilityStore.normalize(rawLoc) : rawLoc;
+      const devNum = i.deviceNumber || `DEV-${idx + 1}`;
+      const friendly = (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.getFriendlyName === "function" ? DeviceTaxonomy.getFriendlyName(i) : (i.friendlyName || i.model)) || "";
+      const itemW = ((i.baseWatts || i.powerWatts || 0) + (i.poeBudget || 0)) * (i.qty || 1);
+      const extCost = (i.msrp || 0) * (i.qty || 1);
+      const asset = (typeof CATALOG_ASSETS !== "undefined" ? (CATALOG_ASSETS[i.id] || CATALOG_ASSETS[i.sku]) : null) || {};
+      const img = i.image || asset.image;
+      const dsheet = i.datasheetPath || asset.datasheetPath;
+
+      return `
+        <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
+          <td class="py-2 px-3 font-mono text-slate-400">${idx + 1}</td>
+          <td class="py-2 px-3 font-mono text-indigo-400 font-semibold">${escapeHTML(devNum)}</td>
+          <td class="py-2 px-3">
+            <div class="flex items-center gap-2.5">
+              ${img ? `
+                <img src="${img}" alt="${escapeHTML(i.model)}" class="w-10 h-7 object-contain bg-slate-900 border border-slate-800 rounded p-0.5 shrink-0 cursor-pointer hover:border-brand-500/50" onclick="if(typeof openProductImageModal==='function') openProductImageModal('${img}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" title="Click to view full photo" loading="lazy" />
+              ` : ''}
+              <div>
+                <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
+                  <span>${escapeHTML(i.vendor || '')} ${escapeHTML(i.model || '')}</span>
+                  ${dsheet ? `
+                    <button onclick="if(typeof openDatasheetModal==='function') openDatasheetModal('${dsheet}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" class="inline-flex items-center gap-0.5 text-[10px] text-rose-400 hover:text-rose-300 font-normal underline ml-1 cursor-pointer" title="View Technical Datasheet">
+                      <i data-lucide="file-text" class="w-2.5 h-2.5"></i> Datasheet
+                    </button>
+                  ` : ''}
+                </div>
+                <div class="text-[11px] text-slate-400">${escapeHTML(friendly)}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-2 px-3 font-mono text-slate-400 text-[11px]">${escapeHTML(i.sku || '')}</td>
+          <td class="py-2 px-3 text-slate-300 text-[11px]">${escapeHTML(normalizedLoc)}</td>
+          <td class="py-2 px-3 text-center font-bold font-mono text-white">${i.qty || 1}</td>
+          <td class="py-2 px-3 text-right font-mono text-slate-300">$${(i.msrp || 0).toLocaleString()}</td>
+          <td class="py-2 px-3 text-right font-mono font-bold text-emerald-400">$${extCost.toLocaleString()}</td>
+          <td class="py-2 px-3 text-right font-mono text-amber-400">${itemW} W</td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <div class="space-y-2 pt-3">
+        <div class="flex items-center justify-between pb-1 border-b border-slate-800">
+          <h5 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="${icon}" class="w-4 h-4 text-brand-400"></i> ${escapeHTML(title)} (${items.length} Lines)
+          </h5>
+          <span class="text-xs font-mono text-slate-400">Subtotal: <strong class="text-emerald-400 font-semibold">$${subtotalCost.toLocaleString()}</strong> &bull; <strong class="text-amber-400 font-semibold">${subtotalWatts} W</strong></span>
+        </div>
+        <div class="overflow-x-auto rounded-lg border border-slate-800/80 bg-slate-900/50">
+          <table class="w-full text-left">
+            <thead>
+              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                <th class="py-2 px-3">#</th>
+                <th class="py-2 px-3">Device ID</th>
+                <th class="py-2 px-3">Equipment / Model</th>
+                <th class="py-2 px-3">Part / SKU</th>
+                <th class="py-2 px-3">Location / Space</th>
+                <th class="py-2 px-3 text-center">Qty</th>
+                <th class="py-2 px-3 text-right">Unit MSRP</th>
+                <th class="py-2 px-3 text-right">Ext MSRP</th>
+                <th class="py-2 px-3 text-right">Power</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+  };
 
   container.innerHTML = `
-    <div class="space-y-4">
+    <div class="space-y-5">
       <!-- Executive Metrics Bar -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
         <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
           <span class="text-[10px] uppercase font-bold text-slate-400 block">Total BOM Value</span>
           <span class="text-sm font-bold text-emerald-400 font-mono">$${m.totalMSRP.toLocaleString()}</span>
@@ -367,11 +457,15 @@ function renderSubmittalPreview() {
           <span class="text-[10px] uppercase font-bold text-slate-400 block">Switch Port Count</span>
           <span class="text-sm font-bold text-purple-400 font-mono">${m.totalSwitchPorts} Ports</span>
         </div>
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 text-center">
+          <span class="text-[10px] uppercase font-bold text-slate-400 block">Heat Dissipation</span>
+          <span class="text-sm font-bold text-rose-400 font-mono">${engData ? engData.totalHeatBTU.toLocaleString() + ' BTU/h' : '—'}</span>
+        </div>
       </div>
 
       <!-- DRC Status & Sections Included -->
       <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between flex-wrap gap-2">
           <h4 class="text-xs font-bold text-white uppercase tracking-wider">Submittal Specification Package Sections</h4>
           ${health ? `
             <span class="text-[11px] font-mono px-2 py-0.5 rounded-full font-bold ${health.score >= 90 ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-amber-950 text-amber-300 border border-amber-800'}">
@@ -406,7 +500,7 @@ function renderSubmittalPreview() {
           </div>
           <div class="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">
             <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
-            <span><strong>Section 7:</strong> Design Rule Checker (DRC) &amp; Code Compliance Verification</span>
+            <span><strong>Section 7:</strong> Design Rule Checker (DRC) &amp; Technical Datasheet Appendix</span>
           </div>
           <div class="flex items-center gap-2 p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">
             <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
@@ -414,6 +508,80 @@ function renderSubmittalPreview() {
           </div>
         </div>
       </div>
+
+      ${engData ? `
+        <!-- Interactive Live Engineering Proposal & Subsystem Schedule -->
+        <div class="p-5 rounded-xl bg-slate-950 border border-slate-800 space-y-5">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <h4 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+                <span>Live Subsystem Equipment &amp; Datasheet Schedule</span>
+              </h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">Interactive preview of all quoted hardware, product cut sheets, rack thermal dissipation, and closet PoE headroom.</p>
+            </div>
+            <span class="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/70 px-3 py-1 rounded-lg">
+              Total MSRP: $${engData.totalMSRP.toLocaleString()}
+            </span>
+          </div>
+
+          ${renderInteractiveSubsystemTable("Network Switching & Routing", "network", engData.categorized.switches)}
+          ${renderInteractiveSubsystemTable("Video Surveillance Cameras", "camera", engData.categorized.cameras)}
+          ${renderInteractiveSubsystemTable("Access Control & Door Hardware", "shield", engData.categorized.access)}
+          ${renderInteractiveSubsystemTable("Cybersecurity Gateways & Firewalls", "shield-alert", engData.categorized.firewalls)}
+          ${renderInteractiveSubsystemTable("Servers, NVRs & Compute", "hard-drive", engData.categorized.servers)}
+          ${renderInteractiveSubsystemTable("Structured Cabling & Passive Infrastructure", "cable", engData.categorized.cabling)}
+          ${renderInteractiveSubsystemTable("Interconnects, Optics & Fiber Trunks", "link-2", engData.categorized.optics)}
+          ${renderInteractiveSubsystemTable("Software Licensing & Cloud Subscriptions", "key", engData.categorized.licenses)}
+          ${renderInteractiveSubsystemTable("Rack Accessories & Mounting Hardware", "package", engData.categorized.accessories)}
+
+          <!-- Closet & Rack Utilization Schedule -->
+          ${engData.rackSchedule && engData.rackSchedule.length > 0 ? `
+            <div class="space-y-2 pt-4">
+              <h5 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2 pb-1 border-b border-slate-800">
+                <i data-lucide="server" class="w-4 h-4 text-indigo-400"></i> Telecom Closets &amp; Rack Utilization Schedule
+              </h5>
+              <div class="overflow-x-auto rounded-lg border border-slate-800/80 bg-slate-900/50">
+                <table class="w-full text-left text-xs">
+                  <thead>
+                    <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
+                      <th class="py-2 px-3">Telecom Closet</th>
+                      <th class="py-2 px-3">Enclosure / Form Factor</th>
+                      <th class="py-2 px-3 text-center">Rack Height</th>
+                      <th class="py-2 px-3 text-center">Occupied / Free</th>
+                      <th class="py-2 px-3 text-center">Utilization</th>
+                      <th class="py-2 px-3 text-right">Power Draw</th>
+                      <th class="py-2 px-3 text-right">Thermal (BTU/hr)</th>
+                      <th class="py-2 px-3">Mounted Equipment</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${engData.rackSchedule.map(r => `
+                      <tr class="border-b border-slate-800/60 hover:bg-slate-850/40">
+                        <td class="py-2 px-3 font-bold text-white">${escapeHTML(r.space)}</td>
+                        <td class="py-2 px-3">
+                          <div class="font-semibold text-indigo-300">${escapeHTML(r.enclosure)}</div>
+                          <div class="text-[10px] text-slate-400">${escapeHTML(r.formFactor)}</div>
+                        </td>
+                        <td class="py-2 px-3 text-center font-mono text-slate-300 font-bold">${r.totalU}U</td>
+                        <td class="py-2 px-3 text-center font-mono">
+                          <span class="text-brand-400 font-bold">${r.occupiedU}U used</span> &bull; <span class="text-slate-400">${r.availableU}U free</span>
+                        </td>
+                        <td class="py-2 px-3 text-center">
+                          <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold ${r.utilPct > 85 ? 'bg-rose-950/80 text-rose-400 border border-rose-800' : 'bg-slate-800 text-slate-300'}">${r.utilPct}%</span>
+                        </td>
+                        <td class="py-2 px-3 text-right font-mono text-amber-400">${r.watts} W</td>
+                        <td class="py-2 px-3 text-right font-mono text-rose-400">${r.btu.toLocaleString()}</td>
+                        <td class="py-2 px-3 text-[11px] text-slate-300 max-w-xs truncate" title="${escapeHTML(r.equipment)}">${escapeHTML(r.equipment || "No active equipment assigned")}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      ` : ''}
     </div>
   `;
   if (window.lucide) lucide.createIcons();

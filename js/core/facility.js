@@ -1969,38 +1969,41 @@ function syncVisualizerBreadcrumbs() {
   }
 }
 
+function openPortMatrixForActiveRack() {
+  const loc = typeof activeRackId !== "undefined" ? activeRackId : null;
+  if (typeof openPortMatrixStudio === "function") {
+    openPortMatrixStudio(loc);
+  } else if (window.TabManager) {
+    window.TabManager.openTab("port_matrix", { switchInstanceId: loc });
+  }
+}
+window.openPortMatrixForActiveRack = openPortMatrixForActiveRack;
+
 function switchFacilityView(viewName, targetLocName) {
-  facilityActiveView = (viewName === "port_matrix") ? "port_matrix" : ((viewName === "visualizer") ? "visualizer" : "hierarchy");
+  if (viewName === "port_matrix") {
+    if (typeof openPortMatrixStudio === "function") {
+      openPortMatrixStudio(targetLocName || (typeof activeRackId !== "undefined" ? activeRackId : null));
+    } else if (window.TabManager) {
+      window.TabManager.openTab("port_matrix", { switchInstanceId: targetLocName || (typeof activeRackId !== "undefined" ? activeRackId : null) });
+    }
+    return;
+  }
+
+  facilityActiveView = (viewName === "visualizer") ? "visualizer" : "hierarchy";
   window.facilityActiveView = facilityActiveView;
   const hierarchyView = document.getElementById("facilityHierarchyView");
   const visualizerView = document.getElementById("facilityVisualizerView");
-  const portMatrixView = document.getElementById("facilityPortMatrixView");
   const titleHierarchy = document.getElementById("facilityTitleHierarchy");
   const titleVisualizer = document.getElementById("facilityTitleVisualizer");
   const visualizerControls = document.getElementById("facilityVisualizerControls");
 
-  if (facilityActiveView === "port_matrix") {
-    if (hierarchyView) hierarchyView.classList.add("hidden");
-    if (visualizerView) visualizerView.classList.add("hidden");
-    if (portMatrixView) portMatrixView.classList.remove("hidden");
-    if (titleHierarchy) titleHierarchy.classList.add("hidden");
-    if (titleVisualizer) titleVisualizer.classList.remove("hidden");
-    if (visualizerControls) visualizerControls.classList.add("hidden");
-    if (typeof syncRackSelectorOptions === "function") {
-      syncRackSelectorOptions();
-    }
-    if (typeof openPortMatrixStudio === "function") {
-      openPortMatrixStudio(targetLocName || activeRackId);
-    }
-    syncVisualizerBreadcrumbs();
-  } else if (facilityActiveView === "visualizer") {
+  if (facilityActiveView === "visualizer") {
     // Record current position for smooth back button navigation
     if (activeFacilityFloorId) previousFacilityFloorId = activeFacilityFloorId;
     if (activeFacilitySpaceId) previousFacilitySpaceId = activeFacilitySpaceId;
 
     if (hierarchyView) hierarchyView.classList.add("hidden");
     if (visualizerView) visualizerView.classList.remove("hidden");
-    if (portMatrixView) portMatrixView.classList.add("hidden");
     if (titleHierarchy) titleHierarchy.classList.add("hidden");
     if (titleVisualizer) titleVisualizer.classList.remove("hidden");
     if (visualizerControls) visualizerControls.classList.remove("hidden");
@@ -2017,7 +2020,6 @@ function switchFacilityView(viewName, targetLocName) {
     // Return to hierarchy & spaces
     if (hierarchyView) hierarchyView.classList.remove("hidden");
     if (visualizerView) visualizerView.classList.add("hidden");
-    if (portMatrixView) portMatrixView.classList.add("hidden");
     if (titleHierarchy) titleHierarchy.classList.remove("hidden");
     if (titleVisualizer) titleVisualizer.classList.add("hidden");
     if (visualizerControls) visualizerControls.classList.add("hidden");

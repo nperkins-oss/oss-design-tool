@@ -496,6 +496,15 @@
                     <div class="text-[10px] text-slate-400 font-normal">Orion 2-line labels &amp; pull sheets</div>
                   </div>
                 </button>
+                <button onclick="toggleProjectLevelMenu(); openWalkReconciliationModal()" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-emerald-950/60 text-slate-200 hover:text-emerald-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
+                  <div class="p-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div>
+                    <div class="font-bold">Onsite Camera Walk Audit</div>
+                    <div class="text-[10px] text-slate-400 font-normal">Blueprint &amp; field drop reconciliation</div>
+                  </div>
+                </button>
                 <button onclick="toggleProjectLevelMenu(); openProjectWizardModal('edit')" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-sky-950/60 text-slate-200 hover:text-sky-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
                   <div class="p-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">
                     <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
@@ -1267,7 +1276,7 @@
           <button type="button" onclick="openCablePullScheduleModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Cable Pull Schedule &amp; Field Labels">
             <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-400"></i> Cable Schedule
           </button>
-          <button type="button" onclick="openRackPowerMatrixModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Open Rack Power &amp; PDU Receptacle Matrix Studio">
+          <button type="button" onclick="jumpFromMatrixStudioToPowerMatrix()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Open Rack Power &amp; PDU Receptacle Matrix Studio for this switch">
             <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i> Power Matrix
           </button>
           <button type="button" onclick="jumpFromMatrixStudioToElevation()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
@@ -1472,10 +1481,6 @@
           <button id="cableInspectorHeaderBtn" onclick="togglePhysicalInspector()" class="p-1.5 sm:px-2 sm:py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700/80 transition-colors cursor-pointer shadow-sm" title="Toggle Hardware Inspector &amp; Live Rack Peek Panel">
             <i data-lucide="sliders" class="w-3.5 h-3.5 text-amber-400"></i>
             <span class="hidden xl:inline">Inspector</span>
-          </button>
-
-          <button onclick="toggleModalFullscreen()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 border border-slate-700/80 transition-colors" title="Expand Fullscreen">
-            <i data-lucide="maximize-2" id="iconFullscreen" class="w-4 h-4"></i>
           </button>
         </div>
       </div>
@@ -2534,7 +2539,7 @@
             <!-- Visualizer Breadcrumbs with Integrated Enclosure Selector (shown in visualizer view) -->
             <div id="facilityTitleVisualizer" class="hidden">
               <div class="flex items-center gap-2 text-xs font-semibold flex-wrap">
-                <button onclick="switchFacilityView('hierarchy')" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm" title="Return to Spaces &amp; Enclosures list">
+                <button onclick="if(window.TabManager) TabManager.openTab('facility'); else switchFacilityView('hierarchy');" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-sky-300 hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700 shadow-sm cursor-pointer" title="Return to Spaces &amp; Enclosures list">
                   <i data-lucide="arrow-left" class="w-3.5 h-3.5 text-sky-400"></i>
                   <span>Spaces</span>
                 </button>
@@ -2556,7 +2561,17 @@
         <!-- Right: Actions & Tools -->
         <div class="flex items-center gap-2 shrink-0">
           <!-- Visualizer Actions (visible when in visualizer view) -->
-          <div id="facilityVisualizerControls" class="hidden flex items-center gap-1.5">
+          <div id="facilityVisualizerControls" class="hidden flex items-center gap-1.5 flex-wrap">
+            <button type="button" onclick="openPortMatrixForActiveRack()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer" title="Open Switch Port Matrix Studio for this enclosure">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i> Port Matrix
+            </button>
+            <button type="button" onclick="openRackPowerMatrixModal(null, null, null, typeof activeRackId !== 'undefined' ? activeRackId : null)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer" title="Open Rack Power &amp; PDU Receptacle Matrix Studio">
+              <i data-lucide="plug-zap" class="w-3.5 h-3.5 text-emerald-400"></i> Power Matrix
+            </button>
+            <button type="button" onclick="toggleTopologyModal()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer" title="Open Network Topology Studio">
+              <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-400"></i> Topology
+            </button>
+            <div class="w-px h-4 bg-slate-800 mx-0.5"></div>
             <button onclick="openQuickAddEnclosureModal()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-bold transition-colors flex items-center gap-1 shadow-sm cursor-pointer" title="Add New Rack or Enclosure">
               <i data-lucide="plus" class="w-3.5 h-3.5 text-indigo-400"></i> Enclosure
             </button>
@@ -2603,9 +2618,13 @@
 
                 <!-- 0U Vertical Channels & PDU Config (For 19" equipment racks) -->
                 <div id="rackPduConfigControl" class="flex items-center gap-1">
-                  <button type="button" onclick="openRackPowerMatrixModal()" class="px-2 py-0.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/70 rounded-lg text-[11px] font-bold text-emerald-300 hover:text-white flex items-center gap-1 shadow-sm transition-all cursor-pointer" title="Open Rack Power &amp; PDU Receptacle Matrix Studio (End-to-End Power Trace &amp; Orion 2-Line Brady Power Labels)">
+                  <button type="button" onclick="openRackPowerMatrixModal(null, null, null, typeof activeRackId !== 'undefined' ? activeRackId : null)" class="px-2 py-0.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/70 rounded-lg text-[11px] font-bold text-emerald-300 hover:text-white flex items-center gap-1 shadow-sm transition-all cursor-pointer" title="Open Rack Power &amp; PDU Receptacle Matrix Studio (End-to-End Power Trace &amp; Orion 2-Line Brady Power Labels)">
                     <i data-lucide="plug-zap" class="w-3 h-3 text-emerald-400"></i>
                     <span>Power Matrix</span>
+                  </button>
+                  <button type="button" onclick="openPortMatrixForActiveRack()" class="px-2 py-0.5 bg-sky-950/80 hover:bg-sky-900 border border-sky-600/70 rounded-lg text-[11px] font-bold text-sky-300 hover:text-white flex items-center gap-1 shadow-sm transition-all cursor-pointer" title="Open Switch Port Matrix Studio for this rack's active switches">
+                    <i data-lucide="cpu" class="w-3 h-3 text-sky-400"></i>
+                    <span>Port Matrix</span>
                   </button>
                   <button type="button" onclick="toggleRackVerticalChannelsModal()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-indigo-500/60 rounded-lg text-[11px] font-semibold text-indigo-300 flex items-center gap-1 shadow-inner transition-all cursor-pointer" title="Configure 4-Corner 0U Verticals: PDUs or Cable Managers in Front-Left, Front-Right, Rear-Left, Rear-Right">
                     <i data-lucide="columns-3" class="w-3 h-3 text-indigo-400"></i>
@@ -2717,39 +2736,6 @@
           </div>
         </div>
       </div>
-      
-      <!-- View 3: Port Matrix Studio Frame inside Unified Studio -->
-      <div id="facilityPortMatrixView" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-950 flex flex-col">
-        <!-- Port Matrix Header Bar inside Unified Studio -->
-        <div class="px-5 py-3 mb-4 bg-slate-900 border border-slate-800 rounded-2xl flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-xl">
-          <div class="flex items-center gap-3">
-            <div class="p-2 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400">
-              <i data-lucide="cpu" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-bold text-white tracking-tight">Switch Port Matrix &amp; Interconnect Studio</span>
-                <span id="facilityPortMatrixSwitchBadge" class="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">Port Studio</span>
-              </div>
-              <div class="flex items-center gap-2 text-xs text-slate-400 mt-1">
-                <span>Active Switch:</span>
-                <select id="facilityPortMatrixSwitchSelector" onchange="renderPortMatrixStudioContent(this.value)" class="bg-slate-950 border border-slate-700 text-sky-300 font-semibold rounded-lg px-3 py-1 text-xs focus:outline-none focus:border-sky-500 cursor-pointer min-w-[240px] max-w-[420px] truncate shadow-sm transition-all"></select>
-              </div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="switchFacilityView('visualizer')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
-              <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> View in Rack
-            </button>
-            <button type="button" onclick="jumpFromMatrixStudioToTopology()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
-              <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-400"></i> View in Topology
-            </button>
-          </div>
-        </div>
-
-        <!-- Port Matrix Content Body -->
-        <div id="facilityPortMatrixBody" class="flex-1 overflow-y-auto space-y-5"></div>
-      </div>
     </div>
   </div>
 
@@ -2845,7 +2831,7 @@
   <!-- Project Health & Engineering Validation Audit Workspace Tab -->
   <div id="projectHealthModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col animate-fade-in">
     <div class="bg-slate-900 w-full h-full flex flex-col overflow-hidden">
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between gap-3 flex-wrap">
         <div class="flex items-center gap-2.5">
           <div id="projectHealthModalIcon" class="p-2 rounded-xl bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
             <i data-lucide="shield-check" class="w-5 h-5"></i>
@@ -2858,54 +2844,32 @@
             <p class="text-[11px] text-slate-400">Live multi-domain scan of TIA-568 distance limits, PoE power &amp; 802.3bt classes, closet port capacities, and scope compliance.</p>
           </div>
         </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button type="button" onclick="if(window.TabManager) TabManager.openTab('physical_layout'); else if(typeof toggleCableLayoutModal==='function') toggleCableLayoutModal();" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="map" class="w-3.5 h-3.5 text-amber-400"></i> Physical Layout
+          </button>
+          <button type="button" onclick="if(window.TabManager) TabManager.openTab('enclosures'); else if(typeof openFacilityModal==='function') openFacilityModal('visualizer');" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i> Enclosures
+          </button>
+          <button type="button" onclick="if(window.TabManager) TabManager.openTab('port_matrix'); else if(typeof openPortMatrixStudio==='function') openPortMatrixStudio();" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i> Port Matrix
+          </button>
+          <button type="button" onclick="if(window.TabManager) TabManager.openTab('bom'); else if(typeof toggleBomModal==='function') toggleBomModal();" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-brand-400"></i> Quote BOM
+          </button>
+        </div>
       </div>
       <div class="flex-1 overflow-y-auto p-6 space-y-4" id="projectHealthModalContent">
         <!-- Rendered by renderProjectHealthModal() -->
       </div>
       <div class="px-6 py-3 bg-slate-950/90 border-t border-slate-800 flex items-center justify-between text-xs">
         <span class="text-slate-500 font-mono text-[11px]">Audit Engine &bull; Real-time Project Telemetry</span>
-        <button onclick="toggleProjectHealthModal()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold">Close</button>
+        <span class="text-slate-500 font-mono text-[11px]">TIA-568-D &bull; IEEE 802.3af/at/bt &bull; UL 294 &bull; NFPA 70</span>
       </div>
     </div>
   </div>
 
   </div> <!-- End workspaceMainViewport -->
-
-  <!-- Engineering Submittal & System Proposal Modal -->
-  <div id="engineeringSubmittalModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-6xl max-h-[95vh] flex flex-col shadow-2xl overflow-hidden">
-      <!-- Modal Header (Hidden during print) -->
-      <div class="px-6 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/80 no-print shrink-0">
-        <div class="flex items-center gap-2.5">
-          <div class="p-2 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-400">
-            <i data-lucide="file-check" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h2 class="text-sm font-bold text-white flex items-center gap-2">
-              Engineering Submittal & System Proposal
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand-950 text-brand-400 border border-brand-800">Printable Spec</span>
-            </h2>
-            <p class="text-[11px] text-slate-400">Formal contractor submittal package, equipment schedules, thermal dissipation, and field drop schedules.</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="exportComprehensiveProjectCSV()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 flex items-center gap-1.5 transition-colors" title="Export complete multi-section project CSV workbook">
-            <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i> Full CSV
-          </button>
-          <button onclick="printEngineeringSubmittal()" class="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-lg shadow-md flex items-center gap-1.5 transition-all" title="Print or save as high-resolution PDF document">
-            <i data-lucide="printer" class="w-3.5 h-3.5"></i> Print / PDF
-          </button>
-          <button onclick="closeEngineeringSubmittalModal()" class="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-      <!-- Scrollable Submittal Document Body -->
-      <div class="flex-1 overflow-y-auto p-4 sm:p-8" id="engineeringSubmittalModalContent">
-        <!-- Rendered dynamically by openEngineeringSubmittalModal() -->
-      </div>
-    </div>
-  </div>
 
   <!-- Technical Datasheet Viewer Modal -->
   <div id="datasheetViewerModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4" onclick="if(event.target === this) closeDatasheetModal()">

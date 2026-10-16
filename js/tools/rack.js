@@ -2134,9 +2134,9 @@ window.switchPowerMatrixRack = switchPowerMatrixRack;
 
 function jumpFromPowerMatrixToRack(rackSlot = null, instanceId = null) {
   if (window.TabManager && typeof window.TabManager.openTab === "function") {
-    window.TabManager.openTab("rack", { locationName: activeRackId });
-  } else if (typeof openRackModal === "function") {
-    openRackModal();
+    window.TabManager.openTab("enclosures", { locationName: activeRackId });
+  } else if (typeof openRackViewerFor === "function") {
+    openRackViewerFor(activeRackId);
   }
   if (rackSlot !== null && instanceId && typeof selectRackSlotItem === "function") {
     setTimeout(() => {
@@ -2401,24 +2401,42 @@ function renderRackPowerMatrixModalContent() {
         </div>
 
         <div class="flex items-center gap-2 flex-wrap">
-          <!-- Cross-Navigation Links -->
+          <!-- Cross-Navigation Links (Symmetric with Port Matrix Studio) -->
           <button
             type="button"
-            onclick="jumpFromPowerMatrixToRack()"
-            class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Open ${escapeHTML(activeRackId)} in the Rack Elevation Visualizer"
+            onclick="openCablePullScheduleModal()"
+            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Cable Pull Schedule &amp; Field Labels"
           >
-            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i>
-            <span>Rack Elevation</span>
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Cable Schedule</span>
           </button>
           <button
             type="button"
-            onclick="window.TabManager ? TabManager.openTab('port_matrix') : (typeof openPortMatrixStudio === 'function' && openPortMatrixStudio())"
-            class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 hover:text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-            title="Switch to Port Matrix Studio"
+            onclick="if (typeof openPortMatrixStudio === 'function') openPortMatrixStudio(activeRackId); else if (window.TabManager) TabManager.openTab('port_matrix', { switchInstanceId: activeRackId });"
+            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Open Switch Port Matrix Studio for ${escapeHTML(activeRackId)}"
           >
-            <i data-lucide="grid" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
             <span>Port Matrix</span>
+          </button>
+          <button
+            type="button"
+            onclick="jumpFromPowerMatrixToRack()"
+            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Open ${escapeHTML(activeRackId)} in the Rack Elevation Visualizer"
+          >
+            <i data-lucide="server" class="w-3.5 h-3.5 text-indigo-400"></i>
+            <span>View in Rack</span>
+          </button>
+          <button
+            type="button"
+            onclick="toggleTopologyModal()"
+            class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            title="Open Network Topology Studio"
+          >
+            <i data-lucide="network" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>View in Topology</span>
           </button>
 
           <div class="h-5 w-px bg-slate-800 mx-0.5"></div>

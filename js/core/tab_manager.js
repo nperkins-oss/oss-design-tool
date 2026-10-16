@@ -411,14 +411,88 @@ const TabManager = (() => {
         const m = document.getElementById("revisionModal");
         if (m) m.classList.add("hidden");
       }
+    },
+    walk_audit: {
+      id: "walk_audit",
+      title: "Camera Walk Audit",
+      icon: "clipboard-check",
+      color: "emerald",
+      closable: true,
+      modalId: "walkAuditModal",
+      openFn: () => {
+        if (typeof WalkReconciliationEngine !== "undefined" && typeof WalkReconciliationEngine.openModal === "function") {
+          WalkReconciliationEngine.openModal();
+        }
+        if (window.lucide) lucide.createIcons();
+      },
+      closeFn: () => {
+        if (typeof WalkReconciliationEngine !== "undefined" && typeof WalkReconciliationEngine.closeModal === "function") {
+          WalkReconciliationEngine.closeModal();
+        } else {
+          const m = document.getElementById("walkAuditModal");
+          if (m) m.classList.add("hidden");
+        }
+      }
     }
   };
+
+  const TAB_KEY_ALIASES = {
+    rack: "enclosures",
+    layout: "physical_layout",
+    walk: "walk_audit"
+  };
+
+  const TABS_STORAGE_KEY = "netselect_workspace_tabs_v1";
 
   // Initial State: Start with Networking Catalog active
   let openTabs = [
     { id: "catalog_networking", title: "Networking", icon: "network", closable: true, context: null }
   ];
   let activeTabId = "catalog_networking";
+
+  function saveTabsState() {
+    try {
+      const payload = {
+        activeTabId,
+        openTabIds: openTabs.map(t => t.id)
+      };
+      localStorage.setItem(TABS_STORAGE_KEY, JSON.stringify(payload));
+    } catch (e) {
+      // Ignore localStorage quota/privacy errors
+    }
+  }
+
+  function loadTabsState() {
+    try {
+      const raw = localStorage.getItem(TABS_STORAGE_KEY);
+      if (!raw) return false;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.openTabIds) || parsed.openTabIds.length === 0) return false;
+
+      const restored = [];
+      parsed.openTabIds.forEach(rawKey => {
+        const key = TAB_KEY_ALIASES[rawKey] || rawKey;
+        const studio = STUDIO_REGISTRY[key];
+        if (studio && !restored.some(t => t.id === key)) {
+          restored.push({
+            id: key,
+            title: studio.title,
+            icon: studio.icon,
+            closable: studio.closable,
+            context: null
+          });
+        }
+      });
+
+      if (restored.length === 0) return false;
+      openTabs = restored;
+      const targetActive = TAB_KEY_ALIASES[parsed.activeTabId] || parsed.activeTabId;
+      activeTabId = openTabs.some(t => t.id === targetActive) ? targetActive : openTabs[0].id;
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
   function closeAllToolModals() {
     const modalIds = [
@@ -431,7 +505,8 @@ const TabManager = (() => {
       "cableScheduleModal",
       "projectHealthModal",
       "submittalModal",
-      "revisionModal"
+      "revisionModal",
+      "walkAuditModal"
     ];
     modalIds.forEach(id => {
       const el = document.getElementById(id);
@@ -442,11 +517,17 @@ const TabManager = (() => {
   }
 
   function init() {
-    renderTabBar();
     setupGlobalSyncHooks();
+    const restored = loadTabsState();
+    if (restored) {
+      activateTab(activeTabId);
+    } else {
+      renderTabBar();
+    }
   }
 
-  function openTab(studioKey, context = null) {
+  function openTab(rawStudioKey, context = null) {
+    const studioKey = TAB_KEY_ALIASES[rawStudioKey] || rawStudioKey;
     const studio = STUDIO_REGISTRY[studioKey];
     if (!studio) return;
 
@@ -467,7 +548,8 @@ const TabManager = (() => {
     activateTab(studioKey, context);
   }
 
-  function activateTab(tabId, context = null) {
+  function activateTab(rawTabId, context = null) {
+    const tabId = TAB_KEY_ALIASES[rawTabId] || rawTabId;
     const tab = openTabs.find(t => t.id === tabId);
     if (!tab) return;
 
@@ -489,10 +571,11 @@ const TabManager = (() => {
     activeTabId = tabId;
     const studio = STUDIO_REGISTRY[tabId];
 
-    // If opening a studio tab, invoke its openFn
+    // If opening a studio tab, invoke its openFn.
+    // Only pass explicit deep-link context so clicking a tab in the tab bar preserves the user's last manual dropdown selection.
     if (studio && studio.openFn) {
       try {
-        studio.openFn(context || tab.context);
+        studio.openFn(context);
       } catch (err) {
         console.error("Error in studio openFn:", tabId, err);
       }
@@ -502,21 +585,22 @@ const TabManager = (() => {
     if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
     if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
 
+    saveTabsState();
     renderTabBar();
   }
 
-  function closeTab(tabId, e = null) {
+  function closeTab(rawTabId, e = null) {
     if (e) {
       if (typeof e.stopPropagation === "function") e.stopPropagation();
       if (typeof e.preventDefault === "function") e.preventDefault();
     }
+    const tabId = TAB_KEY_ALIASES[rawTabId] || rawTabId;
     const idx = openTabs.findIndex(t => t.id === tabId);
     if (idx === -1) return;
 
     // Do not allow closing if it's the only tab open
     if (openTabs.length <= 1) return;
 
-    const tab = openTabs[idx];
     const studio = STUDIO_REGISTRY[tabId];
     if (studio && studio.closeFn) {
       try {
@@ -532,9 +616,10 @@ const TabManager = (() => {
     if (activeTabId === tabId) {
       const nextTab = openTabs[Math.max(0, idx - 1)] || openTabs[0];
       if (nextTab) {
-        activateTab(nextTab.id, nextTab.context);
+        activateTab(nextTab.id);
       }
     } else {
+      saveTabsState();
       renderTabBar();
     }
   }
@@ -543,23 +628,25 @@ const TabManager = (() => {
     const container = document.getElementById("workspaceTabsList");
     if (!container) return;
 
-    container.innerHTML = openTabs.map(tab => {
+    container.innerHTML = openTabs.map((tab, idx) => {
       const isActive = tab.id === activeTabId;
       const activeClasses = isActive
         ? "bg-slate-950 text-white font-bold border-t border-x border-slate-700/80 border-b-2 border-b-brand-500 shadow-sm"
         : "bg-slate-900/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border-t border-x border-transparent border-b-2 border-b-transparent";
 
       const canClose = (tab.closable !== false) && openTabs.length > 1;
+      const shortcutHint = idx < 9 ? ` (Alt+${idx + 1})` : "";
 
       return `
         <div onclick="TabManager.activateTab('${tab.id}')" 
              onauxclick="if(event.button === 1) TabManager.closeTab('${tab.id}', event)"
              id="workspace-tab-${tab.id}" 
+             title="${tab.title}${shortcutHint}"
              class="group px-3.5 py-2 rounded-t-xl text-xs flex items-center gap-2 transition-all cursor-pointer select-none shrink-0 ${activeClasses}">
           <i data-lucide="${tab.icon}" class="w-3.5 h-3.5 ${isActive ? 'text-brand-400' : 'text-slate-500 group-hover:text-slate-400'}"></i>
           <span class="truncate max-w-[140px] sm:max-w-[180px]">${tab.title}</span>
           ${canClose ? `
-            <button type="button" onclick="TabManager.closeTab('${tab.id}', event)" class="p-0.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 opacity-70 group-hover:opacity-100 transition-all ml-0.5" title="Close Tab (Ctrl+W / Middle-Click)">
+            <button type="button" onclick="TabManager.closeTab('${tab.id}', event)" class="p-0.5 rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 opacity-70 group-hover:opacity-100 transition-all ml-0.5" title="Close Tab (Alt+W / Middle-Click)">
               <i data-lucide="x" class="w-3 h-3"></i>
             </button>
           ` : ''}
@@ -605,14 +692,14 @@ const TabManager = (() => {
       },
       {
         title: "Project Delivery & Engineering",
-        keys: ["bom", "cable_schedule", "drc", "submittal", "revisions"]
+        keys: ["bom", "cable_schedule", "walk_audit", "drc", "submittal", "revisions"]
       }
     ];
 
     dropdown.innerHTML = `
       <div class="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800 flex items-center justify-between">
         <span>Open Workspace Tab</span>
-        <span class="text-[9px] font-mono text-slate-500">Esc to close</span>
+        <span class="text-[9px] font-mono text-slate-500">Alt+1..9 &bull; Esc</span>
       </div>
       <div class="py-1 space-y-2 max-h-80 overflow-y-auto pr-1">
         ${sections.map(sec => `
@@ -672,7 +759,7 @@ const TabManager = (() => {
       }
     };
     window.openRackViewerFor = function(locationName) {
-      openTab("enclosures", { locationName });
+      openTab("enclosures", locationName ? { locationName } : null);
     };
 
     // BOM
@@ -725,9 +812,23 @@ const TabManager = (() => {
       }
     };
 
+    // Camera Walk Audit
+    window.openWalkReconciliationModal = function() {
+      openTab("walk_audit");
+    };
+    window.closeWalkReconciliationModal = function() {
+      if (activeTabId === "walk_audit") {
+        closeTab("walk_audit");
+      } else {
+        const m = document.getElementById("walkAuditModal");
+        if (m) m.classList.add("hidden");
+      }
+    };
+
     // Port Matrix Studio
-    window.openPortMatrixStudio = function(swId, focusPortNumber = null) {
-      openTab("port_matrix", { switchInstanceId: swId, focusPortNumber });
+    window.openPortMatrixStudio = function(swId = null, focusPortNumber = null) {
+      const ctx = (swId || focusPortNumber !== null) ? { switchInstanceId: swId, focusPortNumber } : null;
+      openTab("port_matrix", ctx);
     };
     window.closePortMatrixStudio = function() {
       if (activeTabId === "port_matrix") {
@@ -735,13 +836,16 @@ const TabManager = (() => {
       } else {
         const m = document.getElementById("portMatrixStudioModal");
         if (m) m.classList.add("hidden");
-        if (typeof _rawClosePortMatrixStudio === "function") _rawClosePortMatrixStudio();
+        if (typeof _rawOrigClosePortMatrixStudio === "function") _rawOrigClosePortMatrixStudio();
       }
     };
 
     // Power Matrix Studio
     window.openRackPowerMatrixModal = function(focusPduKey = null, focusOutletNum = null, focusInstanceId = null, targetRackId = null) {
-      openTab("power_matrix", { focusPduKey, focusOutletNum, focusInstanceId, targetRackId });
+      const ctx = (focusPduKey || focusOutletNum || focusInstanceId || targetRackId)
+        ? { focusPduKey, focusOutletNum, focusInstanceId, targetRackId }
+        : null;
+      openTab("power_matrix", ctx);
     };
     window.openPowerMatrixStudio = window.openRackPowerMatrixModal;
     window.closeRackPowerMatrixModal = function() {
@@ -755,16 +859,30 @@ const TabManager = (() => {
     };
   }
 
-  // Keyboard shortcut for tab navigation (Ctrl+W closes active tab, Ctrl+T opens new tab menu)
+  // Keyboard shortcuts for rapid multi-tab navigation:
+  // - Alt+1..9: Switch to open tab 1..9
+  // - Alt+W or Ctrl+W: Close active tab
+  // - Alt+T or Ctrl+T: Open '+' New Tab menu
+  // - Alt+B or Alt+Q: Open Quote BOM tab
   document.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key === "w") {
+    const keyLower = (e.key || "").toLowerCase();
+    if ((e.ctrlKey || e.altKey) && keyLower === "w") {
       if (openTabs.length > 1) {
         e.preventDefault();
         closeTab(activeTabId);
       }
-    } else if (e.ctrlKey && e.key === "t") {
+    } else if ((e.ctrlKey || e.altKey) && keyLower === "t") {
       e.preventDefault();
       toggleNewTabMenu();
+    } else if (e.altKey && (keyLower === "b" || keyLower === "q")) {
+      e.preventDefault();
+      openTab("bom");
+    } else if (e.altKey && /^[1-9]$/.test(e.key)) {
+      const targetIdx = parseInt(e.key, 10) - 1;
+      if (openTabs[targetIdx]) {
+        e.preventDefault();
+        activateTab(openTabs[targetIdx].id);
+      }
     } else if (e.key === "Escape") {
       const dropdown = document.getElementById("newTabMenuDropdown");
       if (dropdown && !dropdown.classList.contains("hidden")) {
