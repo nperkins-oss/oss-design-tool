@@ -318,22 +318,84 @@ document.addEventListener("DOMContentLoaded", () => {
   safeCreateIcons();
 });
 
+// Remember last active sub-mode per domain and isolated per-mode shared filter state
+const lastActiveModeByDomain = {
+  networking: "access",
+  physical_security: "cameras",
+  compute_storage: "servers",
+  infrastructure: "racks",
+  software: "vms_software"
+};
+
+const modeFilterState = {};
+
+function saveModeFilterState(mode) {
+  if (!mode) return;
+  modeFilterState[mode] = {
+    selectedAccSubCategory,
+    selectedAccVendors: Array.isArray(selectedAccVendors) ? [...selectedAccVendors] : [],
+    selectedAccCategories: Array.isArray(selectedAccCategories) ? [...selectedAccCategories] : [],
+    selectedAccTypes: Array.isArray(selectedAccTypes) ? [...selectedAccTypes] : [],
+    selectedAccMounting,
+    accMinPowerWatts,
+    selectedUpsVoltage
+  };
+}
+
+function restoreModeFilterState(mode) {
+  if (!mode) return;
+  const saved = modeFilterState[mode];
+  if (saved) {
+    selectedAccSubCategory = saved.selectedAccSubCategory ?? "all";
+    window.selectedAccSubCategory = selectedAccSubCategory;
+    selectedAccVendors = Array.isArray(saved.selectedAccVendors) ? [...saved.selectedAccVendors] : [];
+    selectedAccCategories = Array.isArray(saved.selectedAccCategories) ? [...saved.selectedAccCategories] : [];
+    selectedAccTypes = Array.isArray(saved.selectedAccTypes) ? [...saved.selectedAccTypes] : [];
+    selectedAccMounting = saved.selectedAccMounting ?? "all";
+    accMinPowerWatts = saved.accMinPowerWatts ?? 0;
+    selectedUpsVoltage = saved.selectedUpsVoltage ?? "all";
+  } else {
+    selectedAccSubCategory = "all";
+    window.selectedAccSubCategory = "all";
+    selectedAccVendors = [];
+    selectedAccCategories = [];
+    selectedAccTypes = [];
+    selectedAccMounting = "all";
+    accMinPowerWatts = 0;
+    selectedUpsVoltage = "all";
+  }
+}
+
 // -----------------------------------------------------------
 // Master Domain & Sub-Mode Routing
 // -----------------------------------------------------------
 function switchDomain(domainKey, openTabFlag = true) {
   if (!DOMAIN_DEFINITIONS[domainKey]) return;
+  saveModeFilterState(currentMode);
+
   activeDomain = domainKey;
-  
-  // Default to the first mode of this domain
-  currentMode = DOMAIN_DEFINITIONS[domainKey].modes[0].id;
+  window.activeDomain = activeDomain;
+
+  // Restore the last active sub-mode for this domain instead of resetting to modes[0]
+  const savedMode = lastActiveModeByDomain[domainKey];
+  const validMode = DOMAIN_DEFINITIONS[domainKey].modes.some(m => m.id === savedMode)
+    ? savedMode
+    : DOMAIN_DEFINITIONS[domainKey].modes[0].id;
+  currentMode = validMode;
+  window.currentMode = currentMode;
+  lastActiveModeByDomain[domainKey] = currentMode;
+
+  restoreModeFilterState(currentMode);
 
   if (openTabFlag && typeof TabManager !== "undefined") {
     TabManager.openTab("catalog_" + domainKey);
   }
 
-  // Auto-reset search filters and search bar on page change to prevent hidden filter zero-results traps
-  resetCurrentFilters(true);
+  // Keep search input box synchronized with persistent activeSearchQuery
+  const searchInput = document.getElementById("filterSearch");
+  if (searchInput && searchInput.value !== activeSearchQuery) {
+    searchInput.value = activeSearchQuery;
+  }
 
   buildDomainNavigation();
   buildSubModeNavigation();
@@ -344,18 +406,28 @@ function switchDomain(domainKey, openTabFlag = true) {
 }
 
 function switchMode(newMode) {
+  saveModeFilterState(currentMode);
+
   // Find parent domain for this mode
   for (const [dKey, dDef] of Object.entries(DOMAIN_DEFINITIONS)) {
     if (dDef.modes.some(m => m.id === newMode)) {
       activeDomain = dKey;
+      window.activeDomain = activeDomain;
+      lastActiveModeByDomain[dKey] = newMode;
       break;
     }
   }
 
   currentMode = newMode;
+  window.currentMode = currentMode;
 
-  // Auto-reset search filters and search bar on mode change to prevent hidden filter zero-results traps
-  resetCurrentFilters(true);
+  restoreModeFilterState(newMode);
+
+  // Keep search input box synchronized with persistent activeSearchQuery
+  const searchInput = document.getElementById("filterSearch");
+  if (searchInput && searchInput.value !== activeSearchQuery) {
+    searchInput.value = activeSearchQuery;
+  }
 
   buildDomainNavigation();
   buildSubModeNavigation();
@@ -528,10 +600,14 @@ function resetCurrentFilters(silent = false) {
   minSrvStorageTb = 0;
   requireSrvDualPsu = false;
 
+  window.selectedAccSubCategory = "all";
+  Object.keys(modeFilterState).forEach(k => delete modeFilterState[k]);
+
   activeSearchQuery = "";
   const searchInput = document.getElementById("filterSearch");
   if (searchInput) searchInput.value = "";
 
+  buildCalculatorStrip();
   buildSidebarFilters();
   runActiveFilter();
   if (!silent && typeof showToast === "function") {

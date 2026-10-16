@@ -695,9 +695,9 @@ const GlobalSearchEngine = {
     const filterInput = document.getElementById("filterSearch");
     if (filterInput) filterInput.value = "";
 
-    // Reset current filters so the target card is never hidden by previous filter checkboxes
+    // Reset current filters silently so the target card is never hidden by previous filter checkboxes
     if (typeof resetCurrentFilters === "function") {
-      resetCurrentFilters();
+      resetCurrentFilters(true);
     }
 
     // 3. Switch domain & mode if necessary
