@@ -559,11 +559,12 @@ function setRackVerticalChannels(channels, rackId = activeRackId) {
   renderRackVisualizer();
 }
 
-function getRackPduConfig() {
-  const parsed = FacilityStore.parse(activeRackId);
+function getRackPduConfig(rackIdOverride = null) {
+  const targetRackId = rackIdOverride || activeRackId;
+  const parsed = FacilityStore.parse(targetRackId);
   const enclosures = FacilityStore.getEnclosures();
   const activeEnc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === (parsed.hostName || '').toLowerCase()) || null;
-  const saved = localStorage.getItem(`rack_pdu_config_${activeRackId}`);
+  const saved = localStorage.getItem(`rack_pdu_config_${targetRackId}`);
   if (saved) return saved;
   if (activeEnc && activeEnc.pduConfig) return activeEnc.pduConfig;
   return "front_cable_rear_pdu";
@@ -1227,7 +1228,8 @@ function shortSocketLabel(socketType) {
   return socketType || "5-20R";
 }
 
-function resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig) {
+function resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig, rackIdOverride = null) {
+  const targetRackId = rackIdOverride || activeRackId;
   const allPdus = getCatalogPdusList();
   const isHoriz = (pduConfig === "horizontal");
   const defaultZeroU = allPdus.find(p => p.sku === "EMI001") || allPdus.find(p => (p.rackUnits || 0) === 0) || null;
@@ -1238,13 +1240,13 @@ function resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig) {
   const matchingBomPdus = bomPdus.filter(it => isHoriz ? (parseInt(it.rackUnits, 10) || 0) >= 1 : (parseInt(it.rackUnits, 10) || 0) === 0);
 
   const savedSkuA = (activeEnc && (isHoriz ? activeEnc.pduHorizSku : activeEnc.pduASku))
-    || localStorage.getItem(`rack_pdu_sku_${isHoriz ? 'horiz' : 'a'}_${activeRackId}`)
+    || localStorage.getItem(`rack_pdu_sku_${isHoriz ? 'horiz' : 'a'}_${targetRackId}`)
     || (matchingBomPdus[0] && matchingBomPdus[0].sku)
     || (bomPdus[0] && bomPdus[0].sku)
     || null;
 
   const savedSkuB = (activeEnc && activeEnc.pduBSku)
-    || localStorage.getItem(`rack_pdu_sku_b_${activeRackId}`)
+    || localStorage.getItem(`rack_pdu_sku_b_${targetRackId}`)
     || (matchingBomPdus[1] ? matchingBomPdus[1].sku : (matchingBomPdus[0] && matchingBomPdus[0].sku))
     || savedSkuA
     || null;
@@ -1695,12 +1697,13 @@ function autoBalanceRackPowerFeeds() {
 }
 window.autoBalanceRackPowerFeeds = autoBalanceRackPowerFeeds;
 
-function calculateRackPduMetrics(assignedItems, activeEnc) {
-  const pduConfig = getRackPduConfig();
+function calculateRackPduMetrics(assignedItems, activeEnc, rackIdOverride = null) {
+  const targetRackId = rackIdOverride || activeRackId;
+  const pduConfig = getRackPduConfig(targetRackId);
   const isSingleFeedMode = (pduConfig === "single_vertical" || pduConfig === "horizontal");
 
   // Resolve OSS Standard Closet Prefix (e.g., MDF, IDFA, 2-IDFB, 1-2-IDFC)
-  const parsed = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(activeRackId) : { space: "MDF" };
+  const parsed = (typeof FacilityStore !== "undefined") ? FacilityStore.parse(targetRackId) : { space: "MDF" };
   const closetPrefix = (typeof PortEngine !== "undefined" && typeof PortEngine.formatClosetPrefix === "function")
     ? PortEngine.formatClosetPrefix(parsed)
     : ((parsed.space || "MDF").replace(/[^a-zA-Z0-9]/g, "").toUpperCase() || "MDF");
@@ -1711,7 +1714,7 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
   const pduBFullId = `${closetPrefix}-${pduBCode}`;
 
   // Resolve Real Catalog PDU Specifications for PDU-A and PDU-B
-  const { pduADef, pduBDef, bomPdus } = resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig);
+  const { pduADef, pduBDef, bomPdus } = resolveRackCatalogPdus(assignedItems, activeEnc, pduConfig, targetRackId);
   const specA = buildPduSpecFromCatalog(pduADef, pduAFullId, pduACode);
   const specB = buildPduSpecFromCatalog(pduBDef, pduBFullId, pduBCode);
 
@@ -2032,10 +2035,32 @@ function calculateRackPduMetrics(assignedItems, activeEnc) {
     }
   };
 
-  window._lastRackPduMetrics = metricsResult;
+  if (!rackIdOverride || rackIdOverride === activeRackId) {
+    window._lastRackPduMetrics = metricsResult;
+  }
   return metricsResult;
 }
 window.calculateRackPduMetrics = calculateRackPduMetrics;
+
+function getRackPduMetricsForLocation(loc) {
+  if (!loc || typeof FacilityStore === "undefined" || typeof projectBOM === "undefined") return null;
+  const normLoc = FacilityStore.normalize(loc);
+  const parsed = FacilityStore.parse(normLoc);
+  if (!parsed || parsed.isDin || parsed.isWallBackboard || parsed.isPole || normLoc.endsWith("• Field")) {
+    return null;
+  }
+  const enclosures = FacilityStore.getEnclosures();
+  const enc = enclosures.find(e => e.id === parsed.hostId) || enclosures.find(e => e.name.toLowerCase() === (parsed.hostName || "").toLowerCase()) || null;
+  if (enc && enc.hostType && enc.hostType !== "equipment_rack") {
+    return null;
+  }
+  const itemsInRack = projectBOM.filter(it => {
+    if (!it || it.parentInstanceId) return false;
+    return FacilityStore.normalize(it.closetName || it.rackId) === normLoc;
+  });
+  return calculateRackPduMetrics(itemsInRack, enc, normLoc);
+}
+window.getRackPduMetricsForLocation = getRackPduMetricsForLocation;
 
 // =========================================================================
 // RACK POWER & PDU RECEPTACLE MATRIX STUDIO MODAL

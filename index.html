@@ -985,6 +985,11 @@
             <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-sky-400"></i> Port Matrix
           </button>
 
+          <!-- Open Dedicated Power Matrix Studio -->
+          <button onclick="openRackPowerMatrixModal()" class="px-2.5 py-1.5 bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-amber-700/60 transition-colors shadow-sm cursor-pointer" title="Open Dedicated Widescreen Rack Power &amp; PDU Receptacle Matrix Studio">
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Power Matrix
+          </button>
+
           <!-- Auto-Synthesize Optics & DACs -->
           <button onclick="autoSynthesizeInterconnects()" class="px-2.5 py-1.5 bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-emerald-700/60 transition-colors shadow-sm cursor-pointer" title="Auto-synthesize DAC cables and optical transceivers for all active topology links into BOM">
             <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
@@ -1001,73 +1006,91 @@
       <!-- Tier 2: Canvas Controls & Layout Toolbar -->
       <div class="px-4 py-1.5 border-b border-slate-800/60 bg-slate-900/60 flex items-center justify-between shrink-0 gap-2 text-xs">
         <div class="flex items-center gap-2 flex-wrap">
-          <!-- Systems Plane Filter Selector -->
-          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl">
-            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">View:</span>
-            <select id="topologyPlaneSelector" onchange="setTopologyViewPlane(this.value)" class="bg-transparent font-bold text-xs text-brand-400 focus:outline-none cursor-pointer">
+          <!-- Unified View Lens & Device Layer Filter Menu -->
+          <div class="relative" id="topologyLayerFilterContainer">
+            <button id="btnTopologyLayers" onclick="toggleTopologyLayerMenu()" class="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-200 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Filter System View Lens &amp; Device Type Layers">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span id="lblTopologyActivePlane">View &amp; Layers: Unified</span>
+              <span id="badgeTopologyLayerCount" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">All</span>
+              <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+            </button>
+            <!-- Hidden select preserved for programmatic compatibility -->
+            <select id="topologyPlaneSelector" onchange="setTopologyViewPlane(this.value)" class="hidden">
               <option value="all">All Systems (Unified)</option>
               <option value="backbone">Backbone &amp; Speeds</option>
               <option value="power">PoE &amp; Power Delivery</option>
               <option value="vms">VMS Video Recording &amp; Ingest</option>
               <option value="access">Access Control &amp; Security Services</option>
             </select>
-          </div>
-
-          <!-- Dynamic Layer Filter Selector -->
-          <div class="relative" id="topologyLayerFilterContainer">
-            <button id="btnTopologyLayers" onclick="toggleTopologyLayerMenu()" class="px-2.5 py-1.5 bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Filter Topology Device Layers">
-              <i data-lucide="layers" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Layers</span>
-              <span id="badgeTopologyLayerCount" class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold">All</span>
-            </button>
-            <div id="topologyLayerMenu" class="hidden absolute left-0 top-full mt-1.5 w-64 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-2.5 space-y-2 backdrop-blur-md">
-              <div class="flex items-center justify-between pb-1.5 border-b border-slate-800 text-[11px]">
-                <span class="font-bold text-slate-200">Device Type Layers</span>
-                <div class="flex gap-2 text-[10px] font-mono">
-                  <button type="button" onclick="toggleAllTopologyLayers(true)" class="text-emerald-400 hover:underline cursor-pointer">All</button>
-                  <span class="text-slate-600">|</span>
-                  <button type="button" onclick="toggleAllTopologyLayers(false)" class="text-slate-400 hover:underline cursor-pointer">None</button>
+            <div id="topologyLayerMenu" class="hidden absolute left-0 top-full mt-1.5 w-72 bg-slate-950 border border-slate-800 rounded-xl shadow-2xl z-50 p-3 space-y-3 backdrop-blur-md">
+              <!-- System Lens Quick Presets -->
+              <div class="space-y-1.5 pb-2.5 border-b border-slate-800">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span class="font-bold text-slate-200">System View Lens</span>
+                  <span class="text-[10px] font-mono text-slate-500">Auto-Syncs Layers</span>
+                </div>
+                <div class="grid grid-cols-1 gap-1 text-[11px]" id="topoLensPresetButtons">
+                  <button type="button" data-plane="all" onclick="setTopologyViewPlane('all')" class="px-2 py-1 rounded-lg bg-brand-600/20 border border-brand-500/50 text-brand-300 font-semibold text-left flex items-center justify-between cursor-pointer transition-colors">
+                    <span>All Systems (Unified)</span>
+                    <span class="text-[9px] font-mono opacity-80">Full Stack</span>
+                  </button>
+                  <button type="button" data-plane="backbone" onclick="setTopologyViewPlane('backbone')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors">
+                    <span>Backbone &amp; Trunks Only</span>
+                    <span class="text-[9px] font-mono text-sky-400">Core/Access</span>
+                  </button>
+                  <button type="button" data-plane="power" onclick="setTopologyViewPlane('power')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors">
+                    <span>PoE &amp; Rack PDU Power</span>
+                    <span class="text-[9px] font-mono text-amber-400">PDU + PoE</span>
+                  </button>
+                  <button type="button" data-plane="vms" onclick="setTopologyViewPlane('vms')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors">
+                    <span>VMS Video Ingest Pipeline</span>
+                    <span class="text-[9px] font-mono text-teal-400">Cams ➔ NVR</span>
+                  </button>
+                  <button type="button" data-plane="access" onclick="setTopologyViewPlane('access')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors">
+                    <span>Access Control Pipeline</span>
+                    <span class="text-[9px] font-mono text-cyan-400">Doors ➔ ACS</span>
+                  </button>
                 </div>
               </div>
-              <div class="space-y-1.5 text-xs">
-                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input type="checkbox" id="topoLayer-network" checked onchange="setTopologyLayerFilter('network', this.checked)" class="rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i> Switches &amp; Firewalls</span>
-                </label>
-                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input type="checkbox" id="topoLayer-servers" checked onchange="setTopologyLayerFilter('servers', this.checked)" class="rounded bg-slate-900 border-slate-700 text-purple-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="server" class="w-3.5 h-3.5 text-purple-400"></i> Servers &amp; Storage</span>
-                </label>
-                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input type="checkbox" id="topoLayer-cameras" checked onchange="setTopologyLayerFilter('cameras', this.checked)" class="rounded bg-slate-900 border-slate-700 text-teal-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-teal-400"></i> Cameras &amp; Video</span>
-                </label>
-                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input type="checkbox" id="topoLayer-access" checked onchange="setTopologyLayerFilter('access', this.checked)" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control &amp; Doors</span>
-                </label>
-                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input type="checkbox" id="topoLayer-wireless" checked onchange="setTopologyLayerFilter('wireless', this.checked)" class="rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-sky-400"></i> Wireless Bridges &amp; Radios</span>
-                </label>
-                <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
-                  <input type="checkbox" id="topoLayer-links" checked onchange="setTopologyLayerFilter('links', this.checked)" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0">
-                  <span class="flex items-center gap-1.5"><i data-lucide="spline" class="w-3.5 h-3.5 text-amber-400"></i> Interconnect Links &amp; DACs</span>
-                </label>
+
+              <!-- Individual Device Type Layer Toggles -->
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between pb-1 text-[11px]">
+                  <span class="font-bold text-slate-200">Device Type Layers</span>
+                  <div class="flex gap-2 text-[10px] font-mono">
+                    <button type="button" onclick="toggleAllTopologyLayers(true)" class="text-emerald-400 hover:underline cursor-pointer">All</button>
+                    <span class="text-slate-600">|</span>
+                    <button type="button" onclick="toggleAllTopologyLayers(false)" class="text-slate-400 hover:underline cursor-pointer">None</button>
+                  </div>
+                </div>
+                <div class="space-y-1.5 text-xs">
+                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input type="checkbox" id="topoLayer-network" checked onchange="setTopologyLayerFilter('network', this.checked)" class="rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0">
+                    <span class="flex items-center gap-1.5"><i data-lucide="network" class="w-3.5 h-3.5 text-indigo-400"></i> Switches &amp; Firewalls</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input type="checkbox" id="topoLayer-servers" checked onchange="setTopologyLayerFilter('servers', this.checked)" class="rounded bg-slate-900 border-slate-700 text-purple-500 focus:ring-0">
+                    <span class="flex items-center gap-1.5"><i data-lucide="server" class="w-3.5 h-3.5 text-purple-400"></i> Servers &amp; Storage</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input type="checkbox" id="topoLayer-cameras" checked onchange="setTopologyLayerFilter('cameras', this.checked)" class="rounded bg-slate-900 border-slate-700 text-teal-500 focus:ring-0">
+                    <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-teal-400"></i> Cameras &amp; Video</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input type="checkbox" id="topoLayer-access" checked onchange="setTopologyLayerFilter('access', this.checked)" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+                    <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control &amp; Doors</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input type="checkbox" id="topoLayer-wireless" checked onchange="setTopologyLayerFilter('wireless', this.checked)" class="rounded bg-slate-900 border-slate-700 text-sky-500 focus:ring-0">
+                    <span class="flex items-center gap-1.5"><i data-lucide="radio" class="w-3.5 h-3.5 text-sky-400"></i> Wireless Bridges &amp; Radios</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                    <input type="checkbox" id="topoLayer-links" checked onchange="setTopologyLayerFilter('links', this.checked)" class="rounded bg-slate-900 border-slate-700 text-amber-500 focus:ring-0">
+                    <span class="flex items-center gap-1.5"><i data-lucide="spline" class="w-3.5 h-3.5 text-amber-400"></i> Interconnect Links &amp; DACs</span>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
-
-          <!-- Auto-Arrange & Network Layout Presets -->
-          <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5 shadow">
-            <button onclick="autoArrangeTopologyHierarchy()" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Auto-Arrange Layout">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Auto-Arrange
-            </button>
-            <select id="topologyLayoutMode" onchange="autoArrangeTopologyHierarchy(this.value)" class="bg-transparent font-medium text-xs text-indigo-300 px-2 py-1 focus:outline-none cursor-pointer hover:text-white transition-colors" title="Select Network Topology Layout Pattern">
-              <option value="tree">Tiered Tree</option>
-              <option value="hub_spoke">Hub &amp; Spoke</option>
-              <option value="ring">Resilient Ring</option>
-            </select>
           </div>
 
           <!-- Toggle Field Devices (Cameras, Access Drops) -->
@@ -1079,22 +1102,30 @@
           <!-- Dual-Mode Topology Grouping Mode (Physical Floor vs Serving Switch) -->
           <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-xl" title="Switch between grouping field drops by their Physical Floor vs by their Serving Switch Enclosure">
             <i data-lucide="split" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
-            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">Group:</span>
-            <select id="topologyGroupingSelector" onchange="setTopologyGroupingMode(this.value)" class="bg-transparent font-bold text-xs text-cyan-300 focus:outline-none cursor-pointer">
-              <option value="floor">Physical Floor (Cable Runs)</option>
-              <option value="switch">Serving Switch Enclosure</option>
+            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">Group Drops:</span>
+            <select id="topologyGroupingSelector" onchange="setTopologyGroupingMode(this.value)" class="bg-slate-900 font-bold text-xs text-cyan-300 focus:outline-none cursor-pointer">
+              <option value="floor" class="bg-slate-900 text-white">Physical Floor (Cable Runs)</option>
+              <option value="switch" class="bg-slate-900 text-white">Serving Switch Enclosure</option>
             </select>
           </div>
 
-          <!-- Project Default Fiber Selector -->
-          <div class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-950/80 rounded-xl border border-slate-800" title="Project Default Fiber Specification for Inter-Rack / Backbone Links">
-            <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400 shrink-0"></i>
-            <span class="text-[10px] font-mono text-slate-400 uppercase font-semibold">Fiber:</span>
-            <select id="topoProjectFiberSelect" onchange="setProjectFiberType(this.value)" class="bg-transparent font-bold text-xs text-cyan-300 focus:outline-none cursor-pointer">
-              <option value="mmf">MMF (OM4 SR)</option>
-              <option value="smf">SMF (OS2 LR)</option>
+          <!-- Auto-Arrange & Network Layout Presets -->
+          <div class="flex items-center bg-slate-900 border border-slate-800 rounded-xl p-0.5 shadow">
+            <button onclick="autoArrangeTopologyHierarchy()" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Auto-Arrange Layout">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Auto-Arrange
+            </button>
+            <select id="topologyLayoutMode" onchange="autoArrangeTopologyHierarchy(this.value)" class="bg-slate-900 font-medium text-xs text-indigo-300 px-2 py-1 focus:outline-none cursor-pointer hover:text-white transition-colors rounded-r-lg" title="Select Network Topology Layout Pattern">
+              <option value="tree" class="bg-slate-900 text-white">Tiered Tree</option>
+              <option value="hub_spoke" class="bg-slate-900 text-white">Hub &amp; Spoke</option>
+              <option value="ring" class="bg-slate-900 text-white">Resilient Ring</option>
             </select>
           </div>
+
+          <!-- Hidden Project Default Fiber Selector (Moved to Topology Project Overview Inspector & Project Standards) -->
+          <select id="topoProjectFiberSelect" onchange="setProjectFiberType(this.value)" class="hidden">
+            <option value="mmf" class="bg-slate-900 text-white">MMF (OM4 SR)</option>
+            <option value="smf" class="bg-slate-900 text-white">SMF (OS2 LR)</option>
+          </select>
         </div>
 
         <!-- Canvas Undo/Redo & Zoom Controls -->

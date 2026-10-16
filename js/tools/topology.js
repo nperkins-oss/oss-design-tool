@@ -658,31 +658,66 @@ function toggleTopologyLayerMenu() {
   menu.classList.toggle("hidden");
 }
 
+function syncTopologyLayerCheckboxesDom() {
+  Object.keys(topologyLayerFilters).forEach(k => {
+    const chk = document.getElementById(`topoLayer-${k}`);
+    if (chk) chk.checked = !!topologyLayerFilters[k];
+  });
+  const hasAnyFieldLayer = !!(topologyLayerFilters.cameras || topologyLayerFilters.access);
+  showTopologyFieldDevices = hasAnyFieldLayer;
+  if (typeof localStorage !== "undefined") {
+    localStorage.setItem("netselect_topology_show_field", showTopologyFieldDevices ? "true" : "false");
+  }
+  updateTopologyLayerCountBadge();
+  updateTopologyFieldDevicesButton();
+}
+
 function setTopologyLayerFilter(layer, enabled) {
   if (topologyLayerFilters.hasOwnProperty(layer)) {
     topologyLayerFilters[layer] = !!enabled;
   }
-  updateTopologyLayerCountBadge();
+  // If user manually toggles cameras/access on while in 'backbone' plane, switch lens back to 'all' so they appear
+  if (enabled && (layer === "cameras" || layer === "access" || layer === "servers") && activeTopologyViewPlane === "backbone") {
+    activeTopologyViewPlane = "all";
+  }
+  syncTopologyLayerCheckboxesDom();
   renderTopology();
 }
 
 function toggleAllTopologyLayers(enableAll) {
+  activeTopologyViewPlane = enableAll ? "all" : activeTopologyViewPlane;
   Object.keys(topologyLayerFilters).forEach(k => {
     topologyLayerFilters[k] = !!enableAll;
-    const chk = document.getElementById(`topoLayer-${k}`);
-    if (chk) chk.checked = !!enableAll;
   });
-  updateTopologyLayerCountBadge();
+  syncTopologyLayerCheckboxesDom();
   renderTopology();
 }
 
 function updateTopologyLayerCountBadge() {
   const badge = document.getElementById("badgeTopologyLayerCount");
+  const planeLbl = document.getElementById("lblTopologyActivePlane");
+  const planeLabels = {
+    all: "View & Layers: Unified",
+    backbone: "Lens: Backbone",
+    power: "Lens: PoE & PDU Power",
+    vms: "Lens: Video / VMS",
+    access: "Lens: Access Control"
+  };
+  if (planeLbl) {
+    planeLbl.textContent = planeLabels[activeTopologyViewPlane] || "View & Layers";
+  }
+  const presetBtns = document.querySelectorAll("#topoLensPresetButtons button[data-plane]");
+  presetBtns.forEach(btn => {
+    const isAct = btn.getAttribute("data-plane") === activeTopologyViewPlane;
+    btn.className = isAct
+      ? "px-2 py-1 rounded-lg bg-brand-600/20 border border-brand-500/50 text-brand-300 font-semibold text-left flex items-center justify-between cursor-pointer transition-colors"
+      : "px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors";
+  });
   if (!badge) return;
   const total = Object.keys(topologyLayerFilters).length;
   const active = Object.values(topologyLayerFilters).filter(Boolean).length;
   badge.textContent = active === total ? "All" : `${active}/${total}`;
-  if (active < total) {
+  if (active < total || activeTopologyViewPlane !== "all") {
     badge.className = "text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500 text-slate-950 font-bold";
   } else {
     badge.className = "text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold";
@@ -694,20 +729,17 @@ function toggleTopologyFieldDevices() {
   if (typeof localStorage !== "undefined") {
     localStorage.setItem("netselect_topology_show_field", showTopologyFieldDevices ? "true" : "false");
   }
+  if (showTopologyFieldDevices && activeTopologyViewPlane === "backbone") {
+    activeTopologyViewPlane = "all";
+  } else if (!showTopologyFieldDevices && (activeTopologyViewPlane === "vms" || activeTopologyViewPlane === "access")) {
+    activeTopologyViewPlane = "backbone";
+  }
   topologyLayerFilters.cameras = showTopologyFieldDevices;
   topologyLayerFilters.access = showTopologyFieldDevices;
-  topologyLayerFilters.wireless = showTopologyFieldDevices;
-  const chkCam = document.getElementById("topoLayer-cameras");
-  const chkAcc = document.getElementById("topoLayer-access");
-  const chkWire = document.getElementById("topoLayer-wireless");
-  if (chkCam) chkCam.checked = showTopologyFieldDevices;
-  if (chkAcc) chkAcc.checked = showTopologyFieldDevices;
-  if (chkWire) chkWire.checked = showTopologyFieldDevices;
-  updateTopologyLayerCountBadge();
-  updateTopologyFieldDevicesButton();
+  syncTopologyLayerCheckboxesDom();
   renderTopology();
   if (typeof showToast === "function") {
-    showToast(showTopologyFieldDevices ? "Showing field devices & drops" : "Hiding field devices (showing backbone infrastructure)");
+    showToast(showTopologyFieldDevices ? "Showing field devices & horizontal cable drops" : "Hiding field drops (showing rack & backbone infrastructure)");
   }
 }
 
@@ -942,6 +974,39 @@ function panNodeIntoView(instanceId) {
 
 function setTopologyViewPlane(plane) {
   activeTopologyViewPlane = plane || "all";
+  const sel = document.getElementById("topologyPlaneSelector");
+  if (sel && sel.value !== activeTopologyViewPlane) {
+    sel.value = activeTopologyViewPlane;
+  }
+  if (activeTopologyViewPlane === "backbone") {
+    topologyLayerFilters.network = true;
+    topologyLayerFilters.wireless = true;
+    topologyLayerFilters.links = true;
+    topologyLayerFilters.servers = false;
+    topologyLayerFilters.cameras = false;
+    topologyLayerFilters.access = false;
+  } else if (activeTopologyViewPlane === "vms") {
+    topologyLayerFilters.network = true;
+    topologyLayerFilters.servers = true;
+    topologyLayerFilters.cameras = true;
+    topologyLayerFilters.links = true;
+    topologyLayerFilters.access = false;
+  } else if (activeTopologyViewPlane === "access") {
+    topologyLayerFilters.network = true;
+    topologyLayerFilters.servers = true;
+    topologyLayerFilters.access = true;
+    topologyLayerFilters.links = true;
+    topologyLayerFilters.cameras = false;
+  } else {
+    // "all" or "power"
+    topologyLayerFilters.network = true;
+    topologyLayerFilters.servers = true;
+    topologyLayerFilters.cameras = true;
+    topologyLayerFilters.access = true;
+    topologyLayerFilters.wireless = true;
+    topologyLayerFilters.links = true;
+  }
+  syncTopologyLayerCheckboxesDom();
   renderTopology();
   renderTopologyInspector();
 }
@@ -1278,11 +1343,36 @@ function renderTopology() {
     }
   });
 
+  // Pre-compute switch patch panel mappings and rack PDU metrics for fast lookup
+  const switchPatchCache = {};
+  const getCachedSwitchPatchMapping = (sw) => {
+    if (!sw || typeof PortEngine === "undefined" || typeof PortEngine.resolveSwitchPatchMapping !== "function") return null;
+    if (!switchPatchCache[sw.instanceId]) {
+      switchPatchCache[sw.instanceId] = PortEngine.resolveSwitchPatchMapping(sw);
+    }
+    return switchPatchCache[sw.instanceId];
+  };
+
+  const resolveDevicePatchEntry = (dev, hostSw) => {
+    if (!dev || !hostSw) return null;
+    const pm = getCachedSwitchPatchMapping(hostSw);
+    if (!pm || !pm.byPortNumber) return null;
+    const entries = Object.values(pm.byPortNumber);
+    let match = entries.find(e => e.connectedDeviceId === dev.instanceId);
+    if (!match && dev.assignedSwitchPort) {
+      match = pm.byPortNumber[parseInt(dev.assignedSwitchPort, 10)] || null;
+    }
+    return match || null;
+  };
+
   // Render Location Clusters
   Object.keys(groups).forEach(loc => {
     const items = groups[loc] || [];
     const isClusterSelected = selectedTopologyRackLoc === loc;
     const isFieldCluster = loc.endsWith("• Field Drops") || loc.toLowerCase().includes("field drop");
+    const clusterPduMetrics = (!isFieldCluster && typeof getRackPduMetricsForLocation === "function")
+      ? getRackPduMetricsForLocation(loc)
+      : null;
 
     // Align rack preview inside cluster with Enclosure Visualizer top-to-bottom elevation order
     if (!isFieldCluster) {
@@ -1300,7 +1390,7 @@ function renderTopology() {
     }
 
     const isExteriorCluster = loc.toLowerCase().includes("exterior");
-    const clusterWidthClass = isFieldCluster ? (items.length > 2 ? "w-96" : "w-88") : "w-84";
+    const clusterWidthClass = isFieldCluster ? (items.length > 2 ? "w-96" : "w-88") : "w-88";
     const clusterBorderClass = isClusterSelected
       ? (isFieldCluster ? 'border-cyan-400 ring-2 ring-cyan-400/50 shadow-cyan-500/20' : 'border-indigo-500 ring-2 ring-indigo-500/50 shadow-indigo-500/20')
       : (isFieldCluster ? 'border-cyan-800/60 bg-slate-900/95 hover:border-cyan-600' : 'border-slate-800 bg-slate-900/90 hover:border-slate-700/80');
@@ -1341,16 +1431,27 @@ function renderTopology() {
         onclick="selectTopologyRack('${escapeHTML(loc)}', event)"
         title="Click to inspect this container (or drag to reposition)"
       >
-        <div class="flex items-center gap-2.5">
-          <div class="p-1.5 rounded-lg ${iconBg} ${iconColor} transition-all">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="p-1.5 rounded-lg ${iconBg} ${iconColor} transition-all shrink-0">
             <i data-lucide="${headerIcon}" class="w-4 h-4"></i>
           </div>
-          <div>
-            <span class="text-xs font-bold ${titleColor} tracking-wide block leading-none">${escapeHTML(parsed.space)}</span>
-            <span class="text-[10px] font-mono ${isFieldCluster ? 'text-cyan-400/90' : 'text-indigo-400/90'} block mt-1 leading-none">${subTitleText}</span>
+          <div class="min-w-0">
+            <span class="text-xs font-bold ${titleColor} tracking-wide block leading-none truncate">${escapeHTML(parsed.space)}</span>
+            <span class="text-[10px] font-mono ${isFieldCluster ? 'text-cyan-400/90' : 'text-indigo-400/90'} block mt-1 leading-none truncate">${subTitleText}</span>
           </div>
         </div>
-        <div class="flex items-center gap-1.5">
+        <div class="flex items-center gap-1.5 shrink-0">
+          ${clusterPduMetrics ? `
+            <button
+              type="button"
+              onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, null, '${escapeHTML(loc)}')"
+              class="text-[9px] font-mono text-amber-300 hover:text-white bg-amber-950/60 hover:bg-amber-900/80 px-1.5 py-0.5 rounded-lg border border-amber-700/50 flex items-center gap-1 transition-colors cursor-pointer"
+              title="Rack PDUs: ${escapeHTML(clusterPduMetrics.pduA.sku)} (${clusterPduMetrics.pduA.amps}A${clusterPduMetrics.pduConfig === 'single_vertical' || clusterPduMetrics.pduConfig === 'horizontal' ? '' : ` + ${clusterPduMetrics.pduB.amps}A`}) — Click to open Power Matrix Studio"
+            >
+              <i data-lucide="zap" class="w-2.5 h-2.5 text-amber-400"></i>
+              <span>${escapeHTML(clusterPduMetrics.pduA.sku)}</span>
+            </button>
+          ` : ''}
           <span class="text-[10px] font-mono text-slate-300 bg-slate-950 px-2 py-0.5 rounded-lg border ${isFieldCluster ? 'border-cyan-800/40 text-cyan-300' : 'border-slate-800'}">
             ${countBadge}
           </span>
@@ -1370,6 +1471,32 @@ function renderTopology() {
           const powerSourceLabel = getPowerSourceLabel(item);
           const hasEdgeDevices = edgeData && (edgeData.cameras > 0 || edgeData.doors > 0 || edgeData.wireless > 0);
 
+          // Check 1:1 Rack PDU Receptacle assignment for this device
+          const devPduRecord = (clusterPduMetrics && clusterPduMetrics.byDeviceId && clusterPduMetrics.byDeviceId[item.instanceId])
+            ? clusterPduMetrics.byDeviceId[item.instanceId]
+            : null;
+          let pduFeedBadgeHtml = "";
+          if (devPduRecord && devPduRecord.psus) {
+            const connPsus = Object.values(devPduRecord.psus).filter(p => p && p.connected);
+            if (connPsus.length > 0) {
+              const shortFeeds = connPsus.map(p => p.pduShortReceptacle).join(" + ");
+              const fullTip = connPsus.map(p => `${p.devicePsuTag} ➔ ${p.pduReceptacleTag} (${p.pduSku}) via ${p.powerCordId} [${p.cordSku}]`).join(" | ");
+              const badgeColor = devPduRecord.isDualRedundant
+                ? "bg-emerald-950/70 border-emerald-600/50 text-emerald-300"
+                : (devPduRecord.isSpof ? "bg-rose-950/70 border-rose-600/50 text-rose-300" : "bg-amber-950/70 border-amber-600/50 text-amber-300");
+              pduFeedBadgeHtml = `
+                <button
+                  type="button"
+                  onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, '${item.instanceId}', '${escapeHTML(loc)}')"
+                  class="px-1.5 py-0.2 rounded border ${badgeColor} text-[9px] font-mono font-bold hover:brightness-125 transition-all cursor-pointer truncate max-w-[165px]"
+                  title="${escapeHTML(fullTip)} — Click to open in Power Matrix Studio"
+                >
+                  ${escapeHTML(shortFeeds)}
+                </button>
+              `;
+            }
+          }
+
           if (isServer) {
             // Render Server Chassis Node Card
             const maxCap = item.maxIngestBandwidthMbps || 750;
@@ -1386,6 +1513,7 @@ function renderTopology() {
                 <div class="flex items-start justify-between gap-1.5">
                   <div class="min-w-0">
                     <div class="flex items-center gap-1.5 flex-wrap">
+                      ${item.rackSlot ? `<span class="px-1.5 py-0.2 rounded bg-indigo-950/90 border border-indigo-600/50 text-[9px] font-mono font-bold text-indigo-300" title="Mounted at Rack Slot U${escapeHTML(String(item.rackSlot))}">U${escapeHTML(String(item.rackSlot))}</span>` : ''}
                       ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-purple-900/60 border border-purple-500/40 text-[9px] font-mono font-bold text-purple-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
                       <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
                       <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
@@ -1423,13 +1551,13 @@ function renderTopology() {
                   </div>
                 </div>
 
-                <!-- Power Telemetry -->
-                <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono text-slate-400">
-                  <div class="flex items-center gap-1">
+                <!-- Power & Rack PDU Receptacle Telemetry -->
+                <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono text-slate-400 gap-1">
+                  <div class="flex items-center gap-1 min-w-0">
                     <i data-lucide="zap" class="w-3 h-3 text-amber-400 shrink-0"></i>
-                    <span>${powerSourceLabel}</span>
+                    ${pduFeedBadgeHtml || `<span class="truncate">${powerSourceLabel}</span>`}
                   </div>
-                  <span class="text-slate-300">${item.baseWatts || 300}W Base</span>
+                  <span class="text-slate-300 shrink-0">${item.baseWatts || 300}W Base</span>
                 </div>
               </div>
             `;
@@ -1445,6 +1573,7 @@ function renderTopology() {
             const hostCloset = hostSw ? (hostSw.closetName || hostSw.rackId || "IDF/MDF") : null;
             const hostClosetShort = hostCloset ? hostCloset.split('•')[0].trim() : 'MDF/IDF';
             const pWatts = item.consumedPoEWatts || item.powerConsumptionWatts || item.baseWatts || 0;
+            const patchEntry = resolveDevicePatchEntry(item, hostSw);
             return `
               <div 
                 class="topo-node-card text-xs space-y-1.5 p-2.5 rounded-xl border ${isSelected ? 'border-cyan-400 ring-2 ring-cyan-400/50 bg-slate-850 shadow-cyan-900/30' : 'border-slate-800 bg-slate-950/80 hover:border-cyan-700/60'} transition-all cursor-pointer shadow-md select-none"
@@ -1459,6 +1588,7 @@ function renderTopology() {
                     <div class="min-w-0">
                       <div class="flex items-center gap-1.5 flex-wrap">
                         ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-cyan-900/60 border border-cyan-500/40 text-[9px] font-mono font-bold text-cyan-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+                        ${patchEntry && patchEntry.horizontalCableId ? `<span class="px-1.5 py-0.2 rounded bg-amber-950/80 border border-amber-600/50 text-[9px] font-mono font-bold text-amber-300" title="Orion Horizontal Cable Run ID: ${escapeHTML(patchEntry.horizontalCableId)}">${escapeHTML(patchEntry.horizontalCableId)}</span>` : ''}
                         <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
                         <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
                           <i data-lucide="pencil" class="w-2.5 h-2.5"></i>
@@ -1469,14 +1599,16 @@ function renderTopology() {
                     </div>
                   </div>
                   <span class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border border-cyan-500/40 bg-cyan-500/10 text-cyan-300 shrink-0">
-                    Field Drop
+                    ${patchEntry ? escapeHTML(patchEntry.switchPortTag) : 'Field Drop'}
                   </span>
                 </div>
                 ${hostSw ? `
-                  <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono">
-                    <span class="text-slate-400">Home-Run:</span>
-                    <span class="text-cyan-300 font-semibold truncate max-w-[180px]" title="Terminates at ${escapeHTML(hostCloset || '')} &bull; ${escapeHTML(hostSw.friendlyName || hostSw.model)}">
-                      <span class="text-sky-400">${escapeHTML(hostClosetShort)}</span>: ${escapeHTML(hostSw.friendlyName || hostSw.model)}
+                  <div class="flex items-center justify-between pt-1 border-t border-slate-900 text-[10px] font-mono gap-1">
+                    <span class="text-slate-400 shrink-0">Path:</span>
+                    <span class="text-cyan-300 font-semibold truncate" title="Orion Path: ${patchEntry ? `${escapeHTML(patchEntry.horizontalCableId)} ➔ ${escapeHTML(patchEntry.patchPanelId)}:${escapeHTML(patchEntry.keystoneJackLabel)} ➔ ${escapeHTML(patchEntry.switchPortTag)}` : `${escapeHTML(hostCloset || '')} • ${escapeHTML(hostSw.friendlyName || hostSw.model)}`}">
+                      ${patchEntry
+                        ? `<span class="text-amber-300">${escapeHTML(patchEntry.panelTag)}</span> &rarr; <span class="text-sky-300">${escapeHTML(patchEntry.switchPortTag)}</span> <span class="text-slate-500">(${escapeHTML(hostClosetShort)})</span>`
+                        : `<span class="text-sky-400">${escapeHTML(hostClosetShort)}</span>: ${escapeHTML(hostSw.friendlyName || hostSw.model)}`}
                     </span>
                   </div>
                 ` : `
@@ -1509,6 +1641,7 @@ function renderTopology() {
               <div class="flex items-start justify-between gap-1.5">
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 flex-wrap">
+                    ${item.rackSlot ? `<span class="px-1.5 py-0.2 rounded bg-indigo-950/90 border border-indigo-600/50 text-[9px] font-mono font-bold text-indigo-300" title="Mounted at Rack Slot U${escapeHTML(String(item.rackSlot))}">U${escapeHTML(String(item.rackSlot))}</span>` : ''}
                     ${item.deviceNumber ? `<span class="px-1.5 py-0.2 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
                     <span class="font-bold text-white truncate block text-xs" title="${escapeHTML(item.friendlyName || item.model)}">${escapeHTML(item.friendlyName || item.model)}</span>
                     <button type="button" onclick="event.stopPropagation(); promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
@@ -1544,9 +1677,9 @@ function renderTopology() {
 
               <!-- Power & Port Telemetry -->
               <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-900 text-[10px] font-mono">
-                <div class="flex items-center gap-1 text-slate-400">
+                <div class="flex items-center gap-1 text-slate-400 min-w-0">
                   <i data-lucide="zap" class="w-3 h-3 text-amber-400 shrink-0"></i>
-                  <span class="truncate">${powerSourceLabel}${isStacked ? ` (${stackUnits}x PSUs &bull; ${totalStackBaseWatts}W)` : ''}</span>
+                  ${pduFeedBadgeHtml || `<span class="truncate">${powerSourceLabel}${isStacked ? ` (${stackUnits}x PSUs &bull; ${totalStackBaseWatts}W)` : ''}</span>`}
                 </div>
                 <div class="flex items-center justify-end gap-1 text-slate-400">
                   <i data-lucide="layers" class="w-3 h-3 text-sky-400 shrink-0"></i>
@@ -1990,17 +2123,31 @@ function generateTopologyLinks(nodes, edgeDeviceMap = {}) {
 
         const isPoE = (dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.maxPowerWatts || 0) > 0;
         const watts = dev.consumedPoEWatts || dev.powerConsumptionWatts || dev.maxPowerWatts || 0;
+        let patchInfo = null;
+        if (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function") {
+          const patchData = PortEngine.resolveSwitchPatchMapping(host);
+          if (patchData && patchData.byPortNumber && dev.assignedSwitchPort) {
+            patchInfo = patchData.byPortNumber[dev.assignedSwitchPort];
+          }
+        }
+        const orionRunTag = patchInfo
+          ? `${patchInfo.horizontalCableId} • ${patchInfo.panelTag}-${String(patchInfo.jackNumber).padStart(2, '0')} ➔ ${patchInfo.switchPortTag}`
+          : (dev.assignedSwitchPort ? `Port ${dev.assignedSwitchPort}` : "");
+        const dropLabel = orionRunTag
+          ? (isPoE ? `${orionRunTag} (${watts}W)` : orionRunTag)
+          : (isPoE ? `Cat6 PoE Drop (${watts}W)` : "Cat6 Drop");
         topologyLinks.push({
           id: `link-field-${host.instanceId}-${dev.instanceId}`,
           fromId: host.instanceId,
           toId: dev.instanceId,
           multiplier: 1,
           isLAG: false,
-          speedLabel: isPoE ? `Cat6 PoE Drop (${watts}W)` : "Cat6 Drop",
+          speedLabel: dropLabel,
           rawSpeed: "1G",
           category: "field_drop",
           isFieldDrop: true,
-          isPoEDelivery: isPoE
+          isPoEDelivery: isPoE,
+          orionPatchInfo: patchInfo
         });
       }
     });
@@ -2729,19 +2876,19 @@ function renderTopologyLocationOptions(currentLoc) {
   let html = "";
 
   if (groups.spaces.length > 0) {
-    html += `<optgroup label="Spaces & Zones (Field / Unenclosed)">`;
+    html += `<optgroup label="Spaces & Zones (Field / Unenclosed)" class="bg-slate-900 text-slate-300">`;
     groups.spaces.forEach(s => {
       const isSel = normalizedCurrent === s.name;
-      html += `<option value="${escapeHTML(s.name)}" ${isSel ? 'selected' : ''}>${escapeHTML(s.displayName || s.name)}</option>`;
+      html += `<option value="${escapeHTML(s.name)}" class="bg-slate-900 text-white" ${isSel ? 'selected' : ''}>${escapeHTML(s.displayName || s.name)}</option>`;
     });
     html += `</optgroup>`;
   }
 
   if (groups.enclosures.length > 0) {
-    html += `<optgroup label="Racks & Enclosures">`;
+    html += `<optgroup label="Racks & Enclosures" class="bg-slate-900 text-slate-300">`;
     groups.enclosures.forEach(e => {
       const isSel = normalizedCurrent === e.name;
-      html += `<option value="${escapeHTML(e.name)}" ${isSel ? 'selected' : ''}>${escapeHTML(e.displayName || e.name)}</option>`;
+      html += `<option value="${escapeHTML(e.name)}" class="bg-slate-900 text-white" ${isSel ? 'selected' : ''}>${escapeHTML(e.displayName || e.name)}</option>`;
     });
     html += `</optgroup>`;
   }
@@ -2841,7 +2988,7 @@ function renderTopologyInspector() {
           <!-- Action Buttons -->
           <div class="grid grid-cols-2 gap-2 pt-1">
             <button 
-              onclick="if (typeof openCableLayoutModal === 'function') { toggleTopologyModal(); openCableLayoutModal(); }"
+              onclick="if (typeof TabManager !== 'undefined' && typeof TabManager.openTab === 'function') { TabManager.openTab('layout'); } else if (typeof openCableLayoutModal === 'function') { toggleTopologyModal(); openCableLayoutModal(); }"
               class="px-2.5 py-1.5 bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/50 hover:border-cyan-400 text-cyan-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group"
               title="Open Floor in Physical Layout Tool"
             >
@@ -2914,21 +3061,34 @@ function renderTopologyInspector() {
             <span class="text-[9px] font-mono text-slate-500">Click to Trace Cable</span>
           </span>
           <div class="space-y-1.5 max-h-60 overflow-y-auto pr-1">
-            ${itemsInRack.map(item => `
+            ${itemsInRack.map(item => {
+              let orionBadge = "";
+              if (item.uplinkTargetId && item.assignedSwitchPort && typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function") {
+                const sw = projectBOM.find(s => s.instanceId === item.uplinkTargetId);
+                if (sw) {
+                  const patchData = PortEngine.resolveSwitchPatchMapping(sw);
+                  const pInfo = patchData && patchData.byPortNumber ? patchData.byPortNumber[item.assignedSwitchPort] : null;
+                  if (pInfo) {
+                    orionBadge = `${pInfo.horizontalCableId} &bull; ${pInfo.panelTag}-${String(pInfo.jackNumber).padStart(2, '0')} &rarr; ${pInfo.switchPortTag}`;
+                  }
+                }
+              }
+              return `
               <div 
                 onclick="selectTopologyNode('${item.instanceId}', event)"
                 class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-cyan-500/60 hover:bg-slate-900 cursor-pointer flex items-center justify-between text-xs transition-colors group"
               >
-                <div class="truncate max-w-[190px]">
+                <div class="truncate max-w-[215px]">
                   <div class="flex items-center gap-1.5">
                     ${item.deviceNumber ? `<span class="px-1 py-0.2 rounded bg-cyan-900/60 border border-cyan-500/40 text-[9px] font-mono font-bold text-cyan-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
                     <span class="text-white font-medium truncate block">${escapeHTML(item.friendlyName || item.model)}</span>
                   </div>
-                  <span class="text-[10px] text-slate-400 font-mono block">${escapeHTML(item.role || 'Drop')} &bull; ${item.consumedPoEWatts || 15}W</span>
+                  <span class="text-[10px] text-slate-400 font-mono block truncate">${orionBadge ? `<span class="text-sky-300 font-bold">${orionBadge}</span> &bull; ` : ''}${escapeHTML(item.role || 'Drop')} &bull; ${item.consumedPoEWatts || 15}W</span>
                 </div>
-                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 group-hover:text-cyan-400 transition-colors"></i>
+                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-600 group-hover:text-cyan-400 transition-colors shrink-0"></i>
               </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       `;
@@ -2962,11 +3122,15 @@ function renderTopologyInspector() {
     const totalHeightU = parsed.heightU || (parsed.isDin ? 0 : 24);
     const ruPercent = totalHeightU > 0 ? Math.min(100, Math.round((occupiedRU / totalHeightU) * 100)) : 0;
     const btuPerHour = Math.round(totalWatts * 3.412142);
+    const rackPduMetrics = (!parsed.isDin && typeof getRackPduMetricsForLocation === "function")
+      ? getRackPduMetricsForLocation(loc)
+      : null;
 
     const switchIds = itemsInRack.map(i => i.instanceId);
     const servedClients = projectBOM.filter(i => switchIds.includes(i.uplinkTargetId) && !itemsInRack.includes(i));
     const cameraCount = servedClients.filter(c => c.role === "Camera" || (c.category && c.category.includes("camera"))).reduce((sum, c) => sum + (parseInt(c.qty, 10) || 1), 0);
     const doorCount = servedClients.filter(d => d.role === "Access Control" || (d.category && d.category.includes("access"))).reduce((sum, d) => sum + (parseInt(d.qty, 10) || 1), 0);
+    const firstSwitchInRack = itemsInRack.find(i => i.role === "Access" || i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation");
 
     if (selectedNodeEl) selectedNodeEl.innerText = `${parsed.space} • ${parsed.enclosure}`;
     if (linkSpeedEl) linkSpeedEl.innerText = `${itemsInRack.length} Mounted Chassis`;
@@ -2986,10 +3150,10 @@ function renderTopologyInspector() {
         </div>
 
         <!-- Action Buttons -->
-        <div class="grid grid-cols-2 gap-2 pt-1">
+        <div class="grid grid-cols-2 gap-1.5 pt-1">
           <button 
             onclick="openRackViewerFor('${escapeHTML(loc)}')"
-            class="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/50 hover:border-indigo-400 text-indigo-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group"
+            class="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/50 hover:border-indigo-400 text-indigo-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group cursor-pointer"
             title="Open this rack directly in the 2D Rack Elevation Tool"
           >
             <i data-lucide="server" class="w-3.5 h-3.5 group-hover:scale-110 transition-transform"></i>
@@ -2997,12 +3161,30 @@ function renderTopologyInspector() {
           </button>
           <button 
             onclick="panClusterIntoView('${escapeHTML(loc)}')"
-            class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+            class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
             title="Center this enclosure cluster on the topology canvas"
           >
             <i data-lucide="focus" class="w-3.5 h-3.5"></i>
             <span>Center View</span>
           </button>
+          ${!parsed.isDin ? `
+            <button 
+              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(loc)}');"
+              class="px-2.5 py-1.5 bg-amber-950/50 hover:bg-amber-900/70 border border-amber-500/50 text-amber-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Open 1:1 Rack Power & PDU Matrix Studio for this rack"
+            >
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Power Matrix</span>
+            </button>
+            <button 
+              onclick="if (typeof openPortMatrixStudio === 'function') openPortMatrixStudio(${firstSwitchInRack ? `'${firstSwitchInRack.instanceId}'` : ''});"
+              class="px-2.5 py-1.5 bg-sky-950/50 hover:bg-sky-900/70 border border-sky-500/50 text-sky-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+              title="Open Port & Patch Panel Matrix Studio"
+            >
+              <i data-lucide="grid" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span>Port Matrix</span>
+            </button>
+          ` : ''}
         </div>
       </div>
 
@@ -3030,11 +3212,18 @@ function renderTopologyInspector() {
         </div>
       ` : ''}
 
-      <!-- Power & Thermal Telemetry -->
+      <!-- Catalog Rack PDU & Electrical Load -->
       <div class="space-y-2 pb-3 border-b border-slate-800">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & Thermal Load
-        </span>
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & Catalog Rack PDU
+          </span>
+          ${rackPduMetrics ? `
+            <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 text-amber-300 font-bold">
+              ${rackPduMetrics.redundancy === 'dual' ? '2N A+B PDUs' : 'Single PDU-A'}
+            </span>
+          ` : ''}
+        </div>
         <div class="space-y-1.5 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-850 font-mono">
           <div class="flex justify-between text-slate-400">
             <span>Enclosure Power Draw:</span>
@@ -3056,6 +3245,20 @@ function renderTopologyInspector() {
               </span>
             </div>
           ` : ''}
+          ${rackPduMetrics ? `
+            <div class="pt-1.5 mt-1 border-t border-slate-900 space-y-1 text-[10px]">
+              <div class="flex items-center justify-between">
+                <span class="text-amber-300 font-bold">${escapeHTML(rackPduMetrics.pduA.id)} (${escapeHTML(rackPduMetrics.pduA.sku)}):</span>
+                <span class="${rackPduMetrics.pduA.isOverContinuous || rackPduMetrics.pduA.isOverOutlets ? 'text-rose-400 font-bold' : 'text-slate-200'}">${rackPduMetrics.pduA.usedOutlets}/${rackPduMetrics.pduA.totalOutlets} R &bull; ${rackPduMetrics.pduA.amps}A</span>
+              </div>
+              ${rackPduMetrics.pduB ? `
+                <div class="flex items-center justify-between">
+                  <span class="text-sky-300 font-bold">${escapeHTML(rackPduMetrics.pduB.id)} (${escapeHTML(rackPduMetrics.pduB.sku)}):</span>
+                  <span class="${rackPduMetrics.pduB.isOverContinuous || rackPduMetrics.pduB.isOverOutlets ? 'text-rose-400 font-bold' : 'text-slate-200'}">${rackPduMetrics.pduB.usedOutlets}/${rackPduMetrics.pduB.totalOutlets} R &bull; ${rackPduMetrics.pduB.amps}A</span>
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
         </div>
       </div>
 
@@ -3070,17 +3273,22 @@ function renderTopologyInspector() {
             <div class="text-[11px] text-slate-500 py-3 text-center bg-slate-950 rounded-xl border border-slate-850">
               No equipment mounted in this rack yet.
             </div>
-          ` : itemsInRack.map(item => `
+          ` : itemsInRack.map(item => {
+            const devPduList = rackPduMetrics && rackPduMetrics.byDeviceId ? rackPduMetrics.byDeviceId[item.instanceId] : null;
+            const devPduShort = devPduList && devPduList.length > 0
+              ? devPduList.map(rec => `${rec.pduBank ? 'PDU' + rec.pduBank : 'UPS'}-R${String(rec.outletNumber).padStart(2, '0')}`).join('+')
+              : '';
+            return `
             <div 
               onclick="selectTopologyNode('${item.instanceId}', event)"
               class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-indigo-500/60 hover:bg-slate-900 cursor-pointer flex items-center justify-between text-xs transition-colors group"
             >
-              <div class="truncate max-w-[180px]">
+              <div class="truncate max-w-[185px]">
                 <div class="flex items-center gap-1.5">
                   ${item.rackSlot ? `<span class="px-1.5 py-0.2 rounded bg-indigo-950/80 border border-indigo-700/60 text-[9px] font-mono font-bold text-indigo-300">U${item.rackSlot}</span>` : ''}
                   <span class="text-white block font-medium truncate group-hover:text-indigo-200">${escapeHTML(item.model)}</span>
                 </div>
-                <span class="text-[10px] text-slate-400 font-mono">${escapeHTML(item.vendor || 'Generic')} &bull; ${(item.rackUnits !== undefined ? item.rackUnits : 1)}U &bull; ${escapeHTML(item.role)}</span>
+                <span class="text-[10px] text-slate-400 font-mono truncate block">${devPduShort ? `<span class="text-amber-300 font-bold">${escapeHTML(devPduShort)}</span> &bull; ` : ''}${escapeHTML(item.vendor || 'Generic')} &bull; ${(item.rackUnits !== undefined ? item.rackUnits : 1)}U</span>
               </div>
               <div class="flex items-center gap-1.5 shrink-0">
                 <div class="text-right">
@@ -3101,7 +3309,8 @@ function renderTopologyInspector() {
                 </button>
               </div>
             </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
       </div>
 
@@ -3206,6 +3415,9 @@ function renderTopologyInspector() {
       const hostedRoles = item.hostedRoles || ["VMS Ingest & Recording"];
       const serverSupportedModes = (typeof PortEngine !== "undefined") ? PortEngine.getSupportedPowerModes(item) : ["internal_psu", "dual_ac"];
       const serverPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.dualPsu ? "dual_ac" : "internal_psu");
+      const srvLoc = FacilityStore.normalize(item.closetName || item.rackId);
+      const srvPduMetrics = (typeof getRackPduMetricsForLocation === "function") ? getRackPduMetricsForLocation(srvLoc) : null;
+      const srvPduOutlets = (srvPduMetrics && srvPduMetrics.byDeviceId) ? (srvPduMetrics.byDeviceId[item.instanceId] || []) : [];
 
       container.innerHTML = `
         <!-- Server Overview Card -->
@@ -3213,6 +3425,7 @@ function renderTopologyInspector() {
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-1.5 flex-wrap">
               ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-purple-900/60 border border-purple-500/40 text-[9px] font-mono font-bold text-purple-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+              ${item.rackSlot ? `<span class="px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/60 text-[9px] font-mono font-bold text-indigo-300">U${escapeHTML(item.rackSlot)}</span>` : ''}
               <span class="text-xs font-bold text-white">${escapeHTML(item.friendlyName || item.model)}</span>
               <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
                 <i data-lucide="pencil" class="w-3 h-3"></i>
@@ -3236,15 +3449,23 @@ function renderTopologyInspector() {
               <button 
                 type="button" 
                 onclick="openRackViewerFor('${item.closetName || item.rackId}')"
-                class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                class="flex-1 min-w-[95px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="Open Enclosure Visualizer at this rack"
               >
                 <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
               </button>
               <button 
                 type="button" 
+                onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(srvLoc)}');"
+                class="flex-1 min-w-[95px] px-2 py-1 bg-amber-950/60 hover:bg-amber-900/80 text-amber-200 border border-amber-500/50 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                title="Open 1:1 Rack Power & PDU Matrix Studio"
+              >
+                <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i> Power Matrix
+              </button>
+              <button 
+                type="button" 
                 onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
-                class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                class="px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="View Space Hierarchy & Unenclosed Devices"
               >
                 <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
@@ -3252,7 +3473,7 @@ function renderTopologyInspector() {
               <button 
                 type="button" 
                 onclick="jumpToBomTarget('${item.instanceId}')"
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="Locate item in BOM Drawer"
               >
                 <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
@@ -3260,7 +3481,7 @@ function renderTopologyInspector() {
               <button 
                 type="button" 
                 onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
-                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+                class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="View in Physical Layout Canvas"
               >
                 <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
@@ -3281,16 +3502,28 @@ function renderTopologyInspector() {
 
         <!-- Electrical & Power Supply -->
         <div class="space-y-2 pb-3 border-b border-slate-800">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & Power Supply
-          </span>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & Rack PDU Feed
+            </span>
+            ${srvPduOutlets.length > 0 ? `
+              <button 
+                type="button" 
+                onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(srvLoc)}');"
+                class="px-1.5 py-0.5 bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-700/60 rounded text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                title="Open Dedicated 1:1 Power Matrix Studio"
+              >
+                <i data-lucide="maximize-2" class="w-2.5 h-2.5"></i> Studio
+              </button>
+            ` : ''}
+          </div>
           <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Power Architecture:</label>
               <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
                 ${serverSupportedModes.map(m => {
                   const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
-                  return `<option value="${m}" ${serverPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                  return `<option value="${m}" class="bg-slate-900 text-white" ${serverPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
                 }).join('')}
               </select>
             </div>
@@ -3298,6 +3531,26 @@ function renderTopologyInspector() {
               <span>Chassis Draw:</span>
               <span class="text-white font-bold">${item.baseWatts || item.powerWatts || 350} W</span>
             </div>
+            ${srvPduOutlets.length > 0 ? `
+              <div class="pt-1.5 mt-1 border-t border-slate-900 space-y-1.5 font-mono text-[10px]">
+                <div class="text-slate-400 font-bold uppercase text-[9px] flex items-center justify-between">
+                  <span>1:1 Rack PDU Receptacle Mapping</span>
+                  <span class="text-amber-300">${srvPduOutlets.length}x Power Cord${srvPduOutlets.length > 1 ? 's' : ''}</span>
+                </div>
+                ${srvPduOutlets.map(rec => `
+                  <div class="p-1.5 rounded-lg bg-slate-900/90 border border-amber-500/30 space-y-0.5">
+                    <div class="flex items-center justify-between">
+                      <span class="text-amber-300 font-bold">${escapeHTML(rec.psuTag)} &rarr; ${escapeHTML(rec.receptacleId)}</span>
+                      <span class="text-slate-300">${escapeHTML(rec.cordSku || 'P006-006')} (${rec.cordLengthFt || 6}ft)</span>
+                    </div>
+                    <div class="text-[9px] text-slate-400 flex items-center justify-between">
+                      <span>Cord ID: <strong class="text-white">${escapeHTML(rec.cordId)}</strong></span>
+                      <span>${rec.watts}W &bull; ${escapeHTML(rec.receptacleType || '5-15R')}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : ''}
           </div>
         </div>
 
@@ -3390,9 +3643,9 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Target Core / Aggregation Switch:</label>
               <select onchange="updateCustomUplink('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500">
-                <option value="">Auto-Assign (Nearest Core)</option>
+                <option value="" class="bg-slate-900 text-white">Auto-Assign (Nearest Core)</option>
                 ${candidateTargets.map(t => `
-                  <option value="${t.instanceId}" ${item.customUplinkTargetId === t.instanceId ? 'selected' : ''}>${t.model} (${FacilityStore.normalize(t.closetName)})</option>
+                  <option value="${t.instanceId}" class="bg-slate-900 text-white" ${item.customUplinkTargetId === t.instanceId ? 'selected' : ''}>${t.model} (${FacilityStore.normalize(t.closetName)})</option>
                 `).join('')}
               </select>
             </div>
@@ -3494,7 +3747,7 @@ function renderTopologyInspector() {
               <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
                 ${supportedModes.map(m => {
                   const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
-                  return `<option value="${m}" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                  return `<option value="${m}" class="bg-slate-900 text-white" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
                 }).join('')}
               </select>
             </div>
@@ -3514,9 +3767,9 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Connected Local Switch (e.g. Pole Switch):</label>
               <select onchange="setDeviceHostSwitch('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="">Unassigned</option>
+                <option value="" class="bg-slate-900 text-white">Unassigned</option>
                 ${candidateTargets.filter(t => t.role === "Access" || t.role === "Core").map(sw => `
-                  <option value="${sw.instanceId}" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
+                  <option value="${sw.instanceId}" class="bg-slate-900 text-white" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
                     ${sw.model} (${FacilityStore.normalize(sw.closetName)})
                   </option>
                 `).join('')}
@@ -3546,9 +3799,9 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Target Radio (Opposite End of Link):</label>
               <select onchange="updateRadioPartner('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-purple-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="">Auto-Pair or Standalone</option>
+                <option value="" class="bg-slate-900 text-white">Auto-Pair or Standalone</option>
                 ${peerRadios.map(p => `
-                  <option value="${p.instanceId}" ${item.customUplinkTargetId === p.instanceId ? 'selected' : ''}>${p.model} (${FacilityStore.normalize(p.closetName)})</option>
+                  <option value="${p.instanceId}" class="bg-slate-900 text-white" ${item.customUplinkTargetId === p.instanceId ? 'selected' : ''}>${p.model} (${FacilityStore.normalize(p.closetName)})</option>
                 `).join('')}
               </select>
             </div>
@@ -3562,6 +3815,13 @@ function renderTopologyInspector() {
     if (isEdgeDevice) {
       const hostSwitch = item.uplinkTargetId ? projectBOM.find(s => s.instanceId === item.uplinkTargetId) : null;
       const hostSwitchPorts = hostSwitch && typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(hostSwitch) : [];
+      const hostPatchMap = (hostSwitch && typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function")
+        ? PortEngine.resolveSwitchPatchMapping(hostSwitch)
+        : null;
+      const activePortNum = item.assignedSwitchPort || (hostSwitchPorts.find(p => p.connectedDeviceId === item.instanceId)?.portNumber) || null;
+      const orionPatchInfo = (hostPatchMap && hostPatchMap.byPortNumber && activePortNum)
+        ? hostPatchMap.byPortNumber[activePortNum]
+        : null;
       const currentPowerMode = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSourceOverride || "poe_switch");
       const supportedModes = (typeof PortEngine !== "undefined") ? PortEngine.getSupportedPowerModes(item) : ["poe_switch", "poe_injector"];
       const isCamera = item.role === "Camera" || (item.category && item.category.includes("camera"));
@@ -3648,7 +3908,7 @@ function renderTopologyInspector() {
               <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
                 ${supportedModes.map(m => {
                   const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
-                  return `<option value="${m}" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                  return `<option value="${m}" class="bg-slate-900 text-white" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
                 }).join('')}
               </select>
             </div>
@@ -3667,18 +3927,30 @@ function renderTopologyInspector() {
           </div>
         </div>
 
-        <!-- Network Switch & Port Mapping -->
+        <!-- Network Switch, Orion Patch Panel & Port Mapping -->
         <div class="space-y-2 pb-3 border-b border-slate-800">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-            <i data-lucide="git-commit" class="w-3.5 h-3.5"></i> Host Switch & Port Assignment
-          </span>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+              <i data-lucide="git-commit" class="w-3.5 h-3.5"></i> Host Switch & Orion Patch Path
+            </span>
+            ${hostSwitch ? `
+              <button 
+                type="button" 
+                onclick="if (typeof openPortMatrixStudio === 'function') openPortMatrixStudio('${hostSwitch.instanceId}');"
+                class="px-1.5 py-0.5 bg-sky-950/60 hover:bg-sky-900/80 text-sky-300 border border-sky-700/60 rounded text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                title="Open Port & Patch Panel Matrix Studio"
+              >
+                <i data-lucide="grid" class="w-2.5 h-2.5"></i> Port Matrix
+              </button>
+            ` : ''}
+          </div>
           <div class="space-y-2 bg-slate-950 p-2.5 rounded-xl border border-slate-850 text-xs">
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Connected Host Switch:</label>
               <select onchange="setDeviceHostSwitch('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="">Unassigned</option>
+                <option value="" class="bg-slate-900 text-white">Unassigned</option>
                 ${candidateTargets.filter(t => t.role === "Access" || t.role === "Core" || t.role === "Core & Agg" || t.role === "Gateways & WAN" || t.role === "Security WAN" || t.role === "Firewall").map(sw => `
-                  <option value="${sw.instanceId}" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
+                  <option value="${sw.instanceId}" class="bg-slate-900 text-white" ${item.uplinkTargetId === sw.instanceId ? 'selected' : ''}>
                     ${sw.model} (${FacilityStore.normalize(sw.closetName)})
                   </option>
                 `).join('')}
@@ -3690,12 +3962,37 @@ function renderTopologyInspector() {
                 <label class="text-[10px] text-slate-400 block mb-1">Assigned Switch Port:</label>
                 <select onchange="setDeviceSwitchPort('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-sky-300 font-mono text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500">
                   ${hostSwitchPorts.map(p => `
-                    <option value="${p.portNumber}" ${(item.assignedSwitchPort === p.portNumber || p.connectedDeviceId === item.instanceId) ? 'selected' : ''}>
+                    <option value="${p.portNumber}" class="bg-slate-900 text-white" ${(item.assignedSwitchPort === p.portNumber || p.connectedDeviceId === item.instanceId) ? 'selected' : ''}>
                       ${p.label} &bull; ${p.speed} ${p.poeStandard ? `(${p.poeStandard.toUpperCase()})` : ''} ${p.connectedDeviceId && p.connectedDeviceId !== item.instanceId ? `[In Use: ${p.connectedDeviceModel}]` : ''}
                     </option>
                   `).join('')}
                 </select>
               </div>
+              ${orionPatchInfo ? `
+                <div class="pt-1.5 mt-1 border-t border-slate-900 space-y-1 font-mono text-[10px]">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Horizontal Cable ID:</span>
+                    <span class="px-1.5 py-0.2 rounded bg-sky-950 text-sky-300 border border-sky-700/60 font-bold">${escapeHTML(orionPatchInfo.horizontalCableId)}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Patch Panel Jack:</span>
+                    <span class="text-cyan-300 font-bold">${escapeHTML(orionPatchInfo.keystoneJackLabel)}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Patch Cord:</span>
+                    <span class="text-indigo-300 font-bold">${escapeHTML(orionPatchInfo.patchCordId)} (${escapeHTML(orionPatchInfo.patchCordSpec?.label || '3 ft Cat6')})</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400">Switch Port Tag:</span>
+                    <span class="text-emerald-300 font-bold">${escapeHTML(orionPatchInfo.closetCode)}-${escapeHTML(orionPatchInfo.switchPortTag)}</span>
+                  </div>
+                  <div class="mt-1 p-1.5 rounded bg-slate-900 border border-slate-800 text-[9px] text-slate-300 space-y-0.5">
+                    <div class="text-[8px] uppercase text-slate-500 font-bold">2-Line Brady Label (Headend)</div>
+                    <div class="text-amber-300 font-bold">${escapeHTML(orionPatchInfo.headendLabelLine1)}</div>
+                    <div class="text-cyan-300">${escapeHTML(orionPatchInfo.headendLabelLine2)}</div>
+                  </div>
+                </div>
+              ` : ''}
             ` : ''}
           </div>
         </div>
@@ -3714,9 +4011,9 @@ function renderTopologyInspector() {
               <div>
                 <label class="text-[10px] text-slate-400 block mb-1">Assigned Recording Server:</label>
                 <select onchange="item.assignedRecordingServerId = this.value || null; FacilityStore.notifyWorkspaceChange(); renderTopology(); renderTopologyInspector();" class="w-full bg-slate-900 border border-slate-700 text-teal-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                  <option value="">Auto-Detect Primary VMS</option>
+                  <option value="" class="bg-slate-900 text-white">Auto-Detect Primary VMS</option>
                   ${candidateServers.map(s => `
-                    <option value="${s.instanceId}" ${item.assignedRecordingServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
+                    <option value="${s.instanceId}" class="bg-slate-900 text-white" ${item.assignedRecordingServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
                   `).join('')}
                 </select>
               </div>
@@ -3735,9 +4032,9 @@ function renderTopologyInspector() {
               <div>
                 <label class="text-[10px] text-slate-400 block mb-1">Assigned Access Engine Server:</label>
                 <select onchange="item.assignedAccessServerId = this.value || null; FacilityStore.notifyWorkspaceChange(); renderTopology(); renderTopologyInspector();" class="w-full bg-slate-900 border border-slate-700 text-emerald-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                  <option value="">Auto-Detect Primary Host</option>
+                  <option value="" class="bg-slate-900 text-white">Auto-Detect Primary Host</option>
                   ${candidateServers.map(s => `
-                    <option value="${s.instanceId}" ${item.assignedAccessServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
+                    <option value="${s.instanceId}" class="bg-slate-900 text-white" ${item.assignedAccessServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
                   `).join('')}
                 </select>
               </div>
@@ -3754,6 +4051,12 @@ function renderTopologyInspector() {
     const portSummary = typeof PortEngine !== "undefined" ? PortEngine.getPortSummary(item) : null;
     const supportedModes = typeof PortEngine !== "undefined" ? PortEngine.getSupportedPowerModes(item) : ["internal_psu"];
     const currentPowerMode = typeof PortEngine !== "undefined" ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
+    const swPatchMap = (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function")
+      ? PortEngine.resolveSwitchPatchMapping(item)
+      : null;
+    const swLoc = FacilityStore.normalize(item.closetName || item.rackId);
+    const swPduMetrics = (typeof getRackPduMetricsForLocation === "function") ? getRackPduMetricsForLocation(swLoc) : null;
+    const swPduOutlets = (swPduMetrics && swPduMetrics.byDeviceId) ? (swPduMetrics.byDeviceId[item.instanceId] || []) : [];
 
     const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
       (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
@@ -3774,6 +4077,7 @@ function renderTopologyInspector() {
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-1.5 flex-wrap">
             ${item.deviceNumber ? `<span class="px-1.5 py-0.5 rounded bg-brand-900/60 border border-brand-500/40 text-[9px] font-mono font-bold text-brand-300">${escapeHTML(item.deviceNumber)}</span>` : ''}
+            ${item.rackSlot ? `<span class="px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/60 text-[9px] font-mono font-bold text-indigo-300">U${escapeHTML(item.rackSlot)}</span>` : ''}
             <span class="text-xs font-bold text-white truncate max-w-[180px]">${escapeHTML(item.friendlyName || item.model)}</span>
             <button type="button" onclick="promptEditDeviceFriendlyName('${item.instanceId}')" class="text-slate-400 hover:text-white p-0.5 rounded hover:bg-slate-800 transition-colors" title="Edit Friendly Name">
               <i data-lucide="pencil" class="w-3 h-3"></i>
@@ -3805,15 +4109,23 @@ function renderTopologyInspector() {
             <button 
               type="button" 
               onclick="openRackViewerFor('${item.closetName || item.rackId}')"
-              class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              class="flex-1 min-w-[95px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
               title="Open Enclosure Visualizer at this rack"
             >
               <i data-lucide="server" class="w-3 h-3 text-indigo-400"></i> Enclosure
             </button>
             <button 
               type="button" 
+              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(swLoc)}');"
+              class="flex-1 min-w-[95px] px-2 py-1 bg-amber-950/60 hover:bg-amber-900/80 text-amber-200 border border-amber-500/50 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+              title="Open 1:1 Rack Power & PDU Matrix Studio"
+            >
+              <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i> Power Matrix
+            </button>
+            <button 
+              type="button" 
               onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
-              class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              class="px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
               title="View Space Hierarchy & Unenclosed Devices"
             >
               <i data-lucide="building-2" class="w-3 h-3 text-cyan-400"></i> Space
@@ -3821,7 +4133,7 @@ function renderTopologyInspector() {
             <button 
               type="button" 
               onclick="jumpToBomTarget('${item.instanceId}')"
-              class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
               title="Locate item in BOM Drawer"
             >
               <i data-lucide="file-spreadsheet" class="w-3 h-3 text-emerald-400"></i> BOM
@@ -3829,7 +4141,7 @@ function renderTopologyInspector() {
             <button 
               type="button" 
               onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')"
-              class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
+              class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
               title="View in Physical Layout Canvas"
             >
               <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i> Physical
@@ -3863,10 +4175,10 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1 font-sans">Stack Members (Treated as 1 Single Stack):</label>
               <select onchange="updateSwitchStackFromTopology('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-indigo-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="0" ${!isStacked ? 'selected' : ''}>0 (Standalone - 1 Unit)</option>
-                <option value="2" ${stackUnits === 2 ? 'selected' : ''}>2 Units (Dual-Chassis Stack - Recommended)</option>
-                <option value="3" ${stackUnits === 3 ? 'selected' : ''}>3 Units (3-Chassis Stack)</option>
-                <option value="4" ${stackUnits === 4 ? 'selected' : ''}>4 Units (4-Chassis Stack)</option>
+                <option value="0" class="bg-slate-900 text-white" ${!isStacked ? 'selected' : ''}>0 (Standalone - 1 Unit)</option>
+                <option value="2" class="bg-slate-900 text-white" ${stackUnits === 2 ? 'selected' : ''}>2 Units (Dual-Chassis Stack - Recommended)</option>
+                <option value="3" class="bg-slate-900 text-white" ${stackUnits === 3 ? 'selected' : ''}>3 Units (3-Chassis Stack)</option>
+                <option value="4" class="bg-slate-900 text-white" ${stackUnits === 4 ? 'selected' : ''}>4 Units (4-Chassis Stack)</option>
               </select>
             </div>
             <div class="text-[10px] font-mono text-slate-400 space-y-1 pt-1 border-t border-slate-900">
@@ -3885,16 +4197,28 @@ function renderTopologyInspector() {
 
       <!-- Power & PoE Telemetry -->
       <div class="space-y-2 pb-3 border-b border-slate-800">
-        <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-          <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & PoE Telemetry
-        </span>
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+            <i data-lucide="zap" class="w-3.5 h-3.5"></i> Electrical & PoE Telemetry
+          </span>
+          ${swPduOutlets.length > 0 ? `
+            <button 
+              type="button" 
+              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(swLoc)}');"
+              class="px-1.5 py-0.5 bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-700/60 rounded text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
+              title="Open Dedicated 1:1 Power Matrix Studio"
+            >
+              <i data-lucide="maximize-2" class="w-2.5 h-2.5"></i> Studio
+            </button>
+          ` : ''}
+        </div>
         <div class="space-y-2 text-xs bg-slate-950 p-2.5 rounded-xl border border-slate-850">
           <div>
             <label class="text-[10px] text-slate-400 block mb-1 font-sans">Chassis Power Mode:</label>
             <select onchange="setDevicePowerSource('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
               ${supportedModes.map(m => {
                 const def = (typeof POWER_SOURCE_MODES !== "undefined" && POWER_SOURCE_MODES[m]) || { label: m };
-                return `<option value="${m}" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
+                return `<option value="${m}" class="bg-slate-900 text-white" ${currentPowerMode === m ? 'selected' : ''}>${def.label}</option>`;
               }).join('')}
             </select>
           </div>
@@ -3928,6 +4252,26 @@ function renderTopologyInspector() {
               <span class="font-mono ${((item.consumedPoEWatts || 0) > totalStackPoE) ? 'text-rose-400 font-bold' : 'text-emerald-400'}">
                 ${item.consumedPoEWatts || 0} W (${Math.round(((item.consumedPoEWatts || 0) / (totalStackPoE || 1)) * 100)}%)
               </span>
+            </div>
+          ` : ''}
+          ${swPduOutlets.length > 0 ? `
+            <div class="pt-1.5 mt-1 border-t border-slate-900 space-y-1.5 font-mono text-[10px]">
+              <div class="text-slate-400 font-bold uppercase text-[9px] flex items-center justify-between">
+                <span>1:1 Rack PDU Receptacle Mapping</span>
+                <span class="text-amber-300">${swPduOutlets.length}x Power Cord${swPduOutlets.length > 1 ? 's' : ''}</span>
+              </div>
+              ${swPduOutlets.map(rec => `
+                <div class="p-1.5 rounded-lg bg-slate-900/90 border border-amber-500/30 space-y-0.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-amber-300 font-bold">${escapeHTML(rec.psuTag)} &rarr; ${escapeHTML(rec.receptacleId)}</span>
+                    <span class="text-slate-300">${escapeHTML(rec.cordSku || 'P006-006')} (${rec.cordLengthFt || 6}ft)</span>
+                  </div>
+                  <div class="text-[9px] text-slate-400 flex items-center justify-between">
+                    <span>Cord ID: <strong class="text-white">${escapeHTML(rec.cordId)}</strong></span>
+                    <span>${rec.watts}W &bull; ${escapeHTML(rec.receptacleType || '5-15R')}</span>
+                  </div>
+                </div>
+              `).join('')}
             </div>
           ` : ''}
         </div>
@@ -4117,9 +4461,9 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Target Core / Aggregation Switch:</label>
               <select onchange="updateCustomUplink('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:border-brand-500">
-                <option value="">Auto-Assign (Nearest Core)</option>
+                <option value="" class="bg-slate-900 text-white">Auto-Assign (Nearest Core)</option>
                 ${candidateTargets.map(t => `
-                  <option value="${t.instanceId}" ${item.customUplinkTargetId === t.instanceId ? 'selected' : ''}>${t.model} (${FacilityStore.normalize(t.closetName)})</option>
+                  <option value="${t.instanceId}" class="bg-slate-900 text-white" ${item.customUplinkTargetId === t.instanceId ? 'selected' : ''}>${t.model} (${FacilityStore.normalize(t.closetName)})</option>
                 `).join('')}
               </select>
             </div>
@@ -4128,21 +4472,21 @@ function renderTopologyInspector() {
               <div>
                 <label class="text-[10px] text-slate-400 block mb-1">Trunk LAG:</label>
                 <select onchange="updateCustomLinkMultiplier('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-sky-300 font-mono font-bold rounded-lg px-2 py-1 text-xs">
-                  <option value="1" ${(item.customLinkMultiplier || 1) == 1 ? 'selected' : ''}>1x Link</option>
-                  <option value="2" ${item.customLinkMultiplier == 2 ? 'selected' : ''}>2x LACP LAG</option>
-                  <option value="4" ${item.customLinkMultiplier == 4 ? 'selected' : ''}>4x LACP LAG</option>
+                  <option value="1" class="bg-slate-900 text-white" ${(item.customLinkMultiplier || 1) == 1 ? 'selected' : ''}>1x Link</option>
+                  <option value="2" class="bg-slate-900 text-white" ${item.customLinkMultiplier == 2 ? 'selected' : ''}>2x LACP LAG</option>
+                  <option value="4" class="bg-slate-900 text-white" ${item.customLinkMultiplier == 4 ? 'selected' : ''}>4x LACP LAG</option>
                 </select>
               </div>
 
               <div>
                 <label class="text-[10px] text-slate-400 block mb-1">Speed Override:</label>
                 <select onchange="updateCustomLinkSpeed('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-amber-300 font-mono font-bold rounded-lg px-2 py-1 text-xs">
-                  <option value="">Auto-Detect</option>
-                  <option value="100G" ${item.customLinkSpeed === '100G' ? 'selected' : ''}>100G</option>
-                  <option value="40G" ${item.customLinkSpeed === '40G' ? 'selected' : ''}>40G</option>
-                  <option value="25G" ${item.customLinkSpeed === '25G' ? 'selected' : ''}>25G</option>
-                  <option value="10G" ${item.customLinkSpeed === '10G' ? 'selected' : ''}>10G</option>
-                  <option value="1G" ${item.customLinkSpeed === '1G' ? 'selected' : ''}>1G</option>
+                  <option value="" class="bg-slate-900 text-white">Auto-Detect</option>
+                  <option value="100G" class="bg-slate-900 text-white" ${item.customLinkSpeed === '100G' ? 'selected' : ''}>100G</option>
+                  <option value="40G" class="bg-slate-900 text-white" ${item.customLinkSpeed === '40G' ? 'selected' : ''}>40G</option>
+                  <option value="25G" class="bg-slate-900 text-white" ${item.customLinkSpeed === '25G' ? 'selected' : ''}>25G</option>
+                  <option value="10G" class="bg-slate-900 text-white" ${item.customLinkSpeed === '10G' ? 'selected' : ''}>10G</option>
+                  <option value="1G" class="bg-slate-900 text-white" ${item.customLinkSpeed === '1G' ? 'selected' : ''}>1G</option>
                 </select>
               </div>
             </div>
@@ -4160,9 +4504,9 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Assigned VMS Recording Server:</label>
               <select onchange="updateSwitchVmsServer('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-teal-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="">Auto-Detect Primary VMS</option>
+                <option value="" class="bg-slate-900 text-white">Auto-Detect Primary VMS</option>
                 ${candidateServers.map(s => `
-                  <option value="${s.instanceId}" ${item.assignedVmsServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
+                  <option value="${s.instanceId}" class="bg-slate-900 text-white" ${item.assignedVmsServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
                 `).join('')}
               </select>
             </div>
@@ -4170,9 +4514,9 @@ function renderTopologyInspector() {
             <div>
               <label class="text-[10px] text-slate-400 block mb-1">Assigned Access Control Engine:</label>
               <select onchange="updateSwitchAccessServer('${item.instanceId}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-emerald-300 font-mono text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500">
-                <option value="">Auto-Detect Primary Host</option>
+                <option value="" class="bg-slate-900 text-white">Auto-Detect Primary Host</option>
                 ${candidateServers.map(s => `
-                  <option value="${s.instanceId}" ${item.assignedAccessServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
+                  <option value="${s.instanceId}" class="bg-slate-900 text-white" ${item.assignedAccessServerId === s.instanceId ? 'selected' : ''}>${s.model} (${FacilityStore.normalize(s.closetName)})</option>
                 `).join('')}
               </select>
             </div>
@@ -4193,14 +4537,19 @@ function renderTopologyInspector() {
             </div>
           ` : children.map(ch => {
             const chPowerBadge = (typeof PortEngine !== "undefined") ? PortEngine.getPowerBadge(ch) : { label: "PoE", badgeLabel: "PoE", isExternal: false };
+            const chPortNum = ch.assignedSwitchPort || (switchPorts.find(p => p.connectedDeviceId === ch.instanceId)?.portNumber) || null;
+            const chPatch = (swPatchMap && swPatchMap.byPortNumber && chPortNum) ? swPatchMap.byPortNumber[chPortNum] : null;
+            const chPathLabel = chPatch
+              ? `${chPatch.horizontalCableId} &bull; ${chPatch.panelTag}-${String(chPatch.jackNumber).padStart(2, '0')} &rarr; ${chPatch.switchPortTag}`
+              : `Port ${chPortNum || 'Auto'}`;
             return `
               <div 
                 onclick="selectTopologyNode('${ch.instanceId}', event)"
                 class="bg-slate-950 p-2 rounded-lg border border-slate-850 hover:border-slate-700 cursor-pointer flex items-center justify-between text-xs transition-colors"
               >
-                <div class="truncate max-w-[170px]">
-                  <span class="text-white block font-medium truncate">${escapeHTML(ch.model)}</span>
-                  <span class="text-[10px] text-slate-400 font-mono">${ch.role || 'Edge Device'} &bull; ${ch.qty || 1}x &bull; Port ${ch.assignedSwitchPort || 'Auto'}</span>
+                <div class="truncate max-w-[195px]">
+                  <span class="text-white block font-medium truncate">${escapeHTML(ch.friendlyName || ch.model)}</span>
+                  <span class="text-[10px] text-slate-400 font-mono truncate block"><span class="text-sky-300 font-bold">${chPathLabel}</span> &bull; ${ch.role || 'Edge Device'}</span>
                 </div>
                 <div class="text-right shrink-0">
                   <span class="font-mono text-[10px] ${chPowerBadge.isExternal ? 'text-amber-400' : 'text-emerald-400'} font-bold block">
@@ -4286,6 +4635,64 @@ function renderTopologyInspector() {
           </div>
         </div>
       `;
+    } else if (link.category === "field_drop" || link.isFieldDrop) {
+      const pInfo = link.orionPatchInfo || null;
+      container.innerHTML = `
+        <div class="space-y-3">
+          <div class="pb-2 border-b border-slate-800 flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-white block">${escapeHTML(link.speedLabel)}</span>
+              <span class="text-[10px] font-mono text-cyan-400">Orion Structured Cabling & Patch Panel Drop</span>
+            </div>
+            ${fromNode ? `
+              <button 
+                type="button" 
+                onclick="if (typeof openPortMatrixStudio === 'function') openPortMatrixStudio('${fromNode.instanceId}');"
+                class="px-2 py-0.5 bg-sky-950/80 hover:bg-sky-900 text-sky-300 border border-sky-600/60 rounded text-[9px] font-mono font-bold cursor-pointer"
+                title="Open Port & Patch Panel Matrix Studio"
+              >
+                Port Matrix
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="space-y-2 text-xs bg-slate-950 p-3 rounded-xl border border-slate-850 font-mono">
+            <div class="flex justify-between">
+              <span class="text-slate-400">Serving Switch:</span>
+              <span class="text-white font-bold truncate max-w-[165px]">${escapeHTML(fromNode ? (fromNode.friendlyName || fromNode.model) : 'Switch')}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-400">Field Endpoint:</span>
+              <span class="text-cyan-300 font-bold truncate max-w-[165px]">${escapeHTML(toNode ? (toNode.friendlyName || toNode.model) : 'Endpoint')}</span>
+            </div>
+            ${pInfo ? `
+              <div class="pt-1.5 mt-1 border-t border-slate-900 space-y-1">
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Horizontal Cable ID:</span>
+                  <span class="text-sky-300 font-bold">${escapeHTML(pInfo.horizontalCableId)}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Patch Panel Jack:</span>
+                  <span class="text-cyan-300 font-bold">${escapeHTML(pInfo.keystoneJackLabel)}</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Patch Cord:</span>
+                  <span class="text-indigo-300 font-bold">${escapeHTML(pInfo.patchCordId)} (${escapeHTML(pInfo.patchCordSpec?.label || '3 ft Cat6')})</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">Switch Port Tag:</span>
+                  <span class="text-emerald-300 font-bold">${escapeHTML(pInfo.closetCode)}-${escapeHTML(pInfo.switchPortTag)}</span>
+                </div>
+                <div class="mt-1.5 p-2 rounded-lg bg-slate-900 border border-slate-800 text-[9px] space-y-0.5">
+                  <div class="text-[8px] uppercase text-slate-500 font-bold">2-Line Brady Cable Label</div>
+                  <div class="text-amber-300 font-bold">${escapeHTML(pInfo.headendLabelLine1)}</div>
+                  <div class="text-cyan-300">${escapeHTML(pInfo.headendLabelLine2)}</div>
+                </div>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      `;
     } else {
       const fromLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(fromNode?.closetName || fromNode?.rackId || "MDF") : (fromNode?.closetName || "MDF");
       const toLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(toNode?.closetName || toNode?.rackId || "MDF") : (toNode?.closetName || "MDF");
@@ -4353,11 +4760,11 @@ function renderTopologyInspector() {
                 onchange="updateLinkOverride('${link.id}', 'medium', this.value)"
                 class="w-full bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
               >
-                <option value="auto" ${(!override.medium || override.medium === 'auto') ? 'selected' : ''}>Auto-Calculate (${isSameRack ? 'Same Rack: DAC' : `Inter-Rack: ${projectFiber.toUpperCase()} SFP`})</option>
-                <option value="dac" ${override.medium === 'dac' ? 'selected' : ''}>Direct Attach Copper (DAC)</option>
-                <option value="patch" ${(override.medium === 'patch' || override.medium === 'cat6a') ? 'selected' : ''}>RJ45 Copper Patch Cord (Cat6A)</option>
-                <option value="mmf" ${override.medium === 'mmf' ? 'selected' : ''}>Multi-Mode Fiber (MMF / OM4 SR Optics)</option>
-                <option value="smf" ${override.medium === 'smf' ? 'selected' : ''}>Single-Mode Fiber (SMF / OS2 LR Optics)</option>
+                <option value="auto" class="bg-slate-900 text-white" ${(!override.medium || override.medium === 'auto') ? 'selected' : ''}>Auto-Calculate (${isSameRack ? 'Same Rack: DAC' : `Inter-Rack: ${projectFiber.toUpperCase()} SFP`})</option>
+                <option value="dac" class="bg-slate-900 text-white" ${override.medium === 'dac' ? 'selected' : ''}>Direct Attach Copper (DAC)</option>
+                <option value="patch" class="bg-slate-900 text-white" ${(override.medium === 'patch' || override.medium === 'cat6a') ? 'selected' : ''}>RJ45 Copper Patch Cord (Cat6A)</option>
+                <option value="mmf" class="bg-slate-900 text-white" ${override.medium === 'mmf' ? 'selected' : ''}>Multi-Mode Fiber (MMF / OM4 SR Optics)</option>
+                <option value="smf" class="bg-slate-900 text-white" ${override.medium === 'smf' ? 'selected' : ''}>Single-Mode Fiber (SMF / OS2 LR Optics)</option>
               </select>
             </div>
 
@@ -4371,12 +4778,12 @@ function renderTopologyInspector() {
                   onchange="updateLinkOverride('${link.id}', 'dacLength', this.value)"
                   class="w-full bg-slate-950 border border-slate-700 text-amber-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
                 >
-                  <option value="auto" ${(!override.dacLength || override.dacLength === 'auto') ? 'selected' : ''}>Auto (${calcDacLen} based on ${uDiff}U separation)</option>
-                  <option value="0.5m" ${override.dacLength === '0.5m' ? 'selected' : ''}>0.5m (~1.6 ft &bull; Adjacent / 1-2U)</option>
-                  <option value="1m" ${override.dacLength === '1m' ? 'selected' : ''}>1.0m (~3.3 ft &bull; 3-6U)</option>
-                  <option value="2m" ${override.dacLength === '2m' ? 'selected' : ''}>2.0m (~6.6 ft &bull; 7-15U)</option>
-                  <option value="3m" ${override.dacLength === '3m' ? 'selected' : ''}>3.0m (~10 ft &bull; 16-28U)</option>
-                  <option value="5m" ${override.dacLength === '5m' ? 'selected' : ''}>5.0m (~16.4 ft &bull; 28U+ Top-to-Bottom)</option>
+                  <option value="auto" class="bg-slate-900 text-white" ${(!override.dacLength || override.dacLength === 'auto') ? 'selected' : ''}>Auto (${calcDacLen} based on ${uDiff}U separation)</option>
+                  <option value="0.5m" class="bg-slate-900 text-white" ${override.dacLength === '0.5m' ? 'selected' : ''}>0.5m (~1.6 ft &bull; Adjacent / 1-2U)</option>
+                  <option value="1m" class="bg-slate-900 text-white" ${override.dacLength === '1m' ? 'selected' : ''}>1.0m (~3.3 ft &bull; 3-6U)</option>
+                  <option value="2m" class="bg-slate-900 text-white" ${override.dacLength === '2m' ? 'selected' : ''}>2.0m (~6.6 ft &bull; 7-15U)</option>
+                  <option value="3m" class="bg-slate-900 text-white" ${override.dacLength === '3m' ? 'selected' : ''}>3.0m (~10 ft &bull; 16-28U)</option>
+                  <option value="5m" class="bg-slate-900 text-white" ${override.dacLength === '5m' ? 'selected' : ''}>5.0m (~16.4 ft &bull; 28U+ Top-to-Bottom)</option>
                 </select>
               </div>
             ` : ((activeMedium === 'patch' || activeMedium === 'cat6a') ? `
@@ -4389,14 +4796,14 @@ function renderTopologyInspector() {
                   onchange="updateLinkOverride('${link.id}', 'patchLength', this.value)"
                   class="w-full bg-slate-950 border border-slate-700 text-sky-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
                 >
-                  <option value="auto" ${(!override.patchLength || override.patchLength === 'auto') ? 'selected' : ''}>Auto (${calcPatchCord.label} based on ${uDiff}U separation)</option>
-                  <option value="0.5" ${override.patchLength === '0.5' ? 'selected' : ''}>0.5 ft (6-Inch &bull; Adjacent / 0-1U)</option>
-                  <option value="1" ${override.patchLength === '1' ? 'selected' : ''}>1.0 ft (~0.3m &bull; 2-4U)</option>
-                  <option value="3" ${override.patchLength === '3' ? 'selected' : ''}>3.0 ft (~1.0m &bull; 5-7U)</option>
-                  <option value="5" ${override.patchLength === '5' ? 'selected' : ''}>5.0 ft (~1.5m &bull; 8-14U)</option>
-                  <option value="7" ${override.patchLength === '7' ? 'selected' : ''}>7.0 ft (~2.1m &bull; 15-22U)</option>
-                  <option value="10" ${override.patchLength === '10' ? 'selected' : ''}>10.0 ft (~3.0m &bull; 23-32U)</option>
-                  <option value="15" ${override.patchLength === '15' ? 'selected' : ''}>15.0 ft (~4.6m &bull; 33U+ Top-to-Bottom)</option>
+                  <option value="auto" class="bg-slate-900 text-white" ${(!override.patchLength || override.patchLength === 'auto') ? 'selected' : ''}>Auto (${calcPatchCord.label} based on ${uDiff}U separation)</option>
+                  <option value="0.5" class="bg-slate-900 text-white" ${override.patchLength === '0.5' ? 'selected' : ''}>0.5 ft (6-Inch &bull; Adjacent / 0-1U)</option>
+                  <option value="1" class="bg-slate-900 text-white" ${override.patchLength === '1' ? 'selected' : ''}>1.0 ft (~0.3m &bull; 2-4U)</option>
+                  <option value="3" class="bg-slate-900 text-white" ${override.patchLength === '3' ? 'selected' : ''}>3.0 ft (~1.0m &bull; 5-7U)</option>
+                  <option value="5" class="bg-slate-900 text-white" ${override.patchLength === '5' ? 'selected' : ''}>5.0 ft (~1.5m &bull; 8-14U)</option>
+                  <option value="7" class="bg-slate-900 text-white" ${override.patchLength === '7' ? 'selected' : ''}>7.0 ft (~2.1m &bull; 15-22U)</option>
+                  <option value="10" class="bg-slate-900 text-white" ${override.patchLength === '10' ? 'selected' : ''}>10.0 ft (~3.0m &bull; 23-32U)</option>
+                  <option value="15" class="bg-slate-900 text-white" ${override.patchLength === '15' ? 'selected' : ''}>15.0 ft (~4.6m &bull; 33U+ Top-to-Bottom)</option>
                 </select>
               </div>
             ` : `
@@ -4406,9 +4813,9 @@ function renderTopologyInspector() {
                   onchange="updateLinkOverride('${link.id}', 'fiberType', this.value)"
                   class="w-full bg-slate-950 border border-slate-700 text-cyan-200 text-xs rounded-xl px-2.5 py-1.5 focus:outline-none focus:border-brand-500 font-mono"
                 >
-                  <option value="auto" ${(!override.fiberType || override.fiberType === 'auto') ? 'selected' : ''}>Project Default (${projectFiber.toUpperCase()} / ${projectFiber === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'})</option>
-                  <option value="mmf" ${override.fiberType === 'mmf' ? 'selected' : ''}>Multi-Mode (OM4 Duplex LC &bull; SR Optics 850nm)</option>
-                  <option value="smf" ${override.fiberType === 'smf' ? 'selected' : ''}>Single-Mode (OS2 Duplex LC &bull; LR Optics 1310nm)</option>
+                  <option value="auto" class="bg-slate-900 text-white" ${(!override.fiberType || override.fiberType === 'auto') ? 'selected' : ''}>Project Default (${projectFiber.toUpperCase()} / ${projectFiber === 'smf' ? 'OS2 Single-Mode' : 'OM4 Multi-Mode'})</option>
+                  <option value="mmf" class="bg-slate-900 text-white" ${override.fiberType === 'mmf' ? 'selected' : ''}>Multi-Mode (OM4 Duplex LC &bull; SR Optics 850nm)</option>
+                  <option value="smf" class="bg-slate-900 text-white" ${override.fiberType === 'smf' ? 'selected' : ''}>Single-Mode (OS2 Duplex LC &bull; LR Optics 1310nm)</option>
                 </select>
               </div>
             `)}
@@ -4434,11 +4841,31 @@ function renderTopologyInspector() {
     const totalSwitches = projectBOM.filter(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core" || i.role === "Aggregation")).length;
     const totalGateways = projectBOM.filter(i => !i.parentInstanceId && (i.role === "Gateways & WAN" || i.role === "Security WAN")).length;
     const totalEdge = projectBOM.filter(i => i.uplinkTargetId && !i.parentInstanceId).length;
+    const currentFiber = getProjectFiberType();
 
     container.innerHTML = `
       <div class="space-y-4">
         <div class="text-slate-400 text-xs">
-          Select any switch, server, or interconnect link on the canvas to configure uplinks, adjust LAG trunking, or inspect connected field devices.
+          Select any rack, switch, server, field drop, or interconnect link on the canvas to configure uplinks, inspect Orion patch panel & cable labels, or verify 1:1 rack PDU receptacle assignments.
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onclick="if (typeof openPortMatrixStudio === 'function') openPortMatrixStudio();"
+            class="px-2.5 py-2 bg-sky-950/60 hover:bg-sky-900/80 border border-sky-500/50 text-sky-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <i data-lucide="grid" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span>Port Matrix</span>
+          </button>
+          <button
+            type="button"
+            onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal();"
+            class="px-2.5 py-2 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-500/50 text-amber-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+          >
+            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>Power Matrix</span>
+          </button>
         </div>
 
         <div class="space-y-2 pt-2 border-t border-slate-800">
@@ -4460,6 +4887,23 @@ function renderTopologyInspector() {
               <span class="text-slate-400">Active Interconnects:</span>
               <span class="text-emerald-400 font-bold">${topologyLinks.length} Trunks</span>
             </div>
+          </div>
+        </div>
+
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 block">Default Inter-Rack Backbone Standard</span>
+          <div class="bg-slate-950 p-3 rounded-xl border border-slate-850 space-y-1.5">
+            <label class="text-[10px] text-slate-400 block">Backbone Fiber & SFP Default:</label>
+            <select
+              onchange="setProjectFiberType(this.value)"
+              class="w-full bg-slate-900 border border-slate-700 text-cyan-300 font-mono text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-brand-500 cursor-pointer"
+            >
+              <option value="mmf" class="bg-slate-900 text-white" ${currentFiber === 'mmf' ? 'selected' : ''}>OM4 Multi-Mode Fiber (850nm SR Optics)</option>
+              <option value="smf" class="bg-slate-900 text-white" ${currentFiber === 'smf' ? 'selected' : ''}>OS2 Single-Mode Fiber (1310nm LR Optics)</option>
+            </select>
+            <p class="text-[10px] text-slate-500 leading-relaxed">
+              Same-rack switch links default to short DAC copper; inter-rack links default to this fiber standard unless overridden per link.
+            </p>
           </div>
         </div>
       </div>
@@ -5252,11 +5696,11 @@ function populateTopologyQuickJump() {
   if (!select) return;
 
   const items = getTopologySearchItems();
-  let html = `<option value="">Jump to Device / Rack...</option>`;
+  let html = `<option value="" class="bg-slate-900 text-white">Jump to Device / Rack...</option>`;
   items.forEach(item => {
     const isSel = (selectedTopologyRackLoc && item.targetVal === `loc:${selectedTopologyRackLoc}`) ||
                   (selectedTopologyNodeId && item.targetVal === `node:${selectedTopologyNodeId}`);
-    html += `<option value="${item.targetVal}" ${isSel ? 'selected' : ''}>${item.icon} ${escapeHTML(item.name)} (${escapeHTML(item.badge)})</option>`;
+    html += `<option value="${item.targetVal}" class="bg-slate-900 text-white" ${isSel ? 'selected' : ''}>${item.icon} ${escapeHTML(item.name)} (${escapeHTML(item.badge)})</option>`;
   });
   select.innerHTML = html;
 }
@@ -5303,31 +5747,31 @@ function jumpToTopologyTarget(targetVal = null) {
     if (st && st.tool !== "topology") NavigationHistory.push(st);
   }
 
-  // 2. Close physical layout modal if open
-  const physModal = document.getElementById("cableLayoutModal");
-  if (physModal && !physModal.classList.contains("hidden")) {
-    if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
-  }
-
-  // 3. Close facility modal if open
-  const facModal = document.getElementById("facilityModal");
-  if (facModal && !facModal.classList.contains("hidden")) {
-    if (typeof toggleFacilityModal === "function") toggleFacilityModal();
-  }
-
-  // 4. Close BOM drawer if open so full topology canvas and inspector are visible
+  // 2. Close BOM drawer if open so full topology canvas and inspector are visible
   const drawer = document.getElementById("bomDrawer");
   if (drawer && !drawer.classList.contains("translate-x-full")) {
     if (typeof toggleBomDrawer === "function") toggleBomDrawer();
   }
 
-  // 5. Open topology modal if hidden
+  // 3. Open topology via TabManager (or modal fallback)
   const wasHidden = !isTopologyModalVisible();
-  if (wasHidden && typeof toggleTopologyModal === "function") {
-    toggleTopologyModal();
+  if (typeof TabManager !== "undefined" && typeof TabManager.openTab === "function") {
+    TabManager.openTab("topology");
+  } else {
+    const physModal = document.getElementById("cableLayoutModal");
+    if (physModal && !physModal.classList.contains("hidden")) {
+      if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
+    }
+    const facModal = document.getElementById("facilityModal");
+    if (facModal && !facModal.classList.contains("hidden")) {
+      if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+    }
+    if (wasHidden && typeof toggleTopologyModal === "function") {
+      toggleTopologyModal();
+    }
   }
 
-  // 3. Jump to target after delay to allow canvas rendering
+  // 4. Jump to target after delay to allow canvas rendering
   if (targetVal) {
     setTimeout(() => {
       if (targetVal.startsWith("loc:")) {
