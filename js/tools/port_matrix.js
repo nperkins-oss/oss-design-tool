@@ -86,7 +86,6 @@ function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
   const switches = getProjectSwitches();
 
   const selector = document.getElementById("matrixStudioSwitchSelector");
-  const facilitySelector = document.getElementById("facilityPortMatrixSwitchSelector");
 
   if (switches.length === 0) {
     activePortMatrixSwitchId = null;
@@ -94,10 +93,6 @@ function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
     if (selector) {
       selector.innerHTML = noSwitchOption;
       selector.disabled = true;
-    }
-    if (facilitySelector) {
-      facilitySelector.innerHTML = noSwitchOption;
-      facilitySelector.disabled = true;
     }
 
     const emptyHtml = `
@@ -113,7 +108,7 @@ function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
           <button type="button" onclick="quickAddDefaultSwitchToProject()" class="px-4 py-2 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-sky-900/30 flex items-center gap-2 transition-all cursor-pointer">
             <i data-lucide="plus-circle" class="w-4 h-4"></i> Add 24-Port PoE+ Switch
           </button>
-          <button type="button" onclick="switchFacilityView('hierarchy')" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl flex items-center gap-2 transition-all cursor-pointer">
+          <button type="button" onclick="if(window.TabManager) TabManager.openTab('facility'); else switchFacilityView('hierarchy');" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-xs rounded-xl flex items-center gap-2 transition-all cursor-pointer">
             <i data-lucide="layers" class="w-4 h-4 text-indigo-400"></i> Hierarchy &amp; Spaces
           </button>
         </div>
@@ -122,21 +117,14 @@ function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
 
     const container = document.getElementById("portMatrixStudioBody");
     if (container) container.innerHTML = emptyHtml;
-    const facilityContainer = document.getElementById("facilityPortMatrixBody");
-    if (facilityContainer) facilityContainer.innerHTML = emptyHtml;
 
-    const facModal = document.getElementById("facilityModal");
-    const isFacilityActive = facModal && !facModal.classList.contains("hidden") && (typeof facilityActiveView !== "undefined" && facilityActiveView === "port_matrix");
-    if (!isFacilityActive) {
-      const modal = document.getElementById("portMatrixStudioModal");
-      if (modal) modal.classList.remove("hidden");
-    }
+    const modal = document.getElementById("portMatrixStudioModal");
+    if (modal) modal.classList.remove("hidden");
     if (window.lucide) lucide.createIcons();
     return;
   }
 
   if (selector) selector.disabled = false;
-  if (facilitySelector) facilitySelector.disabled = false;
 
   let selectedSw = null;
   if (targetSwitchIdOrLoc) {
@@ -167,20 +155,12 @@ function openPortMatrixStudio(targetSwitchIdOrLoc, focusPortNumber = null) {
     selector.innerHTML = switchOptions;
     selector.value = selectedSw.instanceId;
   }
-  if (facilitySelector) {
-    facilitySelector.innerHTML = switchOptions;
-    facilitySelector.value = selectedSw.instanceId;
-  }
 
   renderPortMatrixStudioContent(selectedSw.instanceId);
 
-  const facModal = document.getElementById("facilityModal");
-  const isFacilityActive = facModal && !facModal.classList.contains("hidden") && (typeof facilityActiveView !== "undefined" && facilityActiveView === "port_matrix");
-  if (!isFacilityActive) {
-    const modal = document.getElementById("portMatrixStudioModal");
-    if (modal) {
-      modal.classList.remove("hidden");
-    }
+  const modal = document.getElementById("portMatrixStudioModal");
+  if (modal) {
+    modal.classList.remove("hidden");
   }
   if (window.lucide) lucide.createIcons();
 
@@ -213,13 +193,10 @@ function renderPortMatrixStudioContent(switchInstanceId) {
   activePortMatrixSwitchId = switchInstanceId;
   const sw = projectBOM.find(i => i.instanceId === switchInstanceId);
   const container = document.getElementById("portMatrixStudioBody");
-  const facilityContainer = document.getElementById("facilityPortMatrixBody");
-  if (!sw || (!container && !facilityContainer)) return;
+  if (!sw || !container) return;
 
   const selector = document.getElementById("matrixStudioSwitchSelector");
   if (selector && selector.value !== switchInstanceId) selector.value = switchInstanceId;
-  const facilitySelector = document.getElementById("facilityPortMatrixSwitchSelector");
-  if (facilitySelector && facilitySelector.value !== switchInstanceId) facilitySelector.value = switchInstanceId;
 
   const hasDedicatedStack = typeof PortEngine !== "undefined" && typeof PortEngine.hasDedicatedStackPorts === "function"
     ? PortEngine.hasDedicatedStackPorts(sw)
@@ -268,10 +245,6 @@ function renderPortMatrixStudioContent(switchInstanceId) {
   const badgeEl = document.getElementById("matrixStudioSwitchBadge");
   if (badgeEl) {
     badgeEl.textContent = badgeText;
-  }
-  const facilityBadgeEl = document.getElementById("facilityPortMatrixSwitchBadge");
-  if (facilityBadgeEl) {
-    facilityBadgeEl.textContent = badgeText;
   }
 
   const renderKeystoneJackCell = (p) => {
@@ -885,13 +858,13 @@ function renderPortMatrixStudioContent(switchInstanceId) {
                     <td class="p-2.5 text-right" onclick="event.stopPropagation()">
                       ${hasDev && !isStack ? `
                         <div class="flex items-center justify-end gap-1">
-                          <button onclick="closePortMatrixStudio(); jumpToTopologyTarget('node:${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800 text-indigo-300 text-[10px] cursor-pointer" title="Focus in Topology">
+                          <button onclick="jumpToTopologyTarget('node:${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800 text-indigo-300 text-[10px] cursor-pointer" title="Focus in Topology">
                             Topo
                           </button>
-                          <button onclick="closePortMatrixStudio(); jumpToPhysicalLayoutTarget('${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 text-[10px] cursor-pointer" title="Focus in Physical Layout">
+                          <button onclick="jumpToPhysicalLayoutTarget('${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 text-[10px] cursor-pointer" title="Focus in Physical Layout">
                             Phys
                           </button>
-                          <button onclick="closePortMatrixStudio(); jumpToBomTarget('${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[10px] cursor-pointer" title="Locate in BOM">
+                          <button onclick="jumpToBomTarget('${p.connectedDeviceId}')" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[10px] cursor-pointer" title="Locate in BOM">
                             BOM
                           </button>
                           <button onclick="disconnectMatrixPort('${sw.instanceId}', ${p.portNumber})" class="px-1.5 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-[10px] cursor-pointer flex items-center gap-0.5" title="Disconnect device from this port">
@@ -918,7 +891,6 @@ function renderPortMatrixStudioContent(switchInstanceId) {
   `;
 
   if (container) container.innerHTML = matrixHtml;
-  if (facilityContainer) facilityContainer.innerHTML = matrixHtml;
 
   if (window.lucide) lucide.createIcons();
 }

@@ -1989,6 +1989,13 @@ function switchFacilityView(viewName, targetLocName) {
     return;
   }
 
+  const targetTabKey = (viewName === "visualizer") ? "enclosures" : "facility";
+  const facModal = document.getElementById("facilityModal");
+  if (facModal && facModal.classList.contains("hidden") && window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab(targetTabKey, targetLocName ? { locationName: targetLocName } : null);
+    return;
+  }
+
   facilityActiveView = (viewName === "visualizer") ? "visualizer" : "hierarchy";
   window.facilityActiveView = facilityActiveView;
   const hierarchyView = document.getElementById("facilityHierarchyView");
@@ -2037,6 +2044,9 @@ function switchFacilityView(viewName, targetLocName) {
     renderFacilityManager();
   }
 
+  if (window.TabManager && typeof window.TabManager.syncTabBarState === "function") {
+    window.TabManager.syncTabBarState(targetTabKey);
+  }
   if (typeof updateFacilitySubNavUI === "function") updateFacilitySubNavUI();
   if (window.lucide) lucide.createIcons();
 }
@@ -3679,22 +3689,14 @@ function openRackViewerFor(locationName) {
     const st = NavigationHistory.captureCurrentState();
     if (st && st.tool !== "facility") NavigationHistory.push(st);
   }
-  const physModal = document.getElementById("cableLayoutModal");
-  if (physModal && !physModal.classList.contains("hidden")) {
-    if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
-  }
-  const topoModal = document.getElementById("topologyModal");
-  if (topoModal && !topoModal.classList.contains("hidden")) {
-    if (typeof toggleTopologyModal === "function") toggleTopologyModal();
-  }
-  const bomModal = document.getElementById("bomModal");
-  if (bomModal && !bomModal.classList.contains("hidden")) {
-    if (typeof toggleBomModal === "function") toggleBomModal();
-  }
-
   previousFacilityFloorId = activeFacilityFloorId;
   previousFacilitySpaceId = activeFacilitySpaceId;
   facilityActiveForm = null;
+
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("enclosures", locationName ? { locationName } : null);
+    return;
+  }
 
   const facModal = document.getElementById("facilityModal");
   if (facModal && facModal.classList.contains("hidden")) {
@@ -3710,18 +3712,6 @@ function jumpToFacilitySpace(target) {
     const st = NavigationHistory.captureCurrentState();
     if (st && st.tool !== "facility") NavigationHistory.push(st);
   }
-  const physModal = document.getElementById("cableLayoutModal");
-  if (physModal && !physModal.classList.contains("hidden")) {
-    if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
-  }
-  const topoModal = document.getElementById("topologyModal");
-  if (topoModal && !topoModal.classList.contains("hidden")) {
-    if (typeof toggleTopologyModal === "function") toggleTopologyModal();
-  }
-  const bomModalTarget = document.getElementById("bomModal");
-  if (bomModalTarget && !bomModalTarget.classList.contains("hidden")) {
-    if (typeof toggleBomModal === "function") toggleBomModal();
-  }
 
   const parsed = FacilityStore.parse(target);
   const spaces = FacilityStore.getSpaces();
@@ -3731,9 +3721,26 @@ function jumpToFacilitySpace(target) {
     (parsed.space && s.name.toLowerCase() === parsed.space.toLowerCase())
   );
 
+  if (space) {
+    activeFacilityFloorId = space.floorId;
+    activeFacilitySpaceId = space.id;
+    previousFacilityFloorId = space.floorId;
+    previousFacilitySpaceId = space.id;
+  }
+
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("facility");
+    if (space) {
+      activeFacilityFloorId = space.floorId;
+      activeFacilitySpaceId = space.id;
+      renderFacilityManager();
+    }
+    return;
+  }
+
   const facModal = document.getElementById("facilityModal");
   if (facModal && facModal.classList.contains("hidden")) {
-    toggleFacilityModal();
+    facModal.classList.remove("hidden");
   }
   switchFacilityView("hierarchy");
   if (space) {

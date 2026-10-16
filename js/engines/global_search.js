@@ -629,6 +629,9 @@ const GlobalSearchEngine = {
       switches: 0,
       firewalls: 0,
       wireless: 0,
+      cameras: 0,
+      access_control: 0,
+      compute: 0,
       accessories: 0,
       racks_ups: 0,
       optics: 0,
@@ -685,7 +688,7 @@ const GlobalSearchEngine = {
     const target = found.target;
     const item = found.item;
 
-    // 1. Close search overlays and all modal dialogs
+    // 1. Close search overlays and floating modal dialogs
     this.closeDropdown();
     this.closeModal();
     this.closeAllBlockingModals();
@@ -700,7 +703,7 @@ const GlobalSearchEngine = {
       resetCurrentFilters(true);
     }
 
-    // 3. Switch domain & mode if necessary
+    // 3. Switch domain & mode (and ensure catalog tab is active in TabManager)
     const isModeChange = (typeof currentMode === "undefined" || currentMode !== target.mode);
 
     if (isModeChange) {
@@ -708,6 +711,10 @@ const GlobalSearchEngine = {
         switchMode(target.mode);
       }
     } else {
+      const catalogTabKey = `catalog_${target.domain || window.activeDomain || "networking"}`;
+      if (window.TabManager && typeof window.TabManager.openTab === "function") {
+        window.TabManager.openTab(catalogTabKey);
+      }
       // Re-run filter in current mode to ensure clean view
       if (typeof runActiveFilter === "function") {
         runActiveFilter();
@@ -755,19 +762,14 @@ const GlobalSearchEngine = {
   },
 
   /**
-   * Helper to close all potentially blocking flyouts or modals
+   * Helper to close floating overlay modals without closing open workspace studio tabs
    */
   closeAllBlockingModals() {
     const modalsToClose = [
       { id: "datasheetViewerModal", func: "closeDatasheetModal" },
       { id: "productImageModal", func: "closeProductImageModal" },
-      { id: "facilityModal", func: "toggleFacilityModal" },
-      { id: "topologyModal", func: "toggleTopologyModal" },
-      { id: "cableLayoutModal", func: "toggleCableLayoutModal" },
       { id: "compareModal", func: "toggleCompareModal" },
-      { id: "projectHealthModal", func: "toggleProjectHealthModal" },
-      { id: "rackElevationModal", func: "toggleRackModal" },
-      { id: "licensingTermsModal", func: "toggleLicenseModal" }
+      { id: "licenseModal", func: "toggleLicenseModal" }
     ];
 
     modalsToClose.forEach(m => {
@@ -780,11 +782,6 @@ const GlobalSearchEngine = {
         }
       }
     });
-
-    const bomDrawer = document.getElementById("bomDrawer");
-    if (bomDrawer && !bomDrawer.classList.contains("translate-x-full")) {
-      if (typeof toggleBomDrawer === "function") toggleBomDrawer();
-    }
   },
 
   // =========================================================================

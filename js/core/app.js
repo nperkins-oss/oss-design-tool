@@ -1839,7 +1839,9 @@ const NavigationHistory = {
     if (!state || !state.tool) return false;
 
     if (state.tool === "physical") {
-      if (typeof toggleCableLayoutModal === "function") {
+      if (window.TabManager && typeof window.TabManager.openTab === "function") {
+        window.TabManager.openTab("physical_layout");
+      } else if (typeof toggleCableLayoutModal === "function") {
         const modal = document.getElementById("cableLayoutModal");
         if (modal && modal.classList.contains("hidden")) toggleCableLayoutModal();
       }
@@ -1853,7 +1855,9 @@ const NavigationHistory = {
     }
 
     if (state.tool === "topology") {
-      if (typeof toggleTopologyModal === "function") {
+      if (window.TabManager && typeof window.TabManager.openTab === "function") {
+        window.TabManager.openTab("topology");
+      } else if (typeof toggleTopologyModal === "function") {
         const modal = document.getElementById("topologyModal");
         if (modal && modal.classList.contains("hidden")) toggleTopologyModal();
       }
@@ -1864,9 +1868,14 @@ const NavigationHistory = {
     }
 
     if (state.tool === "facility") {
-      const facModal = document.getElementById("facilityModal");
-      if (facModal && facModal.classList.contains("hidden")) {
-        if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+      const targetTab = (state.view === "visualizer") ? "enclosures" : "facility";
+      if (window.TabManager && typeof window.TabManager.openTab === "function") {
+        window.TabManager.openTab(targetTab);
+      } else {
+        const facModal = document.getElementById("facilityModal");
+        if (facModal && facModal.classList.contains("hidden")) {
+          if (typeof toggleFacilityModal === "function") toggleFacilityModal();
+        }
       }
       if (typeof switchFacilityView === "function") {
         switchFacilityView(state.view || "hierarchy", state.rackId);
@@ -1875,11 +1884,15 @@ const NavigationHistory = {
     }
 
     if (state.tool === "bom") {
-      const modal = document.getElementById("bomModal");
-      const drawer = document.getElementById("bomDrawer");
-      if ((modal && modal.classList.contains("hidden")) || (drawer && drawer.classList.contains("translate-x-full"))) {
-        if (typeof toggleBomModal === "function") toggleBomModal();
-        else if (typeof toggleBomDrawer === "function") toggleBomDrawer();
+      if (window.TabManager && typeof window.TabManager.openTab === "function") {
+        window.TabManager.openTab("bom");
+      } else {
+        const modal = document.getElementById("bomModal");
+        const drawer = document.getElementById("bomDrawer");
+        if ((modal && modal.classList.contains("hidden")) || (drawer && drawer.classList.contains("translate-x-full"))) {
+          if (typeof toggleBomModal === "function") toggleBomModal();
+          else if (typeof toggleBomDrawer === "function") toggleBomDrawer();
+        }
       }
       return true;
     }

@@ -5885,28 +5885,12 @@ function jumpToTopologyTarget(targetVal = null) {
     if (st && st.tool !== "topology") NavigationHistory.push(st);
   }
 
-  // 2. Close BOM drawer if open so full topology canvas and inspector are visible
-  const drawer = document.getElementById("bomDrawer");
-  if (drawer && !drawer.classList.contains("translate-x-full")) {
-    if (typeof toggleBomDrawer === "function") toggleBomDrawer();
-  }
-
-  // 3. Open topology via TabManager (or modal fallback)
+  // 2. Open topology via TabManager (or modal fallback)
   const wasHidden = !isTopologyModalVisible();
   if (typeof TabManager !== "undefined" && typeof TabManager.openTab === "function") {
     TabManager.openTab("topology");
-  } else {
-    const physModal = document.getElementById("cableLayoutModal");
-    if (physModal && !physModal.classList.contains("hidden")) {
-      if (typeof toggleCableLayoutModal === "function") toggleCableLayoutModal();
-    }
-    const facModal = document.getElementById("facilityModal");
-    if (facModal && !facModal.classList.contains("hidden")) {
-      if (typeof toggleFacilityModal === "function") toggleFacilityModal();
-    }
-    if (wasHidden && typeof toggleTopologyModal === "function") {
-      toggleTopologyModal();
-    }
+  } else if (wasHidden && typeof toggleTopologyModal === "function") {
+    toggleTopologyModal();
   }
 
   // 4. Jump to target after delay to allow canvas rendering

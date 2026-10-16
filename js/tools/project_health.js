@@ -1025,7 +1025,7 @@ function auditProjectHealth() {
           summary: `${vAudit.totalCameras} camera(s) (${vAudit.totalSensors} streams @ ${vAudit.totalBandwidthMbps} Mbps) require ${vAudit.requiredUsableTB} TB usable (${vAudit.requiredRawTB} TB raw ${vAudit.raidType}) for ${vAudit.retentionDays}-day retention`,
           details: `Based on ${vAudit.retentionDays}-day retention (${vAudit.codec}, ${vAudit.fps} FPS, ${Math.round(vAudit.motionDutyCycle * 100)}% motion duty cycle, ${vAudit.raidType}), the camera fleet requires ${vAudit.requiredUsableTB} TB of usable storage (${deficitTB} TB deficit). Auto-fit an NVR appliance to meet target retention.`,
           actionLabel: `+ Auto-Fit NVR for ${vAudit.requiredUsableTB} TB Usable`,
-          actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModalContent();",
+          actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModal();",
           badgeText: `${deficitTB} TB STORAGE DEFICIT`
         });
       } else if (quotedNvrs.length > 0 && vAudit.totalBandwidthMbps > totalMaxThroughputMbps) {
@@ -1038,7 +1038,7 @@ function auditProjectHealth() {
           summary: `Camera ingest bitrate (${vAudit.totalBandwidthMbps} Mbps) exceeds quoted NVR recording throughput limit (${totalMaxThroughputMbps} Mbps)`,
           details: `Even when hard drive storage capacity is sufficient, exceeding the NVR's maximum network ingest throughput (${totalMaxThroughputMbps} Mbps) causes dropped video frames and database corruption during high-motion events. Distribute cameras across an additional NVR or upgrade to a higher-throughput enterprise recorder.`,
           actionLabel: `+ Add Additional NVR Appliance`,
-          actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModalContent();",
+          actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModal();",
           badgeText: "THROUGHPUT OVERLOAD"
         });
       }
@@ -1075,7 +1075,7 @@ function auditProjectHealth() {
       summary: `${requiredControlledDoors} controlled door(s) (${totalReadersQuoted} readers, ${totalLocksQuoted} locks) quoted, but panels only support ${totalControllerDoorCap} door(s)`,
       details: `Every controlled door opening requires a dedicated reader port, lock relay, REX input, and DPS supervised input on an intelligent door controller or downstream interface module. Add ${controllersToAdd}x 2-Door Intelligent Controller(s) (Mercury LP1502) to terminate all ${requiredControlledDoors} doors.`,
       actionLabel: `+ Add ${controllersToAdd}x Mercury LP1502 Controller(s)`,
-      actionFn: `if(typeof addToBOM==='function'){addToBOM('mercury-lp1502', ${controllersToAdd}); updateProjectHealthUI(); renderProjectHealthModalContent();}`,
+      actionFn: `if(typeof addToBOM==='function'){addToBOM('mercury-lp1502', ${controllersToAdd}); updateProjectHealthUI(); renderProjectHealthModal();}`,
       badgeText: `${doorDeficit} DOORS UNTERMINATED`
     });
   }
@@ -1383,7 +1383,7 @@ function renderProjectHealthModal() {
           National &amp; local codes (NEC 300.9 / 800.100, NFPA 101, TIA-568) and Orion Internal Standards (TOW Structured Cabling, Life Safety Power, and Switch Configuration) are 100% verified. No manufacturer or industry discrepancies detected.
         </p>
         <div class="pt-2">
-          <button onclick="toggleProjectHealthModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer">
+          <button onclick="if(window.TabManager) TabManager.openTab('physical_layout'); else toggleProjectHealthModal();" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold cursor-pointer">
             Return to Design Canvas
           </button>
         </div>
@@ -1475,25 +1475,26 @@ function renderProjectHealthModal() {
 // =========================================================================
 
 function jumpToPhysicalLayoutFromHealth(targetVal) {
-  toggleProjectHealthModal();
   if (typeof jumpToPhysicalLayoutTarget === "function") {
     jumpToPhysicalLayoutTarget(targetVal);
+  } else if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("physical_layout");
   } else if (typeof toggleCableLayoutModal === "function") {
     toggleCableLayoutModal();
   }
 }
 
 function openPortMatrixFromHealth(switchId) {
-  toggleProjectHealthModal();
   if (typeof openPortMatrixStudio === "function") {
     openPortMatrixStudio(switchId || null);
   }
 }
 
 function openRackFromHealth(closetName) {
-  toggleProjectHealthModal();
   if (typeof deepLinkToRackElevation === "function") {
     deepLinkToRackElevation(closetName);
+  } else if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("enclosures");
   } else if (typeof toggleFacilityModal === "function") {
     toggleFacilityModal();
   }

@@ -95,22 +95,6 @@ const TabManager = (() => {
       },
       closeFn: null
     },
-    catalog: {
-      id: "catalog",
-      title: "Product Catalog",
-      icon: "layers",
-      color: "brand",
-      closable: true,
-      modalId: null,
-      openFn: () => {
-        closeAllToolModals();
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
-        if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
-      },
-      closeFn: () => {
-        if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
-      }
-    },
     physical_layout: {
       id: "physical_layout",
       title: "Physical Layout",
@@ -214,12 +198,8 @@ const TabManager = (() => {
         const m = document.getElementById("facilityModal");
         if (m) {
           m.classList.remove("hidden");
-          if (ctx && ctx.locationName && typeof openRackViewerFor === "function") {
-            if (typeof _rawOrigOpenRackViewerFor === "function") {
-              _rawOrigOpenRackViewerFor(ctx.locationName);
-            } else {
-              openRackViewerFor(ctx.locationName);
-            }
+          if (ctx && ctx.locationName && typeof switchFacilityView === "function") {
+            switchFacilityView("visualizer", ctx.locationName);
           } else if (typeof switchFacilityView === "function") {
             switchFacilityView("visualizer");
           }
@@ -252,7 +232,7 @@ const TabManager = (() => {
       closeFn: () => {
         const m = document.getElementById("portMatrixStudioModal");
         if (m) m.classList.add("hidden");
-        if (typeof _rawClosePortMatrixStudio === "function") _rawClosePortMatrixStudio();
+        if (typeof _rawOrigClosePortMatrixStudio === "function") _rawOrigClosePortMatrixStudio();
       }
     },
     power_matrix: {
@@ -290,9 +270,12 @@ const TabManager = (() => {
       modalId: "bomModal",
       openFn: () => {
         const m = document.getElementById("bomModal");
+        const drawer = document.getElementById("bomDrawer");
         if (m) {
           m.classList.remove("hidden");
-          if (typeof renderBom === "function") renderBom();
+          if (drawer) drawer.classList.remove("translate-x-full");
+          if (typeof updateBOMView === "function") updateBOMView();
+          else if (typeof renderBom === "function") renderBom();
           if (window.lucide) lucide.createIcons();
         }
       },
@@ -439,7 +422,8 @@ const TabManager = (() => {
   const TAB_KEY_ALIASES = {
     rack: "enclosures",
     layout: "physical_layout",
-    walk: "walk_audit"
+    walk: "walk_audit",
+    catalog: "catalog_networking"
   };
 
   const TABS_STORAGE_KEY = "netselect_workspace_tabs_v1";
@@ -522,6 +506,27 @@ const TabManager = (() => {
     if (restored) {
       activateTab(activeTabId);
     } else {
+      renderTabBar();
+    }
+  }
+
+  function syncTabBarState(rawStudioKey) {
+    const studioKey = TAB_KEY_ALIASES[rawStudioKey] || rawStudioKey;
+    const studio = STUDIO_REGISTRY[studioKey];
+    if (!studio) return;
+
+    if (!openTabs.some(t => t.id === studioKey)) {
+      openTabs.push({
+        id: studioKey,
+        title: studio.title,
+        icon: studio.icon,
+        closable: studio.closable,
+        context: null
+      });
+    }
+    if (activeTabId !== studioKey) {
+      activeTabId = studioKey;
+      saveTabsState();
       renderTabBar();
     }
   }
@@ -751,9 +756,9 @@ const TabManager = (() => {
         openTab("facility", loc ? { locationName: loc } : null);
       }
     };
-    window.openFacilityModal = function(view = "hierarchy") {
-      if (view === "visualizer") {
-        openTab("enclosures");
+    window.openFacilityModal = function(view = "hierarchy", loc = null) {
+      if (view === "visualizer" || loc) {
+        openTab("enclosures", loc ? { locationName: loc } : null);
       } else {
         openTab("facility");
       }
@@ -766,6 +771,7 @@ const TabManager = (() => {
     window.toggleBomModal = function() {
       openTab("bom");
     };
+    window.toggleBomDrawer = window.toggleBomModal;
 
     // DRC Health
     window.toggleProjectHealthModal = function() {
@@ -908,6 +914,7 @@ const TabManager = (() => {
     openTab,
     activateTab,
     closeTab,
+    syncTabBarState,
     toggleNewTabMenu,
     closeNewTabMenu,
     getActiveTabId: () => activeTabId,

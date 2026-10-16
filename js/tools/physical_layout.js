@@ -2365,28 +2365,6 @@ function applyCanvasZoom() {
   }
 }
 
-function toggleModalFullscreen() {
-  const modal = document.getElementById("cableLayoutModal");
-  const icon = document.getElementById("iconFullscreen");
-  isModalFullscreen = !isModalFullscreen;
-
-  if (modal) {
-    if (isModalFullscreen) {
-      modal.classList.remove("p-2", "sm:p-4");
-      modal.classList.add("p-0");
-    } else {
-      modal.classList.remove("p-0");
-      modal.classList.add("p-2", "sm:p-4");
-    }
-  }
-
-  if (icon) {
-    icon.setAttribute("data-lucide", isModalFullscreen ? "minimize-2" : "maximize-2");
-    if (window.lucide) lucide.createIcons();
-  }
-}
-window.togglePhysicalLayoutFullscreen = toggleModalFullscreen;
-
 // -----------------------------------------------------------
 // Telemetry & Calculations
 // -----------------------------------------------------------
@@ -4934,12 +4912,10 @@ function deepLinkToRackElevation(closetName) {
     const st = NavigationHistory.captureCurrentState();
     if (st && st.tool !== "facility") NavigationHistory.push(st);
   }
-  toggleCableLayoutModal();
   if (typeof openRackViewerFor === "function") {
     openRackViewerFor(closetName);
-  } else if (typeof toggleRackModal === "function") {
-    toggleRackModal();
-    if (typeof switchActiveRackElevation === "function") switchActiveRackElevation(closetName);
+  } else if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("enclosures", closetName ? { locationName: closetName } : null);
   }
 }
 
@@ -6760,26 +6736,14 @@ function jumpToPhysicalLayoutTarget(targetVal) {
     if (st && st.tool !== "physical") NavigationHistory.push(st);
   }
 
-  // 2. Close other open modals
-  const topoModal = document.getElementById("topologyModal");
-  if (topoModal && !topoModal.classList.contains("hidden")) {
-    if (typeof toggleTopologyModal === "function") toggleTopologyModal();
-  }
-  const facModal = document.getElementById("facilityModal");
-  if (facModal && !facModal.classList.contains("hidden")) {
-    if (typeof toggleFacilityModal === "function") toggleFacilityModal();
-  }
-  if (typeof toggleBomDrawer === "function") {
-    const drawer = document.getElementById("bomDrawer");
-    if (drawer && !drawer.classList.contains("translate-x-full")) {
-      toggleBomDrawer();
+  // 2. Open physical layout tab via TabManager (or modal fallback)
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("physical_layout");
+  } else {
+    const modal = document.getElementById("cableLayoutModal");
+    if (modal && modal.classList.contains("hidden")) {
+      toggleCableLayoutModal();
     }
-  }
-
-  // 3. Open physical layout modal if hidden
-  const modal = document.getElementById("cableLayoutModal");
-  if (modal && modal.classList.contains("hidden")) {
-    toggleCableLayoutModal();
   }
 
   // 4. Resolve target floor and enclosure node
@@ -7121,7 +7085,6 @@ if (typeof window !== "undefined") {
   window.toggleFieldWalkMode = toggleFieldWalkMode;
   window.updateUnplacedCountBadge = updateUnplacedCountBadge;
   window.deleteSelectedPhysicalItems = deleteSelectedPhysicalItems;
-  window.togglePhysicalLayoutFullscreen = toggleModalFullscreen;
   window.stepToNextDistanceViolation = handlePhysicalDrcPillClick;
   window.handlePhysicalDrcPillClick = handlePhysicalDrcPillClick;
   window.getSelectedNodeId = () => selectedNodeId;

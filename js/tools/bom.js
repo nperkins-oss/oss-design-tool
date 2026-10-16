@@ -2023,7 +2023,7 @@ function toggleBomModal() {
   if (!modal) return;
   const isOpening = modal.classList.contains("hidden");
   if (isOpening) {
-    const openModals = ["facilityModal", "cableLayoutModal", "topologyModal", "portMatrixStudioModal", "rackElevationModal", "licenseModal", "projectHealthModal"];
+    const openModals = ["facilityModal", "cableLayoutModal", "topologyModal", "portMatrixStudioModal", "licenseModal", "projectHealthModal"];
     openModals.forEach(id => {
       const el = document.getElementById(id);
       if (el && !el.classList.contains("hidden")) {
@@ -2554,7 +2554,7 @@ function renderBomTableRow(item) {
             ${item.closetName && !isUnassigned ? `
               <button 
                 type="button" 
-                onclick="toggleBomModal(); openRackViewerFor('${item.closetName || item.rackId}')"
+                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
                 class="px-2 py-0.5 rounded bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/60 text-indigo-300 hover:text-white text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
                 title="View in Rack Elevation Visualizer"
               >
@@ -2604,7 +2604,7 @@ function renderBomTableRow(item) {
                   <button 
                     type="button" 
                     onclick="if (typeof toggleStackPatchPanel === 'function') toggleStackPatchPanel('${item.instanceId}')"
-                    class="px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all flex items-center gap-1 border ${item.patchPanelBetween ? 'bg-purple-900/80 text-purple-200 border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-white'}"
+                    class="px-2 py-0.5 rounded text-[10px] font-mono font-bold transition-all flex items-center gap-1 border ${item.patchPanelBetween ? 'bg-purple-900/80 text-purple-200 border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}"
                     title="${item.patchPanelBetween ? 'Remove 24-port patch panel between stacked switches' : 'Place 24-port patch panel in between stacked switches'}"
                   >
                     <i data-lucide="${item.patchPanelBetween ? 'check-square' : 'plus-square'}" class="w-2.5 h-2.5 ${item.patchPanelBetween ? 'text-purple-400' : 'text-slate-400'}"></i>
@@ -2649,7 +2649,7 @@ function renderBomTableRow(item) {
           <!-- Jump to Topology -->
           <button 
             type="button" 
-            onclick="toggleBomModal(); jumpToTopologyTarget('node:${item.instanceId}')" 
+            onclick="jumpToTopologyTarget('node:${item.instanceId}')" 
             class="p-1.5 rounded-lg bg-slate-900 hover:bg-indigo-950/80 border border-slate-800 hover:border-indigo-800/60 text-slate-400 hover:text-indigo-300 transition-colors cursor-pointer"
             title="Inspect ports, wire speeds, and logical uplinks in Topology"
           >
@@ -2659,7 +2659,7 @@ function renderBomTableRow(item) {
           <!-- Jump to Physical Blueprint -->
           <button 
             type="button" 
-            onclick="toggleBomModal(); jumpToPhysicalLayoutTarget('${item.instanceId}')" 
+            onclick="jumpToPhysicalLayoutTarget('${item.instanceId}')" 
             class="p-1.5 rounded-lg bg-slate-900 hover:bg-amber-950/80 border border-slate-800 hover:border-amber-800/60 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer"
             title="Inspect blueprint, floor drops, and cable pathways in Physical Layout"
           >
@@ -2733,7 +2733,7 @@ function renderBomLocationAccordion(locKey, items) {
           ${!isUnassigned ? `
             <button 
               type="button" 
-              onclick="event.stopPropagation(); toggleBomModal(); openRackViewerFor('${escapeHTML(locKey)}')" 
+              onclick="event.stopPropagation(); openRackViewerFor('${escapeHTML(locKey)}')" 
               class="px-2.5 py-1 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Open Enclosure Visualizer"
             >
@@ -3707,442 +3707,23 @@ function exportComprehensiveProjectCSV() {
   showToast("Exported comprehensive multi-section CSV workbook.");
 }
 
-function openEngineeringSubmittalModal() {
-  if (projectBOM.length === 0) {
-    showToast("Cannot generate engineering submittal for an empty BOM.");
-    return;
-  }
-
-  const modal = document.getElementById("engineeringSubmittalModal");
-  const content = document.getElementById("engineeringSubmittalModalContent");
-  if (!modal || !content) return;
-
-  const data = compileProjectEngineeringData();
-
-  // Helper to render subsystem table
-  const renderSubsystemSection = (title, icon, items) => {
-    if (!items || items.length === 0) return "";
-    let subtotalCost = 0;
-    let subtotalWatts = 0;
-    items.forEach(it => {
-      subtotalCost += (it.msrp || 0) * (it.qty || 1);
-      subtotalWatts += ((it.baseWatts || it.powerWatts || 0) + (it.poeBudget || 0)) * (it.qty || 1);
-    });
-
-    const rows = items.map((i, idx) => {
-      const rawLoc = i.closetName || i.rackId || FacilityStore.UNASSIGNED;
-      const normalizedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
-      const devNum = i.deviceNumber || `DEV-${idx + 1}`;
-      const friendly = (typeof DeviceTaxonomy !== "undefined" ? DeviceTaxonomy.getFriendlyName(i) : (i.friendlyName || i.model)) || "";
-      const itemW = ((i.baseWatts || i.powerWatts || 0) + (i.poeBudget || 0)) * (i.qty || 1);
-      const extCost = (i.msrp || 0) * (i.qty || 1);
-      const asset = (typeof CATALOG_ASSETS !== "undefined" ? (CATALOG_ASSETS[i.id] || CATALOG_ASSETS[i.sku]) : null) || {};
-      const img = i.image || asset.image;
-      const dsheet = i.datasheetPath || asset.datasheetPath;
-
-      return `
-        <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
-          <td class="py-2 px-3 font-mono text-slate-400">${idx + 1}</td>
-          <td class="py-2 px-3 font-mono text-indigo-400 font-semibold">${escapeHTML(devNum)}</td>
-          <td class="py-2 px-3">
-            <div class="flex items-center gap-2.5">
-              ${img ? `
-                <img src="${img}" alt="${escapeHTML(i.model)}" class="w-10 h-7 object-contain bg-slate-900 border border-slate-800 rounded p-0.5 shrink-0 cursor-pointer hover:border-brand-500/50 print:border-slate-300" onclick="if(typeof openProductImageModal==='function') openProductImageModal('${img}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" title="Click to view full photo" loading="lazy" />
-              ` : ''}
-              <div>
-                <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
-                  <span>${escapeHTML(i.vendor || '')} ${escapeHTML(i.model || '')}</span>
-                  ${dsheet ? `
-                    <button onclick="if(typeof openDatasheetModal==='function') openDatasheetModal('${dsheet}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" class="inline-flex items-center gap-0.5 text-[10px] text-rose-400 hover:text-rose-300 font-normal underline ml-1 cursor-pointer print:hidden" title="View Technical Datasheet">
-                      <i data-lucide="file-text" class="w-2.5 h-2.5"></i> Datasheet
-                    </button>
-                  ` : ''}
-                </div>
-                <div class="text-[11px] text-slate-400">${escapeHTML(friendly)}</div>
-              </div>
-            </div>
-          </td>
-          <td class="py-2 px-3 font-mono text-slate-400 text-[11px]">${escapeHTML(i.sku)}</td>
-          <td class="py-2 px-3 text-slate-300 text-[11px]">${escapeHTML(normalizedLoc)}</td>
-          <td class="py-2 px-3 text-center font-bold font-mono text-white">${i.qty || 1}</td>
-          <td class="py-2 px-3 text-right font-mono text-slate-300">$${(i.msrp || 0).toLocaleString()}</td>
-          <td class="py-2 px-3 text-right font-mono font-bold text-emerald-400">$${extCost.toLocaleString()}</td>
-          <td class="py-2 px-3 text-right font-mono text-amber-400">${itemW} W</td>
-        </tr>
-      `;
-    }).join("");
-
-    return `
-      <div class="space-y-2 pt-4 print-avoid-break">
-        <div class="flex items-center justify-between pb-1 border-b border-slate-800">
-          <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
-            <i data-lucide="${icon}" class="w-4 h-4 text-brand-400"></i> ${escapeHTML(title)} (${items.length} Lines)
-          </h4>
-          <span class="text-xs font-mono text-slate-400">Subtotal: <strong class="text-emerald-400 font-semibold">$${subtotalCost.toLocaleString()}</strong> &bull; <strong class="text-amber-400 font-semibold">${subtotalWatts} W</strong></span>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left submittal-table">
-            <thead>
-              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
-                <th class="py-2 px-3">#</th>
-                <th class="py-2 px-3">Device ID</th>
-                <th class="py-2 px-3">Equipment / Model</th>
-                <th class="py-2 px-3">Part / SKU</th>
-                <th class="py-2 px-3">Location / Space</th>
-                <th class="py-2 px-3 text-center">Qty</th>
-                <th class="py-2 px-3 text-right">Unit MSRP</th>
-                <th class="py-2 px-3 text-right">Ext MSRP</th>
-                <th class="py-2 px-3 text-right">Power</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${rows}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
-  };
-
-  const totalDrops = data.cablingSchedule.reduce((a, c) => a + c.drops, 0);
-  const totalPanels = data.cablingSchedule.reduce((a, c) => a + c.totalPanels, 0);
-
-  content.innerHTML = `
-    <div class="max-w-5xl mx-auto space-y-6">
-      
-      <!-- Executive Header & Metadata -->
-      <div class="p-6 rounded-2xl bg-slate-950/90 border border-slate-800 submittal-header-bg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print-avoid-break">
-        <div>
-          <div class="flex items-center gap-2 text-[11px] font-bold tracking-widest uppercase text-brand-400 mb-1">
-            <span>ORION SECURITY SOLUTIONS</span> &bull; <span>SYSTEM DESIGN TOOL v0.10.0-ALPHA</span>
-          </div>
-          <h1 class="text-xl sm:text-2xl font-black text-white tracking-tight">ENGINEERING SUBMITTAL & SYSTEM PROPOSAL</h1>
-          <p class="text-xs text-slate-400 mt-0.5">Comprehensive Hardware Bill of Materials, Closet Utilization, PoE Headroom, and Cabling Schedules.</p>
-        </div>
-        <div class="grid grid-cols-2 gap-x-6 gap-y-1 text-xs border-t md:border-t-0 md:border-l border-slate-800 pt-3 md:pt-0 md:pl-6 shrink-0 font-mono">
-          <div class="text-slate-400">Project:</div>
-          <div class="text-white font-bold">${escapeHTML(data.projName)}</div>
-          ${data.jobOpportunityNumber ? `<div class="text-slate-400">Job / Opp #:</div><div class="text-amber-400 font-semibold">${escapeHTML(data.jobOpportunityNumber)}</div>` : ''}
-          ${data.clientName ? `<div class="text-slate-400">Client / Facility:</div><div class="text-slate-200 font-semibold">${escapeHTML(data.clientName)}</div>` : ''}
-          ${data.siteAddress ? `<div class="text-slate-400">Site Location:</div><div class="text-slate-300">${escapeHTML(data.siteAddress)}</div>` : ''}
-          ${data.leadDesigner ? `<div class="text-slate-400">Lead Designer:</div><div class="text-sky-400 font-semibold">${escapeHTML(data.leadDesigner)}</div>` : ''}
-          <div class="text-slate-400">Doc Reference:</div>
-          <div class="text-indigo-400 font-semibold">${escapeHTML(data.projId)}</div>
-          <div class="text-slate-400">Licensing Term:</div>
-          <div class="text-purple-400 font-semibold">${escapeHTML(data.licensingTerm || "1-Year")}</div>
-          <div class="text-slate-400">Date Issued:</div>
-          <div class="text-slate-200">${escapeHTML(data.dateStr)}</div>
-          <div class="text-slate-400">Revision:</div>
-          <div class="text-emerald-400 font-bold">REV 1.0 (PROPOSAL)</div>
-        </div>
-      </div>
-
-      <!-- Executive KPIs Strip -->
-      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 print-avoid-break">
-        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Total Hardware</div>
-          <div class="text-lg font-black text-white font-mono mt-0.5">${data.totalHardwareUnits} <span class="text-xs font-normal text-slate-500">units</span></div>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Estimated MSRP</div>
-          <div class="text-lg font-black text-emerald-400 font-mono mt-0.5">$${data.totalMSRP.toLocaleString()}</div>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">PoE Capacity</div>
-          <div class="text-lg font-black text-amber-400 font-mono mt-0.5">${data.totalPoEBudgetWatts.toLocaleString()} <span class="text-xs font-normal text-slate-500">W</span></div>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Heat Dissipation</div>
-          <div class="text-sm font-black text-rose-400 font-mono mt-1">${data.totalHeatBTU.toLocaleString()} <span class="text-[10px] font-normal text-slate-500">BTU/hr</span></div>
-          <div class="text-[10px] text-slate-400 font-mono mt-0.5">${data.totalCoolingTons} AC Tons</div>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Field Drops</div>
-          <div class="text-lg font-black text-sky-400 font-mono mt-0.5">${totalDrops} <span class="text-xs font-normal text-slate-500">runs</span></div>
-          <div class="text-[10px] text-slate-400 font-mono">${totalPanels} Patch Panels</div>
-        </div>
-        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 submittal-kpi-card">
-          <div class="text-[10px] text-slate-400 font-bold uppercase">Telecom Spaces</div>
-          <div class="text-lg font-black text-purple-400 font-mono mt-0.5">${data.spaces.length} <span class="text-xs font-normal text-slate-500">closets</span></div>
-        </div>
-      </div>
-
-      <!-- Section 1: Detailed Systems Bill of Materials -->
-      <div class="space-y-4">
-        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
-          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">1</span>
-            System Bill of Materials & Subsystem Breakdown
-          </h3>
-        </div>
-
-        ${renderSubsystemSection("Network Switching & Routing", "network", data.categorized.switches)}
-        ${renderSubsystemSection("Video Surveillance Cameras", "camera", data.categorized.cameras)}
-        ${renderSubsystemSection("Access Control & Door Hardware", "shield", data.categorized.access)}
-        ${renderSubsystemSection("Cybersecurity Gateways & Firewalls", "shield-alert", data.categorized.firewalls)}
-        ${renderSubsystemSection("Servers, NVRs & Compute", "hard-drive", data.categorized.servers)}
-        ${renderSubsystemSection("Structured Cabling & Passive Infrastructure", "cable", data.categorized.cabling)}
-        ${renderSubsystemSection("Interconnects, Optics & Fiber Trunks", "link-2", data.categorized.optics)}
-        ${renderSubsystemSection("Software Licensing & Cloud Subscriptions", "key", data.categorized.licenses)}
-        ${renderSubsystemSection("Rack Accessories & Mounting Hardware", "package", data.categorized.accessories)}
-
-        <div class="p-3 bg-slate-950/90 rounded-xl border border-slate-800 flex justify-between items-center text-sm font-bold font-mono">
-          <span class="text-slate-300">TOTAL ESTIMATED HARDWARE MSRP (EXTENDED):</span>
-          <span class="text-emerald-400 text-base font-extrabold">$${data.totalMSRP.toLocaleString()}</span>
-        </div>
-      </div>
-
-      <!-- Section 2: Telecom Closets & Rack Utilization Schedule -->
-      <div class="space-y-4 pt-4 print-avoid-break">
-        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
-          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">2</span>
-            Telecom Closets & Rack Utilization Schedule
-          </h3>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left submittal-table">
-            <thead>
-              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
-                <th class="py-2 px-3">Telecom Closet</th>
-                <th class="py-2 px-3">Enclosure / Form Factor</th>
-                <th class="py-2 px-3 text-center">Rack Height</th>
-                <th class="py-2 px-3 text-center">Occupied / Free</th>
-                <th class="py-2 px-3 text-center">Utilization</th>
-                <th class="py-2 px-3 text-right">Power Draw</th>
-                <th class="py-2 px-3 text-right">Thermal (BTU/hr)</th>
-                <th class="py-2 px-3">Mounted Equipment</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.rackSchedule.map(r => `
-                <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
-                  <td class="py-2.5 px-3 font-bold text-white">${escapeHTML(r.space)}</td>
-                  <td class="py-2.5 px-3">
-                    <div class="font-semibold text-indigo-300">${escapeHTML(r.enclosure)}</div>
-                    <div class="text-[10px] text-slate-400">${escapeHTML(r.formFactor)}</div>
-                  </td>
-                  <td class="py-2.5 px-3 text-center font-mono text-slate-300 font-bold">${r.totalU}U</td>
-                  <td class="py-2.5 px-3 text-center font-mono text-xs">
-                    <span class="text-brand-400 font-bold">${r.occupiedU}U used</span> &bull; <span class="text-slate-400">${r.availableU}U free</span>
-                  </td>
-                  <td class="py-2.5 px-3 text-center">
-                    <div class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold ${r.utilPct > 85 ? 'bg-rose-950/80 text-rose-400 border border-rose-800' : 'bg-slate-800 text-slate-300'}">
-                      ${r.utilPct}%
-                    </div>
-                  </td>
-                  <td class="py-2.5 px-3 text-right font-mono text-amber-400">${r.watts} W</td>
-                  <td class="py-2.5 px-3 text-right font-mono text-rose-400">${r.btu.toLocaleString()}</td>
-                  <td class="py-2.5 px-3 text-[11px] text-slate-300 max-w-xs truncate" title="${escapeHTML(r.equipment)}">
-                    ${escapeHTML(r.equipment || "No active equipment assigned")}
-                  </td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Section 3: PoE Power Budget & Headroom Telemetry -->
-      <div class="space-y-4 pt-4 print-avoid-break">
-        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
-          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">3</span>
-            PoE Power Budget & Headroom Telemetry
-          </h3>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left submittal-table">
-            <thead>
-              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
-                <th class="py-2 px-3">Telecom Closet</th>
-                <th class="py-2 px-3 text-center">Switches</th>
-                <th class="py-2 px-3 text-right">Switch PoE Capacity</th>
-                <th class="py-2 px-3 text-center">Edge Devices</th>
-                <th class="py-2 px-3 text-right">Edge PoE Demand</th>
-                <th class="py-2 px-3 text-right">Headroom Margin</th>
-                <th class="py-2 px-3 text-center">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.poeSchedule.map(p => {
-                let badgeClass = "bg-emerald-950 text-emerald-400 border-emerald-800";
-                if (p.status.includes("DEFICIT")) badgeClass = "bg-rose-950 text-rose-400 border-rose-800";
-                else if (p.status.includes("WARNING")) badgeClass = "bg-amber-950 text-amber-400 border-amber-800";
-
-                return `
-                  <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
-                    <td class="py-2.5 px-3 font-bold text-white">${escapeHTML(p.space)}</td>
-                    <td class="py-2.5 px-3 text-center font-mono text-slate-300">${p.switchCount}</td>
-                    <td class="py-2.5 px-3 text-right font-mono font-bold text-amber-400">${p.switchBudget.toLocaleString()} W</td>
-                    <td class="py-2.5 px-3 text-center font-mono text-slate-300">${p.edgeCount}</td>
-                    <td class="py-2.5 px-3 text-right font-mono font-semibold text-rose-400">${p.edgeDemand.toLocaleString()} W</td>
-                    <td class="py-2.5 px-3 text-right font-mono font-bold ${p.headroom >= 0 ? 'text-emerald-400' : 'text-rose-500'}">
-                      ${p.headroom >= 0 ? '+' : ''}${p.headroom.toLocaleString()} W
-                    </td>
-                    <td class="py-2.5 px-3 text-center">
-                      <span class="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${badgeClass}">
-                        ${escapeHTML(p.status)}
-                      </span>
-                    </td>
-                  </tr>
-                `;
-              }).join("")}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Section 4: Structured Cabling & Field Drop Schedule -->
-      <div class="space-y-4 pt-4 print-avoid-break">
-        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
-          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">4</span>
-            Structured Cabling & Field Drop Schedule
-          </h3>
-        </div>
-
-        <div class="overflow-x-auto">
-          <table class="w-full text-left submittal-table">
-            <thead>
-              <tr class="text-[10px] uppercase font-bold text-slate-400 bg-slate-950/80 border-b border-slate-800">
-                <th class="py-2 px-3">Telecom Closet</th>
-                <th class="py-2 px-3 text-center">Data Drops</th>
-                <th class="py-2 px-3 text-center">48P Panels</th>
-                <th class="py-2 px-3 text-center">24P Panels</th>
-                <th class="py-2 px-3 text-center">Total Panels</th>
-                <th class="py-2 px-3 text-center">Keystones</th>
-                <th class="py-2 px-3 text-right">Est. Footage</th>
-                <th class="py-2 px-3 text-center">1k' Spools</th>
-                <th class="py-2 px-3 text-center">Fiber Trunks</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${data.cablingSchedule.map(c => `
-                <tr class="border-b border-slate-800/60 hover:bg-slate-850/40 text-xs">
-                  <td class="py-2.5 px-3 font-bold text-white">${escapeHTML(c.space)}</td>
-                  <td class="py-2.5 px-3 text-center font-mono font-bold text-sky-400">${c.drops}</td>
-                  <td class="py-2.5 px-3 text-center font-mono text-slate-300">${c.pp48}</td>
-                  <td class="py-2.5 px-3 text-center font-mono text-slate-300">${c.pp24}</td>
-                  <td class="py-2.5 px-3 text-center font-mono font-bold text-indigo-400">${c.totalPanels}</td>
-                  <td class="py-2.5 px-3 text-center font-mono text-slate-300">${c.keystones}</td>
-                  <td class="py-2.5 px-3 text-right font-mono text-slate-300">${c.estFootage.toLocaleString()} ft</td>
-                  <td class="py-2.5 px-3 text-center font-mono font-bold text-amber-400">${c.spoolsNeeded}</td>
-                  <td class="py-2.5 px-3 text-center font-mono font-bold text-purple-400">${c.fiberLinks}</td>
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Section 5: Engineering Submittal Sign-Off & Approvals Block -->
-      <div class="space-y-4 pt-6 print-avoid-break">
-        <div class="flex items-center gap-2 border-b-2 border-brand-500/40 pb-2">
-          <h3 class="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-6 h-6 rounded-md bg-brand-600 text-white flex items-center justify-center text-xs font-bold">5</span>
-            Engineering Verification & Submittal Approval
-          </h3>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 text-xs">
-            <div class="font-bold text-slate-200 uppercase tracking-wider text-[11px] border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
-              <i data-lucide="award" class="w-3.5 h-3.5 text-brand-400"></i> Lead Systems Designer
-            </div>
-            <div class="space-y-2.5 font-mono text-[11px]">
-              <div><span class="text-slate-500">Name:</span> ___________________________</div>
-              <div><span class="text-slate-500">Signature:</span> ______________________</div>
-              <div><span class="text-slate-500">Date:</span> ___________________________</div>
-              <div><span class="text-slate-500">Lic / Cert:</span> ______________________</div>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 text-xs">
-            <div class="font-bold text-slate-200 uppercase tracking-wider text-[11px] border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
-              <i data-lucide="briefcase" class="w-3.5 h-3.5 text-indigo-400"></i> Project Manager / GC
-            </div>
-            <div class="space-y-2.5 font-mono text-[11px]">
-              <div><span class="text-slate-500">Name:</span> ___________________________</div>
-              <div><span class="text-slate-500">Signature:</span> ______________________</div>
-              <div><span class="text-slate-500">Date:</span> ___________________________</div>
-              <div><span class="text-slate-500">Company:</span> ________________________</div>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 text-xs">
-            <div class="font-bold text-slate-200 uppercase tracking-wider text-[11px] border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
-              <i data-lucide="check-square" class="w-3.5 h-3.5 text-emerald-400"></i> Customer Acceptance / AHJ
-            </div>
-            <div class="space-y-2.5 font-mono text-[11px]">
-              <div><span class="text-slate-500">Name:</span> ___________________________</div>
-              <div><span class="text-slate-500">Signature:</span> ______________________</div>
-              <div><span class="text-slate-500">Date:</span> ___________________________</div>
-              <div><span class="text-slate-500">Title / Auth:</span> ___________________</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-[11px] text-slate-400">
-          <strong class="text-slate-300">Engineering Notes & Field Deviations:</strong>
-          <p class="mt-1 font-mono text-slate-500 leading-relaxed">
-            All equipment installations shall comply with NFPA 70 (NEC), TIA-568-D structured cabling standards, and local electrical codes. 
-            Any field alterations to cabling paths exceeding 295ft (90m) permanent link limits must receive written engineering change approval.
-          </p>
-        </div>
-      </div>
-
-    </div>
-  `;
-
-  modal.classList.remove("hidden");
-  if (window.lucide && typeof lucide.createIcons === "function") {
-    try { lucide.createIcons(); } catch(e) {}
-  }
-}
-
-function closeEngineeringSubmittalModal() {
-  const modal = document.getElementById("engineeringSubmittalModal");
-  if (modal) modal.classList.add("hidden");
-}
-
-function printEngineeringSubmittal() {
-  window.print();
-}
-
 function jumpToBomTarget(instanceId) {
   if (typeof NavigationHistory !== "undefined") {
     const st = NavigationHistory.captureCurrentState();
     if (st && st.tool !== "bom") NavigationHistory.push(st);
   }
 
-  // Minimize/hide open modal windows so the user immediately sees the BOM drawer in foreground
-  const facilityModal = document.getElementById("facilityModal");
-  if (facilityModal && !facilityModal.classList.contains("hidden")) {
-    facilityModal.classList.add("hidden");
-  }
-  const cableModal = document.getElementById("cableLayoutModal");
-  if (cableModal && !cableModal.classList.contains("hidden")) {
-    cableModal.classList.add("hidden");
-  }
-  const topoModal = document.getElementById("topologyModal");
-  if (topoModal && !topoModal.classList.contains("hidden")) {
-    topoModal.classList.add("hidden");
-  }
-  const pmModal = document.getElementById("portMatrixStudioModal");
-  if (pmModal && !pmModal.classList.contains("hidden")) {
-    pmModal.classList.add("hidden");
-  }
-
-  const modal = document.getElementById("bomModal");
-  if (modal && modal.classList.contains("hidden")) {
-    toggleBomModal();
+  if (window.TabManager && typeof window.TabManager.openTab === "function") {
+    window.TabManager.openTab("bom");
   } else {
-    const drawer = document.getElementById("bomDrawer");
-    if (drawer && drawer.classList.contains("translate-x-full")) {
+    const modal = document.getElementById("bomModal");
+    if (modal && modal.classList.contains("hidden")) {
       toggleBomModal();
+    } else {
+      const drawer = document.getElementById("bomDrawer");
+      if (drawer && drawer.classList.contains("translate-x-full")) {
+        toggleBomModal();
+      }
     }
   }
 
@@ -4193,9 +3774,6 @@ window.toggleBomDrawer = toggleBomDrawer;
 window.exportBomCSV = exportBomCSV;
 window.compileProjectEngineeringData = compileProjectEngineeringData;
 window.exportComprehensiveProjectCSV = exportComprehensiveProjectCSV;
-window.openEngineeringSubmittalModal = openEngineeringSubmittalModal;
-window.closeEngineeringSubmittalModal = closeEngineeringSubmittalModal;
-window.printEngineeringSubmittal = printEngineeringSubmittal;
 window.auditSwitchCapacities = auditSwitchCapacities;
 window.autoResolveUplinks = autoResolveUplinks;
 window.updateStackedCount = updateStackedCount;

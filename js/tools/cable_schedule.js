@@ -728,7 +728,7 @@ function renderCablePullScheduleContent() {
               <!-- Quick Action Jump Button -->
               <td class="p-2.5 text-right font-sans">
                 <button 
-                  onclick="closeCablePullScheduleModal(); jumpToPhysicalLayoutTarget('${r.instanceId || r.nodeId}')"
+                  onclick="jumpToPhysicalLayoutTarget('${r.instanceId || r.nodeId}')"
                   class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[10px] cursor-pointer transition-colors"
                   title="Locate drop on floor plan"
                 >
