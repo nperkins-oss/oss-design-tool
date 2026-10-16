@@ -1666,13 +1666,32 @@ const FacilityStore = {
   // -----------------------------------------------------------
   isFieldDevice(item) {
     if (!item) return false;
+    if (item.isEnclosureFrame || item.isPassive) return false;
     const role = (item.role || "").trim();
-    if (role === "Access" || role === "Core" || role === "Core & Agg" || role === "Aggregation" || 
-        role === "Gateways & WAN" || role === "Security WAN" || role === "Server" || 
-        role === "VMS Server" || role === "Compute & Storage" || role === "UPS" || role === "PDU") {
-      return false;
-    }
+    const cat = (item.category || "").toLowerCase().trim();
+
+    const nonFieldRoles = [
+      "Access", "Core", "Core & Agg", "Aggregation", "Gateways & WAN", "Security WAN", "Firewall",
+      "Server", "VMS Server", "Compute & Storage", "Storage Drives & SAN",
+      "UPS", "Rack UPS Power", "PDU", "Rackmount PDU",
+      "Equipment Rack", "19\" Equipment Racks", "Cabinets & Enclosures",
+      "Security Cabinet", "Industrial NEMA Enclosure", "Architectural Backboard",
+      "Enclosure", "Patch Panel", "Structured Cabling", "Optics & DAC",
+      "Mgmt License", "Security License", "Feature License", "Stacking Cable",
+      "Accessory", "Power Jumper Cable", "Pathways & J-Hooks", "Mounting Hardware"
+    ];
+    if (nonFieldRoles.includes(role)) return false;
+
+    const nonFieldCats = [
+      "racks", "enclosures", "cabinets", "ups", "pdu", "rack_pdu", "power_distribution",
+      "power_cords", "pathways", "mounting_hardware", "infrastructure", "passive",
+      "cabling", "optics", "license", "switch", "switches", "firewall", "server", "storage"
+    ];
+    if (nonFieldCats.includes(cat)) return false;
+
     if (typeof DeviceTaxonomy !== "undefined") {
+      if (typeof DeviceTaxonomy.isPassiveOrHostInfrastructure === "function" && DeviceTaxonomy.isPassiveOrHostInfrastructure(item)) return false;
+      if (typeof DeviceTaxonomy.isPowerDistributionOrBackup === "function" && DeviceTaxonomy.isPowerDistributionOrBackup(item)) return false;
       if (typeof DeviceTaxonomy.isCamera === "function" && DeviceTaxonomy.isCamera(item)) return true;
       if (typeof DeviceTaxonomy.isAccessControl === "function" && DeviceTaxonomy.isAccessControl(item)) return true;
       if (typeof DeviceTaxonomy.isIntercom === "function" && DeviceTaxonomy.isIntercom(item)) return true;
@@ -1680,7 +1699,6 @@ const FacilityStore = {
       if (typeof DeviceTaxonomy.isFieldDevice === "function" && DeviceTaxonomy.isFieldDevice(item)) return true;
     }
     if (role === "Camera" || role === "Access Control" || role === "Intercom" || role === "Field Drop") return true;
-    const cat = (item.category || "").toLowerCase();
     if (cat.includes("camera") || cat.includes("access") || cat.includes("intercom") || cat.includes("sensor")) return true;
     const loc = item.closetName || item.rackId || "";
     if (typeof isFieldLocation === "function" && isFieldLocation(loc)) return true;

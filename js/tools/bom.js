@@ -2409,7 +2409,7 @@ function renderBomTableRow(item) {
   const isUnassigned = typeof FacilityStore !== "undefined" && currentLocationKey === FacilityStore.UNASSIGNED;
 
   const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
-  const pwrBadge = (typeof PortEngine !== "undefined" && PortEngine.POWER_MODES && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
+  const pwrBadge = (pwr !== "passive" && typeof PortEngine !== "undefined" && PortEngine.POWER_MODES && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
   const childItems = projectBOM.filter(ch => ch.parentInstanceId === item.instanceId);
 
   const catSw = (item.modularUplink ? item : null) || 

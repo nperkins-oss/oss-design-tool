@@ -92,6 +92,15 @@ const POWER_SOURCE_MODES = {
     drawsFromSwitch: false,
     requiresExternalPsu: true,
     description: "Off-grid 12V/24V solar array with battery backup storage"
+  },
+  passive: {
+    id: "passive",
+    label: "Passive Infrastructure",
+    badgeLabel: "Passive",
+    icon: "box",
+    drawsFromSwitch: false,
+    requiresExternalPsu: false,
+    description: "Passive physical enclosure, rack frame, patch panel, cable, or mount requiring no power"
   }
 };
 
@@ -681,6 +690,23 @@ const PortEngine = {
     // 1. Gather all field devices that are homed to this switch or in this switch's closet/rack
     const edgeDevices = projectBOM.filter(item => {
       if (!item || item.parentInstanceId || item.instanceId === switchItem.instanceId) return false;
+      if (item.isEnclosureFrame || item.isPassive) {
+        if (item.uplinkTargetId === switchItem.instanceId) {
+          item.uplinkTargetId = null;
+          item.assignedSwitchPort = null;
+        }
+        return false;
+      }
+      if (typeof DeviceTaxonomy !== "undefined") {
+        if ((typeof DeviceTaxonomy.isPassiveOrHostInfrastructure === "function" && DeviceTaxonomy.isPassiveOrHostInfrastructure(item)) ||
+            (typeof DeviceTaxonomy.isPowerDistributionOrBackup === "function" && DeviceTaxonomy.isPowerDistributionOrBackup(item))) {
+          if (item.uplinkTargetId === switchItem.instanceId) {
+            item.uplinkTargetId = null;
+            item.assignedSwitchPort = null;
+          }
+          return false;
+        }
+      }
       const role = (item.role || "").toLowerCase();
       const cat = (item.category || "").toLowerCase();
       const isEdge = role === "camera" || role === "access control" || role === "intercom" || 
@@ -800,6 +826,13 @@ const PortEngine = {
    */
   autoAssignDeviceToClosetSwitch(deviceItem, targetClosetName = null) {
     if (!deviceItem || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return null;
+    if (deviceItem.isEnclosureFrame || deviceItem.isPassive) return null;
+    if (typeof DeviceTaxonomy !== "undefined") {
+      if ((typeof DeviceTaxonomy.isPassiveOrHostInfrastructure === "function" && DeviceTaxonomy.isPassiveOrHostInfrastructure(deviceItem)) ||
+          (typeof DeviceTaxonomy.isPowerDistributionOrBackup === "function" && DeviceTaxonomy.isPowerDistributionOrBackup(deviceItem))) {
+        return null;
+      }
+    }
     delete deviceItem.unassignedByUser;
 
     let targetLoc = targetClosetName || deviceItem.closetName || deviceItem.rackId || "MDF • Rack-1";
@@ -1245,6 +1278,9 @@ const PortEngine = {
   getDevicePowerSource(deviceItem) {
     if (!deviceItem) return "internal_psu";
     const supported = this.getSupportedPowerModes(deviceItem);
+    if (supported.length === 1 && (supported[0] === "passive" || supported[0] === "dedicated_ac")) {
+      return supported[0];
+    }
 
     let candidate = deviceItem.powerSourceOverride || deviceItem.powerSource;
     if (!candidate && deviceItem.interfaces && deviceItem.interfaces.length > 0 && deviceItem.interfaces[0].powerSource) {
@@ -1259,7 +1295,7 @@ const PortEngine = {
       const pref = deviceItem.dualPsu !== false ? "dual_ac" : "dedicated_ac";
       return supported.includes(pref) ? pref : (supported[0] || "internal_psu");
     }
-    if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN") {
+    if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN" || role === "Firewall") {
       const pref = (deviceItem.dualPsu || deviceItem.psuSku) ? "dual_ac" : "internal_psu";
       return supported.includes(pref) ? pref : (supported[0] || "internal_psu");
     }
@@ -1281,11 +1317,12 @@ const PortEngine = {
   },
 
   /**
-   * Returns human-readable power source badge info
+   * Returns human-readable power source badge info (or null for passive infrastructure)
    */
   getPowerBadge(deviceItem) {
     const mode = this.getDevicePowerSource(deviceItem);
-    const def = this.POWER_MODES[mode] || this.POWER_MODES.poe_switch;
+    if (mode === "passive") return null;
+    const def = this.POWER_MODES[mode] || this.POWER_MODES.internal_psu;
     return {
       mode,
       label: def.label,
@@ -1297,19 +1334,43 @@ const PortEngine = {
 
   /**
    * Returns valid power delivery modes supported by this specific hardware model
-   * Prevents impossible configurations (e.g. Solar or PoE-in on Core switches)
+   * Prevents impossible configurations (e.g. PoE-in on Equipment Racks, Enclosures, UPSs, or Core switches)
    */
   getSupportedPowerModes(item) {
     if (!item) return ["internal_psu"];
-    const role = item.role || "";
-    const cat = (item.category || "").toLowerCase();
+    const role = (item.role || "").trim();
+    const cat = (item.category || "").toLowerCase().trim();
     const model = (item.model || "").toLowerCase();
+
+    // 0a. Passive Infrastructure (Equipment Racks, Enclosures, Patch Panels, Cables, Mounts, Licenses)
+    if (item.isEnclosureFrame || item.isPassive ||
+        (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.isPassiveOrHostInfrastructure === "function" && DeviceTaxonomy.isPassiveOrHostInfrastructure(item))) {
+      return ["passive"];
+    }
+    const passiveRoles = [
+      "Equipment Rack", "19\" Equipment Racks", "Cabinets & Enclosures",
+      "Security Cabinet", "Industrial NEMA Enclosure", "Architectural Backboard",
+      "Enclosure", "Patch Panel", "Structured Cabling", "Optics & DAC",
+      "Mgmt License", "Security License", "Feature License", "Stacking Cable",
+      "Accessory", "Power Jumper Cable", "Pathways & J-Hooks", "Mounting Hardware"
+    ];
+    if (passiveRoles.includes(role) || cat === "racks" || cat === "enclosures" || cat === "power_cords" || cat === "pathways" || cat === "mounting_hardware" || cat === "passive") {
+      return ["passive"];
+    }
+
+    // 0b. Electrical Backup & Power Distribution (Rack UPS, EBPs, Rackmount PDUs)
+    if (role === "Rack UPS Power" || role === "UPS" || role === "Rackmount PDU" || role === "PDU" ||
+        cat === "ups" || cat === "pdu" || cat === "rack_pdu" || cat === "power_distribution" ||
+        (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.isPowerDistributionOrBackup === "function" && DeviceTaxonomy.isPowerDistributionOrBackup(item))) {
+      return ["dedicated_ac"];
+    }
+
     const isDin = item.isDinMounted || (item.mounting && item.mounting.includes("DIN"));
     const isIndustrial = model.includes("industrial") || cat.includes("industrial") || isDin;
     const isHighPower = (item.baseWatts || 0) > 80 || (item.powerConsumptionWatts || 0) > 80;
 
     // 1. Core, Aggregation, Gateways, High-Power Enterprise Switches & Servers
-    if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN" || role === "Server" || role === "VMS Server" || role === "Compute & Storage") {
+    if (role === "Core" || role === "Core & Agg" || role === "Aggregation" || role === "Gateways & WAN" || role === "Security WAN" || role === "Firewall" || role === "Server" || role === "VMS Server" || role === "Compute & Storage") {
       const modes = ["internal_psu"];
       if (item.dualPsu !== false || item.psuSku || model.includes("enterprise") || model.includes("core") || model.includes("pro") || isHighPower) {
         modes.push("dual_ac");
@@ -1343,8 +1404,9 @@ const PortEngine = {
       return modes;
     }
 
-    // 4. IP Cameras & Access Control Devices
-    if (role === "Camera" || role === "Access Control" || cat.includes("camera") || cat.includes("access")) {
+    // 4. IP Cameras, Access Control, Intercoms, Biometrics & LPR Endpoints
+    if (role === "Camera" || role === "Access Control" || role === "Intercom" || role === "Door" || role === "Biometric" || role === "LPR" ||
+        cat.includes("camera") || cat.includes("access") || cat.includes("intercom") || cat.includes("door")) {
       const modes = ["poe_switch", "poe_injector"];
       if (item.supportsAuxDc !== false && (item.auxPower || isIndustrial || model.includes("ptz") || model.includes("mercury") || model.includes("axis"))) {
         modes.push("dedicated_dc");
@@ -1358,7 +1420,11 @@ const PortEngine = {
       return modes;
     }
 
-    return ["internal_psu", "poe_switch", "dedicated_dc"];
+    if (item.isPoEPowered || item.poeClass || item.powerSource === "poe_switch") {
+      return ["poe_switch", "poe_injector", "dedicated_dc"];
+    }
+
+    return ["internal_psu", "dedicated_dc"];
   },
 
   /**

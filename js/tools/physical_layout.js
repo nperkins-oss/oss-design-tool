@@ -3211,17 +3211,25 @@ function switchSidebarTab(tab) {
 // -----------------------------------------------------------
 function isFieldDeviceForPhysicalLayout(item) {
   if (!item || item.parentInstanceId) return false;
+  if (item.isEnclosureFrame || item.isPassive) return false;
+  if (typeof DeviceTaxonomy !== "undefined") {
+    if (typeof DeviceTaxonomy.isPassiveOrHostInfrastructure === "function" && DeviceTaxonomy.isPassiveOrHostInfrastructure(item)) return false;
+    if (typeof DeviceTaxonomy.isPowerDistributionOrBackup === "function" && DeviceTaxonomy.isPowerDistributionOrBackup(item)) return false;
+  }
 
-  // Structured Cabling spools, licenses, accessories, optics do not get placed as camera/door drops
+  // Structured Cabling spools, licenses, accessories, optics, cords, pathways, mounts do not get placed as camera/door drops
   if (item.role === "Structured Cabling" || item.role === "Optics & DAC") return false;
   if (item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return false;
-  if (item.role === "Accessory") return false;
+  if (item.role === "Accessory" || item.role === "Power Jumper Cable" || item.role === "Pathways & J-Hooks" || item.role === "Mounting Hardware") return false;
 
-  // Infrastructure that lives inside racks / enclosures
+  // Infrastructure that lives inside racks / enclosures or IS a rack / enclosure
   const infraRoles = [
-    "Access", "Core", "Core & Agg", "Aggregation", "Gateways & WAN", "Security WAN",
+    "Access", "Core", "Core & Agg", "Aggregation", "Gateways & WAN", "Security WAN", "Firewall",
     "Server", "VMS Server", "Compute & Storage", "Storage Drives & SAN",
-    "Rack UPS Power", "UPS", "PDU", "19\" Equipment Racks", "Enclosure", "Patch Panel"
+    "Rack UPS Power", "UPS", "Rackmount PDU", "PDU",
+    "Equipment Rack", "19\" Equipment Racks", "Cabinets & Enclosures",
+    "Security Cabinet", "Industrial NEMA Enclosure", "Architectural Backboard",
+    "Enclosure", "Patch Panel"
   ];
   if (infraRoles.includes(item.role)) return false;
 
@@ -3230,11 +3238,14 @@ function isFieldDeviceForPhysicalLayout(item) {
 
   if (cat.includes("switch") || cat.includes("server") || cat.includes("storage") || 
       cat.includes("ups") || cat.includes("pdu") || cat.includes("rack") || 
-      cat.includes("enclosure") || cat.includes("cabinet")) {
+      cat.includes("enclosure") || cat.includes("cabinet") || cat.includes("power_cord") ||
+      cat.includes("pathway") || cat.includes("mounting") || cat.includes("passive")) {
     return false;
   }
   if (role.includes("switch") || role.includes("server") || role.includes("storage") || 
-      role.includes("ups") || role.includes("pdu") || role.includes("gateway")) {
+      role.includes("ups") || role.includes("pdu") || role.includes("gateway") ||
+      role.includes("rack") || role.includes("enclosure") || role.includes("cabinet") ||
+      role.includes("backboard")) {
     return false;
   }
 

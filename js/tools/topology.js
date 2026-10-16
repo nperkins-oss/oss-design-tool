@@ -1035,6 +1035,47 @@ function toggleTopologyInspector(forceState = null) {
 }
 
 // -----------------------------------------------------------
+// Canonical Active Topology Node Classifier
+// Excludes Passive Enclosures, Equipment Racks, UPS, PDUs, Cords,
+// Patch Panels, Pathways, Mounting Kits, Optics, and Licenses
+// -----------------------------------------------------------
+function isTopologyActiveNode(item) {
+  if (!item || item.parentInstanceId) return false;
+  if (item.isEnclosureFrame || item.isPassive) return false;
+
+  if (typeof DeviceTaxonomy !== "undefined") {
+    if (typeof DeviceTaxonomy.isPassiveOrHostInfrastructure === "function" && DeviceTaxonomy.isPassiveOrHostInfrastructure(item)) {
+      return false;
+    }
+    if (typeof DeviceTaxonomy.isPowerDistributionOrBackup === "function" && DeviceTaxonomy.isPowerDistributionOrBackup(item)) {
+      return false;
+    }
+  }
+
+  const role = (item.role || "").trim();
+  const cat = (item.category || "").toLowerCase().trim();
+
+  const excludedRoles = [
+    "Equipment Rack", "19\" Equipment Racks", "Cabinets & Enclosures",
+    "Security Cabinet", "Industrial NEMA Enclosure", "Architectural Backboard",
+    "Enclosure", "Rack UPS Power", "UPS", "Rackmount PDU", "PDU",
+    "Patch Panel", "Structured Cabling", "Optics & DAC",
+    "Mgmt License", "Security License", "Feature License", "Stacking Cable",
+    "Accessory", "Power Jumper Cable", "Pathways & J-Hooks", "Mounting Hardware"
+  ];
+  if (excludedRoles.includes(role)) return false;
+
+  const excludedCats = [
+    "racks", "enclosures", "cabinets", "ups", "pdu", "rack_pdu", "power_distribution",
+    "power_cords", "pathways", "mounting_hardware", "infrastructure", "passive",
+    "cabling", "optics", "license"
+  ];
+  if (excludedCats.includes(cat)) return false;
+
+  return true;
+}
+
+// -----------------------------------------------------------
 // Facility & Device Auto-Linking Engine at Scale
 // -----------------------------------------------------------
 function autoResolveDeviceUplinks() {
@@ -1045,12 +1086,56 @@ function autoResolveDeviceUplinks() {
     (i.role === "Access" || i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation")
   );
 
+  // Self-heal any non-network items (Racks, Enclosures, UPS, PDUs, Patch Panels, Cords)
+  // that may have stale uplinkTargetId, assignedSwitchPort, or poe_switch overrides
+  const invalidLinkedIds = new Set();
+  projectBOM.forEach(item => {
+    if (!item || item.parentInstanceId) return;
+    if (!isTopologyActiveNode(item)) {
+      if (item.uplinkTargetId || item.assignedSwitchPort) {
+        invalidLinkedIds.add(item.instanceId);
+        item.uplinkTargetId = null;
+        item.assignedSwitchPort = null;
+      }
+      if (item.powerSourceOverride === "poe_switch" || item.powerSource === "poe_switch") {
+        delete item.powerSourceOverride;
+        delete item.powerSource;
+      }
+    }
+  });
+
+  if (invalidLinkedIds.size > 0 && typeof PortEngine !== "undefined") {
+    switches.forEach(sw => {
+      if (Array.isArray(sw.switchPorts)) {
+        let modified = false;
+        sw.switchPorts.forEach(p => {
+          if (p.connectedDeviceId && invalidLinkedIds.has(p.connectedDeviceId)) {
+            p.connectedDeviceId = null;
+            p.connectedDeviceModel = null;
+            p.connectedDeviceRole = null;
+            p.connectedLocation = null;
+            p.poeOutputWatts = 0;
+            p.linkStatus = "down";
+            modified = true;
+          }
+        });
+        if (modified && typeof PortEngine.recalculateSwitchPoE === "function") {
+          PortEngine.recalculateSwitchPoE(sw);
+        }
+      }
+    });
+  }
+
   if (switches.length === 0) return;
 
   projectBOM.forEach(item => {
     if (item.parentInstanceId) return;
-    const isEdge = item.role === "Camera" || item.role === "Access Control" || 
-      (item.category && (item.category.includes("camera") || item.category.includes("access")));
+    if (!isTopologyActiveNode(item)) return;
+
+    const isEdge = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isFieldDevice === "function")
+      ? FacilityStore.isFieldDevice(item)
+      : (item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" ||
+         (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom"))));
     const isRadio = item.role === "Wireless Bridge" || item.category === "wireless" || item.category === "ptp_60g";
 
     if (!isEdge && !isRadio) return;
@@ -1158,12 +1243,9 @@ function renderTopology() {
   // Auto-resolve device uplinks to local switches in closets at scale
   autoResolveDeviceUplinks();
 
-  // Filter primary topology infrastructure nodes (exclude internal licenses, accessories, and unassigned staging items)
+  // Filter primary topology infrastructure nodes (exclude Racks, Enclosures, UPS, PDUs, Patch Panels, Cords, Licenses, and Accessories)
   const activeNodes = projectBOM.filter(item => {
-    if (item.parentInstanceId) return false;
-    if (item.role === "Structured Cabling" || item.role === "Optics & DAC") return false;
-    if (item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return false;
-    if (item.role === "Accessory") return false;
+    if (!isTopologyActiveNode(item)) return false;
 
     // Filter by view plane
     if (activeTopologyViewPlane === "backbone") {
@@ -1186,10 +1268,10 @@ function renderTopology() {
     if (!topologyLayerFilters[layer]) return false;
 
     // Field Devices filter (Cameras, Access Readers, Door Controllers, Intercoms, and field drops)
-    const itemLoc = item.closetName || item.rackId || "";
-    const isFieldDevice = item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" ||
-                          (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom"))) ||
-                          (typeof isFieldLocation === "function" ? isFieldLocation(itemLoc) : (itemLoc.endsWith("• Field") || itemLoc.toLowerCase().includes("field")));
+    const isFieldDevice = (typeof FacilityStore !== "undefined" && typeof FacilityStore.isFieldDevice === "function")
+      ? FacilityStore.isFieldDevice(item)
+      : (item.role === "Camera" || item.role === "Access Control" || item.role === "Intercom" ||
+         (item.category && (item.category.includes("camera") || item.category.includes("access") || item.category.includes("intercom"))));
     if (!showTopologyFieldDevices && isFieldDevice) {
       return false;
     }
@@ -1264,7 +1346,7 @@ function renderTopology() {
   // Pre-calculate connected edge clients (cameras, APs, readers) per host switch
   const edgeDeviceMap = {};
   projectBOM.forEach(item => {
-    if (!item.uplinkTargetId) return;
+    if (!item.uplinkTargetId || !isTopologyActiveNode(item)) return;
     if (!edgeDeviceMap[item.uplinkTargetId]) {
       edgeDeviceMap[item.uplinkTargetId] = {
         cameras: 0,
@@ -1309,6 +1391,7 @@ function renderTopology() {
 
   // Route cameras to servers
   projectBOM.forEach(item => {
+    if (!isTopologyActiveNode(item)) return;
     const qty = parseInt(item.qty, 10) || 1;
     if (item.role === "Camera" || (item.category && item.category.includes("camera"))) {
       let targetServerId = item.assignedRecordingServerId;
@@ -1374,6 +1457,18 @@ function renderTopology() {
       ? getRackPduMetricsForLocation(loc)
       : null;
 
+    // Look up physical Rack/Enclosure Frame SKU & Rack UPS assigned to this location in projectBOM
+    const rackEnclosureBomItem = !isFieldCluster ? projectBOM.find(i =>
+      !i.parentInstanceId &&
+      (i.isEnclosureFrame || i.role === "Equipment Rack" || i.role === "19\" Equipment Racks" || i.role === "Cabinets & Enclosures" || i.role === "Security Cabinet" || i.role === "Industrial NEMA Enclosure" || i.category === "racks" || i.category === "enclosures") &&
+      FacilityStore.normalize(i.closetName || i.rackId) === loc
+    ) : null;
+    const rackUpsBomItem = !isFieldCluster ? projectBOM.find(i =>
+      !i.parentInstanceId &&
+      (i.role === "Rack UPS Power" || i.role === "UPS" || i.category === "ups") &&
+      FacilityStore.normalize(i.closetName || i.rackId) === loc
+    ) : null;
+
     // Align rack preview inside cluster with Enclosure Visualizer top-to-bottom elevation order
     if (!isFieldCluster) {
       items.sort((a, b) => {
@@ -1421,7 +1516,9 @@ function renderTopology() {
     const titleColor = isClusterSelected
       ? (isFieldCluster ? 'text-cyan-300' : 'text-indigo-300')
       : 'text-white';
-    const subTitleText = isFieldCluster ? 'Physical Floor Drops & Endpoints' : escapeHTML(parsed.enclosure);
+    const subTitleText = isFieldCluster
+      ? 'Physical Floor Drops & Endpoints'
+      : (rackEnclosureBomItem ? `${escapeHTML(parsed.enclosure)} &bull; ${escapeHTML(rackEnclosureBomItem.sku)}` : escapeHTML(parsed.enclosure));
     const countBadge = isFieldCluster ? `${items.length} ${items.length === 1 ? 'Drop' : 'Drops'}` : `${items.length} Chassis`;
 
     clusterEl.innerHTML = `
@@ -1437,10 +1534,19 @@ function renderTopology() {
           </div>
           <div class="min-w-0">
             <span class="text-xs font-bold ${titleColor} tracking-wide block leading-none truncate">${escapeHTML(parsed.space)}</span>
-            <span class="text-[10px] font-mono ${isFieldCluster ? 'text-cyan-400/90' : 'text-indigo-400/90'} block mt-1 leading-none truncate">${subTitleText}</span>
+            <span class="text-[10px] font-mono ${isFieldCluster ? 'text-cyan-400/90' : 'text-indigo-400/90'} block mt-1 leading-none truncate" title="${rackEnclosureBomItem ? escapeHTML(rackEnclosureBomItem.model) : ''}">${subTitleText}</span>
           </div>
         </div>
         <div class="flex items-center gap-1.5 shrink-0">
+          ${rackUpsBomItem ? `
+            <span
+              class="text-[9px] font-mono text-emerald-300 bg-emerald-950/60 px-1.5 py-0.5 rounded-lg border border-emerald-700/50 flex items-center gap-1"
+              title="Rack UPS Backup: ${escapeHTML(rackUpsBomItem.model)} (${escapeHTML(rackUpsBomItem.sku)})"
+            >
+              <i data-lucide="battery-charging" class="w-2.5 h-2.5 text-emerald-400"></i>
+              <span>UPS</span>
+            </span>
+          ` : ''}
           ${clusterPduMetrics ? `
             <button
               type="button"
@@ -2922,7 +3028,7 @@ function renderTopologyInspector() {
       });
     } else {
       itemsInRack = projectBOM.filter(item => {
-        if (item.parentInstanceId) return false;
+        if (!isTopologyActiveNode(item)) return false;
         const itemLoc = FacilityStore.normalize(item.closetName || item.rackId);
         return itemLoc === loc;
       });
@@ -3102,6 +3208,23 @@ function renderTopologyInspector() {
     let totalPoEBudget = 0;
     let totalPoEConsumed = 0;
 
+    // Look up physical Rack/Enclosure Frame SKU & Rack UPS / Patch Panels assigned to this location
+    const rackEnclosureBomItem = projectBOM.find(i =>
+      !i.parentInstanceId &&
+      (i.isEnclosureFrame || i.role === "Equipment Rack" || i.role === "19\" Equipment Racks" || i.role === "Cabinets & Enclosures" || i.role === "Security Cabinet" || i.role === "Industrial NEMA Enclosure" || i.category === "racks" || i.category === "enclosures") &&
+      FacilityStore.normalize(i.closetName || i.rackId) === loc
+    );
+    const rackUpsBomItems = projectBOM.filter(i =>
+      !i.parentInstanceId &&
+      (i.role === "Rack UPS Power" || i.role === "UPS" || i.category === "ups") &&
+      FacilityStore.normalize(i.closetName || i.rackId) === loc
+    );
+    const rackPatchPanels = projectBOM.filter(i =>
+      !i.parentInstanceId &&
+      (i.isPassive || (i.sku && (i.sku.startsWith("PP-") || i.sku.startsWith("HCM-")))) &&
+      FacilityStore.normalize(i.closetName || i.rackId) === loc
+    );
+
     itemsInRack.forEach(item => {
       if (typeof enrichBOMItemFromCatalog === "function") enrichBOMItemFromCatalog(item);
       const qty = parseInt(item.qty, 10) || 1;
@@ -3119,7 +3242,18 @@ function renderTopologyInspector() {
       }
     });
 
-    const totalHeightU = parsed.heightU || (parsed.isDin ? 0 : 24);
+    rackUpsBomItems.forEach(ups => {
+      const qty = parseInt(ups.qty, 10) || 1;
+      occupiedRU += (parseInt(ups.rackUnits, 10) || 2) * qty;
+    });
+    rackPatchPanels.forEach(pp => {
+      const qty = parseInt(pp.qty, 10) || 1;
+      occupiedRU += (parseInt(pp.rackUnits, 10) || 1) * qty;
+    });
+
+    const totalHeightU = (rackEnclosureBomItem && rackEnclosureBomItem.rackUnits > 0)
+      ? rackEnclosureBomItem.rackUnits
+      : (parsed.heightU || (parsed.isDin ? 0 : 24));
     const ruPercent = totalHeightU > 0 ? Math.min(100, Math.round((occupiedRU / totalHeightU) * 100)) : 0;
     const btuPerHour = Math.round(totalWatts * 3.412142);
     const rackPduMetrics = (!parsed.isDin && typeof getRackPduMetricsForLocation === "function")
@@ -3127,13 +3261,13 @@ function renderTopologyInspector() {
       : null;
 
     const switchIds = itemsInRack.map(i => i.instanceId);
-    const servedClients = projectBOM.filter(i => switchIds.includes(i.uplinkTargetId) && !itemsInRack.includes(i));
+    const servedClients = projectBOM.filter(i => isTopologyActiveNode(i) && switchIds.includes(i.uplinkTargetId) && !itemsInRack.includes(i));
     const cameraCount = servedClients.filter(c => c.role === "Camera" || (c.category && c.category.includes("camera"))).reduce((sum, c) => sum + (parseInt(c.qty, 10) || 1), 0);
     const doorCount = servedClients.filter(d => d.role === "Access Control" || (d.category && d.category.includes("access"))).reduce((sum, d) => sum + (parseInt(d.qty, 10) || 1), 0);
     const firstSwitchInRack = itemsInRack.find(i => i.role === "Access" || i.role === "Core" || i.role === "Core & Agg" || i.role === "Aggregation");
 
     if (selectedNodeEl) selectedNodeEl.innerText = `${parsed.space} • ${parsed.enclosure}`;
-    if (linkSpeedEl) linkSpeedEl.innerText = `${itemsInRack.length} Mounted Chassis`;
+    if (linkSpeedEl) linkSpeedEl.innerText = `${itemsInRack.length} Active Chassis`;
     if (powerSourceEl) powerSourceEl.innerText = `${Math.round(totalWatts)}W Total Load`;
 
     container.innerHTML = `
@@ -3142,9 +3276,10 @@ function renderTopologyInspector() {
         <div class="flex items-start justify-between">
           <div>
             <span class="text-xs font-bold text-white block">${escapeHTML(parsed.space)}</span>
-            <span class="text-[11px] font-mono text-indigo-300">${escapeHTML(parsed.enclosure)}</span>
+            <span class="text-[11px] font-mono text-indigo-300">${escapeHTML(parsed.enclosure)}${rackEnclosureBomItem ? ` &bull; ${escapeHTML(rackEnclosureBomItem.sku)}` : ''}</span>
+            ${rackEnclosureBomItem ? `<span class="text-[10px] text-slate-400 block truncate max-w-[210px]">${escapeHTML(rackEnclosureBomItem.model)}</span>` : ''}
           </div>
-          <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">
+          <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-indigo-500/40 bg-indigo-500/10 text-indigo-300 shrink-0">
             ${parsed.isDin ? 'NEMA / DIN Enclosure' : `${totalHeightU}U Rack Cabinet`}
           </span>
         </div>
@@ -3233,6 +3368,12 @@ function renderTopologyInspector() {
             <span>Heat Dissipation:</span>
             <span class="text-orange-400 font-bold">${btuPerHour.toLocaleString()} BTU/hr</span>
           </div>
+          ${rackUpsBomItems.length > 0 ? `
+            <div class="flex justify-between text-slate-400 pt-1 border-t border-slate-900">
+              <span>Rack UPS Backup:</span>
+              <span class="text-emerald-400 font-bold truncate max-w-[160px]" title="${escapeHTML(rackUpsBomItems.map(u => u.model).join(', '))}">${escapeHTML(rackUpsBomItems.map(u => u.sku).join(', '))}</span>
+            </div>
+          ` : ''}
           ${totalPoEBudget > 0 ? `
             <div class="flex justify-between text-slate-400 pt-1 border-t border-slate-900">
               <span>PoE Sourcing Budget:</span>
@@ -3367,7 +3508,7 @@ function renderTopologyInspector() {
     const candidateServers = projectBOM.filter(n => !n.parentInstanceId && (n.role === "Server" || n.role === "VMS Server" || n.role === "Compute & Storage"));
 
     // Connected downstream devices
-    const children = projectBOM.filter(ch => ch.uplinkTargetId === item.instanceId && !ch.parentInstanceId);
+    const children = projectBOM.filter(ch => ch.uplinkTargetId === item.instanceId && isTopologyActiveNode(ch));
 
     // If selected node is a SERVER
     if (item.role === "Server" || item.role === "VMS Server" || item.role === "Compute & Storage") {
@@ -5076,7 +5217,7 @@ function autoArrangeTopologyHierarchy(layoutMode = null) {
   TopologyHistory.pushState(`Auto-Arrange Topology (${layoutMode})`);
   const positions = {};
   const activeNodes = projectBOM.filter(item => {
-    if (item.parentInstanceId) return false;
+    if (!isTopologyActiveNode(item)) return false;
     const loc = FacilityStore.normalize(item.closetName || item.rackId);
     return loc !== FacilityStore.UNASSIGNED;
   });
@@ -5448,10 +5589,7 @@ function getTopologySearchItems() {
 
   if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
     projectBOM.forEach(item => {
-      if (item.parentInstanceId) return;
-      if (item.role === "Structured Cabling" || item.role === "Optics & DAC") return;
-      if (item.role === "Mgmt License" || item.role === "Security License" || item.role === "Feature License") return;
-      if (item.role === "Accessory") return;
+      if (!isTopologyActiveNode(item)) return;
 
       const loc = FacilityStore.normalize(item.closetName || item.rackId);
       if (loc === FacilityStore.UNASSIGNED) return;
@@ -5801,6 +5939,7 @@ function jumpToTopologyTarget(targetVal = null) {
 }
 
 // Window Compatibility Exports
+window.isTopologyActiveNode = isTopologyActiveNode;
 window.isTopologyModalVisible = isTopologyModalVisible;
 window.toggleTopologyModal = toggleTopologyModal;
 window.initTopologyCanvas = initTopologyCanvas;

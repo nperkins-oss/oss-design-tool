@@ -22,10 +22,64 @@ const DeviceTaxonomy = {
   },
 
   /**
+   * Checks if a BOM item is a passive physical enclosure, rack frame, patch panel, cable, mount, or license
+   * (Items that host equipment or provide passive physical Layer-1 pathways, not active network endpoints)
+   */
+  isPassiveOrHostInfrastructure(item) {
+    if (!item) return false;
+    if (item.isEnclosureFrame || item.isPassive) return true;
+    const role = (item.role || "").trim();
+    const cat = (item.category || "").toLowerCase().trim();
+    const sku = (item.sku || item.id || "").toUpperCase();
+    const src = (item.source || "").toLowerCase();
+
+    const passiveRoles = [
+      "Equipment Rack", "19\" Equipment Racks", "Cabinets & Enclosures",
+      "Security Cabinet", "Industrial NEMA Enclosure", "Architectural Backboard",
+      "Enclosure", "Patch Panel", "Structured Cabling", "Optics & DAC",
+      "Mgmt License", "Security License", "Feature License", "Stacking Cable",
+      "Accessory", "Power Jumper Cable", "Pathways & J-Hooks", "Mounting Hardware"
+    ];
+    if (passiveRoles.includes(role)) return true;
+
+    const passiveCats = [
+      "racks", "enclosures", "cabinets", "power_cords", "pathways",
+      "mounting_hardware", "infrastructure", "passive", "cabling", "optics", "license"
+    ];
+    if (passiveCats.includes(cat)) return true;
+
+    if (sku.startsWith("PP-") || sku.startsWith("HCM-") || sku.startsWith("C6A-") ||
+        src.includes("pod") || src.includes("stack_") || src.includes("power_cord_sync") || src.includes("cabling_sync")) {
+      return true;
+    }
+    return false;
+  },
+
+  /**
+   * Checks if a BOM item is an electrical UPS, EBP, or Rack PDU power unit
+   */
+  isPowerDistributionOrBackup(item) {
+    if (!item) return false;
+    const role = (item.role || "").trim();
+    const cat = (item.category || "").toLowerCase().trim();
+    if (role === "Rack UPS Power" || role === "UPS" || role === "Rackmount PDU" || role === "PDU") return true;
+    if (cat === "ups" || cat === "pdu" || cat === "rack_pdu" || cat === "power_distribution") return true;
+    return false;
+  },
+
+  /**
    * Identifies the device type prefix and metadata for a BOM item
    */
   getDeviceType(item) {
     if (!item) return this.PREFIXES.DEV;
+    // 0. Passive Enclosures, Racks, Patch Panels, Cords, Mounts & Licenses must NEVER match Door ("double door") or ACS
+    if (this.isPassiveOrHostInfrastructure(item)) {
+      return this.PREFIXES.DEV;
+    }
+    if (this.isPowerDistributionOrBackup(item)) {
+      return this.PREFIXES.UPS;
+    }
+
     const role = (item.role || "").trim();
     const cat = (item.category || "").toLowerCase().trim();
     const model = (item.model || "").toLowerCase();
@@ -53,9 +107,9 @@ const DeviceTaxonomy = {
       return this.PREFIXES.DR;
     }
 
-    // 4. Access Control Panels (ACS) (Cloudlinks, Mercury panels, iSTAR, Trove, etc.)
+    // 4. Access Control Panels (ACS) (Cloudlinks, Mercury panels, iSTAR, etc.)
     if (cat === "access_control" || role === "Access Control" || item.doorCapacity || item.controllerType || 
-        /cloudlink|mercury|istar|lp1501|lp1502|lp2500|lp4502|mr52|mr50|mr16|trove|fpo|eflow|subplate|controller|synergis/i.test(allText)) {
+        /cloudlink|mercury|istar|lp1501|lp1502|lp2500|lp4502|mr52|mr50|mr16|fpo|eflow|subplate|controller|synergis/i.test(allText)) {
       return this.PREFIXES.ACS;
     }
 
@@ -105,7 +159,8 @@ const DeviceTaxonomy = {
     }
 
     // 12. Power / UPS
-    if (role === "UPS" || cat.includes("ups") || /\b(ups|smart-ups|battery backup)\b/i.test(allText)) {
+    if (role === "UPS" || role === "Rack UPS Power" || role === "Rackmount PDU" || role === "PDU" ||
+        cat.includes("ups") || cat.includes("pdu") || /\b(ups|smart-ups|battery backup)\b/i.test(allText)) {
       return this.PREFIXES.UPS;
     }
 
@@ -159,8 +214,12 @@ const DeviceTaxonomy = {
 
   isFieldDevice(item) {
     if (!item) return false;
+    if (this.isPassiveOrHostInfrastructure(item) || this.isPowerDistributionOrBackup(item)) return false;
+    if (this.isSwitch(item) || this.isFirewall(item) || this.isServer(item)) return false;
     const type = this.getDeviceType(item);
-    return ["CAM", "LPR", "DR", "ACS", "BIO", "SIP", "P2P", "DEV"].includes(type.prefix);
+    if (["CAM", "LPR", "DR", "ACS", "BIO", "SIP", "P2P"].includes(type.prefix)) return true;
+    const role = (item.role || "").trim();
+    return role === "Field Drop" || role === "Edge Device" || item.isFieldDevice === true;
   },
 
   /**
@@ -173,11 +232,11 @@ const DeviceTaxonomy = {
   recalculateNumbers(bom) {
     if (!Array.isArray(bom)) return;
 
-    // Group items by prefix (ignore accessory/child items that have parentInstanceId)
+    // Group items by prefix (ignore accessory/child items and passive/rack infrastructure)
     const groups = {};
     bom.forEach(item => {
       if (item.parentInstanceId) return;
-      if (item.role === "Optics & DAC" || item.role === "Mgmt License" || item.role === "Security License" || item.role === "Stacking Cable" || item.role === "Structured Cabling" || item.isPassive || item.category === "Infrastructure" || item.category === "passive" || item.sku?.startsWith("PP-") || item.sku?.startsWith("HCM-") || item.sku?.startsWith("C6A-") || item.source?.includes("pod") || item.source?.includes("stack_")) {
+      if (this.isPassiveOrHostInfrastructure(item) || item.role === "Rackmount PDU" || item.role === "PDU" || item.category === "pdu") {
         item.deviceNumber = null;
         item.friendlyName = null;
         item.customFriendlyName = null;
@@ -244,8 +303,7 @@ const DeviceTaxonomy = {
    */
   getDefaultFriendlyName(item) {
     if (!item) return "";
-    const isPassive = item.role === "Structured Cabling" || item.isPassive || item.category === "Infrastructure" || item.category === "passive" || item.sku?.startsWith("PP-") || item.sku?.startsWith("HCM-") || item.sku?.startsWith("C6A-") || item.source?.includes("pod") || item.source?.includes("stack_");
-    if (isPassive) {
+    if (this.isPassiveOrHostInfrastructure(item) || item.role === "Rackmount PDU" || item.role === "PDU" || item.category === "pdu") {
       return item.model;
     }
     let rawLoc = item.closetName || item.rackId || "Unassigned";
