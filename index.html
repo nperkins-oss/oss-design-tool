@@ -720,47 +720,52 @@
         <div id="subModeNavigationContainer" class="flex items-center gap-1.5"></div>
       </div>
 
-      <!-- Top Calculator Strip (Multi-Port Demand & Headroom) -->
-      <div id="calculatorStripContainer" class="p-4 sm:px-6 border-b border-slate-800 shrink-0"></div>
+      <!-- Unified Scrollable Viewport for Calculator Strip + Search Bar + Hardware Catalog Grid -->
+      <div id="catalogScrollViewport" class="flex-1 overflow-y-auto flex flex-col">
 
-      <!-- Search & Sort Subbar -->
-      <div class="px-4 sm:px-6 py-3 border-b border-slate-800/80 bg-slate-900/40 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div class="flex items-center gap-2 flex-1 max-w-md bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 focus-within:border-brand-500 transition-colors">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
-          <input type="text" id="filterSearch" placeholder="Search by model, SKU, vendor, or specs..." oninput="updateSearchFilter(this.value)" class="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none" />
-        </div>
+        <!-- Top Calculator Strip (Multi-Port Demand & Headroom / Video Storage & Genetec Sizer) -->
+        <div id="calculatorStripContainer" class="p-4 sm:px-6 border-b border-slate-800 shrink-0"></div>
 
-        <div class="flex items-center gap-3">
-          <div class="text-xs text-slate-400">
-            Showing <strong id="resultCount" class="text-white font-mono">0</strong> models
+        <!-- Search & Sort Subbar (Sticky on scroll) -->
+        <div class="sticky top-0 z-20 px-4 sm:px-6 py-3 border-b border-slate-800/80 bg-slate-900/95 backdrop-blur-md flex flex-wrap items-center justify-between gap-3 shrink-0">
+          <div class="flex items-center gap-2 flex-1 max-w-md bg-slate-900 border border-slate-700/80 rounded-xl px-3 py-1.5 focus-within:border-brand-500 transition-colors">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
+            <input type="text" id="filterSearch" placeholder="Search by model, SKU, vendor, or specs..." oninput="updateSearchFilter(this.value)" class="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none" />
           </div>
-          <select id="sortSelector" onchange="runActiveFilter()" class="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none focus:border-brand-500">
-            <option value="featured">Sort: Featured</option>
-            <option value="poe_desc">PoE Budget (High to Low)</option>
-            <option value="buffer_desc">VMS Buffer (High to Low)</option>
-            <option value="ports_desc">Port Count (High to Low)</option>
-            <option value="price_asc">Price (Low to High)</option>
-            <option value="price_desc">Price (High to Low)</option>
-          </select>
-        </div>
-      </div>
 
-      <!-- Hardware Catalog Grid -->
-      <div class="flex-1 overflow-y-auto p-4 sm:p-6">
-        <!-- Removable Active Filter Pills -->
-        <div id="activeFilterPillsContainer" class="flex flex-wrap items-center gap-1.5 mb-4 empty:hidden"></div>
-        <div id="hardwareCardsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5"></div>
-        
-        <!-- Empty State -->
-        <div id="noResultsState" class="hidden py-20 text-center space-y-3">
-          <div class="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
-            <i data-lucide="inbox" class="w-6 h-6"></i>
+          <div class="flex items-center gap-3">
+            <div class="text-xs text-slate-400">
+              Showing <strong id="resultCount" class="text-white font-mono">0</strong> models
+            </div>
+            <select id="sortSelector" onchange="runActiveFilter()" class="bg-slate-900 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-300 focus:outline-none focus:border-brand-500">
+              <option value="featured">Sort: Featured</option>
+              <option value="poe_desc">PoE Budget (High to Low)</option>
+              <option value="buffer_desc">VMS Buffer (High to Low)</option>
+              <option value="ports_desc">Port Count (High to Low)</option>
+              <option value="price_asc">Price (Low to High)</option>
+              <option value="price_desc">Price (High to Low)</option>
+            </select>
           </div>
-          <h3 class="text-sm font-bold text-slate-300">No matching hardware found</h3>
-          <p class="text-xs text-slate-500 max-w-sm mx-auto">Try clearing search terms or resetting sidebar filters.</p>
-          <button onclick="resetCurrentFilters()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl font-medium border border-slate-700">Clear All Filters</button>
-          <div id="noResultsCrossCategorySuggestions" class="pt-2 max-w-xl mx-auto hidden"></div>
         </div>
+
+        <!-- Hardware Catalog Grid -->
+        <div class="flex-1 p-4 sm:p-6">
+          <!-- Removable Active Filter Pills -->
+          <div id="activeFilterPillsContainer" class="flex flex-wrap items-center gap-1.5 mb-4 empty:hidden"></div>
+          <div id="hardwareCardsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5"></div>
+          
+          <!-- Empty State -->
+          <div id="noResultsState" class="hidden py-20 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+              <i data-lucide="inbox" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-sm font-bold text-slate-300">No matching hardware found</h3>
+            <p class="text-xs text-slate-500 max-w-sm mx-auto">Try clearing search terms or resetting sidebar filters.</p>
+            <button onclick="resetCurrentFilters()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-xl font-medium border border-slate-700">Clear All Filters</button>
+            <div id="noResultsCrossCategorySuggestions" class="pt-2 max-w-xl mx-auto hidden"></div>
+          </div>
+        </div>
+
       </div>
 
     </main>
