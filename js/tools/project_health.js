@@ -991,16 +991,18 @@ function auditProjectHealth() {
   });
 
   // =========================================================================
-  // RULE 15: VIDEO RETENTION, BITRATE & NVR STORAGE CAPACITY AUDIT
-  // Validates quoted NVR usable TB and recording throughput against BOM camera demand
+  // RULE 15: VIDEO RETENTION, BITRATE, RAID & GENETEC 5.14 ARCHIVER CAPACITY AUDIT
+  // Validates quoted NVR usable TB, recording throughput, and Genetec 5.14 Archiver limits against BOM camera demand
   // =========================================================================
   if (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function") {
     const vAudit = VideoStorageSizer.calculateFromBOM(projectBOM, {
+      sourceMode: "bom",
       retentionDays: typeof videoRetentionDays !== "undefined" ? videoRetentionDays : 30,
       codec: typeof videoCodec !== "undefined" ? videoCodec : "H.265",
-      fps: typeof videoFps !== "undefined" ? videoFps : 20,
-      motionDutyCycle: typeof videoMotionDuty !== "undefined" ? videoMotionDuty : 0.70,
-      raidType: typeof videoRaidType !== "undefined" ? videoRaidType : "RAID 5"
+      fps: typeof videoFps !== "undefined" ? videoFps : 15,
+      motionDutyCycle: typeof videoMotionDuty !== "undefined" ? videoMotionDuty : 0.50,
+      sceneActivity: typeof videoSceneActivity !== "undefined" ? videoSceneActivity : "medium",
+      raidType: typeof videoRaidType !== "undefined" ? videoRaidType : "RAID 6"
     });
 
     if (vAudit.totalCameras > 0) {
@@ -1009,8 +1011,9 @@ function auditProjectHealth() {
         const c = (i.category || "").toLowerCase();
         return r.includes("nvr") || r.includes("recorder") || r.includes("server") || c === "servers" || c === "storage";
       });
-      const totalQuotedUsableTB = quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTB ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0);
-      const totalMaxThroughputMbps = quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.maxThroughputMbps || 600)) * (nvr.qty || 1)), 0);
+      const totalQuotedUsableTB = Math.round(quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTb ?? nvr.usableStorageTB ?? nvr.rawStorageTb ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0) * 10) / 10;
+      const totalMaxThroughputMbps = Math.round(quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.maxIngestBandwidthMbps ?? nvr.maxThroughputMbps ?? 600)) * (nvr.qty || 1)), 0));
+      const gInfo = vAudit.genetec ? ` (Genetec 5.14: ${vAudit.genetec.minRequiredArchiverRoles} Archiver role(s) across ${vAudit.genetec.recommendedArchiverServers} server(s))` : "";
 
       if (totalQuotedUsableTB < vAudit.requiredUsableTB) {
         const deficitTB = Math.ceil((vAudit.requiredUsableTB - totalQuotedUsableTB) * 10) / 10;
@@ -1022,9 +1025,9 @@ function auditProjectHealth() {
           title: totalQuotedUsableTB === 0
             ? `Missing NVR / VMS Recording Storage (${vAudit.requiredUsableTB} TB Usable Required)`
             : `Video Retention Storage Deficit: ${totalQuotedUsableTB} TB Quoted vs ${vAudit.requiredUsableTB} TB Required`,
-          summary: `${vAudit.totalCameras} camera(s) (${vAudit.totalSensors} streams @ ${vAudit.totalBandwidthMbps} Mbps) require ${vAudit.requiredUsableTB} TB usable (${vAudit.requiredRawTB} TB raw ${vAudit.raidType}) for ${vAudit.retentionDays}-day retention`,
-          details: `Based on ${vAudit.retentionDays}-day retention (${vAudit.codec}, ${vAudit.fps} FPS, ${Math.round(vAudit.motionDutyCycle * 100)}% motion duty cycle, ${vAudit.raidType}), the camera fleet requires ${vAudit.requiredUsableTB} TB of usable storage (${deficitTB} TB deficit). Auto-fit an NVR appliance to meet target retention.`,
-          actionLabel: `+ Auto-Fit NVR for ${vAudit.requiredUsableTB} TB Usable`,
+          summary: `${vAudit.totalCameras} camera(s) (${vAudit.totalSensors} streams @ ${vAudit.totalBandwidthMbps} Mbps) require ${vAudit.requiredUsableTB} TB usable (${vAudit.requiredRawTB} TB raw ${vAudit.raidType}) for ${vAudit.retentionDays}-day retention${gInfo}`,
+          details: `Based on ${vAudit.retentionDays}-day retention (${vAudit.codec}, ${vAudit.fps} FPS, ${Math.round(vAudit.motionDutyCycle * 100)}% duty cycle, ${vAudit.raidType}), the camera fleet requires ${vAudit.requiredUsableTB} TB of usable storage (${deficitTB} TB deficit). Auto-fit an NVR/Archiver server appliance to meet target retention and Genetec 5.14 throughput limits.`,
+          actionLabel: `+ Auto-Fit Server for ${vAudit.requiredUsableTB} TB Usable`,
           actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModal();",
           badgeText: `${deficitTB} TB STORAGE DEFICIT`
         });
@@ -1034,10 +1037,10 @@ function auditProjectHealth() {
           category: "capacity",
           severity: "warning",
           priority: 2,
-          title: `NVR Recording Throughput Exceeded (${vAudit.totalBandwidthMbps} Mbps vs ${totalMaxThroughputMbps} Mbps Max)`,
-          summary: `Camera ingest bitrate (${vAudit.totalBandwidthMbps} Mbps) exceeds quoted NVR recording throughput limit (${totalMaxThroughputMbps} Mbps)`,
-          details: `Even when hard drive storage capacity is sufficient, exceeding the NVR's maximum network ingest throughput (${totalMaxThroughputMbps} Mbps) causes dropped video frames and database corruption during high-motion events. Distribute cameras across an additional NVR or upgrade to a higher-throughput enterprise recorder.`,
-          actionLabel: `+ Add Additional NVR Appliance`,
+          title: `NVR / Archiver Recording Throughput Exceeded (${vAudit.totalBandwidthMbps} Mbps vs ${totalMaxThroughputMbps} Mbps Max)`,
+          summary: `Camera ingest bitrate (${vAudit.totalBandwidthMbps} Mbps) exceeds quoted server recording throughput limit (${totalMaxThroughputMbps} Mbps)${gInfo}`,
+          details: `Even when hard drive storage capacity is sufficient, exceeding the server's maximum network ingest throughput (${totalMaxThroughputMbps} Mbps) or Genetec Archiver role limits (300/500 Mbps per Archiver) causes dropped video frames and archiving queue overflow. Distribute cameras across an additional Archiver server or upgrade to a higher-throughput recorder.`,
+          actionLabel: `+ Add Additional Archiver Server`,
           actionFn: "autoFitNvrToBom(); updateProjectHealthUI(); renderProjectHealthModal();",
           badgeText: "THROUGHPUT OVERLOAD"
         });

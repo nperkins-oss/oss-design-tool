@@ -219,7 +219,7 @@ let selectedCordColor = "all";
 let selectedCordGauge = "all";
 let requireCordLocking = false;
 
-// 6. Camera Filters & Video Storage Sizer State
+// 6. Camera Filters & Video Storage / Genetec 5.14 Sizer State
 let selectedCamVendors = [];
 let selectedCamFormFactors = [];
 let selectedCamResolutions = [];
@@ -230,7 +230,17 @@ let videoRetentionDays = 30;
 let videoCodec = "H.265";
 let videoFps = 15;
 let videoMotionDuty = 0.5;
-let videoRaidType = "RAID6";
+let videoRaidType = "RAID 6";
+let videoSourceMode = "auto"; // "auto" | "manual" | "bom"
+let videoManualCamCount = 32;
+let videoResolutionMp = 4;
+let videoSceneActivity = "medium"; // "low" | "medium" | "high" | "ultra"
+let videoPreferredDriveTb = 16;
+let videoGenetecProfile = "dedicated_300";
+let videoArchiverRoles = 0; // 0 = Auto
+let videoEncryptionCerts = 0;
+let videoSoftwareMotion = false;
+let videoShowDetailsPanel = true;
 
 // 7. Access Control Filters & Door Package Builder State
 let selectedAcsVendors = [];
@@ -1189,108 +1199,394 @@ function buildCalculatorStrip() {
       </div>
     `;
   } else if (currentMode === "cameras" || currentMode === "servers" || currentMode === "storage") {
-    // Phase B.2: Interactive Video Retention, Bitrate & RAID Storage Sizer Strip
+    // Interactive Video Storage, Bandwidth, RAID Drive Matrix & Genetec 5.14 Archiver Sizer
     container.classList.remove("hidden");
     const vCalc = (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function")
       ? VideoStorageSizer.calculateFromBOM(projectBOM, {
+          sourceMode: videoSourceMode,
+          manualCameraCount: videoManualCamCount,
+          resolutionMp: videoResolutionMp,
           retentionDays: videoRetentionDays,
           codec: videoCodec,
           fps: videoFps,
           motionDutyCycle: videoMotionDuty,
-          raidType: videoRaidType
+          sceneActivity: videoSceneActivity,
+          raidType: videoRaidType,
+          preferredDriveSizeTb: videoPreferredDriveTb,
+          genetecProfile: videoGenetecProfile,
+          archiverRolesCount: videoArchiverRoles,
+          encryptionCerts: videoEncryptionCerts,
+          softwareMotionDetection: videoSoftwareMotion
         })
-      : { totalCameras: 0, totalSensors: 0, totalBandwidthMbps: 0, requiredUsableTB: 0, requiredRawTB: 0 };
+      : {
+          sourceMode: "manual",
+          bomCameraUnits: 0,
+          totalCameras: 32,
+          totalSensors: 32,
+          perCameraMbps: 3.3,
+          peakIngressMbps: 105.6,
+          averageRecordingMbps: 52.8,
+          totalBandwidthMbps: 105.6,
+          dailyStorageGb: 570.2,
+          requiredUsableTB: 18.82,
+          requiredRawTB: 25.03,
+          arrayRawTb: 64,
+          arrayUsableTb: 32,
+          driveOptionsMatrix: [],
+          selectedDrivePlan: { driveSizeTb: 16, totalDrives: 4, drivesPerServer: 4, rawStorageTb: 64, usableStorageTb: 32, efficiencyPct: 50, chassisFormFactor: "1U 4-Bay" },
+          genetec: {
+            version: "5.14.1.0",
+            datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf",
+            profileKey: "dedicated_300",
+            profile: { label: "Dedicated Archiver (Up to 300 Mbps)", cpuSpec: "Xeon Silver 4210", ramGb: 16, nicSpec: "1 GbE" },
+            effectiveMaxCamerasPerArchiver: 300,
+            effectiveMaxMbpsPerArchiver: 300,
+            minRequiredArchiverRoles: 1,
+            activeArchiverRoles: 1,
+            isArchiverCountVerified: true,
+            recommendedArchiverServers: 1,
+            requiresDedicatedDirectoryServer: false,
+            totalServersIncludingDirectory: 1,
+            camerasPerArchiverRole: 32,
+            bitratePerArchiverRoleMbps: 105.6,
+            usableTbPerArchiverRole: 18.82,
+            usableTbPerServer: 18.82,
+            bitratePerServerMbps: 105.6,
+            findings: [],
+            isFullyCompliant: true
+          }
+        };
 
-    // Calculate currently quoted NVR usable TB in BOM
     const quotedNvrs = (projectBOM || []).filter(i => {
       const r = (i.role || "").toLowerCase();
       const c = (i.category || "").toLowerCase();
       return r.includes("nvr") || r.includes("recorder") || r.includes("server") || c === "servers" || c === "storage";
     });
-    const quotedUsableTB = quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTB ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0);
+    const quotedUsableTB = Math.round(quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTb ?? nvr.usableStorageTB ?? nvr.rawStorageTb ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0) * 10) / 10;
     const isStorageHealthy = vCalc.requiredUsableTB === 0 || quotedUsableTB >= vCalc.requiredUsableTB;
+    const g = vCalc.genetec || {};
+    const dp = vCalc.selectedDrivePlan || {};
+    const showMatrix = (currentMode === "servers" || currentMode === "storage") ? (videoShowDetailsPanel !== false) : Boolean(videoShowDetailsPanel);
+
+    const profilesList = (typeof GENETEC_514_REQUIREMENTS !== "undefined" && GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES)
+      ? Object.values(GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES)
+      : [];
 
     container.innerHTML = `
-      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-md">
-        <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-sky-500/10 border border-sky-500/30 text-sky-400 shrink-0">
-            <i data-lucide="hard-drive" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Video Retention, Bitrate & RAID Sizer</h4>
-              <span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-300">${vCalc.totalCameras} Cam (${vCalc.totalSensors} Streams)</span>
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
+        <!-- Row 1: Header, Source Toggle, Genetec Datasheet Link & Primary KPI Strip -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+          <div class="flex items-start sm:items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400 shrink-0">
+              <i data-lucide="hard-drive" class="w-5 h-5"></i>
             </div>
-            <p class="text-[11px] text-slate-400">Live VMS storage & throughput sizing from BOM cameras (Modular formula in <code class="text-sky-400">VideoStorageSizer</code>).</p>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Storage, Bandwidth, RAID &amp; Genetec 5.14 Archiver Calculator</h4>
+                <span class="px-2 py-0.5 rounded-md bg-purple-950/80 border border-purple-700/50 text-[10px] font-mono font-bold text-purple-300">
+                  ${vCalc.totalCameras} Cameras (${vCalc.totalSensors} Streams @ ${vCalc.perCameraMbps} Mbps/cam)
+                </span>
+                <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide', 'GENETEC-SC-5.14')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec Security Center 5.14.1.0 System Requirements Guide PDF">
+                  <i data-lucide="file-text" class="w-3 h-3"></i>
+                  <span>Genetec 5.14 Spec Guide</span>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">
+                Industry-standard bitrate &amp; RAID array sizing with live <strong class="text-slate-200">Genetec Security Center 5.14</strong> Archiver role &amp; server throughput verification.
+              </p>
+            </div>
+          </div>
+
+          <!-- Top Right KPI Summary & Actions -->
+          <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${g.isFullyCompliant ? 'border-slate-800' : 'border-rose-600/80'}">
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Peak / Avg Bitrate</div>
+                <div class="text-xs font-mono font-bold text-sky-400">${vCalc.peakIngressMbps} <span class="text-slate-500">/</span> ${vCalc.averageRecordingMbps} Mbps</div>
+              </div>
+              <div class="h-6 w-px bg-slate-800"></div>
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Usable / Raw (${vCalc.raidLevel})</div>
+                <div class="text-xs font-mono font-bold text-purple-300">${vCalc.requiredUsableTB} TB <span class="text-slate-500">/</span> ${vCalc.arrayRawTb || vCalc.requiredRawTB} TB</div>
+              </div>
+              <div class="h-6 w-px bg-slate-800"></div>
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Genetec Archivers</div>
+                <div class="text-xs font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${g.activeArchiverRoles} Role${g.activeArchiverRoles === 1 ? '' : 's'} (${g.recommendedArchiverServers} Srv)
+                </div>
+              </div>
+              <div class="h-6 w-px bg-slate-800"></div>
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">BOM Quoted</div>
+                <div class="text-xs font-mono font-bold ${isStorageHealthy ? 'text-emerald-400' : 'text-amber-400'}">${quotedUsableTB} TB</div>
+              </div>
+            </div>
+
+            <button onclick="setVideoSizerParam('toggleDetails', !videoShowDetailsPanel)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Toggle RAID Drive Matrix & Genetec Archiver Mapping">
+              <i data-lucide="${showMatrix ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>${showMatrix ? 'Hide Matrix' : 'RAID & Archiver Matrix'}</span>
+            </button>
+
+            <button onclick="autoFitNvrToBom()" class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Auto-Fit Server/NVR to BOM based on required Usable TB and Genetec Archiver throughput">
+              <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+              <span>Auto-Fit Server</span>
+            </button>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5 text-xs">
-          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Retention:</span>
-            <select onchange="setVideoSizerParam('retentionDays', Number(this.value))" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
-              ${[15, 30, 60, 90, 180].map(d => `<option value="${d}" class="bg-slate-900" ${videoRetentionDays === d ? 'selected' : ''}>${d} Days</option>`).join('')}
+        <!-- Row 2: Parameter Controls Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2 text-xs">
+          <!-- 1. Camera Count & Source -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] font-bold uppercase text-slate-400">1. Cameras</span>
+              <button onclick="setVideoSizerParam('sourceMode', '${vCalc.sourceMode === 'bom' ? 'manual' : 'bom'}')" class="text-[9px] font-mono px-1.5 py-0.2 rounded ${vCalc.sourceMode === 'bom' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-slate-800 text-slate-300'} cursor-pointer" title="Switch between BOM cameras and Manual camera count">
+                ${vCalc.sourceMode === 'bom' ? `BOM (${vCalc.bomCameraUnits})` : 'Manual'}
+              </button>
+            </div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="1" max="5000" value="${vCalc.totalCameras}" onchange="setVideoSizerParam('manualCameraCount', Math.max(1, parseInt(this.value, 10) || 1))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-0.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-purple-500" />
+              <span class="text-[10px] text-slate-400 font-mono">Cam</span>
+            </div>
+          </div>
+
+          <!-- 2. Resolution -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">2. Resolution</span>
+            <select onchange="setVideoSizerParam('resolutionMp', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
+              ${[
+                { mp: 1, label: "1MP (720p HD)" },
+                { mp: 2, label: "2MP (1080p FHD)" },
+                { mp: 3, label: "3MP (2048x1536)" },
+                { mp: 4, label: "4MP (2K QHD)" },
+                { mp: 5, label: "5MP (2592x1944)" },
+                { mp: 6, label: "6MP (3072x2048)" },
+                { mp: 8, label: "8MP (4K UHD)" },
+                { mp: 12, label: "12MP (Fisheye)" },
+                { mp: 16, label: "16MP (Multi-Sensor)" },
+                { mp: 20, label: "20MP (4x5MP)" },
+                { mp: 32, label: "32MP (4x8MP 4K)" }
+              ].map(r => `<option value="${r.mp}" class="bg-slate-900" ${vCalc.resolutionMp === r.mp ? 'selected' : ''}>${r.label}</option>`).join('')}
             </select>
           </div>
 
-          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Codec:</span>
-            <select onchange="setVideoSizerParam('codec', this.value)" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="H.265" class="bg-slate-900" ${videoCodec === 'H.265' ? 'selected' : ''}>H.265 (HEVC)</option>
-              <option value="H.264" class="bg-slate-900" ${videoCodec === 'H.264' ? 'selected' : ''}>H.264 (AVC)</option>
+          <!-- 3. Frame Rate (FPS) -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">3. Frame Rate</span>
+            <select onchange="setVideoSizerParam('fps', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
+              ${[1, 5, 10, 12, 15, 20, 24, 30, 60].map(f => `<option value="${f}" class="bg-slate-900" ${vCalc.fps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
             </select>
           </div>
 
-          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">FPS:</span>
-            <select onchange="setVideoSizerParam('fps', Number(this.value))" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
-              ${[15, 20, 24, 30].map(f => `<option value="${f}" class="bg-slate-900" ${videoFps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
+          <!-- 4. Format / Codec (H.264 / H.265 / AV1 / AVI) -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">4. Format / Codec</span>
+            <select onchange="setVideoSizerParam('codec', this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="H.265" class="bg-slate-900" ${vCalc.codec === 'H.265' ? 'selected' : ''}>H.265 (HEVC)</option>
+              <option value="H.265+" class="bg-slate-900" ${vCalc.codec === 'H.265+' ? 'selected' : ''}>H.265+ (Smart Codec)</option>
+              <option value="H.264" class="bg-slate-900" ${vCalc.codec === 'H.264' ? 'selected' : ''}>H.264 (AVC)</option>
+              <option value="AV1" class="bg-slate-900" ${vCalc.codec === 'AV1' ? 'selected' : ''}>AV1 (Genetec 5.14)</option>
+              <option value="AVI" class="bg-slate-900" ${vCalc.codec === 'AVI' ? 'selected' : ''}>AVI / MJPEG (Raw)</option>
             </select>
           </div>
 
-          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Duty:</span>
-            <select onchange="setVideoSizerParam('motionDuty', Number(this.value))" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="0.5" class="bg-slate-900" ${videoMotionDuty === 0.5 ? 'selected' : ''}>50% Motion</option>
-              <option value="0.7" class="bg-slate-900" ${videoMotionDuty === 0.7 ? 'selected' : ''}>70% Motion</option>
-              <option value="1" class="bg-slate-900" ${videoMotionDuty === 1 ? 'selected' : ''}>100% Continuous (24/7)</option>
+          <!-- 5. Scene Activity -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">5. Scene Activity</span>
+            <select onchange="setVideoSizerParam('sceneActivity', this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="low" class="bg-slate-900" ${vCalc.sceneActivity === 'low' ? 'selected' : ''}>Low (Static 0.65x)</option>
+              <option value="medium" class="bg-slate-900" ${vCalc.sceneActivity === 'medium' ? 'selected' : ''}>Medium (Std 1.0x)</option>
+              <option value="high" class="bg-slate-900" ${vCalc.sceneActivity === 'high' ? 'selected' : ''}>High (Busy 1.40x)</option>
+              <option value="ultra" class="bg-slate-900" ${vCalc.sceneActivity === 'ultra' ? 'selected' : ''}>Very High (1.75x)</option>
             </select>
           </div>
 
-          <div class="flex items-center gap-1.5 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">RAID:</span>
-            <select onchange="setVideoSizerParam('raidType', this.value)" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="RAID 5" class="bg-slate-900" ${videoRaidType === 'RAID 5' ? 'selected' : ''}>RAID 5 (~83%)</option>
-              <option value="RAID 6" class="bg-slate-900" ${videoRaidType === 'RAID 6' ? 'selected' : ''}>RAID 6 (~75%)</option>
-              <option value="RAID 10" class="bg-slate-900" ${videoRaidType === 'RAID 10' ? 'selected' : ''}>RAID 10 (50%)</option>
-              <option value="JBOD" class="bg-slate-900" ${videoRaidType === 'JBOD' ? 'selected' : ''}>JBOD (100%)</option>
+          <!-- 6. Motion vs Continuous Recording -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">6. Rec Mode / Duty</span>
+            <select onchange="setVideoSizerParam('motionDuty', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="1" class="bg-slate-900" ${vCalc.motionDutyPct >= 100 ? 'selected' : ''}>Continuous 24/7 (100%)</option>
+              <option value="0.75" class="bg-slate-900" ${vCalc.motionDutyPct === 75 ? 'selected' : ''}>Motion High (18h / 75%)</option>
+              <option value="0.7" class="bg-slate-900" ${vCalc.motionDutyPct === 70 ? 'selected' : ''}>Motion Commercial (70%)</option>
+              <option value="0.5" class="bg-slate-900" ${vCalc.motionDutyPct === 50 ? 'selected' : ''}>Motion Medium (12h / 50%)</option>
+              <option value="0.25" class="bg-slate-900" ${vCalc.motionDutyPct === 25 ? 'selected' : ''}>Motion Low (6h / 25%)</option>
             </select>
+          </div>
+
+          <!-- 7. Retention Days -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">7. Retention</span>
+            <select onchange="setVideoSizerParam('retentionDays', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
+              ${[7, 14, 15, 30, 45, 60, 90, 120, 180, 365].map(d => `<option value="${d}" class="bg-slate-900" ${vCalc.retentionDays === d ? 'selected' : ''}>${d} Days</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- 8. RAID Level -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">8. RAID Level</span>
+            <select onchange="setVideoSizerParam('raidType', this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="RAID 5" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 5' ? 'selected' : ''}>RAID 5 (1 Parity)</option>
+              <option value="RAID 6" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 6' ? 'selected' : ''}>RAID 6 (2 Parity)</option>
+              <option value="RAID 10" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 10' ? 'selected' : ''}>RAID 10 (50% Mirror)</option>
+              <option value="RAID 50" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 50' ? 'selected' : ''}>RAID 50 (Dual R5)</option>
+              <option value="RAID 60" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 60' ? 'selected' : ''}>RAID 60 (Dual R6)</option>
+              <option value="JBOD" class="bg-slate-900" ${vCalc.raidLevel === 'JBOD' ? 'selected' : ''}>JBOD (No Parity)</option>
+            </select>
+          </div>
+
+          <!-- 9. Genetec Archiver Roles -->
+          <div class="flex flex-col gap-1 bg-slate-950/90 border ${g.isArchiverCountVerified ? 'border-slate-800' : 'border-rose-600'} rounded-xl px-2.5 py-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[9px] font-bold uppercase text-slate-400">9. Archiver Roles</span>
+              <button onclick="setVideoSizerParam('archiverRoles', 0)" class="text-[9px] font-mono px-1 rounded ${videoArchiverRoles === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Reset to Auto-Calculated minimum Archiver roles">
+                Auto (${g.minRequiredArchiverRoles})
+              </button>
+            </div>
+            <div class="flex items-center gap-1">
+              <input type="number" min="0" max="64" value="${videoArchiverRoles === 0 ? g.activeArchiverRoles : videoArchiverRoles}" onchange="setVideoSizerParam('archiverRoles', Math.max(0, parseInt(this.value, 10) || 0))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-0.5 text-xs font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'} focus:outline-none" title="Enter number of Genetec Archiver roles to verify against bitrate & camera count (0 = Auto)" />
+              <span class="text-[10px] text-slate-400 font-mono">Roles</span>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center gap-3 shrink-0">
-          <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${isStorageHealthy ? 'border-emerald-800/60' : 'border-amber-600/70'}">
-            <div>
-              <div class="text-[10px] uppercase font-bold text-slate-400">Bitrate</div>
-              <div class="text-xs font-mono font-bold text-sky-400">${vCalc.totalBandwidthMbps} Mbps</div>
+        ${showMatrix ? `
+        <!-- Row 3: Detailed Genetec 5.14 Verification & RAID Drive Options Matrix -->
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-3 pt-1">
+          <!-- Left Panel (5 cols): Genetec Security Center 5.14.1.0 Archiver & Server Verification -->
+          <div class="xl:col-span-5 bg-slate-950/90 border ${g.isFullyCompliant ? 'border-slate-800' : 'border-amber-600/70'} rounded-xl p-3 flex flex-col justify-between gap-2.5">
+            <div class="space-y-2">
+              <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-1.5">
+                  <i data-lucide="shield-check" class="w-4 h-4 ${g.isFullyCompliant ? 'text-emerald-400' : 'text-amber-400'}"></i>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-white">Genetec 5.14 Archiver &amp; Server Verification</span>
+                </div>
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${g.isFullyCompliant ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-rose-950 text-rose-300 border border-rose-700/60'}">
+                  ${g.isFullyCompliant ? '✓ PASS: GENETEC 5.14 VERIFIED' : '⚠ CAPACITY / RULE ALERT'}
+                </span>
+              </div>
+
+              <!-- Server Profile & Encryption Modifiers -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <div class="sm:col-span-2 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5">
+                  <div class="text-[9px] font-bold uppercase text-slate-400">Genetec 5.14 Server Profile (${g.profile?.referencePage || 'Sec 1.4'})</div>
+                  <select onchange="setVideoSizerParam('genetecProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
+                    ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps)</option>`).join('')}
+                  </select>
+                </div>
+                <div class="bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
+                  <div class="text-[9px] font-bold uppercase text-slate-400">Fusion Encryption (p.10)</div>
+                  <select onchange="setVideoSizerParam('encryptionCerts', Number(this.value))" class="w-full bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
+                    <option value="0" class="bg-slate-900" ${g.encryptionCerts === 0 ? 'selected' : ''}>0 Certs (100% Cap)</option>
+                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>1 Cert (-30% Cap)</option>
+                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>5 Certs (-41% Cap)</option>
+                    <option value="10" class="bg-slate-900" ${g.encryptionCerts === 10 ? 'selected' : ''}>10 Certs (-52% Cap)</option>
+                    <option value="20" class="bg-slate-900" ${g.encryptionCerts === 20 ? 'selected' : ''}>20 Certs (-68% Cap)</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Per-Archiver & Per-Server Load Mapping Grid -->
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1">
+                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Archiver Roles</div>
+                  <div class="text-sm font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'}">${g.activeArchiverRoles} <span class="text-[10px] text-slate-400">/ ${g.minRequiredArchiverRoles} Min</span></div>
+                  <div class="text-[9px] text-slate-500">Limit: ${g.effectiveMaxMbpsPerArchiver} Mbps</div>
+                </div>
+                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Load / Archiver</div>
+                  <div class="text-sm font-mono font-bold text-sky-400">${g.bitratePerArchiverRoleMbps} Mbps</div>
+                  <div class="text-[9px] text-slate-500">${g.camerasPerArchiverRole} Streams / Role</div>
+                </div>
+                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Storage / Role</div>
+                  <div class="text-sm font-mono font-bold text-purple-300">${g.usableTbPerArchiverRole} TB</div>
+                  <div class="text-[9px] text-slate-500">Usable per Role</div>
+                </div>
+                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Servers Needed</div>
+                  <div class="text-sm font-mono font-bold text-amber-300">${g.recommendedArchiverServers} Archiver${g.requiresDedicatedDirectoryServer ? ' + 1 Dir' : ''}</div>
+                  <div class="text-[9px] text-slate-500">${g.usableTbPerServer} TB Usable / Srv</div>
+                </div>
+              </div>
             </div>
-            <div class="h-6 w-px bg-slate-800"></div>
-            <div>
-              <div class="text-[10px] uppercase font-bold text-slate-400">Usable / Raw Req</div>
-              <div class="text-xs font-mono font-bold ${isStorageHealthy ? 'text-emerald-400' : 'text-amber-400'}">${vCalc.requiredUsableTB} TB / ${vCalc.requiredRawTB} TB</div>
-            </div>
-            <div class="h-6 w-px bg-slate-800"></div>
-            <div>
-              <div class="text-[10px] uppercase font-bold text-slate-400">Quoted NVR</div>
-              <div class="text-xs font-mono font-bold ${isStorageHealthy ? 'text-emerald-400' : 'text-rose-400'}">${quotedUsableTB} TB</div>
+
+            <!-- Hardware Spec & Genetec Rule Alerts -->
+            <div class="space-y-1.5 border-t border-slate-800/80 pt-2 text-[11px]">
+              <div class="flex items-center justify-between text-slate-300 font-mono text-[10px]">
+                <span>Min Spec: <strong class="text-white">${g.profile?.cpuSpec || ''} • ${g.profile?.ramGb || 16}GB RAM • ${g.profile?.nicSpec || '1 GbE'}</strong></span>
+                <span>Daily: <strong class="text-sky-300">${vCalc.dailyStorageGb} GB/day</strong></span>
+              </div>
+              ${(g.findings && g.findings.length > 0) ? g.findings.map(f => `
+                <div class="px-2.5 py-1.5 rounded-lg text-[10px] font-medium flex items-start gap-1.5 ${f.severity === 'critical' ? 'bg-rose-950/70 border border-rose-700/70 text-rose-200' : f.severity === 'warning' ? 'bg-amber-950/70 border border-amber-700/70 text-amber-200' : 'bg-sky-950/70 border border-sky-700/70 text-sky-200'}">
+                  <i data-lucide="${f.severity === 'critical' ? 'alert-octagon' : f.severity === 'warning' ? 'alert-triangle' : 'info'}" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+                  <span>${f.text}</span>
+                </div>
+              `).join('') : `
+                <div class="px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-[10px] flex items-center gap-1.5">
+                  <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
+                  <span>All Genetec 5.14 throughput, camera count, directory isolation, and RAID disk spindle rules satisfied.</span>
+                </div>
+              `}
             </div>
           </div>
 
-          <button onclick="autoFitNvrToBom()" class="px-3 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
-            <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
-            <span>Auto-Fit NVR</span>
-          </button>
+          <!-- Right Panel (7 cols): RAID Level Drive Size & Drive Count Options Matrix -->
+          <div class="xl:col-span-7 bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-col justify-between gap-2">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <div class="flex items-center gap-2">
+                  <i data-lucide="database" class="w-4 h-4 text-amber-400"></i>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-white">${vCalc.raidLevel} Drive Size &amp; Bay Count Options</span>
+                  <span class="text-[10px] font-mono text-slate-400">(${vCalc.raidDescription || ''})</span>
+                </div>
+              </div>
+              <span class="text-[10px] font-mono text-purple-300 bg-purple-950/60 border border-purple-700/50 px-2 py-0.5 rounded">
+                Selected Plan: <strong>${dp.totalDrives || 0}x ${dp.driveSizeTb || 16}TB</strong> = <strong>${dp.rawStorageTb || 0} TB Raw</strong> (${dp.usableStorageTb || 0} TB Usable)
+              </span>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse text-[11px] font-mono">
+                <thead>
+                  <tr class="border-b border-slate-800 text-[9px] uppercase text-slate-400">
+                    <th class="py-1.5 px-2">Drive Size</th>
+                    <th class="py-1.5 px-2">Total Drives</th>
+                    <th class="py-1.5 px-2">Data + Parity</th>
+                    <th class="py-1.5 px-2">Drives / Server</th>
+                    <th class="py-1.5 px-2">Total Raw TB</th>
+                    <th class="py-1.5 px-2">Usable TB (Eff%)</th>
+                    <th class="py-1.5 px-2">Chassis Bay Fit</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                  ${(vCalc.driveOptionsMatrix || []).map(opt => {
+                    const isSelected = opt.driveSizeTb === vCalc.preferredDriveSizeTb;
+                    const warn12 = g.requires12DriveRaidArray && !opt.meetsGenetec12DriveHighPerf;
+                    return `
+                      <tr onclick="setVideoSizerParam('preferredDriveTb', ${opt.driveSizeTb})" class="cursor-pointer transition-colors ${isSelected ? 'bg-purple-950/50 text-white font-bold' : 'hover:bg-slate-900/80 text-slate-300'}">
+                        <td class="py-1.5 px-2 flex items-center gap-1.5">
+                          <span class="w-2 h-2 rounded-full ${isSelected ? 'bg-purple-400 ring-2 ring-purple-400/40' : 'bg-slate-700'}"></span>
+                          <span class="${isSelected ? 'text-purple-300 font-bold' : 'text-white'}">${opt.driveSizeTb} TB HDD</span>
+                        </td>
+                        <td class="py-1.5 px-2 text-amber-300 font-bold">${opt.totalDrives} Drives</td>
+                        <td class="py-1.5 px-2 text-slate-400">${opt.totalDataDrives}D + ${opt.totalParityDrives}P</td>
+                        <td class="py-1.5 px-2 ${warn12 ? 'text-amber-400' : 'text-sky-300'}">
+                          ${opt.drivesPerServer} / srv
+                          ${opt.meetsGenetec12DriveHighPerf ? '<span class="ml-1 px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/50 text-[8px]" title="Meets Genetec 5.14 ≥12-disk RAID 5/6 requirement for 300-500 Mbps">≥12✓</span>' : ''}
+                        </td>
+                        <td class="py-1.5 px-2 text-white">${opt.rawStorageTb} TB</td>
+                        <td class="py-1.5 px-2 text-emerald-400">${opt.usableStorageTb} TB <span class="text-slate-500">(${opt.efficiencyPct}%)</span></td>
+                        <td class="py-1.5 px-2 text-[10px] text-slate-300">${opt.chassisFormFactor}</td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
+        ` : ''}
       </div>
     `;
   } else if (currentMode === "access_control") {
@@ -1356,11 +1652,61 @@ function buildCalculatorStrip() {
 }
 
 function setVideoSizerParam(key, val) {
-  if (key === "retentionDays") { videoRetentionDays = val; window.videoRetentionDays = val; }
-  else if (key === "codec") { videoCodec = val; window.videoCodec = val; }
-  else if (key === "fps") { videoFps = val; window.videoFps = val; }
-  else if (key === "motionDuty") { videoMotionDuty = val; window.videoMotionDuty = val; }
-  else if (key === "raidType") { videoRaidType = val; window.videoRaidType = val; }
+  if (key === "retentionDays") {
+    videoRetentionDays = val; window.videoRetentionDays = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.retentionDays = val;
+  } else if (key === "codec") {
+    videoCodec = val; window.videoCodec = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.codec = val;
+  } else if (key === "fps") {
+    videoFps = val; window.videoFps = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.fps = val;
+  } else if (key === "motionDuty") {
+    videoMotionDuty = val; window.videoMotionDuty = val;
+    if (typeof VideoStorageSizer !== "undefined") {
+      VideoStorageSizer.state.recordingMode = val >= 1 ? "continuous" : "motion";
+      VideoStorageSizer.state.motionDutyPct = Math.round(val * 100);
+    }
+  } else if (key === "raidType") {
+    videoRaidType = val; window.videoRaidType = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.raidLevel = val;
+  } else if (key === "sourceMode") {
+    videoSourceMode = val; window.videoSourceMode = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.sourceMode = val;
+  } else if (key === "manualCameraCount") {
+    videoManualCamCount = val; window.videoManualCamCount = val;
+    videoSourceMode = "manual"; window.videoSourceMode = "manual";
+    if (typeof VideoStorageSizer !== "undefined") {
+      VideoStorageSizer.state.manualCameraCount = val;
+      VideoStorageSizer.state.sourceMode = "manual";
+    }
+  } else if (key === "resolutionMp") {
+    videoResolutionMp = val; window.videoResolutionMp = val;
+    if (typeof VideoStorageSizer !== "undefined") {
+      VideoStorageSizer.state.resolutionMp = val;
+      VideoStorageSizer.state.useManualResolutionOnBom = true;
+    }
+  } else if (key === "sceneActivity") {
+    videoSceneActivity = val; window.videoSceneActivity = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.sceneActivity = val;
+  } else if (key === "preferredDriveTb") {
+    videoPreferredDriveTb = val; window.videoPreferredDriveTb = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.preferredDriveSizeTb = val;
+  } else if (key === "genetecProfile") {
+    videoGenetecProfile = val; window.videoGenetecProfile = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.genetecProfile = val;
+  } else if (key === "archiverRoles") {
+    videoArchiverRoles = val; window.videoArchiverRoles = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.archiverRolesCount = val;
+  } else if (key === "encryptionCerts") {
+    videoEncryptionCerts = val; window.videoEncryptionCerts = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.encryptionCerts = val;
+  } else if (key === "softwareMotion") {
+    videoSoftwareMotion = Boolean(val); window.videoSoftwareMotion = Boolean(val);
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.softwareMotionDetection = Boolean(val);
+  } else if (key === "toggleDetails") {
+    videoShowDetailsPanel = Boolean(val); window.videoShowDetailsPanel = Boolean(val);
+  }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 }
@@ -1369,32 +1715,59 @@ window.setVideoSizerParam = setVideoSizerParam;
 function autoFitNvrToBom() {
   if (typeof VideoStorageSizer === "undefined") return;
   const vCalc = VideoStorageSizer.calculateFromBOM(projectBOM, {
+    sourceMode: videoSourceMode,
+    manualCameraCount: videoManualCamCount,
+    resolutionMp: videoResolutionMp,
     retentionDays: videoRetentionDays,
     codec: videoCodec,
     fps: videoFps,
     motionDutyCycle: videoMotionDuty,
-    raidType: videoRaidType
+    sceneActivity: videoSceneActivity,
+    raidType: videoRaidType,
+    preferredDriveSizeTb: videoPreferredDriveTb,
+    genetecProfile: videoGenetecProfile,
+    archiverRolesCount: videoArchiverRoles,
+    encryptionCerts: videoEncryptionCerts,
+    softwareMotionDetection: videoSoftwareMotion
   });
+
   const targetTB = Math.max(16, vCalc.requiredUsableTB || 16);
-  const servers = (typeof SERVERS_DATABASE !== "undefined") ? SERVERS_DATABASE : [];
+  const targetMbps = Math.max(50, vCalc.peakIngressMbps || 50);
+  const minArchiverServers = (vCalc.genetec && vCalc.genetec.recommendedArchiverServers) ? vCalc.genetec.recommendedArchiverServers : 1;
+
+  const servers = (typeof SERVERS_DATABASE !== "undefined")
+    ? SERVERS_DATABASE.filter(s => s.serverType !== "access_security_host")
+    : [];
   if (servers.length === 0) return;
 
-  // Sort NVRs ascending by usableStorageTB
-  const sorted = [...servers].sort((a, b) => (a.usableStorageTB || a.rawStorageTB || 0) - (b.usableStorageTB || b.rawStorageTB || 0));
-  const singleFit = sorted.find(s => (s.usableStorageTB || s.rawStorageTB || 0) >= targetTB);
+  // Sort NVRs ascending by usableStorageTb
+  const getCap = s => Number(s.usableStorageTb ?? s.usableStorageTB ?? s.rawStorageTb ?? s.rawStorageTB ?? 0);
+  const getBw = s => Number(s.maxIngestBandwidthMbps ?? s.maxThroughputMbps ?? 450);
+  const sorted = [...servers].sort((a, b) => getCap(a) - getCap(b));
+
+  // If 1 server is sufficient for Genetec roles, try to find a single appliance that fits both TB and Mbps
+  const singleFit = minArchiverServers === 1
+    ? sorted.find(s => getCap(s) >= targetTB && getBw(s) >= targetMbps)
+    : null;
 
   if (singleFit && typeof addToBOM === "function") {
     addToBOM(singleFit.id || singleFit.sku, 1);
     if (typeof showToast === "function") {
-      showToast(`Auto-Fitted 1x ${singleFit.model} (${singleFit.usableStorageTB || singleFit.rawStorageTB} TB Usable) for ${vCalc.requiredUsableTB} TB target.`, "success");
+      showToast(`Auto-Fitted 1x ${singleFit.model} (${getCap(singleFit)} TB Usable, ${getBw(singleFit)} Mbps max) for ${vCalc.requiredUsableTB} TB / ${vCalc.peakIngressMbps} Mbps.`, "success");
     }
   } else if (sorted.length > 0 && typeof addToBOM === "function") {
-    const largest = sorted[sorted.length - 1];
-    const cap = largest.usableStorageTB || largest.rawStorageTB || 32;
-    const qtyNeeded = Math.max(1, Math.ceil(targetTB / cap));
-    addToBOM(largest.id || largest.sku, qtyNeeded);
+    // Choose the server tier whose per-server usable TB best matches targetTB / minArchiverServers
+    const perServerTargetTb = targetTB / minArchiverServers;
+    const chosen = sorted.find(s => getCap(s) >= perServerTargetTb) || sorted[sorted.length - 1];
+    const cap = getCap(chosen) || 32;
+    const bw = getBw(chosen) || 600;
+    const qtyByStorage = Math.ceil(targetTB / cap);
+    const qtyByBw = Math.ceil(targetMbps / bw);
+    const qtyNeeded = Math.max(1, minArchiverServers, qtyByStorage, qtyByBw);
+
+    addToBOM(chosen.id || chosen.sku, qtyNeeded);
     if (typeof showToast === "function") {
-      showToast(`Auto-Fitted ${qtyNeeded}x ${largest.model} (${cap * qtyNeeded} TB Total Usable) for ${vCalc.requiredUsableTB} TB target.`, "success");
+      showToast(`Auto-Fitted ${qtyNeeded}x ${chosen.model} (${cap * qtyNeeded} TB Usable, ${bw * qtyNeeded} Mbps max) for ${vCalc.genetec.activeArchiverRoles} Genetec Archiver role(s).`, "success");
     }
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();

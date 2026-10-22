@@ -806,48 +806,270 @@ const NetworkSizer = {
 };
 
 // =========================================================================
-// VIDEO RETENTION, BITRATE & RAID STORAGE SIZER ENGINE (B.2)
+// VIDEO RETENTION, BITRATE, RAID DRIVE MATRIX & GENETEC 5.14 ARCHIVER SIZER
 // Note: Tunable math coefficients are isolated in VIDEO_STORAGE_CONSTANTS
-// so formulas, codec multipliers, and RAID overhead can be updated in one place.
+// and GENETEC_514_REQUIREMENTS so custom values can be updated in one place.
+// Reference: Genetec Security Center 5.14.1.0 System Requirements Guide
+//            (Datasheets/Genetec/SystemRequirements.pdf)
 // =========================================================================
 
 const VIDEO_STORAGE_CONSTANTS = {
-  // Baseline H.265 @ 15 FPS, Medium Complexity scene bitrate (Mbps per sensor head)
-  BASE_BITRATE_MBPS_BY_MP: {
-    2: 2.2,
-    4: 3.8,
-    5: 4.5,
-    6: 5.2,
-    8: 7.0,
-    12: 9.5,
-    16: 12.5,
-    20: 15.0,
-    32: 22.0
+  // Baseline H.264 @ 30 FPS, Medium Scene Activity bitrate (Mbps per sensor head)
+  // Calibrated to industry standards & Genetec 5.14 Guide (p.6 & p.12: 1080p=4.8 Mbps, 4K=19.0 Mbps)
+  BASE_H264_30FPS_MBPS_BY_MP: {
+    1: 2.4,   // 720p HD (1280x720)
+    2: 4.8,   // 1080p Full HD (1920x1080) - Genetec 5.14 benchmark: 4.8 Mbps
+    3: 6.8,   // 3MP (2048x1536)
+    4: 8.8,   // 4MP 2K QHD (2560x1440)
+    5: 10.5,  // 5MP (2592x1944)
+    6: 12.8,  // 6MP (3072x2048)
+    8: 19.0,  // 8MP 4K Ultra HD (3840x2160) - Genetec 5.14 benchmark: 19.0 Mbps
+    12: 26.0, // 12MP Fisheye / Panoramic
+    16: 35.0, // 16MP / Multi-Sensor (e.g. 4x4MP)
+    20: 42.0, // 20MP Multi-Sensor (4x5MP)
+    32: 76.0  // 32MP Multi-Sensor (4x8MP 4K)
   },
-  // Codec compression multipliers relative to standard H.265 (1.0)
+
+  // Codec compression multipliers relative to H.264 (1.00)
+  // Calibrated to Genetec 5.14 Guide (p.6: 1080p H.264=4.8, H.265=3.2, AV1=3.1; 4K H.264=19.0, H.265=13.4, AV1=12.7)
   CODEC_MULTIPLIERS: {
-    "h265_smart": 0.65, // Zipstream / WiseStream / HDSM SmartCodec (-35%)
-    "h265": 1.00,       // Standard H.265 / HEVC
-    "h264": 1.65        // Legacy H.264 / AVC (+65%)
+    "H.264": 1.00,       // Standard H.264 / AVC
+    "h264": 1.00,
+    "H.265": 0.68,       // Standard H.265 / HEVC (~32% reduction vs H.264)
+    "h265": 0.68,
+    "H.265+": 0.45,      // Smart Codec (Zipstream / WiseStream / HDSM ~55% reduction)
+    "h265_smart": 0.45,
+    "AV1": 0.65,         // AV1 Codec (Genetec 5.14 benchmark ~35% reduction vs H.264)
+    "av1": 0.65,
+    "AVI": 3.50,         // Uncompressed / MJPEG / AVI stream (~3.5x H.264)
+    "avi": 3.50
   },
-  BASELINE_FPS: 15,
-  // Usable-to-Raw RAID overhead multipliers (Raw TB = Usable TB * factor)
-  RAID_RAW_MULTIPLIERS: {
-    "jbod": 1.00,
-    "raid5": 1.20,  // ~1 parity drive per 6-drive array
-    "raid6": 1.33,  // ~2 parity drives per 8-drive array
-    "raid10": 2.00  // 50% mirrored capacity
+
+  // Scene Activity / Complexity multipliers
+  SCENE_ACTIVITY_MULTIPLIERS: {
+    "low": { label: "Low (Hallway / Static)", mult: 0.65 },
+    "medium": { label: "Medium (Standard Commercial)", mult: 1.00 },
+    "high": { label: "High (Traffic / Crowds / Foliage)", mult: 1.40 },
+    "ultra": { label: "Very High (Casino / High Detail)", mult: 1.75 }
   },
-  STORAGE_SAFETY_BUFFER: 1.10 // 10% filesystem & metadata overhead
+
+  REFERENCE_FPS: 30,
+  FPS_SCALING_EXPONENT: 0.85, // Non-linear GOP I/P-frame scaling relative to 30 FPS
+
+  // Standard Enterprise Surveillance / Enterprise SAS/SATA 3.5" HDD Capacities (TB)
+  STANDARD_DRIVE_SIZES_TB: [4, 8, 12, 16, 18, 20, 22, 24],
+
+  // RAID Level Definitions & Parity Rules
+  RAID_LEVELS: {
+    "RAID 5": {
+      id: "RAID 5",
+      label: "RAID 5 (Single Parity)",
+      minDrives: 3,
+      parityDrivesPerGroup: 1,
+      maxDrivesPerGroup: 16,
+      mirrorFactor: 1,
+      approxRawMultiplier: 1.20,
+      description: "1 parity drive per RAID group; tolerates 1 drive failure."
+    },
+    "RAID 6": {
+      id: "RAID 6",
+      label: "RAID 6 (Dual Parity)",
+      minDrives: 4,
+      parityDrivesPerGroup: 2,
+      maxDrivesPerGroup: 24,
+      mirrorFactor: 1,
+      approxRawMultiplier: 1.33,
+      description: "2 parity drives per RAID group; tolerates 2 simultaneous drive failures (Enterprise Standard)."
+    },
+    "RAID 10": {
+      id: "RAID 10",
+      label: "RAID 10 (Mirrored Stripes)",
+      minDrives: 4,
+      parityDrivesPerGroup: 0,
+      maxDrivesPerGroup: 24,
+      mirrorFactor: 2,
+      approxRawMultiplier: 2.00,
+      description: "50% usable capacity (mirrored pairs); fastest rebuild & write IOPS."
+    },
+    "RAID 50": {
+      id: "RAID 50",
+      label: "RAID 50 (Dual RAID-5 Spans)",
+      minDrives: 6,
+      parityDrivesPerGroup: 2,
+      maxDrivesPerGroup: 24,
+      mirrorFactor: 1,
+      approxRawMultiplier: 1.25,
+      description: "2 parity drives across dual RAID-5 spans; high write throughput."
+    },
+    "RAID 60": {
+      id: "RAID 60",
+      label: "RAID 60 (Dual RAID-6 Spans)",
+      minDrives: 8,
+      parityDrivesPerGroup: 4,
+      maxDrivesPerGroup: 24,
+      mirrorFactor: 1,
+      approxRawMultiplier: 1.40,
+      description: "4 parity drives across dual RAID-6 spans; recommended for 24-bay high-density SANs."
+    },
+    "JBOD": {
+      id: "JBOD",
+      label: "JBOD / RAID 0 (No Parity)",
+      minDrives: 1,
+      parityDrivesPerGroup: 0,
+      maxDrivesPerGroup: 24,
+      mirrorFactor: 1,
+      approxRawMultiplier: 1.00,
+      description: "100% raw capacity; zero fault tolerance (not recommended for critical video)."
+    }
+  },
+
+  STORAGE_SAFETY_BUFFER: 1.10 // 10% filesystem, database index & pre-event buffer overhead
+};
+
+// Genetec Security Center 5.14.1.0 Official System Requirements (Datasheets/Genetec/SystemRequirements.pdf)
+const GENETEC_514_REQUIREMENTS = {
+  datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf",
+  version: "5.14.1.0",
+  directoryIsolationThresholdCameras: 300, // Page 15 Sec 1.10: >300 cameras requires dedicated Directory server
+  highPerfDiskThresholdMbps: 300,          // Page 8 Sec 1.4.1: >300 to 500 Mbps requires >=12 disks in RAID 5 or 6
+  highPerfMinRaidDrives: 12,
+  maxPlaybackMbpsOnHighPerf: 100,
+
+  // Server Profiles for Archiver Role (Pages 7, 8, 9, 15, 16, 17)
+  ARCHIVER_PROFILES: {
+    "unified_min": {
+      id: "unified_min",
+      label: "Unified Directory + Archiver (Minimum Profile)",
+      cpuSpec: "Intel Core i5-8500 3.0 GHz+",
+      ramGb: 8,
+      nicSpec: "1 GbE NIC",
+      maxCamerasPerRole: 50,
+      maxBitrateMbpsPerRole: 50,
+      maxRolesPerServer: 1,
+      requiresRaid12Drives: false,
+      referencePage: "Page 7 & 9 (Sec 1.4 & 1.5)"
+    },
+    "unified_rec": {
+      id: "unified_rec",
+      label: "Unified Directory + Archiver (Recommended Profile)",
+      cpuSpec: "Intel Xeon E-2434 3.4 GHz+",
+      ramGb: 16,
+      nicSpec: "1 GbE NIC (240GB SSD OS)",
+      maxCamerasPerRole: 100,
+      maxBitrateMbpsPerRole: 200,
+      maxRolesPerServer: 1,
+      requiresRaid12Drives: false,
+      referencePage: "Page 7 & 9 (Sec 1.4 & 1.5)"
+    },
+    "dedicated_300": {
+      id: "dedicated_300",
+      label: "Dedicated Archiver — Standard (Up to 300 Mbps)",
+      cpuSpec: "Intel Xeon Silver 4210 2.2 GHz+",
+      ramGb: 16,
+      nicSpec: "1 GbE NIC",
+      maxCamerasPerRole: 300,
+      maxBitrateMbpsPerRole: 300,
+      maxRolesPerServer: 1,
+      requiresRaid12Drives: false,
+      referencePage: "Page 7 (Sec 1.4.1)"
+    },
+    "dedicated_500": {
+      id: "dedicated_500",
+      label: "Dedicated High-Performance Archiver (300–500 Mbps)",
+      cpuSpec: "Intel Xeon Silver 4210 2.2 GHz+ (≥12 Disks RAID 5/6)",
+      ramGb: 16,
+      nicSpec: "1 GbE / 10 GbE NIC",
+      maxCamerasPerRole: 300,
+      maxBitrateMbpsPerRole: 500,
+      maxRolesPerServer: 1,
+      requiresRaid12Drives: true,
+      referencePage: "Page 8 (Sec 1.4.1)"
+    },
+    "high_perf_multi": {
+      id: "high_perf_multi",
+      label: "High-Performance Dual-Xeon / Streamvault (Multi-Archiver)",
+      cpuSpec: "2x Intel Xeon Silver 4416+ (40 Cores) / Streamvault 4000/7000",
+      ramGb: 64,
+      nicSpec: "10 GbE / 25 GbE NIC",
+      maxCamerasPerRole: 300,
+      maxBitrateMbpsPerRole: 500,
+      maxRolesPerServer: 4, // Up to 4 Archiver roles / 2,000+ Mbps on high-density chassis
+      maxServerBitrateMbps: 2000,
+      requiresRaid12Drives: true,
+      referencePage: "Page 7 & 8 (Sec 1.4 & 1.4.1)"
+    },
+    "virtual_vm": {
+      id: "virtual_vm",
+      label: "Virtualized Archiver VM (ESXi / Hyper-V, -20% VM Derate)",
+      cpuSpec: "8+ vCPUs (Complete Logical Cores)",
+      ramGb: 16,
+      nicSpec: "10 GbE Host NIC (Dedicated 1GbE/VM)",
+      maxCamerasPerRole: 240, // 300 cameras - 20% VM capacity loss (Page 15 Sec 1.10)
+      maxBitrateMbpsPerRole: 300, // Page 17: 300 Mbps per archiving VM
+      maxRolesPerServer: 4,   // Page 16 & 17: Max 4 video VMs / 1,200 Mbps per physical server module
+      maxServerBitrateMbps: 1200,
+      requiresRaid12Drives: false,
+      referencePage: "Page 15–17 (Sec 1.10 & 1.11)"
+    }
+  },
+
+  // Page 10: Fusion Stream Encryption impact on Archiver camera capacity
+  // 1st certificate reduces capacity by 30%; each additional certificate reduces by 4% (max 20)
+  getEncryptionCapacityFactor(certCount = 0) {
+    const certs = Math.max(0, Math.min(20, parseInt(certCount, 10) || 0));
+    if (certs === 0) return 1.0;
+    // Matches Genetec Page 10 table: 0->300 (1.0), 1->210 (0.70), 5->178 (0.593), 10->145 (0.483), 20->96 (0.32)
+    return Math.max(0.25, 0.70 * Math.pow(0.96, certs - 1));
+  }
 };
 
 const VideoStorageSizer = {
   state: {
+    sourceMode: "auto",        // "auto" (uses BOM if >0 cams, else manual) | "manual" | "bom"
+    manualCameraCount: 32,     // Default camera count for standalone planning
+    resolutionMp: 4,           // Default 4MP (2K) when in manual mode or override
+    useManualResolutionOnBom: false,
     retentionDays: 30,
-    codec: "h265_smart",
+    codec: "H.265",            // "H.264" | "H.265" | "H.265+" | "AV1" | "AVI"
     fps: 15,
-    motionDutyPct: 70, // 70% motion recording duty cycle (100% = 24/7 continuous)
-    raidLevel: "raid6"
+    recordingMode: "motion",   // "continuous" (100%) | "motion"
+    motionDutyPct: 50,         // % of 24-hr day recorded when in motion mode (or 100% if continuous)
+    sceneActivity: "medium",   // "low" | "medium" | "high" | "ultra"
+    raidLevel: "RAID 6",       // "RAID 5" | "RAID 6" | "RAID 10" | "RAID 50" | "RAID 60" | "JBOD"
+    preferredDriveSizeTb: 16,  // Selected HDD size (TB) for detailed server mapping
+    genetecProfile: "dedicated_300", // Key in GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES
+    archiverRolesCount: 0,     // 0 = Auto-calculate minimum required Archiver roles; >0 = user-specified count to verify
+    encryptionCerts: 0,        // Fusion Stream Encryption certificates (Page 10)
+    softwareMotionDetection: false, // Page 15: Software motion detection reduces Archiver capacity by up to 50%
+    customBitratePerCamMbps: 0 // Optional custom per-camera bitrate override (0 = use standard math)
+  },
+
+  /**
+   * Normalizes codec strings from UI or legacy state into canonical keys.
+   */
+  normalizeCodec(rawCodec) {
+    const c = String(rawCodec || "H.265").trim();
+    const upper = c.toUpperCase();
+    if (upper === "H.264" || upper === "H264" || upper === "AVC") return "H.264";
+    if (upper === "H.265+" || upper === "H265_SMART" || upper.includes("ZIPSTREAM") || upper.includes("SMART")) return "H.265+";
+    if (upper === "H.265" || upper === "H265" || upper === "HEVC") return "H.265";
+    if (upper === "AV1") return "AV1";
+    if (upper === "AVI" || upper === "MJPEG") return "AVI";
+    return "H.265";
+  },
+
+  /**
+   * Normalizes RAID strings from UI or legacy state into canonical keys.
+   */
+  normalizeRaid(rawRaid) {
+    const r = String(rawRaid || "RAID 6").trim().toUpperCase().replace(/[-_]/g, " ");
+    if (r.includes("RAID 60") || r === "RAID60") return "RAID 60";
+    if (r.includes("RAID 50") || r === "RAID50") return "RAID 50";
+    if (r.includes("RAID 10") || r === "RAID10") return "RAID 10";
+    if (r.includes("RAID 6") || r === "RAID6") return "RAID 6";
+    if (r.includes("RAID 5") || r === "RAID5") return "RAID 5";
+    if (r.includes("JBOD") || r.includes("RAID 0") || r === "RAID0") return "JBOD";
+    return "RAID 6";
   },
 
   /**
@@ -862,6 +1084,7 @@ const VideoStorageSizer = {
       if (m) totalMp = parseInt(m[1], 10);
       else if (/4K/i.test(resStr)) totalMp = 8;
       else if (/1080p/i.test(resStr)) totalMp = 2;
+      else if (/720p/i.test(resStr)) totalMp = 1;
       else totalMp = 4;
     }
 
@@ -875,32 +1098,133 @@ const VideoStorageSizer = {
   },
 
   /**
-   * Calculates per-camera and total project video bandwidth & storage requirements.
+   * Calculates single-sensor bitrate (Mbps) based on resolution MP, codec, FPS, and scene activity.
+   */
+  calculateSingleStreamBitrateMbps(mpPerHead, codecKey, fps, sceneActivityKey, customBitrateOverride = 0) {
+    if (customBitrateOverride > 0) {
+      return customBitrateOverride;
+    }
+    const mp = Number(mpPerHead) || 4;
+    // Lookup closest MP in BASE_H264_30FPS_MBPS_BY_MP or interpolate linearly (~2.35 Mbps per MP @ 30fps H.264)
+    const baseTable = VIDEO_STORAGE_CONSTANTS.BASE_H264_30FPS_MBPS_BY_MP;
+    const baseH264At30 = baseTable[mp] || (mp * 2.35);
+
+    const codecMult = VIDEO_STORAGE_CONSTANTS.CODEC_MULTIPLIERS[codecKey] ?? 0.68;
+    const activityObj = VIDEO_STORAGE_CONSTANTS.SCENE_ACTIVITY_MULTIPLIERS[sceneActivityKey] || VIDEO_STORAGE_CONSTANTS.SCENE_ACTIVITY_MULTIPLIERS.medium;
+    const fpsMult = Math.pow(Math.max(1, fps) / VIDEO_STORAGE_CONSTANTS.REFERENCE_FPS, VIDEO_STORAGE_CONSTANTS.FPS_SCALING_EXPONENT);
+
+    return Math.round(baseH264At30 * codecMult * activityObj.mult * fpsMult * 100) / 100;
+  },
+
+  /**
+   * Computes exact RAID drive count, raw TB, usable TB, parity drives, and chassis fit
+   * across all standard enterprise hard drive sizes (4TB to 24TB).
+   */
+  calculateRaidDriveMatrix(requiredUsableTb, raidKey, numServers = 1) {
+    const raidDef = VIDEO_STORAGE_CONSTANTS.RAID_LEVELS[raidKey] || VIDEO_STORAGE_CONSTANTS.RAID_LEVELS["RAID 6"];
+    const targetUsable = Math.max(0.1, Number(requiredUsableTb) || 0);
+    const servers = Math.max(1, parseInt(numServers, 10) || 1);
+    const usablePerServer = targetUsable / servers;
+
+    return VIDEO_STORAGE_CONSTANTS.STANDARD_DRIVE_SIZES_TB.map(driveTb => {
+      // Calculate drives required per server so every server has a valid, redundant RAID array
+      let dataDrivesPerServer = Math.max(1, Math.ceil(usablePerServer / driveTb));
+      let totalDrivesPerServer = 0;
+      let parityDrivesPerServer = 0;
+
+      if (raidDef.id === "RAID 10") {
+        // Mirrored pairs: total = 2 * dataDrives, minimum 4 drives
+        dataDrivesPerServer = Math.max(2, dataDrivesPerServer);
+        totalDrivesPerServer = dataDrivesPerServer * 2;
+        parityDrivesPerServer = dataDrivesPerServer;
+      } else if (raidDef.id === "JBOD") {
+        totalDrivesPerServer = Math.max(1, dataDrivesPerServer);
+        parityDrivesPerServer = 0;
+      } else {
+        // RAID 5, RAID 6, RAID 50, RAID 60
+        // If a single server needs more than maxDrivesPerGroup, split into multiple RAID groups
+        const minData = Math.max(1, raidDef.minDrives - raidDef.parityDrivesPerGroup);
+        dataDrivesPerServer = Math.max(minData, dataDrivesPerServer);
+        const maxDataPerGroup = raidDef.maxDrivesPerGroup - raidDef.parityDrivesPerGroup;
+        const raidGroupsPerServer = Math.max(1, Math.ceil(dataDrivesPerServer / maxDataPerGroup));
+        parityDrivesPerServer = raidGroupsPerServer * raidDef.parityDrivesPerGroup;
+        totalDrivesPerServer = dataDrivesPerServer + parityDrivesPerServer;
+
+        // Enforce even drive count for spanned RAID 50 / RAID 60
+        if ((raidDef.id === "RAID 50" || raidDef.id === "RAID 60") && (totalDrivesPerServer % 2 !== 0)) {
+          totalDrivesPerServer += 1;
+          dataDrivesPerServer += 1;
+        }
+      }
+
+      const totalDrivesAllServers = totalDrivesPerServer * servers;
+      const totalDataDrives = dataDrivesPerServer * servers;
+      const totalParityDrives = parityDrivesPerServer * servers;
+      const rawStorageTb = totalDrivesAllServers * driveTb;
+      const usableStorageTb = totalDataDrives * driveTb;
+      const efficiencyPct = Math.round((usableStorageTb / rawStorageTb) * 100);
+
+      // Chassis form factor recommendation per server
+      let chassisFormFactor = "1U 4-Bay";
+      if (totalDrivesPerServer > 24) chassisFormFactor = `${Math.ceil(totalDrivesPerServer / 24)}x 4U 24-Bay JBOD/SAN`;
+      else if (totalDrivesPerServer > 12) chassisFormFactor = "4U 24-Bay Rack";
+      else if (totalDrivesPerServer > 8) chassisFormFactor = "2U 12-Bay Rack";
+      else if (totalDrivesPerServer > 4) chassisFormFactor = "2U 8-Bay Rack";
+
+      return {
+        driveSizeTb: driveTb,
+        drivesPerServer: totalDrivesPerServer,
+        dataDrivesPerServer,
+        parityDrivesPerServer,
+        totalDrives: totalDrivesAllServers,
+        totalDataDrives,
+        totalParityDrives,
+        rawStorageTb,
+        usableStorageTb,
+        efficiencyPct,
+        chassisFormFactor,
+        meetsGenetec12DriveHighPerf: totalDrivesPerServer >= 12 && (raidDef.id === "RAID 5" || raidDef.id === "RAID 6" || raidDef.id === "RAID 50" || raidDef.id === "RAID 60")
+      };
+    });
+  },
+
+  /**
+   * Master calculation method used by both the Server/Camera Calculator Strip and DRC (project_health.js).
    */
   calculateProjectVideoLoad(bomList = [], overrides = {}) {
     const defaults = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
       ? StorageService.getProjectDefaults()
       : null;
 
-    const retentionDays = Number(overrides.retentionDays ?? this.state.retentionDays ?? defaults?.vms?.retentionDays ?? 30) || 30;
-    const codec = overrides.codec || this.state.codec || "h265_smart";
-    const fps = Number(overrides.fps ?? this.state.fps ?? 15) || 15;
-    const motionDutyPct = Number(overrides.motionDutyPct ?? this.state.motionDutyPct ?? 70) || 70;
-    const raidLevel = overrides.raidLevel || this.state.raidLevel || "raid6";
+    // 1. Resolve inputs & normalize
+    const retentionDays = Math.max(1, Number(overrides.retentionDays ?? this.state.retentionDays ?? defaults?.vms?.retentionDays ?? 30) || 30);
+    const codec = this.normalizeCodec(overrides.codec ?? this.state.codec ?? "H.265");
+    const fps = Math.max(1, Number(overrides.fps ?? this.state.fps ?? 15) || 15);
 
-    const codecMult = VIDEO_STORAGE_CONSTANTS.CODEC_MULTIPLIERS[codec] || 1.0;
-    const fpsMult = Math.pow(fps / VIDEO_STORAGE_CONSTANTS.BASELINE_FPS, 0.78);
-    const dutyFactor = Math.max(0.1, Math.min(1.0, motionDutyPct / 100));
-    const raidMult = VIDEO_STORAGE_CONSTANTS.RAID_RAW_MULTIPLIERS[raidLevel] || 1.33;
+    // Support both 0..1 (motionDutyCycle) and 1..100 (motionDutyPct)
+    let rawMotion = overrides.motionDutyPct ?? overrides.motionDutyCycle ?? this.state.motionDutyPct ?? 50;
+    if (rawMotion > 0 && rawMotion <= 1) rawMotion = Math.round(rawMotion * 100);
+    const recordingMode = overrides.recordingMode || this.state.recordingMode || (rawMotion >= 100 ? "continuous" : "motion");
+    const motionDutyPct = recordingMode === "continuous" ? 100 : Math.max(5, Math.min(100, Number(rawMotion) || 50));
+    const motionDutyCycle = motionDutyPct / 100;
 
-    let cameraUnits = 0;
-    let totalSensorHeads = 0;
-    let peakIngressMbps = 0;
-    let averageRecordingMbps = 0;
+    const sceneActivity = overrides.sceneActivity || this.state.sceneActivity || "medium";
+    const raidLevel = this.normalizeRaid(overrides.raidLevel ?? overrides.raidType ?? this.state.raidLevel ?? "RAID 6");
+    const raidDef = VIDEO_STORAGE_CONSTANTS.RAID_LEVELS[raidLevel] || VIDEO_STORAGE_CONSTANTS.RAID_LEVELS["RAID 6"];
+
+    const resolutionMp = Number(overrides.resolutionMp ?? this.state.resolutionMp ?? 4) || 4;
+    const customBitratePerCamMbps = Number(overrides.customBitratePerCamMbps ?? this.state.customBitratePerCamMbps ?? 0) || 0;
+    const preferredDriveSizeTb = Number(overrides.preferredDriveSizeTb ?? this.state.preferredDriveSizeTb ?? 16) || 16;
+
+    // 2. Inspect BOM for cameras & quoted NVR/VMS servers
+    let bomCameraUnits = 0;
+    let bomSensorHeads = 0;
+    let bomPeakIngressMbps = 0;
 
     let quotedUsableTb = 0;
+    let quotedRawTb = 0;
     let quotedMaxIngestMbps = 0;
-    let serverCount = 0;
+    let quotedServerCount = 0;
 
     (bomList || []).forEach(item => {
       if (!item || item.parentInstanceId) return;
@@ -910,54 +1234,227 @@ const VideoStorageSizer = {
 
       if (cat === "cameras" || role === "camera" || (typeof isCameraDevice === "function" && isCameraDevice(item))) {
         const optics = this.parseCameraOptics(item);
-        const catalogBitrate = parseFloat(item.streamBitrateMbps);
-        const basePerHead = VIDEO_STORAGE_CONSTANTS.BASE_BITRATE_MBPS_BY_MP[optics.mpPerHead] || (optics.mpPerHead * 0.9);
-        const unitBaseMbps = catalogBitrate > 0 ? catalogBitrate : (basePerHead * optics.heads);
+        const mpToUse = this.state.useManualResolutionOnBom ? resolutionMp : optics.mpPerHead;
+        const perHeadMbps = this.calculateSingleStreamBitrateMbps(mpToUse, codec, fps, sceneActivity, customBitratePerCamMbps);
+        const unitPeakMbps = perHeadMbps * optics.heads;
 
-        const unitPeakMbps = unitBaseMbps * codecMult * fpsMult;
-        const unitAvgMbps = unitPeakMbps * dutyFactor;
-
-        cameraUnits += qty;
-        totalSensorHeads += optics.heads * qty;
-        peakIngressMbps += unitPeakMbps * qty;
-        averageRecordingMbps += unitAvgMbps * qty;
+        bomCameraUnits += qty;
+        bomSensorHeads += optics.heads * qty;
+        bomPeakIngressMbps += unitPeakMbps * qty;
       } else if (cat === "servers" || cat === "storage" || role.includes("nvr") || role.includes("server") || role.includes("storage")) {
-        serverCount += qty;
-        const usableTb = parseFloat(item.usableStorageTb || item.storageTb || 0);
-        const maxBw = parseFloat(item.maxIngestBandwidthMbps || 600);
+        quotedServerCount += qty;
+        const usableTb = parseFloat(item.usableStorageTb ?? item.usableStorageTB ?? item.storageTb ?? 0);
+        const rawTb = parseFloat(item.rawStorageTb ?? item.rawStorageTB ?? usableTb);
+        const maxBw = parseFloat(item.maxIngestBandwidthMbps ?? item.maxThroughputMbps ?? 600);
         quotedUsableTb += usableTb * qty;
+        quotedRawTb += rawTb * qty;
         quotedMaxIngestMbps += maxBw * qty;
       }
     });
 
-    // Storage Formula:
-    // Usable TB = (averageRecordingMbps * 86,400 sec/day * retentionDays) / (8 bits/byte * 1,000,000 MB/TB) * SafetyBuffer
-    const rawUsableTb = (averageRecordingMbps * 86400 * retentionDays) / 8000000;
-    const requiredUsableTb = Math.round(rawUsableTb * VIDEO_STORAGE_CONSTANTS.STORAGE_SAFETY_BUFFER * 100) / 100;
-    const requiredRawTb = Math.round(requiredUsableTb * raidMult * 100) / 100;
+    // 3. Determine active camera count & bitrate (BOM vs Manual Planner)
+    const sourceMode = overrides.sourceMode || this.state.sourceMode || "auto";
+    const useBomCameras = (sourceMode === "bom") || (sourceMode === "auto" && bomCameraUnits > 0 && !overrides.forceManual);
+
+    const perCameraSingleStreamMbps = this.calculateSingleStreamBitrateMbps(resolutionMp, codec, fps, sceneActivity, customBitratePerCamMbps);
+
+    let cameraUnits = 0;
+    let totalSensorHeads = 0;
+    let peakIngressMbps = 0;
+
+    if (useBomCameras && bomCameraUnits > 0) {
+      cameraUnits = bomCameraUnits;
+      totalSensorHeads = bomSensorHeads;
+      peakIngressMbps = bomPeakIngressMbps;
+    } else if (sourceMode === "bom" && bomCameraUnits === 0) {
+      cameraUnits = 0;
+      totalSensorHeads = 0;
+      peakIngressMbps = 0;
+    } else {
+      cameraUnits = Math.max(0, parseInt(overrides.manualCameraCount ?? this.state.manualCameraCount ?? 32, 10) || 0);
+      totalSensorHeads = cameraUnits;
+      peakIngressMbps = cameraUnits * perCameraSingleStreamMbps;
+    }
+
+    const averageRecordingMbps = peakIngressMbps * motionDutyCycle;
+
+    // 4. Storage Math (Industry-Standard Formula)
+    // Daily GB = (averageRecordingMbps * 86,400 sec/day) / (8 bits/byte * 1000) = averageRecordingMbps * 10.8 GB/day
+    const dailyStorageGb = Math.round(averageRecordingMbps * 10.8 * 10) / 10;
+    const netVideoStorageTb = (averageRecordingMbps * 86400 * retentionDays) / 8000000;
+    const requiredUsableTb = Math.round(netVideoStorageTb * VIDEO_STORAGE_CONSTANTS.STORAGE_SAFETY_BUFFER * 100) / 100;
+    const theoreticalRawTb = Math.round(requiredUsableTb * raidDef.approxRawMultiplier * 100) / 100;
+
+    // 5. Genetec Security Center 5.14.1.0 Archiver & Server Verification
+    const genetecProfileKey = overrides.genetecProfile || this.state.genetecProfile || "dedicated_300";
+    const profileDef = GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES[genetecProfileKey] || GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES.dedicated_300;
+    const encryptionCerts = Math.max(0, parseInt(overrides.encryptionCerts ?? this.state.encryptionCerts ?? 0, 10) || 0);
+    const softwareMotion = Boolean(overrides.softwareMotionDetection ?? this.state.softwareMotionDetection);
+
+    const encFactor = GENETEC_514_REQUIREMENTS.getEncryptionCapacityFactor(encryptionCerts);
+    const motionPenaltyFactor = softwareMotion ? 0.50 : 1.00; // Page 15: Software motion detection reduces capacity up to 50%
+    const combinedCapacityFactor = encFactor * motionPenaltyFactor;
+
+    const effectiveMaxCamerasPerArchiver = Math.max(1, Math.floor(profileDef.maxCamerasPerRole * combinedCapacityFactor));
+    const effectiveMaxMbpsPerArchiver = Math.max(10, Math.floor(profileDef.maxBitrateMbpsPerRole * combinedCapacityFactor));
+
+    const minArchiversByCameras = cameraUnits > 0 ? Math.ceil(totalSensorHeads / effectiveMaxCamerasPerArchiver) : 1;
+    const minArchiversByBitrate = peakIngressMbps > 0 ? Math.ceil(peakIngressMbps / effectiveMaxMbpsPerArchiver) : 1;
+    const minRequiredArchiverRoles = cameraUnits > 0 ? Math.max(minArchiversByCameras, minArchiversByBitrate) : 1;
+
+    const userArchiverRoles = parseInt(overrides.archiverRolesCount ?? this.state.archiverRolesCount ?? 0, 10) || 0;
+    const activeArchiverRoles = userArchiverRoles > 0 ? userArchiverRoles : minRequiredArchiverRoles;
+    const isArchiverCountVerified = activeArchiverRoles >= minRequiredArchiverRoles;
+
+    // How Archiver Roles map to physical servers
+    const maxRolesPerPhysicalServer = profileDef.maxRolesPerServer || 1;
+    const maxMbpsPerPhysicalServer = profileDef.maxServerBitrateMbps || effectiveMaxMbpsPerArchiver;
+    const minServersByRoles = Math.ceil(activeArchiverRoles / maxRolesPerPhysicalServer);
+    const minServersByThroughput = peakIngressMbps > 0 ? Math.ceil(peakIngressMbps / maxMbpsPerPhysicalServer) : 1;
+    const recommendedArchiverServers = cameraUnits > 0 ? Math.max(1, minServersByRoles, minServersByThroughput) : 1;
+
+    // Directory isolation rule (Page 15 Section 1.10: >300 cameras requires dedicated Directory server)
+    const requiresDedicatedDirectoryServer = totalSensorHeads > GENETEC_514_REQUIREMENTS.directoryIsolationThresholdCameras;
+    const directoryCoHostViolation = requiresDedicatedDirectoryServer && (genetecProfileKey === "unified_min" || genetecProfileKey === "unified_rec");
+
+    // Per-Archiver & Per-Server Load Mapping
+    const camerasPerArchiverRole = cameraUnits > 0 ? Math.ceil(totalSensorHeads / activeArchiverRoles) : 0;
+    const bitratePerArchiverRoleMbps = cameraUnits > 0 ? Math.round((peakIngressMbps / activeArchiverRoles) * 10) / 10 : 0;
+    const usableTbPerArchiverRole = cameraUnits > 0 ? Math.round((requiredUsableTb / activeArchiverRoles) * 100) / 100 : 0;
+
+    const usableTbPerServer = cameraUnits > 0 ? Math.round((requiredUsableTb / recommendedArchiverServers) * 100) / 100 : 0;
+    const bitratePerServerMbps = cameraUnits > 0 ? Math.round((peakIngressMbps / recommendedArchiverServers) * 10) / 10 : 0;
+
+    // 6. Compute Drive Size Matrix across recommendedArchiverServers
+    const driveOptionsMatrix = this.calculateRaidDriveMatrix(requiredUsableTb, raidLevel, recommendedArchiverServers);
+    const selectedDrivePlan = driveOptionsMatrix.find(d => d.driveSizeTb === preferredDriveSizeTb) || driveOptionsMatrix[3] || driveOptionsMatrix[0];
+
+    // Use the exact RAID drive array raw TB when cameras > 0, or theoreticalRawTb
+    const requiredRawTb = cameraUnits > 0 ? theoreticalRawTb : 0;
+    const arrayRawTb = cameraUnits > 0 && selectedDrivePlan ? selectedDrivePlan.rawStorageTb : 0;
+    const arrayUsableTb = cameraUnits > 0 && selectedDrivePlan ? selectedDrivePlan.usableStorageTb : 0;
+
+    // Check Genetec 300-500 Mbps 12-drive RAID 5/6 requirement (Page 8 Section 1.4.1)
+    const requires12DriveRaidArray = bitratePerArchiverRoleMbps > 300;
+    const meets12DriveRequirement = !requires12DriveRaidArray || (selectedDrivePlan && selectedDrivePlan.meetsGenetec12DriveHighPerf);
+
+    // Warnings & Verification Findings for Genetec 5.14
+    const genetecFindings = [];
+    if (cameraUnits > 0) {
+      if (!isArchiverCountVerified) {
+        genetecFindings.push({
+          severity: "critical",
+          text: `${activeArchiverRoles} Archiver role(s) configured, but ${minRequiredArchiverRoles} required for ${totalSensorHeads} streams @ ${Math.round(peakIngressMbps)} Mbps (${bitratePerArchiverRoleMbps} Mbps/role exceeds ${effectiveMaxMbpsPerArchiver} Mbps limit).`
+        });
+      }
+      if (directoryCoHostViolation) {
+        genetecFindings.push({
+          severity: "critical",
+          text: `Genetec 5.14 Sec 1.10 (p.15): Systems with >300 cameras (${totalSensorHeads} streams) must isolate the Directory role on a dedicated server (cannot use Unified Directory + Archiver).`
+        });
+      } else if (requiresDedicatedDirectoryServer) {
+        genetecFindings.push({
+          severity: "info",
+          text: `Genetec 5.14 Sec 1.10 (p.15): >300 cameras (${totalSensorHeads} streams) requires +1 Dedicated Directory Server alongside the ${recommendedArchiverServers} Archiver server(s).`
+        });
+      }
+      if (requires12DriveRaidArray && !meets12DriveRequirement) {
+        genetecFindings.push({
+          severity: "warning",
+          text: `Genetec 5.14 Sec 1.4.1 (p.8): Archivers between 300–500 Mbps (${bitratePerArchiverRoleMbps} Mbps/role) require at least 12 dedicated video drives in RAID 5 or RAID 6 per server (currently ${selectedDrivePlan ? selectedDrivePlan.drivesPerServer : 0} drives in ${raidLevel}).`
+        });
+      }
+    }
 
     const storageDeficitTb = Math.max(0, Math.round((requiredUsableTb - quotedUsableTb) * 10) / 10);
-    const bandwidthExceeded = serverCount > 0 && peakIngressMbps > quotedMaxIngestMbps;
+    const bandwidthExceeded = quotedServerCount > 0 && peakIngressMbps > quotedMaxIngestMbps;
 
     return {
+      // Core counts & parameters
+      sourceMode: useBomCameras ? "bom" : "manual",
+      bomCameraUnits,
       cameraUnits,
+      totalCameras: cameraUnits,
       totalSensorHeads,
+      totalSensors: totalSensorHeads,
+      resolutionMp,
       retentionDays,
       codec,
       fps,
+      recordingMode,
       motionDutyPct,
+      motionDutyCycle,
+      sceneActivity,
       raidLevel,
+      raidType: raidLevel,
+      raidDescription: raidDef.description,
+      preferredDriveSizeTb,
+
+      // Bitrate & Storage outputs (both camelCase TB/Tb aliases for full cross-studio compatibility)
+      perCameraMbps: perCameraSingleStreamMbps,
       peakIngressMbps: Math.round(peakIngressMbps * 10) / 10,
       averageRecordingMbps: Math.round(averageRecordingMbps * 10) / 10,
+      totalBandwidthMbps: Math.round(peakIngressMbps * 10) / 10,
+      dailyStorageGb,
       requiredUsableTb,
+      requiredUsableTB: requiredUsableTb,
       requiredRawTb,
+      requiredRawTB: requiredRawTb,
+      arrayRawTb,
+      arrayUsableTb,
+
+      // Drive Matrix & Selected Drive Plan
+      driveOptionsMatrix,
+      selectedDrivePlan,
+
+      // Genetec Security Center 5.14 Verification & Mapping
+      genetec: {
+        version: GENETEC_514_REQUIREMENTS.version,
+        datasheetPath: GENETEC_514_REQUIREMENTS.datasheetPath,
+        profileKey: genetecProfileKey,
+        profile: profileDef,
+        encryptionCerts,
+        softwareMotion,
+        effectiveMaxCamerasPerArchiver,
+        effectiveMaxMbpsPerArchiver,
+        minArchiversByCameras,
+        minArchiversByBitrate,
+        minRequiredArchiverRoles,
+        userArchiverRoles,
+        activeArchiverRoles,
+        isArchiverCountVerified,
+        recommendedArchiverServers,
+        requiresDedicatedDirectoryServer,
+        directoryCoHostViolation,
+        totalServersIncludingDirectory: recommendedArchiverServers + (requiresDedicatedDirectoryServer ? 1 : 0),
+        camerasPerArchiverRole,
+        bitratePerArchiverRoleMbps,
+        usableTbPerArchiverRole,
+        usableTbPerServer,
+        bitratePerServerMbps,
+        requires12DriveRaidArray,
+        meets12DriveRequirement,
+        findings: genetecFindings,
+        isFullyCompliant: isArchiverCountVerified && !directoryCoHostViolation && meets12DriveRequirement
+      },
+
+      // Quoted BOM Server Comparison
       quotedUsableTb: Math.round(quotedUsableTb * 10) / 10,
+      quotedUsableTB: Math.round(quotedUsableTb * 10) / 10,
+      quotedRawTb: Math.round(quotedRawTb * 10) / 10,
       quotedMaxIngestMbps: Math.round(quotedMaxIngestMbps),
-      serverCount,
+      serverCount: quotedServerCount,
       storageDeficitTb,
       bandwidthExceeded,
       isCompliant: cameraUnits === 0 || (quotedUsableTb >= requiredUsableTb && !bandwidthExceeded)
     };
+  },
+
+  /**
+   * Alias for calculateProjectVideoLoad used by app.js and project_health.js.
+   */
+  calculateFromBOM(bomList = [], overrides = {}) {
+    return this.calculateProjectVideoLoad(bomList, overrides);
   }
 };
 
@@ -966,5 +1463,6 @@ window.IEEE_POE_STANDARDS = IEEE_POE_STANDARDS;
 window.ELECTRICAL_CONSTANTS = ELECTRICAL_CONSTANTS;
 window.NetworkSizer = NetworkSizer;
 window.VIDEO_STORAGE_CONSTANTS = VIDEO_STORAGE_CONSTANTS;
+window.GENETEC_514_REQUIREMENTS = GENETEC_514_REQUIREMENTS;
 window.VideoStorageSizer = VideoStorageSizer;
 
