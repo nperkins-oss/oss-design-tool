@@ -238,6 +238,7 @@ let videoSceneActivity = "medium"; // "low" | "medium" | "high" | "ultra"
 let videoPreferredDriveTb = 16;
 let videoGenetecProfile = "dedicated_300";
 let videoArchiverRoles = 0; // 0 = Auto
+let videoServerCount = 0;   // 0 = Auto (packs multiple Archiver roles per server within Genetec limits)
 let videoEncryptionCerts = 0;
 let videoSoftwareMotion = false;
 let videoShowDetailsPanel = true;
@@ -1215,6 +1216,7 @@ function buildCalculatorStrip() {
           preferredDriveSizeTb: videoPreferredDriveTb,
           genetecProfile: videoGenetecProfile,
           archiverRolesCount: videoArchiverRoles,
+          serverCountOverride: videoServerCount,
           encryptionCerts: videoEncryptionCerts,
           softwareMotionDetection: videoSoftwareMotion
         })
@@ -1466,47 +1468,59 @@ function buildCalculatorStrip() {
                 </span>
               </div>
 
-              <!-- Server Profile & Encryption Modifiers -->
-              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                <div class="sm:col-span-2 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5">
+              <!-- Server Profile, Multi-Role Server Count & Encryption Modifiers -->
+              <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
+                <div class="sm:col-span-6 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5">
                   <div class="text-[9px] font-bold uppercase text-slate-400">Genetec 5.14 Server Profile (${g.profile?.referencePage || 'Sec 1.4'})</div>
                   <select onchange="setVideoSizerParam('genetecProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
-                    ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps)</option>`).join('')}
+                    ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps/Role • ≤${p.maxRolesPerServer || 4} Roles/Srv)</option>`).join('')}
                   </select>
                 </div>
-                <div class="bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
-                  <div class="text-[9px] font-bold uppercase text-slate-400">Fusion Encryption (p.10)</div>
+                <div class="sm:col-span-3 bg-slate-900/90 border ${g.isServerCountVerified !== false ? 'border-slate-800' : 'border-rose-600'} rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-bold uppercase text-slate-400">Servers (#)</span>
+                    <button onclick="setVideoSizerParam('serverCount', 0)" class="text-[9px] font-mono px-1 rounded ${videoServerCount === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Auto-pack multiple Archiver roles onto servers within Genetec limits">
+                      Auto (${g.minRequiredServers || 1})
+                    </button>
+                  </div>
+                  <div class="flex items-center gap-1 mt-0.5">
+                    <input type="number" min="0" max="64" value="${videoServerCount === 0 ? g.recommendedArchiverServers : videoServerCount}" onchange="setVideoSizerParam('serverCount', Math.max(0, parseInt(this.value, 10) || 0))" class="w-full bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'} focus:outline-none" title="Number of physical servers (can run up to ${g.maxRolesPerPhysicalServer || 4} Archiver roles per server)" />
+                    <span class="text-[9px] text-slate-400 font-mono">Srv</span>
+                  </div>
+                </div>
+                <div class="sm:col-span-3 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
+                  <div class="text-[9px] font-bold uppercase text-slate-400">Encryption (p.10)</div>
                   <select onchange="setVideoSizerParam('encryptionCerts', Number(this.value))" class="w-full bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
-                    <option value="0" class="bg-slate-900" ${g.encryptionCerts === 0 ? 'selected' : ''}>0 Certs (100% Cap)</option>
-                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>1 Cert (-30% Cap)</option>
-                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>5 Certs (-41% Cap)</option>
-                    <option value="10" class="bg-slate-900" ${g.encryptionCerts === 10 ? 'selected' : ''}>10 Certs (-52% Cap)</option>
-                    <option value="20" class="bg-slate-900" ${g.encryptionCerts === 20 ? 'selected' : ''}>20 Certs (-68% Cap)</option>
+                    <option value="0" class="bg-slate-900" ${g.encryptionCerts === 0 ? 'selected' : ''}>0 Certs (100%)</option>
+                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>1 Cert (-30%)</option>
+                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>5 Certs (-41%)</option>
+                    <option value="10" class="bg-slate-900" ${g.encryptionCerts === 10 ? 'selected' : ''}>10 Certs (-52%)</option>
+                    <option value="20" class="bg-slate-900" ${g.encryptionCerts === 20 ? 'selected' : ''}>20 Certs (-68%)</option>
                   </select>
                 </div>
               </div>
 
-              <!-- Per-Archiver & Per-Server Load Mapping Grid -->
-              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center pt-1">
+              <!-- Per-Archiver, Multi-Role Server & Isolated Windows Volume Mapping Grid -->
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center pt-1">
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
                   <div class="text-[9px] font-mono uppercase text-slate-400">Archiver Roles</div>
                   <div class="text-sm font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'}">${g.activeArchiverRoles} <span class="text-[10px] text-slate-400">/ ${g.minRequiredArchiverRoles} Min</span></div>
-                  <div class="text-[9px] text-slate-500">Limit: ${g.effectiveMaxMbpsPerArchiver} Mbps</div>
+                  <div class="text-[9px] text-slate-500">≤${g.effectiveMaxMbpsPerArchiver} Mbps/Role</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Load / Archiver</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Load / Role</div>
                   <div class="text-sm font-mono font-bold text-sky-400">${g.bitratePerArchiverRoleMbps} Mbps</div>
-                  <div class="text-[9px] text-slate-500">${g.camerasPerArchiverRole} Streams / Role</div>
+                  <div class="text-[9px] text-slate-500">${g.camerasPerArchiverRole} Cam • ${g.usableTbPerArchiverRole} TB</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Storage / Role</div>
-                  <div class="text-sm font-mono font-bold text-purple-300">${g.usableTbPerArchiverRole} TB</div>
-                  <div class="text-[9px] text-slate-500">Usable per Role</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Roles / Server</div>
+                  <div class="text-sm font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'}">${g.rolesPerServer || 1} Role${(g.rolesPerServer || 1) === 1 ? '' : 's'}/Srv</div>
+                  <div class="text-[9px] text-slate-500">${g.recommendedArchiverServers} Srv (${g.bitratePerServerMbps} Mbps/Srv)</div>
                 </div>
-                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Servers Needed</div>
-                  <div class="text-sm font-mono font-bold text-amber-300">${g.recommendedArchiverServers} Archiver${g.requiresDedicatedDirectoryServer ? ' + 1 Dir' : ''}</div>
-                  <div class="text-[9px] text-slate-500">${g.usableTbPerServer} TB Usable / Srv</div>
+                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90 sm:col-span-2" title="Every Archiver role requires its own separate Windows volume(s), and each Windows volume is capped at ≤30 TB usable.">
+                  <div class="text-[9px] font-mono uppercase text-purple-300">Windows Volumes (≤${g.maxVolumeSizeTb || 30}TB Cap • Isolated/Role)</div>
+                  <div class="text-sm font-mono font-bold text-purple-300">${g.totalLogicalVolumes || 1} Win Vol${(g.totalLogicalVolumes || 1) === 1 ? '' : 's'} <span class="text-[10px] text-slate-400">(${g.volumesPerArchiverRole || 1} Vol/Role)</span></div>
+                  <div class="text-[9px] text-slate-400">${g.volumesPerServer || 1} Vol/Srv • ~${g.sizePerVolumeTb || g.usableTbPerArchiverRole} TB/Vol</div>
                 </div>
               </div>
             </div>
@@ -1525,7 +1539,7 @@ function buildCalculatorStrip() {
               `).join('') : `
                 <div class="px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-[10px] flex items-center gap-1.5">
                   <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
-                  <span>All Genetec 5.14 throughput, camera count, directory isolation, and RAID disk spindle rules satisfied.</span>
+                  <span>All Genetec 5.14 throughput, multi-role server limits, directory isolation, and Windows volume rules satisfied.</span>
                 </div>
               `}
             </div>
@@ -1542,7 +1556,7 @@ function buildCalculatorStrip() {
                 </div>
               </div>
               <span class="text-[10px] font-mono text-purple-300 bg-purple-950/60 border border-purple-700/50 px-2 py-0.5 rounded">
-                Selected Plan: <strong>${dp.totalDrives || 0}x ${dp.driveSizeTb || 16}TB</strong> = <strong>${dp.rawStorageTb || 0} TB Raw</strong> (${dp.usableStorageTb || 0} TB Usable)
+                Selected Plan: <strong>${dp.totalDrives || 0}x ${dp.driveSizeTb || 16}TB</strong> = <strong>${dp.rawStorageTb || 0} TB Raw</strong> (${dp.usableStorageTb || 0} TB Usable • ${dp.totalVolumes30Tb || 1} Win Vols)
               </span>
             </div>
 
@@ -1553,16 +1567,16 @@ function buildCalculatorStrip() {
                     <th class="py-1.5 px-2">Drive Size</th>
                     <th class="py-1.5 px-2">Total Drives</th>
                     <th class="py-1.5 px-2">Data + Parity</th>
-                    <th class="py-1.5 px-2">Drives / Server</th>
+                    <th class="py-1.5 px-2">Drives / Srv</th>
                     <th class="py-1.5 px-2">Total Raw TB</th>
                     <th class="py-1.5 px-2">Usable TB (Eff%)</th>
+                    <th class="py-1.5 px-2">Windows Vols (≤30TB)</th>
                     <th class="py-1.5 px-2">Chassis Bay Fit</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-800/60">
                   ${(vCalc.driveOptionsMatrix || []).map(opt => {
                     const isSelected = opt.driveSizeTb === vCalc.preferredDriveSizeTb;
-                    const warn12 = g.requires12DriveRaidArray && !opt.meetsGenetec12DriveHighPerf;
                     return `
                       <tr onclick="setVideoSizerParam('preferredDriveTb', ${opt.driveSizeTb})" class="cursor-pointer transition-colors ${isSelected ? 'bg-purple-950/50 text-white font-bold' : 'hover:bg-slate-900/80 text-slate-300'}">
                         <td class="py-1.5 px-2 flex items-center gap-1.5">
@@ -1571,12 +1585,12 @@ function buildCalculatorStrip() {
                         </td>
                         <td class="py-1.5 px-2 text-amber-300 font-bold">${opt.totalDrives} Drives</td>
                         <td class="py-1.5 px-2 text-slate-400">${opt.totalDataDrives}D + ${opt.totalParityDrives}P</td>
-                        <td class="py-1.5 px-2 ${warn12 ? 'text-amber-400' : 'text-sky-300'}">
-                          ${opt.drivesPerServer} / srv
-                          ${opt.meetsGenetec12DriveHighPerf ? '<span class="ml-1 px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/50 text-[8px]" title="Meets Genetec 5.14 ≥12-disk RAID 5/6 requirement for 300-500 Mbps">≥12✓</span>' : ''}
-                        </td>
+                        <td class="py-1.5 px-2 text-sky-300">${opt.drivesPerServer} / srv</td>
                         <td class="py-1.5 px-2 text-white">${opt.rawStorageTb} TB</td>
                         <td class="py-1.5 px-2 text-emerald-400">${opt.usableStorageTb} TB <span class="text-slate-500">(${opt.efficiencyPct}%)</span></td>
+                        <td class="py-1.5 px-2 text-purple-300" title="${opt.windowsVolumesPerRole} Windows Volume(s) per Archiver role × ${g.activeArchiverRoles} role(s) = ${opt.totalVolumes30Tb} separate Windows Volumes (~${opt.sizePerVolumeTb} TB each, ≤30 TB)">
+                          ${opt.totalVolumes30Tb} Vol${opt.totalVolumes30Tb === 1 ? '' : 's'} <span class="text-slate-400 text-[10px]">(${opt.windowsVolumesPerRole}/role @ ${opt.sizePerVolumeTb}TB)</span>
+                        </td>
                         <td class="py-1.5 px-2 text-[10px] text-slate-300">${opt.chassisFormFactor}</td>
                       </tr>
                     `;
@@ -1698,6 +1712,9 @@ function setVideoSizerParam(key, val) {
   } else if (key === "archiverRoles") {
     videoArchiverRoles = val; window.videoArchiverRoles = val;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.archiverRolesCount = val;
+  } else if (key === "serverCount") {
+    videoServerCount = val; window.videoServerCount = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.serverCountOverride = val;
   } else if (key === "encryptionCerts") {
     videoEncryptionCerts = val; window.videoEncryptionCerts = val;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.encryptionCerts = val;

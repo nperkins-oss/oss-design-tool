@@ -930,12 +930,13 @@ const VIDEO_STORAGE_CONSTANTS = {
 const GENETEC_514_REQUIREMENTS = {
   datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf",
   version: "5.14.1.0",
+  maxLogicalVolumeSizeTb: 30,              // 30 TB max usable per Windows Volume (and each Archiver role requires separate Windows volumes)
   directoryIsolationThresholdCameras: 300, // Page 15 Sec 1.10: >300 cameras requires dedicated Directory server
-  highPerfDiskThresholdMbps: 300,          // Page 8 Sec 1.4.1: >300 to 500 Mbps requires >=12 disks in RAID 5 or 6
-  highPerfMinRaidDrives: 12,
   maxPlaybackMbpsOnHighPerf: 100,
 
   // Server Profiles for Archiver Role (Pages 7, 8, 9, 15, 16, 17)
+  // Note: Physical servers can host multiple Archiver roles within the server's total throughput & role limits,
+  // provided each Archiver role is assigned its own separate Windows volume(s) (<= 30 TB per Windows volume).
   ARCHIVER_PROFILES: {
     "unified_min": {
       id: "unified_min",
@@ -946,7 +947,7 @@ const GENETEC_514_REQUIREMENTS = {
       maxCamerasPerRole: 50,
       maxBitrateMbpsPerRole: 50,
       maxRolesPerServer: 1,
-      requiresRaid12Drives: false,
+      maxServerBitrateMbps: 50,
       referencePage: "Page 7 & 9 (Sec 1.4 & 1.5)"
     },
     "unified_rec": {
@@ -958,57 +959,55 @@ const GENETEC_514_REQUIREMENTS = {
       maxCamerasPerRole: 100,
       maxBitrateMbpsPerRole: 200,
       maxRolesPerServer: 1,
-      requiresRaid12Drives: false,
+      maxServerBitrateMbps: 200,
       referencePage: "Page 7 & 9 (Sec 1.4 & 1.5)"
     },
     "dedicated_300": {
       id: "dedicated_300",
-      label: "Dedicated Archiver — Standard (Up to 300 Mbps)",
-      cpuSpec: "Intel Xeon Silver 4210 2.2 GHz+",
-      ramGb: 16,
-      nicSpec: "1 GbE NIC",
-      maxCamerasPerRole: 300,
-      maxBitrateMbpsPerRole: 300,
-      maxRolesPerServer: 1,
-      requiresRaid12Drives: false,
-      referencePage: "Page 7 (Sec 1.4.1)"
-    },
-    "dedicated_500": {
-      id: "dedicated_500",
-      label: "Dedicated High-Performance Archiver (300–500 Mbps)",
-      cpuSpec: "Intel Xeon Silver 4210 2.2 GHz+ (≥12 Disks RAID 5/6)",
+      label: "Dedicated Archiver Server — Standard (300 Mbps/Role, Multi-Role)",
+      cpuSpec: "Intel Xeon Silver 4210+ / Dual-Socket",
       ramGb: 16,
       nicSpec: "1 GbE / 10 GbE NIC",
       maxCamerasPerRole: 300,
+      maxBitrateMbpsPerRole: 300,
+      maxRolesPerServer: 4, // Up to 4 Archiver roles / 1,200 Mbps per physical server (Page 7 & 16-17)
+      maxServerBitrateMbps: 1200,
+      referencePage: "Page 7 & 16 (Sec 1.4.1 & 1.11)"
+    },
+    "dedicated_500": {
+      id: "dedicated_500",
+      label: "Dedicated High-Perf Archiver Server (500 Mbps/Role, Multi-Role)",
+      cpuSpec: "Intel Xeon Silver 4210+ / Gold",
+      ramGb: 32,
+      nicSpec: "10 GbE NIC",
+      maxCamerasPerRole: 300,
       maxBitrateMbpsPerRole: 500,
-      maxRolesPerServer: 1,
-      requiresRaid12Drives: true,
+      maxRolesPerServer: 4, // Up to 4 Archiver roles / 2,000 Mbps per physical server
+      maxServerBitrateMbps: 2000,
       referencePage: "Page 8 (Sec 1.4.1)"
     },
     "high_perf_multi": {
       id: "high_perf_multi",
-      label: "High-Performance Dual-Xeon / Streamvault (Multi-Archiver)",
+      label: "Enterprise Dual-Xeon / Streamvault (Up to 8 Roles / 4,000 Mbps)",
       cpuSpec: "2x Intel Xeon Silver 4416+ (40 Cores) / Streamvault 4000/7000",
       ramGb: 64,
       nicSpec: "10 GbE / 25 GbE NIC",
       maxCamerasPerRole: 300,
       maxBitrateMbpsPerRole: 500,
-      maxRolesPerServer: 4, // Up to 4 Archiver roles / 2,000+ Mbps on high-density chassis
-      maxServerBitrateMbps: 2000,
-      requiresRaid12Drives: true,
+      maxRolesPerServer: 8, // High-density Dual-Xeon / Streamvault up to 4,135 Mbps (Page 8)
+      maxServerBitrateMbps: 4000,
       referencePage: "Page 7 & 8 (Sec 1.4 & 1.4.1)"
     },
     "virtual_vm": {
       id: "virtual_vm",
-      label: "Virtualized Archiver VM (ESXi / Hyper-V, -20% VM Derate)",
-      cpuSpec: "8+ vCPUs (Complete Logical Cores)",
+      label: "Virtualized Archiver Host (ESXi / Hyper-V, -20% VM Derate)",
+      cpuSpec: "8+ vCPUs per VM (Complete Logical Cores)",
       ramGb: 16,
       nicSpec: "10 GbE Host NIC (Dedicated 1GbE/VM)",
       maxCamerasPerRole: 240, // 300 cameras - 20% VM capacity loss (Page 15 Sec 1.10)
       maxBitrateMbpsPerRole: 300, // Page 17: 300 Mbps per archiving VM
       maxRolesPerServer: 4,   // Page 16 & 17: Max 4 video VMs / 1,200 Mbps per physical server module
       maxServerBitrateMbps: 1200,
-      requiresRaid12Drives: false,
       referencePage: "Page 15–17 (Sec 1.10 & 1.11)"
     }
   },
@@ -1039,6 +1038,7 @@ const VideoStorageSizer = {
     preferredDriveSizeTb: 16,  // Selected HDD size (TB) for detailed server mapping
     genetecProfile: "dedicated_300", // Key in GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES
     archiverRolesCount: 0,     // 0 = Auto-calculate minimum required Archiver roles; >0 = user-specified count to verify
+    serverCountOverride: 0,    // 0 = Auto-calculate physical servers; >0 = user-specified physical server count
     encryptionCerts: 0,        // Fusion Stream Encryption certificates (Page 10)
     softwareMotionDetection: false, // Page 15: Software motion detection reduces Archiver capacity by up to 50%
     customBitratePerCamMbps: 0 // Optional custom per-camera bitrate override (0 = use standard math)
@@ -1117,14 +1117,16 @@ const VideoStorageSizer = {
   },
 
   /**
-   * Computes exact RAID drive count, raw TB, usable TB, parity drives, and chassis fit
-   * across all standard enterprise hard drive sizes (4TB to 24TB).
+   * Computes exact RAID drive count, raw TB, usable TB, parity drives, Windows volumes (<=30TB, isolated per Archiver role),
+   * and chassis fit across all standard enterprise hard drive sizes (4TB to 24TB).
    */
-  calculateRaidDriveMatrix(requiredUsableTb, raidKey, numServers = 1) {
+  calculateRaidDriveMatrix(requiredUsableTb, raidKey, numServers = 1, activeArchiverRoles = 1) {
     const raidDef = VIDEO_STORAGE_CONSTANTS.RAID_LEVELS[raidKey] || VIDEO_STORAGE_CONSTANTS.RAID_LEVELS["RAID 6"];
     const targetUsable = Math.max(0.1, Number(requiredUsableTb) || 0);
     const servers = Math.max(1, parseInt(numServers, 10) || 1);
+    const roles = Math.max(1, parseInt(activeArchiverRoles, 10) || 1);
     const usablePerServer = targetUsable / servers;
+    const maxVolTb = GENETEC_514_REQUIREMENTS.maxLogicalVolumeSizeTb || 30;
 
     return VIDEO_STORAGE_CONSTANTS.STANDARD_DRIVE_SIZES_TB.map(driveTb => {
       // Calculate drives required per server so every server has a valid, redundant RAID array
@@ -1162,7 +1164,17 @@ const VideoStorageSizer = {
       const totalParityDrives = parityDrivesPerServer * servers;
       const rawStorageTb = totalDrivesAllServers * driveTb;
       const usableStorageTb = totalDataDrives * driveTb;
+      const usablePerServerTb = dataDrivesPerServer * driveTb;
       const efficiencyPct = Math.round((usableStorageTb / rawStorageTb) * 100);
+
+      // Genetec Windows Volume Sizing:
+      // 1) Each Archiver role MUST have its own separate Windows volume(s) (roles cannot share a volume).
+      // 2) Each Windows volume is capped at <= 30 TB usable.
+      const usablePerRoleTb = usableStorageTb / roles;
+      const windowsVolumesPerRole = Math.max(1, Math.ceil(usablePerRoleTb / maxVolTb));
+      const totalVolumes30Tb = roles * windowsVolumesPerRole;
+      const volumesPerServer30Tb = Math.ceil(totalVolumes30Tb / servers);
+      const sizePerVolumeTb = Math.round((usablePerRoleTb / windowsVolumesPerRole) * 10) / 10;
 
       // Chassis form factor recommendation per server
       let chassisFormFactor = "1U 4-Bay";
@@ -1181,9 +1193,13 @@ const VideoStorageSizer = {
         totalParityDrives,
         rawStorageTb,
         usableStorageTb,
+        usablePerServerTb,
         efficiencyPct,
-        chassisFormFactor,
-        meetsGenetec12DriveHighPerf: totalDrivesPerServer >= 12 && (raidDef.id === "RAID 5" || raidDef.id === "RAID 6" || raidDef.id === "RAID 50" || raidDef.id === "RAID 60")
+        windowsVolumesPerRole,
+        volumesPerServer30Tb,
+        totalVolumes30Tb,
+        sizePerVolumeTb,
+        chassisFormFactor
       };
     });
   },
@@ -1285,7 +1301,7 @@ const VideoStorageSizer = {
     const requiredUsableTb = Math.round(netVideoStorageTb * VIDEO_STORAGE_CONSTANTS.STORAGE_SAFETY_BUFFER * 100) / 100;
     const theoreticalRawTb = Math.round(requiredUsableTb * raidDef.approxRawMultiplier * 100) / 100;
 
-    // 5. Genetec Security Center 5.14.1.0 Archiver & Server Verification
+    // 5. Genetec Security Center 5.14.1.0 Archiver & Multi-Role Server Verification
     const genetecProfileKey = overrides.genetecProfile || this.state.genetecProfile || "dedicated_300";
     const profileDef = GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES[genetecProfileKey] || GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES.dedicated_300;
     const encryptionCerts = Math.max(0, parseInt(overrides.encryptionCerts ?? this.state.encryptionCerts ?? 0, 10) || 0);
@@ -1306,12 +1322,18 @@ const VideoStorageSizer = {
     const activeArchiverRoles = userArchiverRoles > 0 ? userArchiverRoles : minRequiredArchiverRoles;
     const isArchiverCountVerified = activeArchiverRoles >= minRequiredArchiverRoles;
 
-    // How Archiver Roles map to physical servers
-    const maxRolesPerPhysicalServer = profileDef.maxRolesPerServer || 1;
-    const maxMbpsPerPhysicalServer = profileDef.maxServerBitrateMbps || effectiveMaxMbpsPerArchiver;
+    // How Multiple Archiver Roles map to physical servers (within Genetec server limits)
+    const maxRolesPerPhysicalServer = profileDef.maxRolesPerServer || 4;
+    const maxMbpsPerPhysicalServer = profileDef.maxServerBitrateMbps || (effectiveMaxMbpsPerArchiver * maxRolesPerPhysicalServer);
     const minServersByRoles = Math.ceil(activeArchiverRoles / maxRolesPerPhysicalServer);
     const minServersByThroughput = peakIngressMbps > 0 ? Math.ceil(peakIngressMbps / maxMbpsPerPhysicalServer) : 1;
-    const recommendedArchiverServers = cameraUnits > 0 ? Math.max(1, minServersByRoles, minServersByThroughput) : 1;
+    const minRequiredServers = cameraUnits > 0 ? Math.max(1, minServersByRoles, minServersByThroughput) : 1;
+
+    const userServerCount = parseInt(overrides.serverCountOverride ?? this.state.serverCountOverride ?? 0, 10) || 0;
+    // Do not assign more physical servers than active Archiver roles unless user explicitly asked
+    const recommendedArchiverServers = userServerCount > 0 ? userServerCount : Math.min(activeArchiverRoles, minRequiredServers);
+    const rolesPerServer = cameraUnits > 0 ? Math.ceil(activeArchiverRoles / recommendedArchiverServers) : 1;
+    const isServerCountVerified = recommendedArchiverServers >= minRequiredServers && rolesPerServer <= maxRolesPerPhysicalServer;
 
     // Directory isolation rule (Page 15 Section 1.10: >300 cameras requires dedicated Directory server)
     const requiresDedicatedDirectoryServer = totalSensorHeads > GENETEC_514_REQUIREMENTS.directoryIsolationThresholdCameras;
@@ -1325,8 +1347,8 @@ const VideoStorageSizer = {
     const usableTbPerServer = cameraUnits > 0 ? Math.round((requiredUsableTb / recommendedArchiverServers) * 100) / 100 : 0;
     const bitratePerServerMbps = cameraUnits > 0 ? Math.round((peakIngressMbps / recommendedArchiverServers) * 10) / 10 : 0;
 
-    // 6. Compute Drive Size Matrix across recommendedArchiverServers
-    const driveOptionsMatrix = this.calculateRaidDriveMatrix(requiredUsableTb, raidLevel, recommendedArchiverServers);
+    // 6. Compute Drive Size Matrix across recommendedArchiverServers & activeArchiverRoles
+    const driveOptionsMatrix = this.calculateRaidDriveMatrix(requiredUsableTb, raidLevel, recommendedArchiverServers, activeArchiverRoles);
     const selectedDrivePlan = driveOptionsMatrix.find(d => d.driveSizeTb === preferredDriveSizeTb) || driveOptionsMatrix[3] || driveOptionsMatrix[0];
 
     // Use the exact RAID drive array raw TB when cameras > 0, or theoreticalRawTb
@@ -1334,9 +1356,14 @@ const VideoStorageSizer = {
     const arrayRawTb = cameraUnits > 0 && selectedDrivePlan ? selectedDrivePlan.rawStorageTb : 0;
     const arrayUsableTb = cameraUnits > 0 && selectedDrivePlan ? selectedDrivePlan.usableStorageTb : 0;
 
-    // Check Genetec 300-500 Mbps 12-drive RAID 5/6 requirement (Page 8 Section 1.4.1)
-    const requires12DriveRaidArray = bitratePerArchiverRoleMbps > 300;
-    const meets12DriveRequirement = !requires12DriveRaidArray || (selectedDrivePlan && selectedDrivePlan.meetsGenetec12DriveHighPerf);
+    // 7. Genetec Windows Volume Mapping (<= 30 TB per Windows Volume, AND separate Windows volume(s) per Archiver Role)
+    const maxVolTb = GENETEC_514_REQUIREMENTS.maxLogicalVolumeSizeTb || 30;
+    // Calculate both based on requiredUsableTb and based on the selected RAID array's usable TB
+    const reqVolumesPerRole = cameraUnits > 0 ? Math.max(1, Math.ceil(usableTbPerArchiverRole / maxVolTb)) : 1;
+    const volumesPerArchiverRole = (cameraUnits > 0 && selectedDrivePlan) ? selectedDrivePlan.windowsVolumesPerRole : reqVolumesPerRole;
+    const totalLogicalVolumes = (cameraUnits > 0 && selectedDrivePlan) ? selectedDrivePlan.totalVolumes30Tb : (activeArchiverRoles * reqVolumesPerRole);
+    const volumesPerServer = (cameraUnits > 0 && selectedDrivePlan) ? selectedDrivePlan.volumesPerServer30Tb : Math.ceil(totalLogicalVolumes / recommendedArchiverServers);
+    const sizePerVolumeTb = (cameraUnits > 0 && selectedDrivePlan) ? selectedDrivePlan.sizePerVolumeTb : Math.round((usableTbPerArchiverRole / reqVolumesPerRole) * 10) / 10;
 
     // Warnings & Verification Findings for Genetec 5.14
     const genetecFindings = [];
@@ -1344,7 +1371,13 @@ const VideoStorageSizer = {
       if (!isArchiverCountVerified) {
         genetecFindings.push({
           severity: "critical",
-          text: `${activeArchiverRoles} Archiver role(s) configured, but ${minRequiredArchiverRoles} required for ${totalSensorHeads} streams @ ${Math.round(peakIngressMbps)} Mbps (${bitratePerArchiverRoleMbps} Mbps/role exceeds ${effectiveMaxMbpsPerArchiver} Mbps limit).`
+          text: `${activeArchiverRoles} Archiver role(s) configured, but ${minRequiredArchiverRoles} required for ${totalSensorHeads} streams @ ${Math.round(peakIngressMbps)} Mbps (${bitratePerArchiverRoleMbps} Mbps/role exceeds ${effectiveMaxMbpsPerArchiver} Mbps/role limit).`
+        });
+      }
+      if (!isServerCountVerified) {
+        genetecFindings.push({
+          severity: "critical",
+          text: `${recommendedArchiverServers} Server(s) configured (${rolesPerServer} roles/srv @ ${bitratePerServerMbps} Mbps/srv), but profile supports max ${maxRolesPerPhysicalServer} Archiver roles and ${maxMbpsPerPhysicalServer} Mbps per server (${minRequiredServers} server(s) needed).`
         });
       }
       if (directoryCoHostViolation) {
@@ -1358,10 +1391,10 @@ const VideoStorageSizer = {
           text: `Genetec 5.14 Sec 1.10 (p.15): >300 cameras (${totalSensorHeads} streams) requires +1 Dedicated Directory Server alongside the ${recommendedArchiverServers} Archiver server(s).`
         });
       }
-      if (requires12DriveRaidArray && !meets12DriveRequirement) {
+      if (totalLogicalVolumes > 1 || activeArchiverRoles > 1 || arrayUsableTb > maxVolTb) {
         genetecFindings.push({
-          severity: "warning",
-          text: `Genetec 5.14 Sec 1.4.1 (p.8): Archivers between 300–500 Mbps (${bitratePerArchiverRoleMbps} Mbps/role) require at least 12 dedicated video drives in RAID 5 or RAID 6 per server (currently ${selectedDrivePlan ? selectedDrivePlan.drivesPerServer : 0} drives in ${raidLevel}).`
+          severity: "info",
+          text: `Windows Volume Mapping (≤${maxVolTb} TB Cap & Separate Volumes per Role): Configure ${totalLogicalVolumes} separate Windows volume(s) across ${recommendedArchiverServers} server(s) — ${volumesPerArchiverRole} volume(s) per Archiver role (${volumesPerServer} vol/server @ ~${sizePerVolumeTb} TB each) so no role shares a volume or exceeds ${maxVolTb} TB.`
         });
       }
     }
@@ -1411,19 +1444,30 @@ const VideoStorageSizer = {
       genetec: {
         version: GENETEC_514_REQUIREMENTS.version,
         datasheetPath: GENETEC_514_REQUIREMENTS.datasheetPath,
+        maxVolumeSizeTb: maxVolTb,
+        volumesPerArchiverRole,
+        totalLogicalVolumes,
+        volumesPerServer,
+        sizePerVolumeTb,
         profileKey: genetecProfileKey,
         profile: profileDef,
         encryptionCerts,
         softwareMotion,
         effectiveMaxCamerasPerArchiver,
         effectiveMaxMbpsPerArchiver,
+        maxRolesPerPhysicalServer,
+        maxMbpsPerPhysicalServer,
         minArchiversByCameras,
         minArchiversByBitrate,
         minRequiredArchiverRoles,
         userArchiverRoles,
         activeArchiverRoles,
         isArchiverCountVerified,
+        minRequiredServers,
+        userServerCount,
         recommendedArchiverServers,
+        rolesPerServer,
+        isServerCountVerified,
         requiresDedicatedDirectoryServer,
         directoryCoHostViolation,
         totalServersIncludingDirectory: recommendedArchiverServers + (requiresDedicatedDirectoryServer ? 1 : 0),
@@ -1432,10 +1476,8 @@ const VideoStorageSizer = {
         usableTbPerArchiverRole,
         usableTbPerServer,
         bitratePerServerMbps,
-        requires12DriveRaidArray,
-        meets12DriveRequirement,
         findings: genetecFindings,
-        isFullyCompliant: isArchiverCountVerified && !directoryCoHostViolation && meets12DriveRequirement
+        isFullyCompliant: isArchiverCountVerified && isServerCountVerified && !directoryCoHostViolation
       },
 
       // Quoted BOM Server Comparison
