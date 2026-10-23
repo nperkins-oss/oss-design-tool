@@ -2753,6 +2753,7 @@ function addGenetecLicensesToBom() {
   // Remove any previously added Genetec VMS software licenses to avoid duplicates when re-syncing
   const genetecCatalogIds = new Set(items.map(li => li.catalogId).filter(Boolean));
   [
+    "genetec-gsc-base-s-513", "genetec-gsc-base-e-513",
     "genetec-gsc-om-s-base", "genetec-gsc-om-p-base", "genetec-gsc-base-514",
     "genetec-gsc-sv-aio-1c", "genetec-gsc-om-s-1c", "genetec-gsc-om-p-1c", "genetec-gsc-1cam-lic",
     "genetec-gsc-failover-1cam", "genetec-gsc-1fod", "genetec-gsc-standby-svr",
@@ -2795,15 +2796,22 @@ window.addTurnkeyGenetecPackageToBom = addTurnkeyGenetecPackageToBom;
 function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) {
   if (!licRes) return "";
   const cfg = licRes.config || {};
+  const isUnified = Boolean(licRes.isUnified513);
   const svPlan = licRes.streamvaultPlan || {};
   const prim = svPlan.primaryAppliance;
   const vLoad = licRes.videoLoad || {};
 
   const tierBadgeMap = {
-    aio: { label: "Streamvault AIO Tier", color: "bg-sky-500/20 border-sky-500/40 text-sky-300" },
-    standard: { label: "Omnicast Standard (GSC-Om-S)", color: "bg-emerald-500/20 border-emerald-500/40 text-emerald-300" },
-    pro: { label: "Omnicast Professional (GSC-Om-P)", color: "bg-amber-500/20 border-amber-500/40 text-amber-300" },
-    enterprise: { label: "Omnicast Enterprise (GSC-Om-E)", color: "bg-indigo-500/20 border-indigo-500/40 text-indigo-300" }
+    aio: { label: "Streamvault AIO Tier (≤32 Cams)", color: "bg-sky-500/20 border-sky-500/40 text-sky-300" },
+    standard: {
+      label: isUnified ? "GSC-BASE-S Unified Standard ($0 Base • ≤100 Cams / 25 Clients)" : "Omnicast Standard (GSC-Om-S • ≤50 Cams)",
+      color: "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
+    },
+    pro: { label: "Omnicast Professional (Legacy GSC-Om-P • ≤100 Cams)", color: "bg-amber-500/20 border-amber-500/40 text-amber-300" },
+    enterprise: {
+      label: isUnified ? "GSC-BASE-E Unified Enterprise ($0 Base • All Enterprise Features Included)" : "Omnicast Enterprise (GSC-Om-E)",
+      color: "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
+    }
   };
   const activeTierBadge = tierBadgeMap[licRes.effectiveTier] || tierBadgeMap.enterprise;
 
@@ -2818,11 +2826,30 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           <div>
             <div class="flex flex-wrap items-center gap-2">
               <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-                Genetec Security Center 5.14 Licensing, Streamvault &amp; Compatibility Builder
+                Genetec Security Center 5.13 / 5.14 Unified Licensing &amp; Streamvault Builder
               </h4>
               <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${activeTierBadge.color}">
                 ${activeTierBadge.label}
               </span>
+              <!-- Pricing Model Switcher: SC 5.13/5.14 Unified ($0 Base) vs Legacy SC 5.10-5.12 -->
+              <div class="inline-flex items-center p-0.5 rounded-lg bg-slate-950 border border-slate-800">
+                <button
+                  type="button"
+                  onclick="setGenetecLicParam('pricingEdition', 'sc513_unified')"
+                  class="px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${isUnified ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}"
+                  title="Latest Security Center 5.13 / 5.14 Unified Base Packages (GSC-BASE-S and GSC-BASE-E at $0.00 with bundled enterprise features)"
+                >
+                  SC 5.13/5.14 Unified ($0 Base)
+                </button>
+                <button
+                  type="button"
+                  onclick="setGenetecLicParam('pricingEdition', 'legacy_510')"
+                  class="px-2 py-0.5 rounded text-[10px] font-bold transition cursor-pointer ${!isUnified ? 'bg-amber-600 text-white' : 'text-slate-400 hover:text-white'}"
+                  title="Legacy Security Center 5.10–5.12 separate base packages (GSC-Om-S $590 / GSC-Om-P $1,750 / GSC-Om-E $3,650) for legacy expansions"
+                >
+                  Legacy 5.10–5.12
+                </button>
+              </div>
               <a href="Datasheets/Genetec/ProductCompatability.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center gap-1 transition">
                 <i data-lucide="file-text" class="w-3 h-3 text-indigo-400"></i>
                 <span>Compatibility PDF</span>
@@ -2876,6 +2903,31 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
         </div>
       </div>
 
+      <!-- Bundled Features Included at $0.00 in SC 5.13 / 5.14 Unified Base Package (GSC-BASE-S / GSC-BASE-E) -->
+      ${isUnified && Array.isArray(licRes.includedBaseFeatures) && licRes.includedBaseFeatures.length > 0 ? `
+        <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-[11px] flex flex-col gap-1.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-bold uppercase tracking-wider text-[10px] text-emerald-300 flex items-center gap-1.5">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Included Free ($0.00) in ${licRes.effectiveTier === 'standard' ? 'GSC-BASE-S (SC 5.13/5.14 Unified Standard Base)' : 'GSC-BASE-E (SC 5.13/5.14 Unified Enterprise Base)'}</span>
+            </span>
+            ${licRes.unifiedSavingsMsrp > 0 ? `
+              <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 font-mono text-[10px] font-bold">
+                Saves $${licRes.unifiedSavingsMsrp.toLocaleString()} vs Legacy Separate SKUs
+              </span>
+            ` : ''}
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-4 gap-y-1 text-slate-300 text-[10px]">
+            ${licRes.includedBaseFeatures.map(f => `
+              <div class="flex items-center gap-1.5">
+                <span class="text-emerald-400 font-bold">&#10003;</span>
+                <span>${f.label}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
+
       <!-- Compatibility Warnings Banner (if any) -->
       ${licRes.compatibilityWarnings && licRes.compatibilityWarnings.length > 0 ? `
         <div class="p-2.5 rounded-xl bg-amber-950/50 border border-amber-500/40 text-amber-200 text-[11px] space-y-1">
@@ -2896,13 +2948,13 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
             <span class="font-mono text-slate-400">${licRes.cameraUnits} Cams</span>
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Omnicast License Tier:</label>
+            <label class="text-[10px] text-slate-400 block mb-1">Security Center Base Tier:</label>
             <select onchange="setGenetecLicParam('tierMode', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold text-white focus:outline-none">
-              <option value="auto" ${cfg.tierMode === 'auto' ? 'selected' : ''}>Auto-Select Tier (${activeTierBadge.label})</option>
+              <option value="auto" ${cfg.tierMode === 'auto' ? 'selected' : ''}>Auto-Select Tier (${licRes.effectiveTier.toUpperCase()})</option>
               <option value="aio" ${cfg.tierMode === 'aio' ? 'selected' : ''}>Streamvault AIO (≤32 Cams • $0 Base, $120/cam)</option>
-              <option value="standard" ${cfg.tierMode === 'standard' ? 'selected' : ''}>Standard GSC-Om-S (≤50 Cams • $590 Base, $200/cam)</option>
-              <option value="pro" ${cfg.tierMode === 'pro' ? 'selected' : ''}>Professional GSC-Om-P (≤100 Cams • $1,750 Base, $260/cam)</option>
-              <option value="enterprise" ${cfg.tierMode === 'enterprise' ? 'selected' : ''}>Enterprise GSC-Om-E (Unlimited • $3,650 Base, $325/cam)</option>
+              <option value="standard" ${cfg.tierMode === 'standard' ? 'selected' : ''}>${isUnified ? 'GSC-BASE-S Unified Standard (≤100 Cams, 25 Clients • $0 Base, $200/cam)' : 'Legacy Standard GSC-Om-S (≤50 Cams • $590 Base, $200/cam)'}</option>
+              ${!isUnified ? `<option value="pro" ${cfg.tierMode === 'pro' ? 'selected' : ''}>Legacy Professional GSC-Om-P (≤100 Cams • $1,750 Base, $260/cam)</option>` : ''}
+              <option value="enterprise" ${cfg.tierMode === 'enterprise' ? 'selected' : ''}>${isUnified ? 'GSC-BASE-E Unified Enterprise (Unlimited • $0 Base, $325/cam)' : 'Legacy Enterprise GSC-Om-E (Unlimited • $3,650 Base, $325/cam)'}</option>
             </select>
           </div>
           <div>
@@ -2927,14 +2979,16 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center justify-between">
             <span>2. Failover &amp; Operator Clients</span>
-            <span class="font-mono text-slate-400">5 Free in Base</span>
+            <span class="font-mono text-emerald-400">${isUnified ? (licRes.effectiveTier === 'enterprise' ? 'Unlimited Free' : '25 Free in Base') : '5 Free in Base'}</span>
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Standby Archiver Failover (GSC-Om-E-1FC @ $23/cam):</label>
+            <label class="text-[10px] text-slate-400 block mb-1">
+              Standby Archiver Failover ${isUnified && licRes.effectiveTier === 'enterprise' ? '<span class="text-emerald-400 font-bold">(Included $0 in GSC-BASE-E!)</span>' : '(GSC-Om-E-1FC @ $23/cam)'}:
+            </label>
             <div class="flex items-center gap-1.5">
               <select onchange="setGenetecLicParam('failoverMode', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold text-white focus:outline-none">
                 <option value="none" ${cfg.failoverMode === 'none' ? 'selected' : ''}>No Archiver Failover</option>
-                <option value="all" ${cfg.failoverMode === 'all' ? 'selected' : ''}>All ${licRes.cameraUnits} Cameras ($${(licRes.cameraUnits * 23).toLocaleString()})</option>
+                <option value="all" ${cfg.failoverMode === 'all' ? 'selected' : ''}>All ${licRes.cameraUnits} Cameras (${isUnified ? '$0 Included in GSC-BASE-E' : '$' + (licRes.cameraUnits * 23).toLocaleString()})</option>
                 <option value="custom" ${cfg.failoverMode === 'custom' ? 'selected' : ''}>Custom Camera Count</option>
               </select>
               ${cfg.failoverMode === 'custom' ? `
@@ -2945,16 +2999,16 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           <div class="flex items-center justify-between gap-2 pt-0.5">
             <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer">
               <input type="checkbox" ${cfg.failoverDirectory ? 'checked' : ''} onchange="setGenetecLicParam('failoverDirectory', this.checked)" class="rounded border-slate-700 bg-slate-900 text-indigo-500" />
-              <span>Failover Directory (<code class="text-indigo-300">GSC-1FOD</code> $1,000)</span>
+              <span>Failover Directory (${isUnified ? '<strong class="text-emerald-400">$0 Included in GSC-BASE-E</strong>' : '<code class="text-indigo-300">GSC-1FOD</code> $1,000'})</span>
             </label>
           </div>
           <div class="grid grid-cols-2 gap-2 pt-0.5">
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="First 5 Security Desk/Web clients are included free in Base Package; extra clients are $300 each (GSC-1U)">Security Desk Clients:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="In SC 5.13+, GSC-BASE-S includes 25 clients and GSC-BASE-E includes Unlimited Site Login License!">Security Desk Clients:</label>
               <input type="number" min="1" max="500" value="${licRes.workstationClients}" onchange="setGenetecLicParam('workstationClients', Math.max(1, parseInt(this.value,10)||5))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Genetec Mobile iOS/Android App connections ($250 each, GSC-1MobileU)">Mobile App Users:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Genetec Mobile iOS/Android App connections">Mobile App Users:</label>
               <input type="number" min="0" max="500" value="${licRes.mobileClients}" onchange="setGenetecLicParam('mobileClients', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
             </div>
           </div>
@@ -2964,19 +3018,21 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between">
             <span>3. Maps, KiwiVision &amp; LPR Add-Ons</span>
-            <span class="font-mono text-slate-400">Optional</span>
+            <span class="font-mono text-slate-400">${isUnified && licRes.effectiveTier === 'enterprise' ? 'Maps & AD Free' : 'Optional'}</span>
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Plan Manager Interactive Maps:</label>
+            <label class="text-[10px] text-slate-400 block mb-1">
+              Plan Manager Maps ${isUnified && licRes.effectiveTier === 'enterprise' ? '<span class="text-emerald-400 font-bold">(Unlimited GIS Included $0!)</span>' : ''}:
+            </label>
             <select onchange="setGenetecLicParam('planManagerTier', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold text-white focus:outline-none">
-              <option value="none" ${cfg.planManagerTier === 'none' ? 'selected' : ''}>Standard Static Maps (Included)</option>
+              <option value="none" ${cfg.planManagerTier === 'none' ? 'selected' : ''}>${isUnified && licRes.effectiveTier === 'enterprise' ? 'Plan Manager Advanced Unlimited (Included $0 in GSC-BASE-E)' : 'Plan Manager Basic (Included $0 in Base)'}</option>
               <option value="auto" ${cfg.planManagerTier === 'auto' ? 'selected' : ''}>Auto-Fit Plan Manager by Camera Count</option>
-              <option value="50" ${cfg.planManagerTier === '50' ? 'selected' : ''}>GSC-PM-STD-50 (≤50 Entities • $2,350)</option>
-              <option value="100" ${cfg.planManagerTier === '100' ? 'selected' : ''}>GSC-PM-STD-100 (≤100 Entities • $4,250)</option>
-              <option value="250" ${cfg.planManagerTier === '250' ? 'selected' : ''}>GSC-PM-STD-250 (≤250 Entities • $7,050)</option>
-              <option value="500" ${cfg.planManagerTier === '500' ? 'selected' : ''}>GSC-PM-STD-500 (≤500 Entities • $9,400)</option>
-              <option value="1000" ${cfg.planManagerTier === '1000' ? 'selected' : ''}>GSC-PM-STD-1000 (≤1000 Entities • $18,800)</option>
-              <option value="site" ${cfg.planManagerTier === 'site' ? 'selected' : ''}>GSC-PM-STD-SiteLicense (Unlimited • $28,250)</option>
+              <option value="50" ${cfg.planManagerTier === '50' ? 'selected' : ''}>GSC-PM-STD-50 (≤50 Entities • ${isUnified && licRes.effectiveTier === 'enterprise' ? '$0 Included' : '$2,350'})</option>
+              <option value="100" ${cfg.planManagerTier === '100' ? 'selected' : ''}>GSC-PM-STD-100 (≤100 Entities • ${isUnified && licRes.effectiveTier === 'enterprise' ? '$0 Included' : '$4,250'})</option>
+              <option value="250" ${cfg.planManagerTier === '250' ? 'selected' : ''}>GSC-PM-STD-250 (≤250 Entities • ${isUnified && licRes.effectiveTier === 'enterprise' ? '$0 Included' : '$7,050'})</option>
+              <option value="500" ${cfg.planManagerTier === '500' ? 'selected' : ''}>GSC-PM-STD-500 (≤500 Entities • ${isUnified && licRes.effectiveTier === 'enterprise' ? '$0 Included' : '$9,400'})</option>
+              <option value="1000" ${cfg.planManagerTier === '1000' ? 'selected' : ''}>GSC-PM-STD-1000 (≤1000 Entities • ${isUnified && licRes.effectiveTier === 'enterprise' ? '$0 Included' : '$18,800'})</option>
+              <option value="site" ${cfg.planManagerTier === 'site' ? 'selected' : ''}>GSC-PM-STD-SiteLicense (Unlimited • ${isUnified && licRes.effectiveTier === 'enterprise' ? '$0 Included' : '$28,250'})</option>
             </select>
           </div>
           <div class="grid grid-cols-2 gap-2">
@@ -2991,15 +3047,15 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="AutoVu Fixed Sharp LPR cameras ($1,495 Base + $500/cam + $80/yr SMA)">AutoVu LPR Cams:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="AutoVu Fixed Sharp LPR cameras ($500/cam + $80/yr SMA; AutoVu Base is included free in SC 5.13+ GSC-BASE-S & GSC-BASE-E!)">AutoVu LPR Cams:</label>
               <input type="number" min="0" max="200" value="${licRes.effectiveLprCameras}" onchange="setGenetecLicParam('lprCamerasOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-amber-300" />
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Active Directory User & Cardholder Sync ($1,720) & RSA Radar/Fence Module ($1,000)">AD SSO / RSA:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Active Directory Sync (Included free in SC 5.13+ Base!) & RSA Radar/Fence Module ($1,000)">AD SSO / RSA:</label>
               <div class="flex items-center gap-2 pt-1">
-                <label class="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer" title="GSC-1AD-USCH ($1,720)">
-                  <input type="checkbox" ${cfg.adIntegration ? 'checked' : ''} onchange="setGenetecLicParam('adIntegration', this.checked)" class="rounded border-slate-700 bg-slate-900 text-indigo-500" />
-                  <span>AD</span>
+                <label class="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer" title="${isUnified ? 'Active Directory SSO is INCLUDED FREE in GSC-BASE-S (1 AD) & GSC-BASE-E (Unlimited AD/ADFS)!' : 'GSC-1AD-USCH ($1,720)'}">
+                  <input type="checkbox" ${cfg.adIntegration || isUnified ? 'checked' : ''} onchange="setGenetecLicParam('adIntegration', this.checked)" class="rounded border-slate-700 bg-slate-900 text-indigo-500" />
+                  <span>AD ${isUnified ? '($0)' : ''}</span>
                 </label>
                 <label class="flex items-center gap-1 text-[10px] text-slate-300 cursor-pointer" title="GSC-GAP-RSA-STA ($1,000)">
                   <input type="checkbox" ${cfg.rsaEnabled ? 'checked' : ''} onchange="setGenetecLicParam('rsaEnabled', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500" />
@@ -3082,15 +3138,15 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
               </thead>
               <tbody class="divide-y divide-slate-800/50">
                 ${licRes.lineItems.map(li => `
-                  <tr class="hover:bg-slate-900/60">
-                    <td class="py-1.5 px-3 font-bold text-indigo-300 whitespace-nowrap">${li.sku}</td>
+                  <tr class="${li.isIncludedZeroCost ? 'bg-emerald-950/20' : 'hover:bg-slate-900/60'}">
+                    <td class="py-1.5 px-3 font-bold ${li.isIncludedZeroCost ? 'text-emerald-300' : 'text-indigo-300'} whitespace-nowrap">${li.sku}</td>
                     <td class="py-1.5 px-3 font-sans text-slate-200">
                       <div class="font-semibold">${li.model}</div>
-                      ${li.notes ? `<div class="text-[10px] text-slate-400">${li.notes}</div>` : ''}
+                      ${li.notes ? `<div class="text-[10px] ${li.isIncludedZeroCost ? 'text-emerald-300/90' : 'text-slate-400'}">${li.notes}</div>` : ''}
                     </td>
                     <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel}</td>
                     <td class="py-1.5 px-3 text-center font-bold text-amber-300">${li.qty}</td>
-                    <td class="py-1.5 px-3 text-right text-slate-300">$${li.unitMsrp.toLocaleString()}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-300">${li.isIncludedZeroCost ? '<span class="text-emerald-400 font-bold">INCLUDED ($0)</span>' : '$' + li.unitMsrp.toLocaleString()}</td>
                     <td class="py-1.5 px-3 text-right font-bold text-emerald-400">$${li.extendedMsrp.toLocaleString()}</td>
                   </tr>
                 `).join('')}

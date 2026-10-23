@@ -954,11 +954,55 @@ const WORKSTATIONS_DATABASE = [
 // =========================================================================
 const SOFTWARE_DATABASE = {
   vms: [
-    // --- GENETEC BASE PACKAGES ---
+    // --- GENETEC SECURITY CENTER 5.13 / 5.14 UNIFIED BASE PACKAGES ($0.00) ---
+    {
+      id: "genetec-gsc-base-s-513",
+      vendor: "Genetec",
+      model: "Genetec Security Center Unified Base Standard Package (SC 5.13 / 5.14)",
+      sku: "GSC-BASE-S",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Base Server License",
+      tier: "Standard",
+      maxCameras: 100,
+      maxReaders: 100,
+      maxClients: 25,
+      maxArchivers: 1,
+      msrp: 0,
+      description: "New unified Security Center 5.13/5.14 Standard Base Package ($0.00). Bundles Omnicast Standard, Synergis Standard (1 Access Manager + Badge Designer), AutoVu Standard Base, 25 Security Desk/Web clients, and 1 Active Directory integration.",
+      keyFeatures: [
+        "Unified $0.00 Base Package including Omnicast Standard, Synergis Standard, and AutoVu Standard base modules",
+        "Supports up to 100 cameras, 100 readers, 25 concurrent Security Desk/Web clients, and 1 Archiver",
+        "Includes 1 Active Directory integration, Plan Manager Basic, Alarm Management, and Edge Recording/Trickling at no base cost"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-base-e-513",
+      vendor: "Genetec",
+      model: "Genetec Security Center Unified Base Enterprise Package (SC 5.13 / 5.14)",
+      sku: "GSC-BASE-E",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Base Server License",
+      tier: "Enterprise",
+      msrp: 0,
+      description: "New unified Security Center 5.13/5.14 Enterprise Base Package ($0.00). Bundles Omnicast Enterprise, Synergis Enterprise, AutoVu Standard Base, Standby Failover Cameras, Failover Directory Role, Plan Manager Advanced (Unlimited Entities + GIS), Unlimited Client Site Login License, Threat Level, and Unlimited Active Directory / ADFS.",
+      keyFeatures: [
+        "Unified $0.00 Enterprise Base Package including Omnicast Enterprise, Synergis Enterprise, and AutoVu Standard base modules",
+        "Includes FREE Standby Failover Cameras, FREE Failover Directory Role, and FREE Unlimited Security Desk/Web Client Site Login License",
+        "Includes FREE Plan Manager Advanced (GIS + Unlimited Entities), Threat Level Module, and Unlimited Active Directory / ADFS connections"
+      ],
+      datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
+    },
+
+    // --- LEGACY GENETEC 5.10 - 5.12 BASE PACKAGES (FOR LEGACY SYSTEM EXPANSIONS) ---
     {
       id: "genetec-gsc-om-s-base",
       vendor: "Genetec",
-      model: "Genetec Security Center Omnicast Standard Base Package",
+      model: "Genetec Omnicast Standard Base Package (Legacy SC 5.10–5.12)",
       sku: "GSC-Om-S",
       role: "Software License",
       category: "vms_software",
@@ -969,18 +1013,17 @@ const SOFTWARE_DATABASE = {
       maxClients: 5,
       maxArchivers: 1,
       msrp: 590,
-      description: "Entry-level Security Center Omnicast Standard base package for single-site deployments up to 50 cameras and 5 client/web workstations (1 Archiver max).",
+      description: "Legacy Security Center 5.10–5.12 Omnicast Standard base package (up to 50 cameras, 5 clients, 1 Archiver). Replaced by $0 GSC-BASE-S in SC 5.13+.",
       keyFeatures: [
-        "Supports up to 50 cameras, 1 Archiver server, and up to 5 concurrent Security Desk / Web Client connections",
-        "Includes Directory Server, Media Router, and basic alarm/event management",
-        "Requires GSC-Om-S-1C ($200) camera connections and ADV-CAM-S maintenance"
+        "Legacy SC 5.10–5.12 base package (up to 50 cameras, 1 Archiver, 5 concurrent clients)",
+        "Note: In SC 5.13+, use GSC-BASE-S ($0.00) which expands limits to 100 cameras, 25 clients, and includes AD + AutoVu Base"
       ],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
       id: "genetec-gsc-om-p-base",
       vendor: "Genetec",
-      model: "Genetec Security Center Omnicast Professional Base Package",
+      model: "Genetec Omnicast Professional Base Package (Legacy SC 5.10–5.12)",
       sku: "GSC-Om-P",
       role: "Software License",
       category: "vms_software",
@@ -990,18 +1033,17 @@ const SOFTWARE_DATABASE = {
       maxCameras: 100,
       maxClients: 10,
       msrp: 1750,
-      description: "Mid-market Security Center Omnicast Professional base package supporting up to 100 cameras, multiple Archivers, and up to 10 concurrent clients.",
+      description: "Legacy Security Center 5.10–5.12 Omnicast Professional base package (up to 100 cameras, 10 clients). Retired in SC 5.13+ in favor of GSC-BASE-S ($0) and GSC-BASE-E ($0).",
       keyFeatures: [
-        "Supports up to 100 cameras, multiple distributed Archiver roles, and up to 10 Security Desk clients",
-        "Includes 5 free Security Desk / Web Client connections in base package, Camera Sequences, and Zone Monitoring",
-        "Requires GSC-Om-P-1C ($260) camera connections and ADV-CAM-P maintenance"
+        "Legacy SC 5.10–5.12 Professional tier supporting up to 100 cameras and 10 clients",
+        "Requires GSC-Om-P-1C ($260) camera connections and ADV-CAM-P maintenance for existing Pro system expansions"
       ],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
       id: "genetec-gsc-base-514",
       vendor: "Genetec",
-      model: "Genetec Security Center Omnicast Enterprise Base Package",
+      model: "Genetec Omnicast Enterprise Base Package (Legacy SC 5.10–5.12)",
       sku: "GSC-Om-E",
       role: "Software License",
       category: "vms_software",
@@ -1009,11 +1051,10 @@ const SOFTWARE_DATABASE = {
       licenseType: "Base Server License",
       tier: "Enterprise",
       msrp: 3650,
-      description: "Full Enterprise Security Center Omnicast base package supporting unlimited cameras, multi-role Archivers (up to 300 cams/role), Standby Failover, Auxiliary Archiving, and Federation.",
+      description: "Legacy Security Center 5.10–5.12 Omnicast Enterprise base package ($3,650). Replaced by $0 GSC-BASE-E in SC 5.13+ which also bundles Failover Cameras, Failover Directory, Plan Manager Advanced Unlimited, Unlimited Clients, and AD.",
       keyFeatures: [
-        "Includes Directory Server, unlimited Archiver Role support, Media Router, and 5 Security Desk client connections",
-        "Supports Standby Archiver Failover, Failover Directory, Auxiliary Archiving, Hardware Matrix, and Active Directory SSO",
-        "Requires GSC-Om-E-1C ($325) camera connections and ADV-CAM-E maintenance"
+        "Legacy SC 5.10–5.12 Omnicast Enterprise base package ($3,650)",
+        "Note: In SC 5.13+, use GSC-BASE-E ($0.00) which includes Omnicast Enterprise, Synergis Enterprise, Failover, Plan Manager Unlimited, and Site Client License"
       ],
       datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
     },
