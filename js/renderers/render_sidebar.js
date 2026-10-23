@@ -1300,28 +1300,137 @@ function buildPathwaysSidebar(container, baseSet) {
 }
 
 function buildCamerasSidebar(container, baseSet) {
-  const vendors = ["Axis Communications", "Hanwha Vision", "Avigilon", "Bosch Security"];
-  const formFactors = [
-    { id: "dome", label: "Fixed / Vandal Dome" },
-    { id: "bullet", label: "IR Bullet / LPR" },
-    { id: "ptz", label: "PTZ / PTRZ Pan-Tilt-Zoom" },
-    { id: "multisensor", label: "Multi-Sensor / Panoramic" }
-  ];
-  const resolutions = [
-    { id: "2mp", label: "2 MP (1080p Full HD)" },
-    { id: "4mp", label: "4 MP – 6 MP (QHD)" },
-    { id: "8mp", label: "4K UHD (8 MP)" },
-    { id: "multi", label: "15 MP – 32 MP (Multi-Imager)" }
-  ];
+  const isGenericMode = (typeof window.isGenericCameraModeActive === "function")
+    ? window.isGenericCameraModeActive()
+    : (typeof cameraDesignMode !== "undefined" && cameraDesignMode === "generic");
 
   const camVendors = typeof selectedCamVendors !== "undefined" ? selectedCamVendors : [];
   const camForms = typeof selectedCamFormFactors !== "undefined" ? selectedCamFormFactors : [];
   const camRes = typeof selectedCamResolutions !== "undefined" ? selectedCamResolutions : [];
 
+  const modeToggleHtml = `
+    <div class="p-2.5 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Camera Design Mode</span>
+        <span class="text-[9px] font-mono px-1.5 py-0.5 rounded ${isGenericMode ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-sky-500/15 text-sky-300 border border-sky-500/30'}">${isGenericMode ? 'Initial Sizing' : 'Actual SKUs'}</span>
+      </div>
+      <div class="grid grid-cols-2 gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+        <button type="button" onclick="setCameraDesignMode('generic')" class="px-2 py-1.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${isGenericMode ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
+          Generic Types
+        </button>
+        <button type="button" onclick="setCameraDesignMode('specific')" class="px-2 py-1.5 rounded-md text-[10px] font-bold transition-all cursor-pointer ${!isGenericMode ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'}">
+          Actual Parts
+        </button>
+      </div>
+    </div>
+  `;
+
+  if (isGenericMode) {
+    const genericArchitectures = [
+      { id: "single", label: "Single-Sensor Fixed (2MP–8MP)" },
+      { id: "fisheye", label: "360° Fisheye Panoramic (6MP/12MP)" },
+      { id: "multisensor", label: "Multi-Sensor (Dual / Quad / 5-Sensor)" },
+      { id: "ptz", label: "PTZ Pan-Tilt-Zoom (30W PoE+)" },
+      { id: "lpr", label: "LPR License Plate (60W PoE++)" }
+    ];
+    const poeFilters = [
+      { id: "poe_af", label: "802.3af Standard PoE (≤15.4W)" },
+      { id: "poe_at", label: "802.3at PoE+ High Power (≤30W)" },
+      { id: "poe_bt60", label: "802.3bt PoE++ Type 3 (60W)" }
+    ];
+    const resolutions = [
+      { id: "2mp", label: "2 MP (1080p Full HD)" },
+      { id: "4mp", label: "4 MP – 6 MP (QHD / 360°)" },
+      { id: "8mp", label: "8 MP (4K UHD)" },
+      { id: "multi", label: "12 MP – 20 MP (Multi-Imager / 360°)" }
+    ];
+
+    container.innerHTML = `
+      <div class="space-y-5">
+        ${modeToggleHtml}
+
+        <!-- Generic Camera Architecture -->
+        <div class="pt-3 border-t border-slate-800/80">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Camera Type &amp; Architecture</span>
+          <div class="space-y-1.5">
+            ${genericArchitectures.map(ff => {
+              const isChecked = camForms.includes(ff.id);
+              return `
+                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" onchange="toggleFilterItem('camFormFactor', '${ff.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+                    <span>${ff.label}</span>
+                  </div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- PoE Power Budget Tier -->
+        <div class="pt-3 border-t border-slate-800/80">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Generic PoE Power Class</span>
+          <div class="space-y-1.5">
+            ${poeFilters.map(pf => {
+              const isChecked = camForms.includes(pf.id);
+              return `
+                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" onchange="toggleFilterItem('camFormFactor', '${pf.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0">
+                    <span>${pf.label}</span>
+                  </div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Sensor Resolution -->
+        <div class="pt-3 border-t border-slate-800/80">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Resolution Tier</span>
+          <div class="space-y-1.5">
+            ${resolutions.map(r => {
+              const isChecked = camRes.includes(r.id);
+              return `
+                <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
+                  <div class="flex items-center gap-2">
+                    <input type="checkbox" onchange="toggleFilterItem('camResolution', '${r.id}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+                    <span>${r.label}</span>
+                  </div>
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  const vendors = ["Axis Communications", "Hanwha Vision", "Avigilon", "Bosch Security"];
+  const formFactors = [
+    { id: "dome", label: "Fixed / Vandal Dome" },
+    { id: "bullet", label: "IR Bullet / LPR" },
+    { id: "fisheye", label: "360° Fisheye Panoramic" },
+    { id: "ptz", label: "PTZ / PTRZ Pan-Tilt-Zoom" },
+    { id: "multisensor", label: "Multi-Sensor / Panoramic" },
+    { id: "lpr", label: "Dedicated LPR (60W PoE++)" }
+  ];
+  const resolutions = [
+    { id: "2mp", label: "2 MP (1080p Full HD)" },
+    { id: "4mp", label: "4 MP – 6 MP (QHD)" },
+    { id: "8mp", label: "4K UHD (8 MP)" },
+    { id: "multi", label: "12 MP – 32 MP (Multi-Imager)" }
+  ];
+
+  const showOpticalDetails = typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableSpecificCameraDetails === true;
+
   container.innerHTML = `
     <div class="space-y-5">
+      ${modeToggleHtml}
+
       <!-- Camera Manufacturers -->
-      <div>
+      <div class="pt-3 border-t border-slate-800/80">
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Camera Manufacturer</span>
         <div class="space-y-1.5">
           ${vendors.map(v => {
@@ -1360,7 +1469,7 @@ function buildCamerasSidebar(container, baseSet) {
 
       <!-- Sensor Resolution -->
       <div class="pt-3 border-t border-slate-800/80">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Sensor Resolution (DORI)</span>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Sensor Resolution</span>
         <div class="space-y-1.5">
           ${resolutions.map(r => {
             const isChecked = camRes.includes(r.id);
@@ -1376,22 +1485,24 @@ function buildCamerasSidebar(container, baseSet) {
         </div>
       </div>
 
-      <!-- Technical Mandates -->
-      <div class="pt-3 border-t border-slate-800/80 space-y-2">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Optical & Security Mandates</span>
-        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-          <input type="checkbox" onchange="requireCamAnalytics = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamAnalytics !== 'undefined' && requireCamAnalytics) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
-          <span>Edge AI / Deep Learning Analytics</span>
-        </label>
-        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-          <input type="checkbox" onchange="requireCamVandal = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamVandal !== 'undefined' && requireCamVandal) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
-          <span>IK10 Vandal-Resistant Housing</span>
-        </label>
-        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
-          <input type="checkbox" onchange="requireCamTaa = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamTaa !== 'undefined' && requireCamTaa) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
-          <span>NDAA / TAA Compliant Only</span>
-        </label>
-      </div>
+      ${showOpticalDetails ? `
+        <!-- Technical Mandates -->
+        <div class="pt-3 border-t border-slate-800/80 space-y-2">
+          <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Optical & Security Mandates</span>
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+            <input type="checkbox" onchange="requireCamAnalytics = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamAnalytics !== 'undefined' && requireCamAnalytics) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+            <span>Edge AI / Deep Learning Analytics</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+            <input type="checkbox" onchange="requireCamVandal = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamVandal !== 'undefined' && requireCamVandal) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0">
+            <span>IK10 Vandal-Resistant Housing</span>
+          </label>
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer hover:text-white">
+            <input type="checkbox" onchange="requireCamTaa = this.checked; buildSidebarFilters(); runActiveFilter();" ${(typeof requireCamTaa !== 'undefined' && requireCamTaa) ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0">
+            <span>NDAA / TAA Compliant Only</span>
+          </label>
+        </div>
+      ` : ''}
     </div>
   `;
 }

@@ -1119,10 +1119,15 @@ const VideoStorageSizer = {
       if (!item || item.parentInstanceId) return;
       const cat = (item.category || "").toLowerCase();
       const role = (item.role || "").toLowerCase();
-      if (cat === "cameras" || role === "camera" || (typeof isCameraDevice === "function" && isCameraDevice(item))) {
+      if (cat === "cameras" || cat === "camera" || role === "camera" || (typeof isCameraDevice === "function" && isCameraDevice(item))) {
         const qty = parseInt(item.qty ?? item.quantity, 10) || 1;
-        const optics = this.parseCameraOptics(item);
-        const key = `${item.sku || item.model || "CAM"}_${optics.mpPerHead}_${optics.heads}`;
+        const catRef = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function")
+          ? CatalogRegistry.get(item.id || item.sku)
+          : null;
+        const optics = this.parseCameraOptics(item, catRef);
+        const itemFps = Number(item.defaultFps || catRef?.defaultFps || fallbackDefaults.fps || this.state.fps || 15) || 15;
+        const itemCodec = this.normalizeCodec(item.compression || catRef?.compression || fallbackDefaults.codec || this.state.codec || "H.265");
+        const key = `${item.sku || item.model || "CAM"}_${optics.mpPerHead}_${optics.heads}_${itemFps}`;
         if (map.has(key)) {
           map.get(key).qty += qty;
         } else {
@@ -1132,8 +1137,8 @@ const VideoStorageSizer = {
             qty,
             heads: optics.heads,
             resolutionMp: optics.mpPerHead,
-            fps: fallbackDefaults.fps || this.state.fps || 15,
-            codec: fallbackDefaults.codec || this.state.codec || "H.265",
+            fps: itemFps,
+            codec: itemCodec,
             sceneActivity: fallbackDefaults.sceneActivity || this.state.sceneActivity || "medium",
             motionDutyPct: fallbackDefaults.motionDutyPct || this.state.motionDutyPct || 50,
             retentionDays: fallbackDefaults.retentionDays || this.state.retentionDays || 30
@@ -1175,10 +1180,24 @@ const VideoStorageSizer = {
   /**
    * Parses sensor megapixels and sensor head count from a camera catalog/BOM item.
    */
-  parseCameraOptics(item) {
+  parseCameraOptics(item, catRef = null) {
     if (!item) return { mpPerHead: 4, heads: 1, totalMp: 4 };
-    const resStr = String(item.resolution || item.model || "");
-    let totalMp = parseFloat(item.sensorMegapixels) || 0;
+    const ref = catRef || ((typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function") ? CatalogRegistry.get(item.id || item.sku) : null);
+
+    // 1. Honor explicit heads & mpPerHead (used by Generic Camera Types and multi-sensor catalog entries)
+    const explicitHeads = parseInt(item.heads ?? ref?.heads, 10) || 0;
+    const explicitMpPerHead = parseFloat(item.mpPerHead ?? ref?.mpPerHead) || 0;
+    const explicitTotalMp = parseFloat(item.sensorMegapixels ?? ref?.sensorMegapixels) || 0;
+    if (explicitHeads > 0 && explicitMpPerHead > 0) {
+      return {
+        mpPerHead: explicitMpPerHead,
+        heads: explicitHeads,
+        totalMp: explicitTotalMp || (explicitHeads * explicitMpPerHead)
+      };
+    }
+
+    const resStr = String(item.resolution || ref?.resolution || item.model || "");
+    let totalMp = explicitTotalMp;
     if (!totalMp) {
       const m = resStr.match(/(\d+)\s*MP/i);
       if (m) totalMp = parseInt(m[1], 10);
@@ -1188,12 +1207,15 @@ const VideoStorageSizer = {
       else totalMp = 4;
     }
 
-    let heads = 1;
-    if (/4x|quad|multi-sensor.*4|360.*multi/i.test(resStr + " " + (item.formFactor || ""))) heads = 4;
-    else if (/3x|triple|multi-sensor.*3/i.test(resStr + " " + (item.formFactor || ""))) heads = 3;
-    else if (/2x|dual-head|dual-sensor|bi-directional/i.test(resStr + " " + (item.formFactor || ""))) heads = 2;
+    let heads = explicitHeads || 1;
+    if (!explicitHeads) {
+      if (/5-sensor|4x.*ptz/i.test(resStr + " " + (item.formFactor || "") + " " + (item.model || ""))) heads = 5;
+      else if (/4x|quad|multi-sensor.*4|360.*multi/i.test(resStr + " " + (item.formFactor || ""))) heads = 4;
+      else if (/3x|triple|multi-sensor.*3/i.test(resStr + " " + (item.formFactor || ""))) heads = 3;
+      else if (/2x|dual-head|dual-sensor|bi-directional/i.test(resStr + " " + (item.formFactor || ""))) heads = 2;
+    }
 
-    const mpPerHead = heads > 1 && totalMp >= heads * 2 ? Math.round(totalMp / heads) : totalMp;
+    const mpPerHead = explicitMpPerHead || (heads > 1 && totalMp >= heads * 2 ? Math.round(totalMp / heads) : totalMp);
     return { mpPerHead, heads, totalMp };
   },
 

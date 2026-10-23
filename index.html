@@ -496,7 +496,7 @@
                     <div class="text-[10px] text-slate-400 font-normal">Orion 2-line labels &amp; pull sheets</div>
                   </div>
                 </button>
-                <button onclick="toggleProjectLevelMenu(); openWalkReconciliationModal()" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-emerald-950/60 text-slate-200 hover:text-emerald-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
+                <button id="walkAuditMenuBtn" onclick="toggleProjectLevelMenu(); openWalkReconciliationModal()" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-emerald-950/60 text-slate-200 hover:text-emerald-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
                   <div class="p-1 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     <i data-lucide="clipboard-check" class="w-3.5 h-3.5"></i>
                   </div>
@@ -1548,7 +1548,7 @@
                     <input type="checkbox" id="physLayer-cameras" checked onchange="setPhysicalLayerFilter('cameras', this.checked)" class="rounded bg-slate-900 border-slate-700 text-emerald-500 focus:ring-0">
                     <span class="flex items-center gap-1.5"><i data-lucide="camera" class="w-3.5 h-3.5 text-emerald-400"></i> Cameras &amp; Video</span>
                   </label>
-                  <label class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
+                  <label id="physLayerLabel-access" class="flex items-center gap-2 text-slate-300 hover:text-white cursor-pointer select-none">
                     <input type="checkbox" id="physLayer-access" checked onchange="setPhysicalLayerFilter('access', this.checked)" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
                     <span class="flex items-center gap-1.5"><i data-lucide="shield" class="w-3.5 h-3.5 text-cyan-400"></i> Access Control &amp; Doors</span>
                   </label>

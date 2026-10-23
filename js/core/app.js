@@ -29,6 +29,120 @@ function renderVersionBadge() {
   el.className = `text-[10px] font-mono border px-1.5 py-0.5 rounded hidden xl:inline ${env.badgeClass}`;
 }
 
+// =========================================================================
+// BETA FEATURE FLAGS & CAMERA DESIGN MODE CONFIGURATION
+// Set flags to true here (or call window.setFeatureFlag(key, true)) to
+// re-enable deferred modules as they are ready for production release.
+// =========================================================================
+const FEATURE_FLAGS = {
+  enableAccessControl: false,         // Hides Access Control & Doors sub-tab, Power & Trove Enclosures sub-tab, Access Software sub-tab, Door Builder, and ACS CAD layers for Beta
+  enableSpecificCameraDetails: false, // Hides unfinished optical camera details (DORI distances, horizontal FOV angle sliders/cones) for Beta
+  enableWalkAudit: false,             // Hides Onsite Camera Walk Audit in Project menu for Beta
+  enableStorageDrivesTab: false       // Hides Storage Drives & SAN sub-tab in Compute & Storage for Beta
+};
+window.FEATURE_FLAGS = FEATURE_FLAGS;
+
+// Camera Specification Mode:
+// "generic"  = Initial Design Mode (Specify cameras by Generic Type & Resolution with built-in PoE & Storage defaults)
+// "specific" = Full Design Mode (Switch generic cameras to actual vendor SKUs via Bulk Mapping + Individual Override)
+let cameraDesignMode = "generic";
+let showCameraBulkUpgradePanel = true;
+window.cameraDesignMode = cameraDesignMode;
+window.showCameraBulkUpgradePanel = showCameraBulkUpgradePanel;
+
+function isGenericCameraModeActive() {
+  return cameraDesignMode === "generic";
+}
+window.isGenericCameraModeActive = isGenericCameraModeActive;
+
+function setCameraDesignMode(mode) {
+  const normalized = mode === "specific" ? "specific" : "generic";
+  cameraDesignMode = normalized;
+  window.cameraDesignMode = normalized;
+
+  if (normalized === "generic") {
+    selectedCamVendors = [];
+    requireCamAnalytics = false;
+    requireCamVandal = false;
+    requireCamTaa = false;
+  }
+
+  if (typeof GlobalSearchEngine !== "undefined" && typeof GlobalSearchEngine.buildIndex === "function") {
+    GlobalSearchEngine.buildIndex();
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof buildSidebarFilters === "function") buildSidebarFilters();
+  if (typeof runActiveFilter === "function") runActiveFilter();
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof showToast === "function") {
+    showToast(
+      normalized === "generic"
+        ? "Switched to Initial Design Mode (Generic Camera Types & Default PoE/Bitrate)."
+        : "Switched to Full Design Mode (Actual Manufacturer Parts & Bulk SKU Assignment)."
+    );
+  }
+}
+window.setCameraDesignMode = setCameraDesignMode;
+
+function getEnabledDomainModes(domainKey) {
+  const def = DOMAIN_DEFINITIONS[domainKey];
+  if (!def || !Array.isArray(def.modes)) return [];
+  return def.modes.filter(m => {
+    if (!FEATURE_FLAGS.enableAccessControl && (m.id === "access_control" || m.id === "power_enclosures" || m.id === "access_software")) {
+      return false;
+    }
+    if (!FEATURE_FLAGS.enableStorageDrivesTab && m.id === "storage") {
+      return false;
+    }
+    return true;
+  });
+}
+window.getEnabledDomainModes = getEnabledDomainModes;
+
+function applyFeatureFlagsToDOM() {
+  // 1. Hide/show Walk Audit menu & toolbar items
+  ["walkAuditMenuBtn", "btnWalkAuditModal", "btnCanvasFieldAudit"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", !FEATURE_FLAGS.enableWalkAudit);
+  });
+
+  // 2. Hide/show Access Control layer filter on Physical Layout
+  ["layerBtn-access", "physLayerLabel-access"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", !FEATURE_FLAGS.enableAccessControl);
+  });
+
+  // 3. Hide/show Optical FOV/DORI details on Physical Layout if disabled
+  ["physToggleFovBtn", "btnToggleCameraFov", "btnToggleDoriBands"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle("hidden", !FEATURE_FLAGS.enableSpecificCameraDetails);
+  });
+}
+window.applyFeatureFlagsToDOM = applyFeatureFlagsToDOM;
+
+function setFeatureFlag(flagKey, enabled) {
+  if (!(flagKey in FEATURE_FLAGS)) return false;
+  FEATURE_FLAGS[flagKey] = Boolean(enabled);
+  applyFeatureFlagsToDOM();
+  if (typeof GlobalSearchEngine !== "undefined" && typeof GlobalSearchEngine.buildIndex === "function") {
+    GlobalSearchEngine.buildIndex();
+  }
+  // Ensure active mode is still enabled
+  const enabledModes = getEnabledDomainModes(activeDomain);
+  if (enabledModes.length > 0 && !enabledModes.some(m => m.id === currentMode)) {
+    currentMode = enabledModes[0].id;
+    window.currentMode = currentMode;
+  }
+  buildDomainNavigation();
+  buildSubModeNavigation();
+  buildCalculatorStrip();
+  buildSidebarFilters();
+  runActiveFilter();
+  if (typeof updateBOMView === "function") updateBOMView();
+  return true;
+}
+window.setFeatureFlag = setFeatureFlag;
+
 // Active Navigation State
 let activeDomain = "networking"; // "networking" | "physical_security" | "compute_storage" | "infrastructure" | "software"
 let currentMode = "access";      // Active sub-mode within the domain
@@ -297,8 +411,16 @@ const debouncedRunActiveFilter = debounce(() => {
 // -----------------------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
   renderVersionBadge();
+  applyFeatureFlagsToDOM();
   if (typeof StorageService !== "undefined") {
     StorageService.restoreStateFromLocalStorage();
+  }
+
+  // Ensure restored currentMode is enabled under FEATURE_FLAGS
+  const enabledModes = getEnabledDomainModes(activeDomain);
+  if (enabledModes.length > 0 && !enabledModes.some(m => m.id === currentMode)) {
+    currentMode = enabledModes[0].id;
+    window.currentMode = currentMode;
   }
 
   buildDomainNavigation();
@@ -388,10 +510,11 @@ function switchDomain(domainKey, openTabFlag = true) {
   window.activeDomain = activeDomain;
 
   // Restore the last active sub-mode for this domain instead of resetting to modes[0]
+  const enabledModes = getEnabledDomainModes(domainKey);
   const savedMode = lastActiveModeByDomain[domainKey];
-  const validMode = DOMAIN_DEFINITIONS[domainKey].modes.some(m => m.id === savedMode)
+  const validMode = enabledModes.some(m => m.id === savedMode)
     ? savedMode
-    : DOMAIN_DEFINITIONS[domainKey].modes[0].id;
+    : (enabledModes[0] ? enabledModes[0].id : DOMAIN_DEFINITIONS[domainKey].modes[0].id);
   currentMode = validMode;
   window.currentMode = currentMode;
   lastActiveModeByDomain[domainKey] = currentMode;
@@ -417,6 +540,14 @@ function switchDomain(domainKey, openTabFlag = true) {
 }
 
 function switchMode(newMode) {
+  // Guard against disabled modes when FEATURE_FLAGS are off
+  if (!FEATURE_FLAGS.enableAccessControl && (newMode === "access_control" || newMode === "power_enclosures" || newMode === "access_software")) {
+    newMode = newMode === "access_software" ? "vms_software" : "cameras";
+  }
+  if (!FEATURE_FLAGS.enableStorageDrivesTab && newMode === "storage") {
+    newMode = "servers";
+  }
+
   saveModeFilterState(currentMode);
 
   // Find parent domain for this mode
@@ -475,8 +606,9 @@ function buildSubModeNavigation() {
 
   const currentDef = DOMAIN_DEFINITIONS[activeDomain];
   if (!currentDef) return;
+  const enabledModes = getEnabledDomainModes(activeDomain);
 
-  container.innerHTML = currentDef.modes.map(mode => {
+  container.innerHTML = enabledModes.map(mode => {
     const isActive = currentMode === mode.id;
     const activeClasses = isActive
       ? "bg-brand-600/20 text-brand-300 font-bold border-brand-500/40 shadow-sm"
@@ -1199,7 +1331,192 @@ function buildCalculatorStrip() {
         </div>
       </div>
     `;
-  } else if (currentMode === "cameras" || currentMode === "servers" || currentMode === "storage") {
+  } else if (currentMode === "cameras") {
+    // Camera Design Mode (Initial Generic vs Full Actual Parts), Live PoE/Storage Summary & Bulk SKU Upgrade Strip
+    container.classList.remove("hidden");
+    const isGenericMode = isGenericCameraModeActive();
+    const bomCams = (projectBOM || []).filter(i => !i.parentInstanceId && (i.role === "Camera" || i.category === "camera" || i.category === "cameras" || i.deviceTypePrefix === "CAM" || i.deviceTypePrefix === "LPR"));
+    const totalBomCams = bomCams.reduce((s, c) => s + (parseInt(c.qty, 10) || 1), 0);
+    const genericBomCams = bomCams.filter(c => c.isGenericCamera || String(c.id || c.sku || "").startsWith("gen-cam-") || String(c.sku || "").startsWith("GEN-CAM-"));
+    const totalGenericCams = genericBomCams.reduce((s, c) => s + (parseInt(c.qty, 10) || 1), 0);
+    const totalSpecificCams = totalBomCams - totalGenericCams;
+
+    // Compute live PoE & Storage from BOM cameras
+    let camAf = 0, camAt = 0, camBt60 = 0, camRawWatts = 0;
+    bomCams.forEach(c => {
+      const q = parseInt(c.qty, 10) || 1;
+      const std = String(c.poeStandard || "").toLowerCase();
+      const maxW = parseFloat(c.maxPowerWatts || c.powerConsumptionWatts || 12);
+      const drawW = parseFloat(c.powerConsumptionWatts || maxW || 8);
+      camRawWatts += drawW * q;
+      if (c.poeTierKey === "bt60" || std.includes("bt") || maxW > 30) camBt60 += q;
+      else if (c.poeTierKey === "at" || std.includes("at") || maxW > 15.4) camAt += q;
+      else camAf += q;
+    });
+    camRawWatts = Math.round(camRawWatts * 10) / 10;
+
+    const vCalcCam = (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function")
+      ? VideoStorageSizer.calculateFromBOM(projectBOM, { sourceMode: totalBomCams > 0 ? "bom" : "manual" })
+      : { totalSensors: totalBomCams, peakIngressMbps: 0, requiredUsableTB: 0 };
+
+    // Group generic cameras in BOM by generic type for Bulk Assignment
+    const genericGroupsMap = new Map();
+    genericBomCams.forEach(c => {
+      const gKey = c.id || c.genericCameraTypeId || c.sku;
+      const gRef = (typeof CatalogRegistry !== "undefined" && CatalogRegistry.get(gKey)) ||
+                   (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES.find(g => g.id === gKey || g.sku === gKey || g.genericTypeKey === gKey) : null) ||
+                   c;
+      const mapId = gRef.id || gKey;
+      if (!genericGroupsMap.has(mapId)) {
+        genericGroupsMap.set(mapId, {
+          genericId: mapId,
+          sku: gRef.sku || c.sku,
+          model: gRef.model || c.model,
+          resolution: gRef.resolution || c.resolution,
+          poeStandard: gRef.poeStandard || c.poeStandard,
+          powerConsumptionWatts: gRef.powerConsumptionWatts || c.powerConsumptionWatts,
+          streamBitrateMbps: gRef.streamBitrateMbps || c.streamBitrateMbps,
+          recommendedUpgradeSkus: Array.isArray(gRef.recommendedUpgradeSkus) ? gRef.recommendedUpgradeSkus : [],
+          count: 0
+        });
+      }
+      genericGroupsMap.get(mapId).count += (parseInt(c.qty, 10) || 1);
+    });
+    const genericGroups = Array.from(genericGroupsMap.values());
+    const allSpecificCams = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
+
+    container.innerHTML = `
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3 shadow-lg">
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <!-- Left: Camera Specification Mode Switcher -->
+          <div class="flex items-start sm:items-center gap-3">
+            <div class="p-2.5 rounded-xl ${isGenericMode ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400' : 'bg-sky-500/15 border border-sky-500/30 text-sky-400'} shrink-0">
+              <i data-lucide="camera" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Camera Specification &amp; Sizing Mode</h4>
+                <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <button onclick="setCameraDesignMode('generic')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isGenericMode ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}" title="Specify cameras by generic type and resolution (2MP, 4MP, 5MP, 8MP 4K, 360 Fisheye, Dual/Quad/5-Sensor, PTZ, 60W LPR). Automatically drives PoE and Storage calculations.">
+                    <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                    <span>Initial Design (Generic Types)</span>
+                  </button>
+                  <button onclick="setCameraDesignMode('specific')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${!isGenericMode ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}" title="Switch to actual manufacturer catalog parts and bulk-upgrade generic cameras to real SKUs.">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                    <span>Full Design (Actual Parts)</span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">
+                ${isGenericMode
+                  ? 'Specify cameras by <strong class="text-emerald-300">Generic Type &amp; Resolution</strong>. Built-in PoE classes (<code class="text-amber-300">802.3af 15W</code>, <code class="text-sky-300">802.3at 30W</code>, <code class="text-rose-300">802.3bt 60W</code>) and bitrates automatically drive Switch PoE &amp; Server Storage sizing.'
+                  : 'Browse <strong class="text-sky-300">Actual Manufacturer Parts</strong> or bulk-assign generic cameras in your quote to real catalog SKUs while preserving rack, switch port &amp; floorplan placements.'}
+              </p>
+            </div>
+          </div>
+
+          <!-- Right: Live Camera PoE & Storage Telemetry -->
+          <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+            <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Quoted Cameras</div>
+                <div class="text-xs font-mono font-bold text-white">
+                  ${totalBomCams} Cam${totalBomCams === 1 ? '' : 's'}
+                  <span class="text-[10px] font-normal text-slate-400">(${totalGenericCams} Gen / ${totalSpecificCams} SKU)</span>
+                </div>
+              </div>
+              <div class="h-6 w-px bg-slate-800"></div>
+              <div title="802.3af (15.4W): ${camAf} | 802.3at PoE+ (30W): ${camAt} | 802.3bt PoE++ (60W): ${camBt60}">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Camera PoE Draw</div>
+                <div class="text-xs font-mono font-bold text-amber-400">
+                  ${camRawWatts}W <span class="text-[10px] text-slate-400">(${camAf}af/${camAt}at/${camBt60}bt)</span>
+                </div>
+              </div>
+              <div class="h-6 w-px bg-slate-800"></div>
+              <div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Video Bandwidth / Storage</div>
+                <div class="text-xs font-mono font-bold text-sky-400">
+                  ${totalBomCams > 0 ? `${vCalcCam.peakIngressMbps} Mbps` : '0 Mbps'} <span class="text-slate-500">•</span> <span class="text-purple-300">${totalBomCams > 0 ? `${vCalcCam.requiredUsableTB} TB` : '0 TB'}</span>
+                </div>
+              </div>
+            </div>
+
+            ${totalGenericCams > 0 ? `
+              <button onclick="window.showCameraBulkUpgradePanel = !window.showCameraBulkUpgradePanel; showCameraBulkUpgradePanel = window.showCameraBulkUpgradePanel; buildCalculatorStrip();" class="px-3 py-2 rounded-xl ${showCameraBulkUpgradePanel ? 'bg-sky-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40'} text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer" title="Bulk-upgrade generic camera types in the project to actual manufacturer SKUs">
+                <i data-lucide="arrow-up-right-square" class="w-3.5 h-3.5"></i>
+                <span>Upgrade Generic Parts (${totalGenericCams})</span>
+              </button>
+            ` : ''}
+
+            <button onclick="switchMode('servers')" class="px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer" title="Open Storage, Bandwidth, RAID & Genetec 5.14 Archiver Calculator on the Servers tab">
+              <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+              <span>Storage &amp; Archiver Sizer &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        ${(totalGenericCams > 0 && (showCameraBulkUpgradePanel || !isGenericMode)) ? `
+          <!-- Bulk Generic-to-Actual SKU Upgrade Bar -->
+          <div class="bg-slate-950/90 border border-sky-500/30 rounded-xl p-3 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/40 text-[10px] font-mono font-bold text-sky-300 uppercase">Bulk + Individual Part Assignment</span>
+                <span class="text-xs font-bold text-white">Convert Generic Camera Types to Actual Catalog SKUs (${totalGenericCams} Generic Camera${totalGenericCams === 1 ? '' : 's'} in Quote)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="upgradeAllGenericCamerasToRecommended()" class="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Automatically upgrade all generic camera types in the quote to their primary recommended manufacturer SKU">
+                  <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                  <span>Upgrade All ${totalGenericCams}x to Recommended SKUs</span>
+                </button>
+                <button onclick="if (typeof TabManager !== 'undefined') TabManager.openTab('bom');" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer" title="Open BOM Studio to override individual cameras one-by-one">
+                  <i data-lucide="list-checks" class="w-3.5 h-3.5 text-sky-400"></i>
+                  <span>Per-Camera Override in BOM</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              ${genericGroups.map(grp => {
+                // Sort recommended SKUs first, then remaining catalog SKUs
+                const recSet = new Set(grp.recommendedUpgradeSkus || []);
+                const recCams = allSpecificCams.filter(c => recSet.has(c.sku) || recSet.has(c.id));
+                const otherCams = allSpecificCams.filter(c => !recSet.has(c.sku) && !recSet.has(c.id));
+                const selectId = `bulk-upgrade-select-${grp.genericId}`;
+                return `
+                  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2 rounded-lg bg-slate-900/90 border border-slate-800">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-[10px] font-bold">${grp.count}x</span>
+                        <span class="text-xs font-bold text-white truncate">${escapeHTML(grp.model)}</span>
+                      </div>
+                      <div class="text-[10px] font-mono text-slate-400 mt-0.5">
+                        ${escapeHTML(grp.resolution || '')} &bull; ${escapeHTML(grp.poeStandard || '802.3af')} (${grp.powerConsumptionWatts || 8}W) &bull; ${grp.streamBitrateMbps || 4} Mbps
+                      </div>
+                    </div>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <select id="${selectId}" class="bg-slate-950 border border-slate-700 text-slate-200 text-[11px] font-mono rounded-lg px-2 py-1.5 max-w-[230px] focus:outline-none focus:border-sky-500">
+                        ${recCams.length > 0 ? `
+                          <optgroup label="Recommended Matching SKUs">
+                            ${recCams.map(c => `<option value="${escapeHTML(c.sku)}">★ ${escapeHTML(c.vendor)} — ${escapeHTML(c.sku)} ($${(c.msrp || 0).toLocaleString()})</option>`).join('')}
+                          </optgroup>
+                        ` : ''}
+                        <optgroup label="All Catalog Cameras">
+                          ${otherCams.map(c => `<option value="${escapeHTML(c.sku)}">${escapeHTML(c.vendor)} — ${escapeHTML(c.sku)} (${escapeHTML(c.resolution || '')}, $${(c.msrp || 0).toLocaleString()})</option>`).join('')}
+                        </optgroup>
+                      </select>
+                      <button onclick="const el = document.getElementById('${selectId}'); if (el && el.value) upgradeGenericCameraTypeBulk('${grp.genericId}', el.value);" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold whitespace-nowrap cursor-pointer transition-colors">
+                        Apply to ${grp.count}x
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  } else if (currentMode === "servers" || currentMode === "storage") {
     // Interactive Video Storage, Bandwidth, RAID Drive Matrix & Genetec 5.14 Archiver Sizer
     container.classList.remove("hidden");
     const vCalc = (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function")
@@ -1419,6 +1736,7 @@ function buildCalculatorStrip() {
                         <option value="2" class="bg-slate-900" ${grp.heads === 2 ? 'selected' : ''}>2x Dual</option>
                         <option value="3" class="bg-slate-900" ${grp.heads === 3 ? 'selected' : ''}>3x Triple</option>
                         <option value="4" class="bg-slate-900" ${grp.heads === 4 ? 'selected' : ''}>4x Quad</option>
+                        <option value="5" class="bg-slate-900" ${grp.heads === 5 ? 'selected' : ''}>5x (4-Head+PTZ)</option>
                       </select>
                     </td>
                     <!-- Resolution -->

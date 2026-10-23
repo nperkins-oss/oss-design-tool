@@ -962,6 +962,8 @@ function renderAccessoryCard(acc) {
 function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor) {
   const selectEl = document.getElementById(`targetLocSelect-${safeId}`) || document.getElementById(`targetAccLocSelect-${safeSku}`);
   const targetLoc = selectEl ? selectEl.value : null;
+  const qtyEl = document.getElementById(`targetQtyInput-${safeId}`);
+  const qtyToAdd = qtyEl ? Math.max(1, parseInt(qtyEl.value, 10) || 1) : 1;
 
   const performAdd = (loc) => {
     let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
@@ -972,17 +974,17 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
       if (locs.length > 0) assignedLoc = locs.find(l => l.includes("MDF")) || locs[0];
     }
 
-    if (mode === "servers") {
+    if (mode === "servers" || mode === "workstations") {
       if (typeof addServerToBOM === "function") addServerToBOM(safeId, assignedLoc);
     } else if (mode === "cameras") {
-      if (typeof addCameraToBOM === "function") addCameraToBOM(safeId, assignedLoc);
+      if (typeof addCameraToBOM === "function") addCameraToBOM(safeId, assignedLoc, null, qtyToAdd);
     } else if (mode === "access_control") {
       if (typeof addAccessDeviceToBOM === "function") addAccessDeviceToBOM(safeId, assignedLoc);
     } else if (mode === "wireless") {
       if (typeof addWirelessToBOM === "function") addWirelessToBOM(safeId, false, assignedLoc);
-      else addOpticsToBOM(safeSku, safeModel, msrp, 1, safeVendor);
+      else addOpticsToBOM(safeSku, safeModel, msrp, qtyToAdd, safeVendor);
     } else {
-      // Infrastructure & Interconnect Domain Routing
+      // Infrastructure, Software & Interconnect Domain Routing
       const catItem = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function") ? CatalogRegistry.get(safeSku || safeId) : null;
       let role = "Infrastructure";
       if (mode === "racks") role = "Equipment Rack";
@@ -992,7 +994,9 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
       else if (mode === "power_cords") role = "Power Jumper Cable";
       else if (mode === "cabling") role = "Structured Cabling";
       else if (mode === "pathways") role = "Pathways & J-Hooks";
-      else if (mode === "accessories") {
+      else if (mode === "vms_software" || mode === "os_virtualization" || mode === "access_software") {
+        role = (catItem && catItem.role) || "Software License";
+      } else if (mode === "accessories") {
         if (catItem && catItem.role) role = catItem.role;
         else if (catItem && catItem.subCategory === "mounts") role = "Mounting Kit";
         else if (catItem && catItem.subCategory === "media_converters") role = "Media Converter";
@@ -1021,7 +1025,7 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
         poeBudget: 0,
         closetName: assignedLoc,
         rackId: assignedLoc,
-        qty: 1
+        qty: qtyToAdd
       };
 
       projectBOM.push(bomItem);
@@ -1029,7 +1033,7 @@ function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeV
         FacilityStore.notifyWorkspaceChange();
       }
       if (typeof showToast === "function") {
-        showToast(`Added ${safeModel} to ${assignedLoc}`);
+        showToast(`Added ${qtyToAdd > 1 ? `${qtyToAdd}x ` : ''}${safeModel} to ${assignedLoc}`);
       }
     }
   };
@@ -1070,12 +1074,48 @@ function renderCardByDomain(item, mode) {
         </div>
       ` : ''}
     `;
-  } else if (item.category === "cameras" || item.role === "Camera") {
+  } else if (item.category === "workstations" || item.role === "Workstation") {
     specStripHtml = `
-      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-2.5 text-xs font-mono space-y-1">
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-purple-900/40 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Processor &amp; RAM:</span><span class="text-slate-200 font-bold truncate max-w-[195px]" title="${escapeHTML(item.cpu || '')}">${escapeHTML(item.cpu || 'Intel Core i9')} (${item.ramGb || 32}GB)</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">GPU &amp; Displays:</span><span class="text-emerald-400 font-bold truncate max-w-[195px]" title="${escapeHTML(item.gpu || '')}">${item.maxMonitors || 4}x 4K Displays (${escapeHTML(item.gpu || 'RTX Workstation')})</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Decode Capacity:</span><span class="text-sky-300 font-bold">Up to ${item.decodeStreams1080p || 48}x 1080p Streams</span></div>
+      </div>
+      ${item.hostedRoles ? `
+        <div class="flex flex-wrap gap-1 mb-2.5">
+          ${item.hostedRoles.map(r => `<span class="text-[9.5px] font-mono px-1.5 py-0.5 rounded bg-purple-500/10 border border-purple-500/30 text-purple-300">${escapeHTML(r)}</span>`).join('')}
+        </div>
+      ` : ''}
+    `;
+  } else if (item.category === "vms_software" || item.category === "os_virtualization") {
+    specStripHtml = `
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-sky-900/40 mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">License Class:</span><span class="text-sky-300 font-bold">${escapeHTML(item.licenseType || item.role || 'Enterprise Software License')}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Platform:</span><span class="text-emerald-400 font-bold">${escapeHTML(item.vendor || 'Enterprise VMS')}</span></div>
+      </div>
+    `;
+  } else if (item.category === "cameras" || item.role === "Camera") {
+    const isGenCam = Boolean(item.isGenericCamera);
+    const showSpecificOptics = !isGenCam && (typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableSpecificCameraDetails === true);
+    const quotedCount = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.filter(b => !b.parentInstanceId && (b.id === item.id || b.sku === item.sku)).reduce((s, b) => s + (parseInt(b.qty, 10) || 1), 0)
+      : 0;
+    const poeBadgeColor = (item.poeTierKey === "bt60" || (item.maxPowerWatts || 0) >= 50)
+      ? "text-rose-300"
+      : ((item.poeTierKey === "at" || (item.maxPowerWatts || 0) >= 25) ? "text-sky-300" : "text-amber-300");
+
+    specStripHtml = `
+      ${quotedCount > 0 ? `
+        <div class="mb-2 px-2.5 py-1 rounded-lg bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-between text-[11px]">
+          <span class="text-emerald-300 font-bold flex items-center gap-1"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i> Quoted in Project</span>
+          <span class="font-mono font-bold text-white">${quotedCount}x Unit${quotedCount === 1 ? '' : 's'}</span>
+        </div>
+      ` : ''}
+      <div class="bg-slate-950 p-2.5 rounded-xl border ${isGenCam ? 'border-emerald-900/50' : 'border-slate-800'} mb-2.5 text-xs font-mono space-y-1">
+        <div class="flex justify-between"><span class="text-slate-500">Sensors &amp; FPS:</span><span class="text-teal-300 font-bold">${item.heads || 1}x ${item.mpPerHead || item.sensorMegapixels || 2}MP Stream${(item.heads || 1) > 1 ? 's' : ''} @ ${item.defaultFps || 15} FPS</span></div>
         <div class="flex justify-between"><span class="text-slate-500">Stream Bitrate:</span><span class="text-sky-300 font-bold">${item.streamBitrateMbps || 4} Mbps (${escapeHTML(item.compression || 'H.265')})</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">PoE Power:</span><span class="text-amber-300 font-bold">${item.powerConsumptionWatts || 8}W (${escapeHTML(item.poeStandard || '802.3af')})</span></div>
-        <div class="flex justify-between"><span class="text-slate-500">Low-Light IR:</span><span class="text-slate-200 font-bold">${item.irRangeMeters ? `${item.irRangeMeters}m Night Vision` : 'Visual Only'}</span></div>
+        <div class="flex justify-between"><span class="text-slate-500">PoE Power:</span><span class="${poeBadgeColor} font-bold">${item.powerConsumptionWatts || 8}W Typ / ${item.maxPowerWatts || 15.4}W Max (${escapeHTML(item.poeStandard || '802.3af')})</span></div>
+        ${showSpecificOptics ? `<div class="flex justify-between"><span class="text-slate-500">Optics / IR:</span><span class="text-slate-200 font-bold">${escapeHTML(item.lens || 'Varifocal')} • ${item.irRangeMeters ? `${item.irRangeMeters}m IR` : 'Day/Night'}</span></div>` : ''}
       </div>
     `;
   } else if (item.category === "access_control" || item.role === "Access Control") {
@@ -1221,11 +1261,12 @@ function renderCardByDomain(item, mode) {
         <div class="flex items-start justify-between gap-2 mb-2">
           <div>
             <div class="flex items-center gap-1.5 mb-1.5 flex-wrap">
-              <span class="badge-chip border border-brand-500/30 bg-brand-500/10 text-brand-300 font-bold">${safeVendor}</span>
+              <span class="badge-chip border ${item.isGenericCamera ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300' : 'border-brand-500/30 bg-brand-500/10 text-brand-300'} font-bold">${safeVendor}</span>
               <span class="badge-chip border border-slate-700 bg-slate-800 text-slate-300 uppercase">${safeType}</span>
               ${item.formFactor ? `<span class="badge-chip border border-slate-700 bg-slate-800 text-slate-400 font-mono">${escapeHTML(item.formFactor)}</span>` : ''}
               ${item.rackUnits ? `<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">${item.rackUnits}U Rack</span>` : ''}
               ${item.resolution ? `<span class="badge-chip border border-teal-500/40 bg-teal-500/10 text-teal-300">${escapeHTML(item.resolution)}</span>` : ''}
+              ${(item.category === "cameras" && item.poeStandard) ? `<span class="badge-chip border ${item.poeTierKey === 'bt60' ? 'border-rose-500/40 bg-rose-500/15 text-rose-300 font-bold' : (item.poeTierKey === 'at' ? 'border-sky-500/40 bg-sky-500/15 text-sky-300 font-bold' : 'border-amber-500/40 bg-amber-500/10 text-amber-300')}">${escapeHTML(item.poeStandard)} (${item.maxPowerWatts || 15.4}W)</span>` : ''}
               ${item.dualPsu ? `<span class="badge-chip border border-amber-500/30 bg-amber-500/10 text-amber-300 font-bold">Dual PSU</span>` : ''}
               ${isUps && isSine ? `<span class="badge-chip border border-teal-500/30 bg-teal-500/10 text-teal-300 font-bold">Pure Sine Wave</span>` : ''}
               ${isUps && isOnline ? `<span class="badge-chip border border-sky-500/30 bg-sky-500/10 text-sky-300 font-bold">Online 0ms</span>` : ''}
@@ -1254,7 +1295,7 @@ function renderCardByDomain(item, mode) {
             <span class="text-[11px] font-mono text-slate-400">SKU: ${safeSku}</span>
           </div>
           <div class="text-right">
-            <span class="text-xs text-slate-400 block">Est. MSRP</span>
+            <span class="text-xs text-slate-400 block">${item.isGenericCamera ? 'Budget Est.' : 'Est. MSRP'}</span>
             <span class="font-mono text-base font-bold text-emerald-400">$${(item.msrp || 0).toLocaleString()}</span>
           </div>
         </div>
@@ -1269,21 +1310,28 @@ function renderCardByDomain(item, mode) {
           <i data-lucide="${isCompared ? 'check-square' : 'plus-square'}" class="w-3.5 h-3.5"></i>
         </button>
 
-        ${item.datasheetPath ? `
+        ${(!item.isGenericCamera && item.datasheetPath) ? `
           <button onclick="openDatasheetModal('${item.datasheetPath}', '${safeModel}', '${safeSku}')" class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1 shrink-0 transition-colors" title="View Official Engineering Datasheet">
             <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-400"></i>
             <span class="text-[11px]">Datasheet</span>
           </button>
         ` : ''}
 
-        <select id="targetLocSelect-${safeId}" onchange="if(this.value==='new_location') handleLocationDropdownChange(this)" class="bg-slate-950 border border-slate-700 text-slate-300 text-[11px] font-bold rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 max-w-[130px] truncate" title="Destination Location">
+        ${(mode === "cameras" || mode === "vms_software" || mode === "os_virtualization") ? `
+          <div class="flex items-center bg-slate-950 border border-slate-700 rounded-lg px-1.5 py-1 shrink-0" title="Quantity to Add">
+            <span class="text-[9px] font-mono uppercase text-slate-400 mr-1">Qty:</span>
+            <input id="targetQtyInput-${safeId}" type="number" min="1" max="500" value="1" class="w-10 bg-transparent text-white text-xs font-mono font-bold text-center focus:outline-none" />
+          </div>
+        ` : ''}
+
+        <select id="targetLocSelect-${safeId}" onchange="if(this.value==='new_location') handleLocationDropdownChange(this)" class="bg-slate-950 border border-slate-700 text-slate-300 text-[11px] font-bold rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 max-w-[125px] truncate" title="Destination Location">
           ${allLocations.map(loc => `<option value="${escapeHTML(loc)}">${escapeHTML(loc)}</option>`).join('')}
           <option value="new_location">+ New Location...</option>
         </select>
 
-        <button onclick="${addActionCode}" class="flex-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md">
+        <button onclick="${addActionCode}" class="flex-1 px-3 py-1.5 rounded-lg ${item.isGenericCamera ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-brand-600 hover:bg-brand-500'} text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md cursor-pointer">
           <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-          <span>${mode === "power_cords" ? "Add Cord" : (mode === "pdus" ? "Add PDU" : (mode === "ups" ? "Add UPS" : (mode === "racks" ? "Add Rack" : "Add to Quote")))}</span>
+          <span>${mode === "power_cords" ? "Add Cord" : (mode === "pdus" ? "Add PDU" : (mode === "ups" ? "Add UPS" : (mode === "racks" ? "Add Rack" : (mode === "cameras" ? "Add Camera" : "Add to Quote"))))}</span>
         </button>
       </div>
     </div>

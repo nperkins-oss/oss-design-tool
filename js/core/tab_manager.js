@@ -456,6 +456,9 @@ const TabManager = (() => {
       const restored = [];
       parsed.openTabIds.forEach(rawKey => {
         const key = TAB_KEY_ALIASES[rawKey] || rawKey;
+        if (key === "walk_audit" && typeof window.FEATURE_FLAGS !== "undefined" && window.FEATURE_FLAGS.enableWalkAudit === false) {
+          return;
+        }
         const studio = STUDIO_REGISTRY[key];
         if (studio && !restored.some(t => t.id === key)) {
           restored.push({
@@ -697,7 +700,12 @@ const TabManager = (() => {
       },
       {
         title: "Project Delivery & Engineering",
-        keys: ["bom", "cable_schedule", "walk_audit", "drc", "submittal", "revisions"]
+        keys: ["bom", "cable_schedule", "walk_audit", "drc", "submittal", "revisions"].filter(k => {
+          if (k === "walk_audit" && typeof window.FEATURE_FLAGS !== "undefined" && window.FEATURE_FLAGS.enableWalkAudit === false) {
+            return false;
+          }
+          return true;
+        })
       }
     ];
 

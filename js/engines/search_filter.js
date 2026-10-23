@@ -980,9 +980,10 @@ function filterCablingStrategy(items, ctx) {
 }
 FilterEngine.register("cabling", filterCablingStrategy);
 
-// 7. IP Surveillance Cameras Strategy
+// 7. IP Surveillance Cameras Strategy (Supports both Generic Camera Types & Specific Vendor SKUs)
 function filterCamerasStrategy(items, ctx) {
   let results = items;
+  const isGenericMode = typeof window.isGenericCameraModeActive === "function" && window.isGenericCameraModeActive();
   const vendors = ctx.selectedCamVendors || (typeof selectedCamVendors !== "undefined" ? selectedCamVendors : []);
   const forms = ctx.selectedCamFormFactors || (typeof selectedCamFormFactors !== "undefined" ? selectedCamFormFactors : []);
   const resList = ctx.selectedCamResolutions || (typeof selectedCamResolutions !== "undefined" ? selectedCamResolutions : []);
@@ -990,17 +991,23 @@ function filterCamerasStrategy(items, ctx) {
   const reqVandal = typeof ctx.requireCamVandal !== "undefined" ? ctx.requireCamVandal : (typeof requireCamVandal !== "undefined" && requireCamVandal);
   const reqTaa = typeof ctx.requireCamTaa !== "undefined" ? ctx.requireCamTaa : (typeof requireCamTaa !== "undefined" && requireCamTaa);
 
-  if (vendors.length > 0) {
+  if (!isGenericMode && vendors.length > 0) {
     results = results.filter(c => vendors.some(v => (c.vendor || '').toLowerCase().includes(v.toLowerCase())));
   }
   if (forms.length > 0) {
     results = results.filter(c => {
-      const ff = ((c.formFactor || '') + ' ' + (c.model || '')).toLowerCase();
+      const ff = ((c.formFactor || '') + ' ' + (c.model || '') + ' ' + (c.poeTierKey || '')).toLowerCase();
       return forms.some(f => {
-        if (f === "dome") return ff.includes("dome");
-        if (f === "bullet") return ff.includes("bullet");
+        if (f === "single") return c.heads === 1 && !ff.includes("fisheye") && !ff.includes("ptz") && !ff.includes("lpr");
+        if (f === "fisheye") return ff.includes("fisheye") || ff.includes("360");
+        if (f === "dome") return ff.includes("dome") || ff.includes("turret");
+        if (f === "bullet") return ff.includes("bullet") || ff.includes("lpr");
         if (f === "ptz") return ff.includes("ptz") || ff.includes("ptrz");
-        if (f === "multisensor") return ff.includes("multi") || ff.includes("panoramic") || (c.sensorCount && c.sensorCount > 1);
+        if (f === "lpr") return ff.includes("lpr") || ff.includes("anpr") || ff.includes("license plate");
+        if (f === "multisensor") return ff.includes("multi") || ff.includes("panoramic") || ff.includes("dual") || ff.includes("quad") || (c.heads && c.heads > 1);
+        if (f === "poe_af") return c.poeTierKey === "af" || (c.poeStandard || "").toLowerCase().includes("af");
+        if (f === "poe_at") return c.poeTierKey === "at" || (c.poeStandard || "").toLowerCase().includes("at");
+        if (f === "poe_bt60") return c.poeTierKey === "bt60" || (c.poeStandard || "").toLowerCase().includes("bt") || (c.maxPowerWatts || 0) >= 50;
         return ff.includes(f);
       });
     });
@@ -1011,20 +1018,20 @@ function filterCamerasStrategy(items, ctx) {
       const resStr = (c.resolution || '').toLowerCase();
       return resList.some(r => {
         if (r === "2mp") return mp === 2 || resStr.includes("2mp") || resStr.includes("1080p");
-        if (r === "4mp") return (mp >= 4 && mp <= 6) || resStr.includes("4mp") || resStr.includes("5mp");
+        if (r === "4mp") return (mp >= 4 && mp <= 6) || resStr.includes("4mp") || resStr.includes("5mp") || resStr.includes("6mp");
         if (r === "8mp") return mp === 8 || resStr.includes("4k") || resStr.includes("8mp");
-        if (r === "multi") return mp > 8 || resStr.includes("multi") || resStr.includes("16mp") || resStr.includes("20mp") || resStr.includes("32mp");
+        if (r === "multi") return mp > 8 || (c.heads && c.heads > 1) || resStr.includes("multi") || resStr.includes("12mp") || resStr.includes("16mp") || resStr.includes("20mp") || resStr.includes("32mp");
         return false;
       });
     });
   }
-  if (reqAnalytics) {
+  if (!isGenericMode && reqAnalytics) {
     results = results.filter(c => c.deepLearningAnalytics === true || /ai|deep learning|analytics|dlpu/i.test((c.model || '') + ' ' + (c.keyFeatures || []).join(' ')));
   }
-  if (reqVandal) {
+  if (!isGenericMode && reqVandal) {
     results = results.filter(c => /ik10/i.test((c.ikRating || '') + ' ' + (c.formFactor || '')));
   }
-  if (reqTaa) {
+  if (!isGenericMode && reqTaa) {
     results = results.filter(c => c.taa === true);
   }
   return results;

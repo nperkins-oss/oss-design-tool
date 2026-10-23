@@ -438,15 +438,24 @@ const GlobalSearchEngine = {
       });
     };
 
-    // 0. Gather Physical Security & Compute (Cameras, Access Control, Servers/NVRs)
-    const cameras = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []);
+    // 0. Gather Physical Security & Compute (Cameras, Access Control, Servers/NVRs, Workstations)
+    const isGenericCams = (typeof window.isGenericCameraModeActive === "function") && window.isGenericCameraModeActive();
+    const cameras = isGenericCams
+      ? (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [])
+      : (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []);
     cameras.forEach(i => addEntry(i, "cameras"));
 
-    const accessCtrl = (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []);
-    accessCtrl.forEach(i => addEntry(i, "access_control"));
+    const acsEnabled = typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableAccessControl !== false;
+    if (acsEnabled) {
+      const accessCtrl = (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []);
+      accessCtrl.forEach(i => addEntry(i, "access_control"));
+    }
 
     const servers = (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []);
     servers.forEach(i => addEntry(i, "servers"));
+
+    const workstations = (typeof WORKSTATIONS_DATABASE !== "undefined" ? WORKSTATIONS_DATABASE : []);
+    workstations.forEach(i => addEntry(i, "workstations"));
 
     // 1. Gather switches
     const switches = (typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE : []);
@@ -863,8 +872,11 @@ const GlobalSearchEngine = {
 
     // Render Category Filter Tabs
     const tabsContainer = document.getElementById("globalDropdownCategoryTabs");
+    const acsEnabled = typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableAccessControl !== false;
     if (tabsContainer) {
-      tabsContainer.innerHTML = Object.entries(this.CATEGORY_CONFIG).map(([catKey, config]) => {
+      tabsContainer.innerHTML = Object.entries(this.CATEGORY_CONFIG)
+        .filter(([catKey]) => acsEnabled || catKey !== "access_control")
+        .map(([catKey, config]) => {
         const count = data.categoryCounts[catKey] || 0;
         const isActive = this._currentCategory === catKey;
         return `
@@ -1032,8 +1044,11 @@ const GlobalSearchEngine = {
 
     // Render Filter Chips
     const chipsContainer = document.getElementById("modalCategoryFilterChips");
+    const acsEnabled = typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableAccessControl !== false;
     if (chipsContainer) {
-      chipsContainer.innerHTML = Object.entries(this.CATEGORY_CONFIG).map(([catKey, config]) => {
+      chipsContainer.innerHTML = Object.entries(this.CATEGORY_CONFIG)
+        .filter(([catKey]) => acsEnabled || catKey !== "access_control")
+        .map(([catKey, config]) => {
         const count = data.categoryCounts[catKey] || 0;
         const isActive = this._currentCategory === catKey;
         return `

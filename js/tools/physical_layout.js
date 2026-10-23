@@ -4651,7 +4651,53 @@ function renderInspector() {
     const pwrBadge = (item && typeof PortEngine !== "undefined") ? PortEngine.getPowerBadge(item) : { label: "PoE", badgeLabel: "PoE", isExternal: false };
     const pwrWatts = item ? (parseFloat(item.powerConsumptionWatts || item.maxPowerWatts || 15.0) * (parseInt(item.qty, 10) || 1)) : 15.0;
     const isCameraNode = getDeviceLayerType(item || node) === "cameras";
-    const doriTelem = isCameraNode ? computeCameraDoriTelemetry(node, item) : null;
+    const showSpecificCameraOptics = typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableSpecificCameraDetails === true;
+    const doriTelem = (isCameraNode && showSpecificCameraOptics) ? computeCameraDoriTelemetry(node, item) : null;
+
+    let inspectorCameraSkuCardHtml = "";
+    if (isCameraNode && item) {
+      const allRealCams = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
+      const allGenCams = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
+      const genTypeId = item.genericCameraTypeId || item.originGenericTypeId || (item.isGenericCamera ? item.id : null);
+      const genDef = genTypeId ? allGenCams.find(g => g.id === genTypeId || g.sku === genTypeId) : null;
+      const recSkus = (item.recommendedUpgradeSkus && item.recommendedUpgradeSkus.length > 0)
+        ? item.recommendedUpgradeSkus
+        : (genDef && Array.isArray(genDef.recommendedUpgradeSkus) ? genDef.recommendedUpgradeSkus : []);
+      const recCamObjs = recSkus.map(sku => allRealCams.find(c => c.sku === sku || c.id === sku)).filter(Boolean);
+      const otherRealCams = allRealCams.filter(c => !recSkus.includes(c.sku) && !recSkus.includes(c.id));
+
+      inspectorCameraSkuCardHtml = `
+        <div class="bg-slate-950 p-2.5 rounded-xl border ${item.isGenericCamera ? 'border-emerald-500/40' : 'border-sky-500/40'} space-y-1.5 shadow-sm">
+          <div class="flex items-center justify-between text-[10px]">
+            <span class="font-mono font-bold ${item.isGenericCamera ? 'text-emerald-400' : 'text-sky-400'} uppercase flex items-center gap-1">
+              <i data-lucide="camera" class="w-3 h-3"></i> ${item.isGenericCamera ? 'Generic Sizing Camera' : 'Assigned Camera Part'}
+            </span>
+            <span class="font-mono text-[9.5px] text-amber-300 font-bold">${item.powerConsumptionWatts || 8}W / ${item.maxPowerWatts || 15.4}W (${escapeHTML(item.poeStandard || '802.3af')})</span>
+          </div>
+          <select
+            onchange="upgradeSingleCameraInstance('${escapeJSAttr(item.instanceId)}', this.value); renderInspector(); renderCableCanvas();"
+            class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2 py-1 text-[11px] font-mono focus:outline-none focus:border-brand-500 cursor-pointer"
+            title="Assign or override specific camera SKU for this individual drop"
+          >
+            ${recCamObjs.length > 0 ? `
+              <optgroup label="Recommended Compatible Parts">
+                ${recCamObjs.map(c => `<option value="${escapeHTML(c.sku)}" ${(item.sku === c.sku || item.id === c.id) ? 'selected' : ''}>★ ${escapeHTML(c.vendor)} ${escapeHTML(c.model)} (${escapeHTML(c.sku)})</option>`).join('')}
+              </optgroup>
+            ` : ''}
+            <optgroup label="All Catalog Camera SKUs">
+              ${otherRealCams.map(c => `<option value="${escapeHTML(c.sku)}" ${(item.sku === c.sku || item.id === c.id) ? 'selected' : ''}>${escapeHTML(c.vendor)} ${escapeHTML(c.model)} (${escapeHTML(c.sku)})</option>`).join('')}
+            </optgroup>
+            <optgroup label="Generic Sizing Types">
+              ${allGenCams.map(g => `<option value="${escapeHTML(g.id)}" ${(item.id === g.id || item.sku === g.sku) ? 'selected' : ''}>[Generic] ${escapeHTML(g.model)} (${escapeHTML(g.poeStandard)})</option>`).join('')}
+            </optgroup>
+          </select>
+          <div class="flex items-center justify-between text-[9.5px] font-mono text-slate-400">
+            <span>Stream: <strong class="text-teal-300">${item.heads || 1}x ${item.mpPerHead || item.sensorMegapixels || 2}MP @ ${item.defaultFps || 15}fps</strong></span>
+            <span>Bitrate: <strong class="text-sky-300">${item.streamBitrateMbps || 4} Mbps</strong></span>
+          </div>
+        </div>
+      `;
+    }
 
     container.innerHTML = `
       <div class="space-y-2.5">
@@ -4659,6 +4705,8 @@ function renderInspector() {
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Device Label:</label>
           <input type="text" value="${escapeHTML(node.name)}" onchange="updateNodeName('${escapeJSAttr(node.id)}', this.value)" class="w-full bg-slate-900 border border-slate-700 text-white rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-brand-500 font-semibold" />
         </div>
+
+        ${inspectorCameraSkuCardHtml}
 
         <div>
           <label class="text-[10px] uppercase font-bold text-slate-400 block mb-1">Terminating Enclosure / Space:</label>
@@ -5615,7 +5663,7 @@ function renderCableCanvas() {
   }
 
   // 2b. Interactive Camera FOV & DORI / PPF Spatial Cones
-  if (showCameraFovCones && physicalLayerFilters.cameras) {
+  if (showCameraFovCones && physicalLayerFilters.cameras && (typeof window.FEATURE_FLAGS === "undefined" || window.FEATURE_FLAGS.enableSpecificCameraDetails === true)) {
     floor.nodes.filter(n => n.type === "device").forEach(dev => {
       const bomItem = (typeof projectBOM !== "undefined" && dev.instanceId) ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
       const layerType = getDeviceLayerType(bomItem || dev);

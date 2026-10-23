@@ -20,6 +20,7 @@ const CatalogRegistry = {
   },
   physical_security: {
     cameras: [],
+    genericCameras: [],
     cameraAccessories: [],
     accessControl: [],
     powerEnclosures: []
@@ -79,7 +80,14 @@ const CatalogRegistry = {
       return [];
     }
     if (mode === "pathways") return this.infrastructure.pathways || [];
-    if (mode === "cameras") return this.physical_security.cameras || [];
+    if (mode === "generic_cameras") return this.physical_security.genericCameras || [];
+    if (mode === "specific_cameras") return this.physical_security.cameras || [];
+    if (mode === "cameras") {
+      if (typeof window !== "undefined" && typeof window.isGenericCameraModeActive === "function" && window.isGenericCameraModeActive()) {
+        return this.physical_security.genericCameras || [];
+      }
+      return this.physical_security.cameras || [];
+    }
     if (mode === "camera_accessories") return this.physical_security.cameraAccessories || [];
     if (mode === "access_control") return this.physical_security.accessControl || [];
     if (mode === "power_enclosures") return this.physical_security.powerEnclosures || [];
@@ -260,8 +268,9 @@ const CatalogRegistry = {
       a.category === "pathways" || a.type === "pathway" || a.category === "cable_management"
     );
 
-    // Ingest Physical Security & Compute
+    // Ingest Physical Security, Compute & Software
     this.physical_security.cameras = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
+    this.physical_security.genericCameras = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
     this.physical_security.accessControl = typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : [];
     this.physical_security.powerEnclosures = this.infrastructure.accessories.filter(a =>
       a.type === "security_cabinet" || a.category === "security_cabinet" ||
@@ -269,6 +278,12 @@ const CatalogRegistry = {
       (a.vendor || "").toLowerCase().includes("lifesafety")
     );
     this.compute_storage.servers = typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : [];
+    this.compute_storage.workstations = typeof WORKSTATIONS_DATABASE !== "undefined" ? WORKSTATIONS_DATABASE : [];
+    if (typeof SOFTWARE_DATABASE !== "undefined") {
+      this.software.vms = Array.isArray(SOFTWARE_DATABASE.vms) ? SOFTWARE_DATABASE.vms : [];
+      this.software.os = Array.isArray(SOFTWARE_DATABASE.os) ? SOFTWARE_DATABASE.os : [];
+      if (Array.isArray(SOFTWARE_DATABASE.access)) this.software.access = SOFTWARE_DATABASE.access;
+    }
 
     // 3. Build Lookup Indexes
     this._byId.clear();
@@ -281,8 +296,13 @@ const CatalogRegistry = {
       ...this.networking.optics,
       ...this.infrastructure.accessories,
       ...this.physical_security.cameras,
+      ...this.physical_security.genericCameras,
       ...this.physical_security.accessControl,
-      ...this.compute_storage.servers
+      ...this.compute_storage.servers,
+      ...this.compute_storage.workstations,
+      ...(this.software.vms || []),
+      ...(this.software.os || []),
+      ...(this.software.access || [])
     ];
 
     // Index structured cabling items

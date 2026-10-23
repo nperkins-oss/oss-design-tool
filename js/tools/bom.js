@@ -441,6 +441,22 @@ function enrichBOMItemFromCatalog(item) {
     if (item.isDinMounted === undefined) {
       item.isDinMounted = Boolean(catItem.mounting && catItem.mounting.includes("DIN") && !catItem.mounting.includes("19\""));
     }
+
+    // 8. Camera & Multi-Sensor Sizing Enrichment
+    if (item.role === "Camera" || item.category === "camera" || item.category === "cameras" || catItem.category === "cameras") {
+      if (item.heads === undefined && catItem.heads !== undefined) item.heads = catItem.heads;
+      if (item.mpPerHead === undefined && catItem.mpPerHead !== undefined) item.mpPerHead = catItem.mpPerHead;
+      if (item.sensorMegapixels === undefined && catItem.sensorMegapixels !== undefined) item.sensorMegapixels = catItem.sensorMegapixels;
+      if (!item.defaultFps && catItem.defaultFps) item.defaultFps = catItem.defaultFps;
+      if (!item.compression && catItem.compression) item.compression = catItem.compression;
+      if (!item.poeClass && catItem.poeClass) item.poeClass = catItem.poeClass;
+      if (!item.poeTierKey && catItem.poeTierKey) item.poeTierKey = catItem.poeTierKey;
+      if (item.isGenericCamera === undefined && catItem.isGenericCamera !== undefined) item.isGenericCamera = Boolean(catItem.isGenericCamera);
+      if (!item.genericCameraTypeId && catItem.genericCameraTypeId) item.genericCameraTypeId = catItem.genericCameraTypeId;
+      if (!item.recommendedUpgradeSkus && Array.isArray(catItem.recommendedUpgradeSkus)) {
+        item.recommendedUpgradeSkus = [...catItem.recommendedUpgradeSkus];
+      }
+    }
   }
 
   return item;
@@ -1425,7 +1441,8 @@ function addOpticsToBOM(sku, name, msrp, qty, vendor) {
 
 function addServerToBOM(serverId, targetLocation = null) {
   const srv = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(serverId) : null) ||
-              (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId);
+              (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId) ||
+              (typeof WORKSTATIONS_DATABASE !== "undefined" ? WORKSTATIONS_DATABASE : []).find(w => w.id === serverId || w.sku === serverId);
   if (!srv) return;
 
   const instanceId = `srv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -1439,21 +1456,24 @@ function addServerToBOM(serverId, targetLocation = null) {
     }
   }
 
+  const isWorkstation = srv.category === "workstations" || srv.role === "Workstation";
+
   projectBOM.push({
     instanceId: instanceId,
     id: srv.id,
     model: srv.model,
     sku: srv.sku,
-    role: "Server",
-    serverType: srv.serverType || "vms_recording",
+    role: isWorkstation ? "Workstation" : "Server",
+    category: isWorkstation ? "workstations" : "servers",
+    serverType: srv.serverType || (isWorkstation ? "operator_client" : "vms_recording"),
     vendor: srv.vendor,
     msrp: srv.msrp,
     ports: srv.ports || 2,
-    portSpeed: srv.portSpeed || "10G",
-    maxBackboneSpeed: srv.portSpeed || "10G",
-    baseWatts: srv.baseWatts || 300,
-    maxPowerWatts: srv.maxPowerWatts || 500,
-    rackUnits: srv.rackUnits || 2,
+    portSpeed: srv.portSpeed || (isWorkstation ? "2.5G" : "10G"),
+    maxBackboneSpeed: srv.portSpeed || (isWorkstation ? "2.5G" : "10G"),
+    baseWatts: srv.baseWatts || (isWorkstation ? 220 : 300),
+    maxPowerWatts: srv.maxPowerWatts || (isWorkstation ? 450 : 500),
+    rackUnits: srv.rackUnits !== undefined ? srv.rackUnits : (isWorkstation ? 0 : 2),
     depthInches: srv.depthInches || 28,
     dualPsu: srv.dualPsu !== false,
     qty: 1,
@@ -1462,9 +1482,9 @@ function addServerToBOM(serverId, targetLocation = null) {
     rackSlot: null,
     rackU: null,
     isDinMounted: false,
-    hostedRoles: [...(srv.hostedRoles || ["VMS Ingest & Recording"])],
-    maxIngestBandwidthMbps: srv.maxIngestBandwidthMbps || 750,
-    powerSource: "dual_ac",
+    hostedRoles: [...(srv.hostedRoles || (isWorkstation ? ["SOC Operator Client"] : ["VMS Ingest & Recording"]))],
+    maxIngestBandwidthMbps: srv.maxIngestBandwidthMbps || (isWorkstation ? 0 : 750),
+    powerSource: srv.dualPsu === false ? "single_ac" : "dual_ac",
     uplinkTargetId: null
   });
 
@@ -1472,12 +1492,14 @@ function addServerToBOM(serverId, targetLocation = null) {
   showToast(`Added ${srv.model} to ${assignedLoc}`);
 }
 
-function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) {
+function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null, qty = 1) {
   const cam = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(cameraId) : null) ||
+              (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : []).find(c => c.id === cameraId || c.sku === cameraId) ||
               (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.id === cameraId || c.sku === cameraId);
   if (!cam) return;
 
-  const instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const count = Math.max(1, Math.min(500, parseInt(qty, 10) || 1));
+
   let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
   if (targetLocation && targetLocation !== "new_location") {
     assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
@@ -1495,69 +1517,309 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null) 
     if (sw) targetSwitchId = sw.instanceId;
   }
 
-  const newCam = {
-    instanceId: instanceId,
-    id: cam.id,
-    model: cam.model,
-    sku: cam.sku,
-    role: "Camera",
-    category: "camera",
-    vendor: cam.vendor,
-    msrp: cam.msrp,
-    ports: 1,
-    powerConsumptionWatts: cam.powerConsumptionWatts || 8,
-    maxPowerWatts: cam.maxPowerWatts || 15,
-    poeStandard: cam.poeStandard || "802.3af",
-    streamBitrateMbps: cam.streamBitrateMbps || 4.0,
-    resolution: cam.resolution || "2MP",
-    qty: 1,
-    closetName: assignedLoc,
-    rackId: assignedLoc,
-    rackSlot: null,
-    rackU: null,
-    isDinMounted: false,
-    mountMethod: assignedLoc.toLowerCase().includes("pole") ? "pole" : ((cam.formFactor === "dome" || cam.dome) ? "ceiling" : "wall"),
-    uplinkTargetId: targetSwitchId,
-    assignedRecordingServerId: null
-  };
-
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
     ? StorageService.getProjectDefaults()
     : null;
 
-  if (defs && defs.vms && defs.vms.promptAnalytics) {
-    const hasAI = cam.deepLearningAnalytics || (cam.keyFeatures && cam.keyFeatures.some(f => /deep learning|dlpu|artpec|analytics|iva|object classification|ngva/i.test(f)));
-    if (hasAI) {
-      newCam.videoAnalyticsEnabled = true;
-      newCam.analyticsProfile = cam.vendor === "Axis Communications"
-        ? "Axis Object Analytics (AOA - DLPU)"
-        : (cam.vendor === "Hanwha Vision"
-            ? "Hanwha AI Object Detection (Person/Vehicle/Face)"
-            : (cam.vendor === "Bosch"
-                ? "Bosch IVA Pro Buildings"
-                : (cam.vendor === "Avigilon" ? "Avigilon Next-Gen Video Analytics (NGVA)" : "AI Video Analytics")));
+  let lastAddedCam = null;
+
+  for (let idx = 0; idx < count; idx++) {
+    const instanceId = `cam-${Date.now()}-${Math.random().toString(36).substring(2, 6)}${count > 1 ? `-${idx + 1}` : ''}`;
+
+    const newCam = {
+      instanceId: instanceId,
+      id: cam.id,
+      model: cam.model,
+      sku: cam.sku,
+      role: "Camera",
+      category: "camera",
+      vendor: cam.vendor,
+      msrp: cam.msrp,
+      ports: 1,
+      isGenericCamera: Boolean(cam.isGenericCamera),
+      genericCameraTypeId: cam.genericCameraTypeId || (cam.isGenericCamera ? cam.id : null),
+      heads: cam.heads || 1,
+      mpPerHead: cam.mpPerHead || cam.sensorMegapixels || 2,
+      sensorMegapixels: cam.sensorMegapixels || 2,
+      defaultFps: cam.defaultFps || 15,
+      compression: cam.compression || "H.265",
+      powerConsumptionWatts: cam.powerConsumptionWatts || 8,
+      maxPowerWatts: cam.maxPowerWatts || 15.4,
+      poeStandard: cam.poeStandard || "802.3af",
+      poeClass: cam.poeClass || null,
+      poeTierKey: cam.poeTierKey || null,
+      streamBitrateMbps: cam.streamBitrateMbps || 4.0,
+      resolution: cam.resolution || "2MP",
+      formFactor: cam.formFactor || "dome",
+      recommendedUpgradeSkus: Array.isArray(cam.recommendedUpgradeSkus) ? [...cam.recommendedUpgradeSkus] : [],
+      qty: 1,
+      closetName: assignedLoc,
+      rackId: assignedLoc,
+      rackSlot: null,
+      rackU: null,
+      isDinMounted: false,
+      mountMethod: assignedLoc.toLowerCase().includes("pole") ? "pole" : ((cam.formFactor === "dome" || cam.formFactor === "fisheye" || cam.dome) ? "ceiling" : "wall"),
+      uplinkTargetId: targetSwitchId,
+      assignedRecordingServerId: null
+    };
+
+    if (!cam.isGenericCamera && defs && defs.vms && defs.vms.promptAnalytics) {
+      const hasAI = cam.deepLearningAnalytics || (cam.keyFeatures && cam.keyFeatures.some(f => /deep learning|dlpu|artpec|analytics|iva|object classification|ngva/i.test(f)));
+      if (hasAI) {
+        newCam.videoAnalyticsEnabled = true;
+        newCam.analyticsProfile = cam.vendor === "Axis Communications"
+          ? "Axis Object Analytics (AOA - DLPU)"
+          : (cam.vendor === "Hanwha Vision"
+              ? "Hanwha AI Object Detection (Person/Vehicle/Face)"
+              : (cam.vendor === "Bosch" || cam.vendor === "Bosch Security"
+                  ? "Bosch IVA Pro Buildings"
+                  : (cam.vendor === "Avigilon" ? "Avigilon Next-Gen Video Analytics (NGVA)" : "AI Video Analytics")));
+      }
+    }
+
+    projectBOM.push(newCam);
+    lastAddedCam = newCam;
+
+    if (typeof PortEngine !== "undefined") {
+      PortEngine.initDeviceInterfaces(newCam);
+      if (targetSwitchId) {
+        const sw = projectBOM.find(i => i.instanceId === targetSwitchId);
+        if (sw) PortEngine.allocatePort(sw, newCam);
+      } else {
+        PortEngine.autoAssignDeviceToClosetSwitch(newCam, assignedLoc);
+      }
     }
   }
 
-  projectBOM.push(newCam);
-
-  if (typeof PortEngine !== "undefined") {
-    PortEngine.initDeviceInterfaces(newCam);
-    if (targetSwitchId) {
-      const sw = projectBOM.find(i => i.instanceId === targetSwitchId);
-      if (sw) PortEngine.allocatePort(sw, newCam);
-    } else {
-      PortEngine.autoAssignDeviceToClosetSwitch(newCam, assignedLoc);
-    }
+  if (typeof deriveDemandFromBOM === "function") {
+    deriveDemandFromBOM(true);
   }
-
   FacilityStore.notifyWorkspaceChange();
-  if (newCam.videoAnalyticsEnabled) {
-    showToast(`Added ${cam.model} (${newCam.analyticsProfile})`);
+  if (typeof buildCalculatorStrip === "function") {
+    buildCalculatorStrip();
+  }
+  if (count > 1) {
+    showToast(`Added ${count}x ${cam.model} units to ${assignedLoc}`);
+  } else if (lastAddedCam && lastAddedCam.videoAnalyticsEnabled) {
+    showToast(`Added ${cam.model} (${lastAddedCam.analyticsProfile})`);
   } else {
     showToast(`Added ${cam.model} to quote`);
   }
 }
+
+/**
+ * Applies a catalog camera definition (either an actual part from CAMERAS_DATABASE
+ * or a generic camera type from GENERIC_CAMERA_TYPES) onto an existing BOM camera instance
+ * while preserving its instanceId, closet/rack placement, switch port allocation, and floorplan drop.
+ */
+function applyCameraCatalogSpecToBomInstance(bomCam, targetCatCam) {
+  if (!bomCam || !targetCatCam) return false;
+
+  // Preserve original genericCameraTypeId if upgrading from a generic type so user can see origin or re-map
+  if (bomCam.isGenericCamera && (bomCam.genericCameraTypeId || bomCam.id)) {
+    bomCam.originGenericTypeId = bomCam.genericCameraTypeId || bomCam.id;
+  }
+
+  bomCam.id = targetCatCam.id;
+  bomCam.sku = targetCatCam.sku;
+  bomCam.model = targetCatCam.model;
+  bomCam.vendor = targetCatCam.vendor;
+  bomCam.msrp = targetCatCam.msrp;
+  bomCam.isGenericCamera = Boolean(targetCatCam.isGenericCamera);
+  if (targetCatCam.isGenericCamera) {
+    bomCam.genericCameraTypeId = targetCatCam.genericCameraTypeId || targetCatCam.id;
+  }
+
+  bomCam.heads = targetCatCam.heads || 1;
+  bomCam.mpPerHead = targetCatCam.mpPerHead || targetCatCam.sensorMegapixels || 2;
+  bomCam.sensorMegapixels = targetCatCam.sensorMegapixels || 2;
+  bomCam.defaultFps = targetCatCam.defaultFps || 15;
+  bomCam.compression = targetCatCam.compression || "H.265";
+  bomCam.powerConsumptionWatts = targetCatCam.powerConsumptionWatts || 8;
+  bomCam.maxPowerWatts = targetCatCam.maxPowerWatts || 15.4;
+  bomCam.poeStandard = targetCatCam.poeStandard || "802.3af";
+  bomCam.poeClass = targetCatCam.poeClass || null;
+  bomCam.poeTierKey = targetCatCam.poeTierKey || null;
+  bomCam.streamBitrateMbps = targetCatCam.streamBitrateMbps || 4.0;
+  bomCam.resolution = targetCatCam.resolution || "2MP";
+  bomCam.formFactor = targetCatCam.formFactor || bomCam.formFactor || "dome";
+  bomCam.image = targetCatCam.image || null;
+  bomCam.datasheetPath = targetCatCam.datasheet || targetCatCam.datasheetPath || null;
+
+  if (Array.isArray(targetCatCam.recommendedUpgradeSkus) && targetCatCam.recommendedUpgradeSkus.length > 0) {
+    bomCam.recommendedUpgradeSkus = [...targetCatCam.recommendedUpgradeSkus];
+  }
+
+  // Sync floorplan drop metadata if placed on Physical Layout canvas
+  if (typeof floorplanState !== "undefined" && Array.isArray(floorplanState.deviceDrops)) {
+    floorplanState.deviceDrops.forEach(drop => {
+      if (drop.instanceId === bomCam.instanceId) {
+        drop.sku = bomCam.sku;
+        drop.model = bomCam.model;
+      }
+    });
+  }
+
+  return true;
+}
+
+/**
+ * Bulk-upgrades all quoted cameras of a given generic camera type to a selected actual catalog SKU.
+ */
+function upgradeGenericCameraTypeBulk(genericTypeId, targetSkuOverride = null) {
+  if (!genericTypeId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const selectEl = document.getElementById(`bulkUpgradeSelect-${genericTypeId}`);
+  const chosenSku = targetSkuOverride || (selectEl ? selectEl.value : null);
+  if (!chosenSku) {
+    if (typeof showToast === "function") showToast("Select a target camera SKU first.");
+    return;
+  }
+
+  const targetCatCam = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.sku === chosenSku || c.id === chosenSku) ||
+                       (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(chosenSku) : null);
+  if (!targetCatCam) {
+    if (typeof showToast === "function") showToast(`Camera SKU ${chosenSku} not found in catalog.`);
+    return;
+  }
+
+  let upgradedCount = 0;
+  projectBOM.forEach(item => {
+    if (!item || item.parentInstanceId) return;
+    const isCam = item.role === "Camera" || item.category === "camera" || item.category === "cameras";
+    if (!isCam) return;
+    const matchesGeneric = (item.isGenericCamera && (item.genericCameraTypeId === genericTypeId || item.id === genericTypeId || item.sku === genericTypeId)) ||
+                           (item.originGenericTypeId === genericTypeId && item.isGenericCamera);
+    if (matchesGeneric) {
+      applyCameraCatalogSpecToBomInstance(item, targetCatCam);
+      upgradedCount += (parseInt(item.qty, 10) || 1);
+    }
+  });
+
+  if (upgradedCount > 0) {
+    if (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.recalculateNumbers === "function") {
+      DeviceTaxonomy.recalculateNumbers(projectBOM);
+    }
+    if (typeof deriveDemandFromBOM === "function") {
+      deriveDemandFromBOM(true);
+    }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof buildCalculatorStrip === "function") {
+      buildCalculatorStrip();
+    }
+    if (typeof runActiveFilter === "function") {
+      runActiveFilter();
+    }
+    if (typeof showToast === "function") {
+      showToast(`Converted ${upgradedCount}x generic cameras to ${targetCatCam.vendor} ${targetCatCam.model} (${targetCatCam.sku})`);
+    }
+  } else {
+    if (typeof showToast === "function") {
+      showToast("No matching generic cameras found in Project BOM.");
+    }
+  }
+}
+window.upgradeGenericCameraTypeBulk = upgradeGenericCameraTypeBulk;
+
+/**
+ * Bulk-upgrades ALL generic cameras currently in the BOM to their currently selected dropdown SKUs
+ * (or their primary recommended catalog SKU).
+ */
+function upgradeAllGenericCamerasToRecommended() {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const genericTypesInBom = new Set();
+  projectBOM.forEach(item => {
+    if (item && !item.parentInstanceId && item.isGenericCamera) {
+      genericTypesInBom.add(item.genericCameraTypeId || item.id || item.sku);
+    }
+  });
+
+  if (genericTypesInBom.size === 0) {
+    if (typeof showToast === "function") showToast("All cameras in Project BOM are already assigned to specific catalog SKUs.");
+    return;
+  }
+
+  let totalUpgraded = 0;
+  genericTypesInBom.forEach(typeId => {
+    const selectEl = document.getElementById(`bulkUpgradeSelect-${typeId}`);
+    const genericDef = (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : []).find(g => g.id === typeId || g.sku === typeId);
+    const chosenSku = (selectEl && selectEl.value) || (genericDef && Array.isArray(genericDef.recommendedUpgradeSkus) ? genericDef.recommendedUpgradeSkus[0] : null);
+    if (!chosenSku) return;
+
+    const targetCatCam = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.sku === chosenSku || c.id === chosenSku);
+    if (!targetCatCam) return;
+
+    projectBOM.forEach(item => {
+      if (item && !item.parentInstanceId && item.isGenericCamera && (item.genericCameraTypeId === typeId || item.id === typeId || item.sku === typeId)) {
+        applyCameraCatalogSpecToBomInstance(item, targetCatCam);
+        totalUpgraded += (parseInt(item.qty, 10) || 1);
+      }
+    });
+  });
+
+  if (totalUpgraded > 0) {
+    if (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.recalculateNumbers === "function") {
+      DeviceTaxonomy.recalculateNumbers(projectBOM);
+    }
+    if (typeof deriveDemandFromBOM === "function") {
+      deriveDemandFromBOM(true);
+    }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof buildCalculatorStrip === "function") {
+      buildCalculatorStrip();
+    }
+    if (typeof runActiveFilter === "function") {
+      runActiveFilter();
+    }
+    if (typeof showToast === "function") {
+      showToast(`Bulk-converted ${totalUpgraded}x generic cameras to actual catalog SKUs!`);
+    }
+  }
+}
+window.upgradeAllGenericCamerasToRecommended = upgradeAllGenericCamerasToRecommended;
+
+/**
+ * Overrides a single individual camera instance in the Project BOM (e.g., from the BOM row dropdown
+ * or Inspector) to any specific catalog SKU or generic camera type while preserving its closet/port/drop.
+ */
+function upgradeSingleCameraInstance(instanceId, targetSkuOrId) {
+  if (!instanceId || !targetSkuOrId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const bomCam = projectBOM.find(i => i.instanceId === instanceId);
+  if (!bomCam) return;
+
+  const targetCatCam = (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.sku === targetSkuOrId || c.id === targetSkuOrId) ||
+                       (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : []).find(g => g.sku === targetSkuOrId || g.id === targetSkuOrId) ||
+                       (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(targetSkuOrId) : null);
+  if (!targetCatCam) return;
+
+  const prevLabel = bomCam.friendlyName || bomCam.deviceNumber || bomCam.model;
+  applyCameraCatalogSpecToBomInstance(bomCam, targetCatCam);
+
+  if (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.recalculateNumbers === "function") {
+    DeviceTaxonomy.recalculateNumbers(projectBOM);
+  }
+  if (typeof deriveDemandFromBOM === "function") {
+    deriveDemandFromBOM(true);
+  }
+  if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+    FacilityStore.notifyWorkspaceChange();
+  }
+  if (typeof updateBOMView === "function") {
+    updateBOMView();
+  }
+  if (typeof buildCalculatorStrip === "function") {
+    buildCalculatorStrip();
+  }
+  if (typeof showToast === "function") {
+    showToast(`Updated ${prevLabel} → ${targetCatCam.vendor} ${targetCatCam.model} (${targetCatCam.sku})`);
+  }
+}
+window.upgradeSingleCameraInstance = upgradeSingleCameraInstance;
 
 function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = null) {
   const dev = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(accessId) : null) ||
@@ -2428,6 +2690,52 @@ function renderBomTableRow(item) {
 
   const uPosition = item.uPosition || (item.startU ? `U${item.startU}${item.heightU > 1 ? `-U${item.startU + item.heightU - 1}` : ''}` : null);
   const mountLabel = item.mountMethod ? formatMountMethodLabel(item.mountMethod) : null;
+  const isCameraItem = item.role === "Camera" || item.category === "camera" || item.category === "cameras";
+
+  let cameraSkuSelectorHtml = "";
+  if (isCameraItem) {
+    const allRealCams = typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : [];
+    const allGenCams = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
+    const genTypeId = item.genericCameraTypeId || item.originGenericTypeId || (item.isGenericCamera ? item.id : null);
+    const genDef = genTypeId ? allGenCams.find(g => g.id === genTypeId || g.sku === genTypeId) : null;
+    const recSkus = (item.recommendedUpgradeSkus && item.recommendedUpgradeSkus.length > 0)
+      ? item.recommendedUpgradeSkus
+      : (genDef && Array.isArray(genDef.recommendedUpgradeSkus) ? genDef.recommendedUpgradeSkus : []);
+
+    const recCamObjs = recSkus.map(sku => allRealCams.find(c => c.sku === sku || c.id === sku)).filter(Boolean);
+    const otherRealCams = allRealCams.filter(c => !recSkus.includes(c.sku) && !recSkus.includes(c.id));
+
+    cameraSkuSelectorHtml = `
+      <div class="pt-1.5">
+        <div class="p-2 rounded-lg ${item.isGenericCamera ? 'bg-emerald-950/25 border border-emerald-500/30' : 'bg-slate-950/80 border border-slate-800'} transition-colors shadow-sm space-y-1.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded ${item.isGenericCamera ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-sky-500/15 text-sky-300 border border-sky-500/30'} text-[10px] font-mono font-semibold">
+              <i data-lucide="camera" class="w-3 h-3"></i>
+              <span>${item.isGenericCamera ? 'Generic Sizing Placeholder' : 'Assigned Catalog Part'}</span>
+            </span>
+            <span class="text-[10px] font-mono text-slate-400">Override Individual Camera SKU:</span>
+          </div>
+          <select
+            onchange="upgradeSingleCameraInstance('${item.instanceId}', this.value)"
+            class="w-full bg-slate-900 border border-slate-700/80 hover:border-slate-600 text-slate-200 text-xs font-medium rounded-md px-2 py-1 focus:outline-none focus:border-brand-500 cursor-pointer shadow-sm transition-colors"
+            title="Assign or override specific camera part SKU for this individual drop"
+          >
+            ${recCamObjs.length > 0 ? `
+              <optgroup label="Recommended Compatible Parts">
+                ${recCamObjs.map(c => `<option value="${escapeHTML(c.sku)}" ${(item.sku === c.sku || item.id === c.id) ? 'selected' : ''}>★ ${escapeHTML(c.vendor)} ${escapeHTML(c.model)} (${escapeHTML(c.sku)}) — $${(c.msrp || 0).toLocaleString()}</option>`).join('')}
+              </optgroup>
+            ` : ''}
+            <optgroup label="All Catalog Camera SKUs (Full Design)">
+              ${otherRealCams.map(c => `<option value="${escapeHTML(c.sku)}" ${(item.sku === c.sku || item.id === c.id) ? 'selected' : ''}>${escapeHTML(c.vendor)} ${escapeHTML(c.model)} (${escapeHTML(c.sku)}) — $${(c.msrp || 0).toLocaleString()}</option>`).join('')}
+            </optgroup>
+            <optgroup label="Generic Sizing Types (Initial Design)">
+              ${allGenCams.map(g => `<option value="${escapeHTML(g.id)}" ${(item.id === g.id || item.sku === g.sku) ? 'selected' : ''}>[Generic] ${escapeHTML(g.model)} (${escapeHTML(g.poeStandard)}) — $${(g.msrp || 0).toLocaleString()}</option>`).join('')}
+            </optgroup>
+          </select>
+        </div>
+      </div>
+    `;
+  }
 
   return `
     <tr id="bom-item-${item.instanceId}" data-bom-instance="${item.instanceId}" class="group border-b border-slate-800/80 hover:bg-slate-900/50 transition-colors">
@@ -2462,6 +2770,8 @@ function renderBomTableRow(item) {
             <span>&bull;</span>
             <span class="px-1.5 py-0.2 rounded bg-slate-900/80 text-slate-400 text-[10px] border border-slate-800">${escapeHTML(item.role || 'Hardware')}</span>
           </div>
+
+          ${cameraSkuSelectorHtml}
 
           <!-- Modular Uplink Bay Selector (if switch has modular uplink slot) -->
           ${hasModularBay ? `
@@ -2581,6 +2891,17 @@ function renderBomTableRow(item) {
             ${item.baseWatts > 0 ? `
               <span class="px-1.5 py-0.5 rounded bg-slate-900 border border-slate-700 text-slate-300 font-mono text-[10px]" title="Base System Power Consumption">
                 ${item.baseWatts}W Base
+              </span>
+            ` : ''}
+
+            ${isCameraItem ? `
+              <span class="px-2 py-0.5 rounded ${(item.maxPowerWatts || 0) >= 50 ? 'bg-rose-950/70 border border-rose-700/60 text-rose-300' : ((item.maxPowerWatts || 0) >= 25 ? 'bg-sky-950/70 border border-sky-700/60 text-sky-300' : 'bg-amber-950/70 border border-amber-700/60 text-amber-300')} font-mono text-[10px] font-bold flex items-center gap-1" title="Camera PoE Power Draw & Standard">
+                <i data-lucide="zap" class="w-3 h-3"></i>
+                <span>${item.powerConsumptionWatts || 8}W / ${item.maxPowerWatts || 15.4}W (${escapeHTML(item.poeStandard || '802.3af')})</span>
+              </span>
+              <span class="px-2 py-0.5 rounded bg-teal-950/60 border border-teal-800/60 text-teal-300 font-mono text-[10px] flex items-center gap-1" title="Camera Video Stream Bitrate & Resolution">
+                <i data-lucide="video" class="w-3 h-3 text-teal-400"></i>
+                <span>${item.heads || 1}x ${item.mpPerHead || item.sensorMegapixels || 2}MP &bull; ${item.streamBitrateMbps || 4} Mbps</span>
               </span>
             ` : ''}
 
