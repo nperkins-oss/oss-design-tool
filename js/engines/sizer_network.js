@@ -1024,7 +1024,22 @@ const GENETEC_514_REQUIREMENTS = {
 
 const VideoStorageSizer = {
   state: {
-    sourceMode: "auto",        // "auto" (uses BOM if >0 cams, else manual) | "manual" | "bom"
+    sourceMode: "auto",        // "auto" (uses BOM if >0 cams & !hasCustomGroups, else cameraGroups) | "manual" | "bom"
+    hasCustomGroups: false,    // True once the user edits or adds rows in the multi-group calculator
+    cameraGroups: [
+      {
+        id: "grp_1",
+        name: "Camera Group 1",
+        qty: 32,
+        heads: 1,
+        resolutionMp: 4,
+        fps: 15,
+        codec: "H.265",
+        sceneActivity: "medium",
+        motionDutyPct: 50,
+        retentionDays: 30
+      }
+    ],
     manualCameraCount: 32,     // Default camera count for standalone planning
     resolutionMp: 4,           // Default 4MP (2K) when in manual mode or override
     useManualResolutionOnBom: false,
@@ -1042,6 +1057,91 @@ const VideoStorageSizer = {
     encryptionCerts: 0,        // Fusion Stream Encryption certificates (Page 10)
     softwareMotionDetection: false, // Page 15: Software motion detection reduces Archiver capacity by up to 50%
     customBitratePerCamMbps: 0 // Optional custom per-camera bitrate override (0 = use standard math)
+  },
+
+  /**
+   * Evaluates a single camera group row and returns its calculated bitrate and storage metrics.
+   */
+  evaluateCameraGroup(group, fallbackDefaults = {}) {
+    const qty = Math.max(0, parseInt(group.qty ?? 1, 10) || 0);
+    const resolutionMp = Number(group.resolutionMp ?? fallbackDefaults.resolutionMp ?? 4) || 4;
+    const heads = Math.max(1, parseInt(group.heads ?? 1, 10) || 1);
+    const fps = Math.max(1, Number(group.fps ?? fallbackDefaults.fps ?? 15) || 15);
+    const codec = this.normalizeCodec(group.codec ?? fallbackDefaults.codec ?? "H.265");
+    const sceneActivity = group.sceneActivity || fallbackDefaults.sceneActivity || "medium";
+
+    let rawMotion = group.motionDutyPct ?? group.motionDutyCycle ?? fallbackDefaults.motionDutyPct ?? 50;
+    if (rawMotion > 0 && rawMotion <= 1) rawMotion = Math.round(rawMotion * 100);
+    const motionDutyPct = Math.max(5, Math.min(100, Number(rawMotion) || 50));
+    const motionDutyCycle = motionDutyPct / 100;
+
+    const retentionDays = Math.max(1, Number(group.retentionDays ?? fallbackDefaults.retentionDays ?? 30) || 30);
+    const customBitrate = Number(group.customBitrateMbps ?? fallbackDefaults.customBitratePerCamMbps ?? 0) || 0;
+
+    // If heads > 1 and resolutionMp is per-head, or if resolutionMp is a single/multi value
+    const perHeadMbps = this.calculateSingleStreamBitrateMbps(resolutionMp, codec, fps, sceneActivity, customBitrate);
+    const perCameraMbps = Math.round(perHeadMbps * heads * 100) / 100;
+    const totalStreams = qty * heads;
+    const peakIngressMbps = Math.round(qty * perCameraMbps * 100) / 100;
+    const averageRecordingMbps = Math.round(peakIngressMbps * motionDutyCycle * 100) / 100;
+    const dailyStorageGb = Math.round(averageRecordingMbps * 10.8 * 10) / 10;
+    const netVideoStorageTb = (averageRecordingMbps * 86400 * retentionDays) / 8000000;
+    const requiredUsableTb = Math.round(netVideoStorageTb * VIDEO_STORAGE_CONSTANTS.STORAGE_SAFETY_BUFFER * 100) / 100;
+
+    return {
+      id: group.id || `grp_${Math.random().toString(36).slice(2, 7)}`,
+      name: group.name || "Camera Group",
+      qty,
+      heads,
+      totalStreams,
+      resolutionMp,
+      fps,
+      codec,
+      sceneActivity,
+      motionDutyPct,
+      motionDutyCycle,
+      retentionDays,
+      perHeadMbps,
+      perCameraMbps,
+      peakIngressMbps,
+      averageRecordingMbps,
+      dailyStorageGb,
+      requiredUsableTb
+    };
+  },
+
+  /**
+   * Builds a list of camera groups from the active project BOM cameras (grouped by model/resolution).
+   */
+  buildCameraGroupsFromBom(bomList = [], fallbackDefaults = {}) {
+    const map = new Map();
+    (bomList || []).forEach(item => {
+      if (!item || item.parentInstanceId) return;
+      const cat = (item.category || "").toLowerCase();
+      const role = (item.role || "").toLowerCase();
+      if (cat === "cameras" || role === "camera" || (typeof isCameraDevice === "function" && isCameraDevice(item))) {
+        const qty = parseInt(item.qty ?? item.quantity, 10) || 1;
+        const optics = this.parseCameraOptics(item);
+        const key = `${item.sku || item.model || "CAM"}_${optics.mpPerHead}_${optics.heads}`;
+        if (map.has(key)) {
+          map.get(key).qty += qty;
+        } else {
+          map.set(key, {
+            id: `bom_${map.size + 1}`,
+            name: item.model || item.sku || `BOM ${optics.totalMp}MP Camera`,
+            qty,
+            heads: optics.heads,
+            resolutionMp: optics.mpPerHead,
+            fps: fallbackDefaults.fps || this.state.fps || 15,
+            codec: fallbackDefaults.codec || this.state.codec || "H.265",
+            sceneActivity: fallbackDefaults.sceneActivity || this.state.sceneActivity || "medium",
+            motionDutyPct: fallbackDefaults.motionDutyPct || this.state.motionDutyPct || 50,
+            retentionDays: fallbackDefaults.retentionDays || this.state.retentionDays || 30
+          });
+        }
+      }
+    });
+    return Array.from(map.values());
   },
 
   /**
@@ -1268,38 +1368,70 @@ const VideoStorageSizer = {
       }
     });
 
-    // 3. Determine active camera count & bitrate (BOM vs Manual Planner)
+    // 3. Determine active camera groups & aggregate bitrate/storage across all groups
     const sourceMode = overrides.sourceMode || this.state.sourceMode || "auto";
-    const useBomCameras = (sourceMode === "bom") || (sourceMode === "auto" && bomCameraUnits > 0 && !overrides.forceManual);
+    const useBomCameras = (sourceMode === "bom") || (sourceMode === "auto" && bomCameraUnits > 0 && !this.state.hasCustomGroups && !overrides.forceManual);
 
-    const perCameraSingleStreamMbps = this.calculateSingleStreamBitrateMbps(resolutionMp, codec, fps, sceneActivity, customBitratePerCamMbps);
+    const fallbackDefaults = {
+      resolutionMp,
+      fps,
+      codec,
+      sceneActivity,
+      motionDutyPct,
+      retentionDays,
+      customBitratePerCamMbps
+    };
+
+    let rawGroups = [];
+    if (Array.isArray(overrides.cameraGroups) && overrides.cameraGroups.length > 0) {
+      rawGroups = overrides.cameraGroups;
+    } else if (useBomCameras && bomCameraUnits > 0) {
+      rawGroups = this.buildCameraGroupsFromBom(bomList, fallbackDefaults);
+    } else if (sourceMode === "bom" && bomCameraUnits === 0) {
+      rawGroups = [];
+    } else if (Array.isArray(this.state.cameraGroups) && this.state.cameraGroups.length > 0) {
+      rawGroups = this.state.cameraGroups;
+    } else {
+      rawGroups = [{
+        id: "grp_1",
+        name: "Camera Group 1",
+        qty: Math.max(0, parseInt(overrides.manualCameraCount ?? this.state.manualCameraCount ?? 32, 10) || 0),
+        heads: 1,
+        resolutionMp,
+        fps,
+        codec,
+        sceneActivity,
+        motionDutyPct,
+        retentionDays
+      }];
+    }
+
+    const evaluatedGroups = rawGroups.map(g => this.evaluateCameraGroup(g, fallbackDefaults));
 
     let cameraUnits = 0;
     let totalSensorHeads = 0;
     let peakIngressMbps = 0;
+    let averageRecordingMbps = 0;
+    let dailyStorageGb = 0;
+    let requiredUsableTb = 0;
 
-    if (useBomCameras && bomCameraUnits > 0) {
-      cameraUnits = bomCameraUnits;
-      totalSensorHeads = bomSensorHeads;
-      peakIngressMbps = bomPeakIngressMbps;
-    } else if (sourceMode === "bom" && bomCameraUnits === 0) {
-      cameraUnits = 0;
-      totalSensorHeads = 0;
-      peakIngressMbps = 0;
-    } else {
-      cameraUnits = Math.max(0, parseInt(overrides.manualCameraCount ?? this.state.manualCameraCount ?? 32, 10) || 0);
-      totalSensorHeads = cameraUnits;
-      peakIngressMbps = cameraUnits * perCameraSingleStreamMbps;
-    }
+    evaluatedGroups.forEach(eg => {
+      cameraUnits += eg.qty;
+      totalSensorHeads += eg.totalStreams;
+      peakIngressMbps += eg.peakIngressMbps;
+      averageRecordingMbps += eg.averageRecordingMbps;
+      dailyStorageGb += eg.dailyStorageGb;
+      requiredUsableTb += eg.requiredUsableTb;
+    });
 
-    const averageRecordingMbps = peakIngressMbps * motionDutyCycle;
-
-    // 4. Storage Math (Industry-Standard Formula)
-    // Daily GB = (averageRecordingMbps * 86,400 sec/day) / (8 bits/byte * 1000) = averageRecordingMbps * 10.8 GB/day
-    const dailyStorageGb = Math.round(averageRecordingMbps * 10.8 * 10) / 10;
-    const netVideoStorageTb = (averageRecordingMbps * 86400 * retentionDays) / 8000000;
-    const requiredUsableTb = Math.round(netVideoStorageTb * VIDEO_STORAGE_CONSTANTS.STORAGE_SAFETY_BUFFER * 100) / 100;
+    peakIngressMbps = Math.round(peakIngressMbps * 100) / 100;
+    averageRecordingMbps = Math.round(averageRecordingMbps * 100) / 100;
+    dailyStorageGb = Math.round(dailyStorageGb * 10) / 10;
+    requiredUsableTb = Math.round(requiredUsableTb * 100) / 100;
     const theoreticalRawTb = Math.round(requiredUsableTb * raidDef.approxRawMultiplier * 100) / 100;
+    const perCameraSingleStreamMbps = cameraUnits > 0
+      ? Math.round((peakIngressMbps / cameraUnits) * 100) / 100
+      : this.calculateSingleStreamBitrateMbps(resolutionMp, codec, fps, sceneActivity, customBitratePerCamMbps);
 
     // 5. Genetec Security Center 5.14.1.0 Archiver & Multi-Role Server Verification
     const genetecProfileKey = overrides.genetecProfile || this.state.genetecProfile || "dedicated_300";
@@ -1405,6 +1537,7 @@ const VideoStorageSizer = {
     return {
       // Core counts & parameters
       sourceMode: useBomCameras ? "bom" : "manual",
+      cameraGroups: evaluatedGroups,
       bomCameraUnits,
       cameraUnits,
       totalCameras: cameraUnits,

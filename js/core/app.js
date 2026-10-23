@@ -1337,118 +1337,178 @@ function buildCalculatorStrip() {
           </div>
         </div>
 
-        <!-- Row 2: Parameter Controls Grid -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-9 gap-2 text-xs">
-          <!-- 1. Camera Count & Source -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[9px] font-bold uppercase text-slate-400">1. Cameras</span>
-              <button onclick="setVideoSizerParam('sourceMode', '${vCalc.sourceMode === 'bom' ? 'manual' : 'bom'}')" class="text-[9px] font-mono px-1.5 py-0.2 rounded ${vCalc.sourceMode === 'bom' ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-slate-800 text-slate-300'} cursor-pointer" title="Switch between BOM cameras and Manual camera count">
-                ${vCalc.sourceMode === 'bom' ? `BOM (${vCalc.bomCameraUnits})` : 'Manual'}
+        <!-- Row 2: Multi-Group Camera & Recording Schedule Table + Global RAID & Archiver Controls -->
+        <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-col gap-2.5">
+          <!-- Table Toolbar: Add Camera Group, Import BOM Cameras, Global RAID Level & Archiver Roles -->
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                <i data-lucide="camera" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>Camera Groups &amp; Recording Schedules (${(vCalc.cameraGroups || []).length} Group${(vCalc.cameraGroups || []).length === 1 ? '' : 's'})</span>
+              </span>
+              <button onclick="addVideoCameraGroup()" class="px-2.5 py-1 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer" title="Add another camera group with different resolution, frame rate, motion %, or retention days">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Camera Group</span>
               </button>
+              ${vCalc.bomCameraUnits > 0 ? `
+                <button onclick="importBomCamerasToGroups()" class="px-2.5 py-1 rounded-lg ${vCalc.sourceMode === 'bom' ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-700/60' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'} text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer" title="Import cameras from Project BOM into editable camera groups">
+                  <i data-lucide="download" class="w-3 h-3"></i>
+                  <span>Sync BOM Cameras (${vCalc.bomCameraUnits})</span>
+                </button>
+              ` : ''}
             </div>
-            <div class="flex items-center gap-1">
-              <input type="number" min="1" max="5000" value="${vCalc.totalCameras}" onchange="setVideoSizerParam('manualCameraCount', Math.max(1, parseInt(this.value, 10) || 1))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-0.5 text-xs font-mono font-bold text-white focus:outline-none focus:border-purple-500" />
-              <span class="text-[10px] text-slate-400 font-mono">Cam</span>
+
+            <!-- Global Storage RAID & Genetec Archiver Role Controls -->
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1">
+                <span class="text-[9px] font-bold uppercase text-slate-400">RAID Level:</span>
+                <select onchange="setVideoSizerParam('raidType', this.value)" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
+                  <option value="RAID 5" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 5' ? 'selected' : ''}>RAID 5 (1 Parity)</option>
+                  <option value="RAID 6" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 6' ? 'selected' : ''}>RAID 6 (2 Parity)</option>
+                  <option value="RAID 10" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 10' ? 'selected' : ''}>RAID 10 (50% Mirror)</option>
+                  <option value="RAID 50" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 50' ? 'selected' : ''}>RAID 50 (Dual R5)</option>
+                  <option value="RAID 60" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 60' ? 'selected' : ''}>RAID 60 (Dual R6)</option>
+                  <option value="JBOD" class="bg-slate-900" ${vCalc.raidLevel === 'JBOD' ? 'selected' : ''}>JBOD (No Parity)</option>
+                </select>
+              </div>
+
+              <div class="flex items-center gap-1.5 bg-slate-900 border ${g.isArchiverCountVerified ? 'border-slate-800' : 'border-rose-600'} rounded-lg px-2.5 py-1">
+                <span class="text-[9px] font-bold uppercase text-slate-400">Archiver Roles:</span>
+                <input type="number" min="0" max="64" value="${videoArchiverRoles === 0 ? g.activeArchiverRoles : videoArchiverRoles}" onchange="setVideoSizerParam('archiverRoles', Math.max(0, parseInt(this.value, 10) || 0))" class="w-12 bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'} focus:outline-none text-center" title="Enter number of Genetec Archiver roles to verify against bitrate & camera count (0 = Auto)" />
+                <button onclick="setVideoSizerParam('archiverRoles', 0)" class="text-[9px] font-mono px-1.5 py-0.5 rounded ${videoArchiverRoles === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Reset to Auto-Calculated minimum Archiver roles">
+                  Auto (${g.minRequiredArchiverRoles})
+                </button>
+              </div>
             </div>
           </div>
 
-          <!-- 2. Resolution -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">2. Resolution</span>
-            <select onchange="setVideoSizerParam('resolutionMp', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
-              ${[
-                { mp: 1, label: "1MP (720p HD)" },
-                { mp: 2, label: "2MP (1080p FHD)" },
-                { mp: 3, label: "3MP (2048x1536)" },
-                { mp: 4, label: "4MP (2K QHD)" },
-                { mp: 5, label: "5MP (2592x1944)" },
-                { mp: 6, label: "6MP (3072x2048)" },
-                { mp: 8, label: "8MP (4K UHD)" },
-                { mp: 12, label: "12MP (Fisheye)" },
-                { mp: 16, label: "16MP (Multi-Sensor)" },
-                { mp: 20, label: "20MP (4x5MP)" },
-                { mp: 32, label: "32MP (4x8MP 4K)" }
-              ].map(r => `<option value="${r.mp}" class="bg-slate-900" ${vCalc.resolutionMp === r.mp ? 'selected' : ''}>${r.label}</option>`).join('')}
-            </select>
-          </div>
-
-          <!-- 3. Frame Rate (FPS) -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">3. Frame Rate</span>
-            <select onchange="setVideoSizerParam('fps', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
-              ${[1, 5, 10, 12, 15, 20, 24, 30, 60].map(f => `<option value="${f}" class="bg-slate-900" ${vCalc.fps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
-            </select>
-          </div>
-
-          <!-- 4. Format / Codec (H.264 / H.265 / AV1 / AVI) -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">4. Format / Codec</span>
-            <select onchange="setVideoSizerParam('codec', this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="H.265" class="bg-slate-900" ${vCalc.codec === 'H.265' ? 'selected' : ''}>H.265 (HEVC)</option>
-              <option value="H.265+" class="bg-slate-900" ${vCalc.codec === 'H.265+' ? 'selected' : ''}>H.265+ (Smart Codec)</option>
-              <option value="H.264" class="bg-slate-900" ${vCalc.codec === 'H.264' ? 'selected' : ''}>H.264 (AVC)</option>
-              <option value="AV1" class="bg-slate-900" ${vCalc.codec === 'AV1' ? 'selected' : ''}>AV1 (Genetec 5.14)</option>
-              <option value="AVI" class="bg-slate-900" ${vCalc.codec === 'AVI' ? 'selected' : ''}>AVI / MJPEG (Raw)</option>
-            </select>
-          </div>
-
-          <!-- 5. Scene Activity -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">5. Scene Activity</span>
-            <select onchange="setVideoSizerParam('sceneActivity', this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="low" class="bg-slate-900" ${vCalc.sceneActivity === 'low' ? 'selected' : ''}>Low (Static 0.65x)</option>
-              <option value="medium" class="bg-slate-900" ${vCalc.sceneActivity === 'medium' ? 'selected' : ''}>Medium (Std 1.0x)</option>
-              <option value="high" class="bg-slate-900" ${vCalc.sceneActivity === 'high' ? 'selected' : ''}>High (Busy 1.40x)</option>
-              <option value="ultra" class="bg-slate-900" ${vCalc.sceneActivity === 'ultra' ? 'selected' : ''}>Very High (1.75x)</option>
-            </select>
-          </div>
-
-          <!-- 6. Motion vs Continuous Recording -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">6. Rec Mode / Duty</span>
-            <select onchange="setVideoSizerParam('motionDuty', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="1" class="bg-slate-900" ${vCalc.motionDutyPct >= 100 ? 'selected' : ''}>Continuous 24/7 (100%)</option>
-              <option value="0.75" class="bg-slate-900" ${vCalc.motionDutyPct === 75 ? 'selected' : ''}>Motion High (18h / 75%)</option>
-              <option value="0.7" class="bg-slate-900" ${vCalc.motionDutyPct === 70 ? 'selected' : ''}>Motion Commercial (70%)</option>
-              <option value="0.5" class="bg-slate-900" ${vCalc.motionDutyPct === 50 ? 'selected' : ''}>Motion Medium (12h / 50%)</option>
-              <option value="0.25" class="bg-slate-900" ${vCalc.motionDutyPct === 25 ? 'selected' : ''}>Motion Low (6h / 25%)</option>
-            </select>
-          </div>
-
-          <!-- 7. Retention Days -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">7. Retention</span>
-            <select onchange="setVideoSizerParam('retentionDays', Number(this.value))" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-white font-bold text-xs focus:outline-none cursor-pointer">
-              ${[7, 14, 15, 30, 45, 60, 90, 120, 180, 365].map(d => `<option value="${d}" class="bg-slate-900" ${vCalc.retentionDays === d ? 'selected' : ''}>${d} Days</option>`).join('')}
-            </select>
-          </div>
-
-          <!-- 8. RAID Level -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">8. RAID Level</span>
-            <select onchange="setVideoSizerParam('raidType', this.value)" class="bg-slate-900 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="RAID 5" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 5' ? 'selected' : ''}>RAID 5 (1 Parity)</option>
-              <option value="RAID 6" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 6' ? 'selected' : ''}>RAID 6 (2 Parity)</option>
-              <option value="RAID 10" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 10' ? 'selected' : ''}>RAID 10 (50% Mirror)</option>
-              <option value="RAID 50" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 50' ? 'selected' : ''}>RAID 50 (Dual R5)</option>
-              <option value="RAID 60" class="bg-slate-900" ${vCalc.raidLevel === 'RAID 60' ? 'selected' : ''}>RAID 60 (Dual R6)</option>
-              <option value="JBOD" class="bg-slate-900" ${vCalc.raidLevel === 'JBOD' ? 'selected' : ''}>JBOD (No Parity)</option>
-            </select>
-          </div>
-
-          <!-- 9. Genetec Archiver Roles -->
-          <div class="flex flex-col gap-1 bg-slate-950/90 border ${g.isArchiverCountVerified ? 'border-slate-800' : 'border-rose-600'} rounded-xl px-2.5 py-1.5">
-            <div class="flex items-center justify-between">
-              <span class="text-[9px] font-bold uppercase text-slate-400">9. Archiver Roles</span>
-              <button onclick="setVideoSizerParam('archiverRoles', 0)" class="text-[9px] font-mono px-1 rounded ${videoArchiverRoles === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Reset to Auto-Calculated minimum Archiver roles">
-                Auto (${g.minRequiredArchiverRoles})
-              </button>
-            </div>
-            <div class="flex items-center gap-1">
-              <input type="number" min="0" max="64" value="${videoArchiverRoles === 0 ? g.activeArchiverRoles : videoArchiverRoles}" onchange="setVideoSizerParam('archiverRoles', Math.max(0, parseInt(this.value, 10) || 0))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-0.5 text-xs font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'} focus:outline-none" title="Enter number of Genetec Archiver roles to verify against bitrate & camera count (0 = Auto)" />
-              <span class="text-[10px] text-slate-400 font-mono">Roles</span>
-            </div>
+          <!-- Camera Groups Table -->
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400">
+                  <th class="py-1.5 px-2 min-w-[130px]">Group Name</th>
+                  <th class="py-1.5 px-1.5 w-20">Cameras</th>
+                  <th class="py-1.5 px-1.5 w-24">Sensors/Cam</th>
+                  <th class="py-1.5 px-1.5 min-w-[130px]">Resolution / Sensor</th>
+                  <th class="py-1.5 px-1.5 w-24">Frame Rate</th>
+                  <th class="py-1.5 px-1.5 min-w-[125px]">Format / Codec</th>
+                  <th class="py-1.5 px-1.5 min-w-[120px]">Scene Activity</th>
+                  <th class="py-1.5 px-1.5 min-w-[140px]">Rec Mode / Motion</th>
+                  <th class="py-1.5 px-1.5 w-28">Retention (Days)</th>
+                  <th class="py-1.5 px-2 text-right min-w-[115px]">Peak / Avg Mbps</th>
+                  <th class="py-1.5 px-2 text-right min-w-[95px]">Group Usable</th>
+                  <th class="py-1.5 px-1.5 text-center w-16">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60">
+                ${(vCalc.cameraGroups || []).map((grp, idx) => `
+                  <tr class="hover:bg-slate-900/50 transition-colors">
+                    <!-- Group Name -->
+                    <td class="py-1.5 px-2">
+                      <input type="text" value="${String(grp.name || `Group ${idx + 1}`).replace(/"/g, '&quot;')}" onchange="updateVideoCameraGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-purple-500" />
+                    </td>
+                    <!-- Camera Count -->
+                    <td class="py-1.5 px-1.5">
+                      <input type="number" min="1" max="5000" value="${grp.qty}" onchange="updateVideoCameraGroup(${idx}, 'qty', Math.max(1, parseInt(this.value, 10) || 1))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-purple-500" />
+                    </td>
+                    <!-- Sensors per Camera -->
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateVideoCameraGroup(${idx}, 'heads', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-slate-200 font-mono text-xs focus:outline-none cursor-pointer" title="Number of sensor heads/streams per camera unit">
+                        <option value="1" class="bg-slate-900" ${(grp.heads || 1) === 1 ? 'selected' : ''}>1x Single</option>
+                        <option value="2" class="bg-slate-900" ${grp.heads === 2 ? 'selected' : ''}>2x Dual</option>
+                        <option value="3" class="bg-slate-900" ${grp.heads === 3 ? 'selected' : ''}>3x Triple</option>
+                        <option value="4" class="bg-slate-900" ${grp.heads === 4 ? 'selected' : ''}>4x Quad</option>
+                      </select>
+                    </td>
+                    <!-- Resolution -->
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateVideoCameraGroup(${idx}, 'resolutionMp', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
+                        ${[
+                          { mp: 1, label: "1MP (720p HD)" },
+                          { mp: 2, label: "2MP (1080p FHD)" },
+                          { mp: 3, label: "3MP (2048x1536)" },
+                          { mp: 4, label: "4MP (2K QHD)" },
+                          { mp: 5, label: "5MP (2592x1944)" },
+                          { mp: 6, label: "6MP (3072x2048)" },
+                          { mp: 8, label: "8MP (4K UHD)" },
+                          { mp: 12, label: "12MP (Fisheye)" },
+                          { mp: 16, label: "16MP (Panoramic)" },
+                          { mp: 20, label: "20MP (Multi/Pan)" },
+                          { mp: 32, label: "32MP (Ultra-Pan)" }
+                        ].map(r => `<option value="${r.mp}" class="bg-slate-900" ${grp.resolutionMp === r.mp ? 'selected' : ''}>${r.label}</option>`).join('')}
+                      </select>
+                    </td>
+                    <!-- Frame Rate (FPS) -->
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateVideoCameraGroup(${idx}, 'fps', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
+                        ${[1, 5, 10, 12, 15, 20, 24, 30, 60].map(f => `<option value="${f}" class="bg-slate-900" ${grp.fps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
+                      </select>
+                    </td>
+                    <!-- Format / Codec -->
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateVideoCameraGroup(${idx}, 'codec', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
+                        <option value="H.265" class="bg-slate-900" ${grp.codec === 'H.265' ? 'selected' : ''}>H.265 (HEVC)</option>
+                        <option value="H.265+" class="bg-slate-900" ${grp.codec === 'H.265+' ? 'selected' : ''}>H.265+ (Smart)</option>
+                        <option value="H.264" class="bg-slate-900" ${grp.codec === 'H.264' ? 'selected' : ''}>H.264 (AVC)</option>
+                        <option value="AV1" class="bg-slate-900" ${grp.codec === 'AV1' ? 'selected' : ''}>AV1 (Genetec 5.14)</option>
+                        <option value="AVI" class="bg-slate-900" ${grp.codec === 'AVI' ? 'selected' : ''}>AVI / MJPEG</option>
+                      </select>
+                    </td>
+                    <!-- Scene Activity -->
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateVideoCameraGroup(${idx}, 'sceneActivity', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
+                        <option value="low" class="bg-slate-900" ${grp.sceneActivity === 'low' ? 'selected' : ''}>Low (0.65x)</option>
+                        <option value="medium" class="bg-slate-900" ${grp.sceneActivity === 'medium' ? 'selected' : ''}>Medium (1.0x)</option>
+                        <option value="high" class="bg-slate-900" ${grp.sceneActivity === 'high' ? 'selected' : ''}>High (1.40x)</option>
+                        <option value="ultra" class="bg-slate-900" ${grp.sceneActivity === 'ultra' ? 'selected' : ''}>Very High (1.75x)</option>
+                      </select>
+                    </td>
+                    <!-- Rec Mode / Motion Duty -->
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateVideoCameraGroup(${idx}, 'motionDutyPct', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
+                        <option value="100" class="bg-slate-900" ${grp.motionDutyPct >= 100 ? 'selected' : ''}>Continuous (100%)</option>
+                        <option value="75" class="bg-slate-900" ${grp.motionDutyPct === 75 ? 'selected' : ''}>Motion High (75%)</option>
+                        <option value="70" class="bg-slate-900" ${grp.motionDutyPct === 70 ? 'selected' : ''}>Motion Comm (70%)</option>
+                        <option value="50" class="bg-slate-900" ${grp.motionDutyPct === 50 ? 'selected' : ''}>Motion Med (50%)</option>
+                        <option value="25" class="bg-slate-900" ${grp.motionDutyPct === 25 ? 'selected' : ''}>Motion Low (25%)</option>
+                        <option value="10" class="bg-slate-900" ${grp.motionDutyPct === 10 ? 'selected' : ''}>Motion Min (10%)</option>
+                      </select>
+                    </td>
+                    <!-- Retention Days (Number input with quick step) -->
+                    <td class="py-1.5 px-1.5">
+                      <div class="flex items-center gap-1">
+                        <input type="number" min="1" max="1825" value="${grp.retentionDays}" onchange="updateVideoCameraGroup(${idx}, 'retentionDays', Math.max(1, parseInt(this.value, 10) || 30))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-mono font-bold text-amber-300 text-center focus:outline-none focus:border-purple-500" title="Retention in days for this camera group" />
+                        <span class="text-[10px] text-slate-400 font-mono">d</span>
+                      </div>
+                    </td>
+                    <!-- Group Peak / Avg Bitrate -->
+                    <td class="py-1.5 px-2 text-right font-mono">
+                      <div class="text-xs font-bold text-sky-400">${grp.peakIngressMbps} <span class="text-slate-500">/</span> ${grp.averageRecordingMbps}</div>
+                      <div class="text-[9px] text-slate-500">${grp.perCameraMbps} Mbps/cam (${grp.totalStreams} str)</div>
+                    </td>
+                    <!-- Group Usable TB -->
+                    <td class="py-1.5 px-2 text-right font-mono">
+                      <div class="text-xs font-bold text-purple-300">${grp.requiredUsableTb} TB</div>
+                      <div class="text-[9px] text-slate-500">${grp.dailyStorageGb} GB/d</div>
+                    </td>
+                    <!-- Row Actions -->
+                    <td class="py-1.5 px-1.5 text-center">
+                      <div class="flex items-center justify-center gap-1">
+                        <button onclick="duplicateVideoCameraGroup(${idx})" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors cursor-pointer" title="Duplicate this camera group">
+                          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        </button>
+                        ${(vCalc.cameraGroups || []).length > 1 ? `
+                          <button onclick="removeVideoCameraGroup(${idx})" class="p-1 rounded hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title="Remove this camera group">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -1728,6 +1788,105 @@ function setVideoSizerParam(key, val) {
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 }
 window.setVideoSizerParam = setVideoSizerParam;
+
+function ensureEditableCameraGroups() {
+  if (typeof VideoStorageSizer === "undefined") return [];
+  if (!VideoStorageSizer.state.hasCustomGroups) {
+    const bomGroups = VideoStorageSizer.buildCameraGroupsFromBom(projectBOM);
+    if (bomGroups.length > 0 && (videoSourceMode === "auto" || videoSourceMode === "bom")) {
+      VideoStorageSizer.state.cameraGroups = bomGroups;
+    } else if (!Array.isArray(VideoStorageSizer.state.cameraGroups) || VideoStorageSizer.state.cameraGroups.length === 0) {
+      VideoStorageSizer.state.cameraGroups = [{
+        id: "grp_1",
+        name: "Camera Group 1",
+        qty: videoManualCamCount || 32,
+        heads: 1,
+        resolutionMp: videoResolutionMp || 4,
+        fps: videoFps || 15,
+        codec: videoCodec || "H.265",
+        sceneActivity: videoSceneActivity || "medium",
+        motionDutyPct: Math.round((videoMotionDuty || 0.5) * 100),
+        retentionDays: videoRetentionDays || 30
+      }];
+    }
+    VideoStorageSizer.state.hasCustomGroups = true;
+    videoSourceMode = "manual";
+    window.videoSourceMode = "manual";
+    VideoStorageSizer.state.sourceMode = "manual";
+  }
+  return VideoStorageSizer.state.cameraGroups;
+}
+
+function addVideoCameraGroup() {
+  const groups = ensureEditableCameraGroups();
+  const last = groups[groups.length - 1] || {};
+  const nextIdx = groups.length + 1;
+  groups.push({
+    id: `grp_${Date.now()}_${nextIdx}`,
+    name: `Camera Group ${nextIdx}`,
+    qty: 8,
+    heads: 1,
+    resolutionMp: last.resolutionMp || 4,
+    fps: last.fps || 15,
+    codec: last.codec || "H.265",
+    sceneActivity: last.sceneActivity || "medium",
+    motionDutyPct: last.motionDutyPct ?? 50,
+    retentionDays: last.retentionDays || 30
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.addVideoCameraGroup = addVideoCameraGroup;
+
+function duplicateVideoCameraGroup(index) {
+  const groups = ensureEditableCameraGroups();
+  const src = groups[index];
+  if (!src) return;
+  groups.splice(index + 1, 0, {
+    ...src,
+    id: `grp_${Date.now()}_${index + 2}`,
+    name: `${src.name || 'Group'} (Copy)`
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.duplicateVideoCameraGroup = duplicateVideoCameraGroup;
+
+function removeVideoCameraGroup(index) {
+  const groups = ensureEditableCameraGroups();
+  if (groups.length <= 1) return;
+  groups.splice(index, 1);
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.removeVideoCameraGroup = removeVideoCameraGroup;
+
+function updateVideoCameraGroup(index, field, val) {
+  const groups = ensureEditableCameraGroups();
+  if (!groups[index]) return;
+  groups[index][field] = val;
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.updateVideoCameraGroup = updateVideoCameraGroup;
+
+function importBomCamerasToGroups() {
+  if (typeof VideoStorageSizer === "undefined") return;
+  const bomGroups = VideoStorageSizer.buildCameraGroupsFromBom(projectBOM);
+  if (bomGroups.length > 0) {
+    VideoStorageSizer.state.cameraGroups = bomGroups;
+    VideoStorageSizer.state.hasCustomGroups = true;
+    videoSourceMode = "manual";
+    window.videoSourceMode = "manual";
+    VideoStorageSizer.state.sourceMode = "manual";
+    if (typeof showToast === "function") {
+      showToast(`Imported ${bomGroups.length} camera group(s) from BOM into the Storage Calculator.`, "info");
+    }
+    if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+  }
+}
+window.importBomCamerasToGroups = importBomCamerasToGroups;
 
 function autoFitNvrToBom() {
   if (typeof VideoStorageSizer === "undefined") return;
