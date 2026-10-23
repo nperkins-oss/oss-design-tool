@@ -1599,8 +1599,9 @@ function buildAccessControlSidebar(container, baseSet) {
 }
 
 function buildServersSidebar(container, baseSet) {
-  const vendors = ["Dell Technologies", "BCDVideo", "Supermicro", "HPE"];
+  const vendors = ["Genetec", "Dell Technologies", "BCDVideo", "Supermicro", "HPE"];
   const rackUnits = [
+    { val: 0, label: "0U Tower / Desktop / Micro" },
     { val: 1, label: "1U Compact NVR / Edge Host" },
     { val: 2, label: "2U Enterprise VMS Recorder" },
     { val: 4, label: "4U High-Density SAN Array" }
@@ -1623,7 +1624,7 @@ function buildServersSidebar(container, baseSet) {
               <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">
                 <div class="flex items-center gap-2">
                   <input type="checkbox" onchange="toggleFilterItem('srvVendor', '${v}')" ${isChecked ? 'checked' : ''} class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0">
-                  <span>${v}</span>
+                  <span>${v === 'Genetec' ? 'Genetec Streamvault' : v}</span>
                 </div>
                 <span class="text-[10px] font-mono text-slate-500">${count}</span>
               </label>
@@ -1634,7 +1635,7 @@ function buildServersSidebar(container, baseSet) {
 
       <!-- Chassis Rack Units -->
       <div class="pt-3 border-t border-slate-800/80">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Rackmount Chassis Size</span>
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Chassis Form Factor</span>
         <div class="space-y-1.5">
           ${rackUnits.map(ru => {
             const count = baseSet.filter(s => parseInt(s.rackUnits, 10) === ru.val).length;
@@ -1671,26 +1672,85 @@ function buildServersSidebar(container, baseSet) {
           <span>Redundant Hot-Swap Dual PSU</span>
         </label>
       </div>
+
+      <!-- Genetec Reference Datasheets -->
+      <div class="pt-3 border-t border-slate-800/80 space-y-1.5">
+        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Genetec Engineering Docs</span>
+        <a href="Datasheets/Genetec/SystemRequirements.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>System Requirements 5.14</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+        <a href="Datasheets/Genetec/ProductCompatability.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>Product Compatibility Matrix</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+        <a href="Datasheets/Genetec/SupportedPlugins.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>Supported Plugins & Integrations</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+        <a href="Datasheets/Genetec/RSA.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>Restricted Security Area (RSA)</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+      </div>
     </div>
   `;
 }
 
 function buildDomainPlaceholderSidebar(container, mode) {
   const modeTitle = (mode || "").replace(/_/g, " ").toUpperCase();
+  const activeLicCat = (typeof window !== "undefined" && window.selectedVmsLicCategory) ? window.selectedVmsLicCategory : "all";
+  const licCategories = [
+    { id: "all", label: "All Licenses & Add-Ons" },
+    { id: "Base Server License", label: "Base Packages (Std / Pro / Ent)" },
+    { id: "Per-Camera License", label: "Camera Connection Licenses" },
+    { id: "Annual SMA", label: "Genetec Advantage (1Y / 3Y / 5Y)" },
+    { id: "Failover Add-On", label: "Failover & High Availability" },
+    { id: "Client License", label: "Security Desk & Mobile Clients" },
+    { id: "Map Add-On", label: "Plan Manager Interactive Maps" },
+    { id: "Analytics License", label: "KiwiVision Video Analytics" },
+    { id: "LPR License", label: "AutoVu ALPR Licenses" },
+    { id: "Intercom License", label: "Sipelia Intercom Licenses" }
+  ];
+
   container.innerHTML = `
     <div class="space-y-4">
       <div class="p-3 bg-slate-950/60 rounded-xl border border-slate-800 text-xs space-y-2">
-        <div class="flex items-center gap-2 text-brand-400 font-bold uppercase tracking-wider text-[11px]">
-          <i data-lucide="layers" class="w-4 h-4"></i>
+        <div class="flex items-center gap-2 text-indigo-400 font-bold uppercase tracking-wider text-[11px]">
+          <i data-lucide="key" class="w-4 h-4"></i>
           <span>${modeTitle}</span>
         </div>
-        <p class="text-[11px] text-slate-400">Faceted hardware filtering and capacity thresholds for this catalog domain.</p>
+        <p class="text-[11px] text-slate-400">Filter official Genetec Security Center SKUs, camera connections, failover roles, and Advantage SMAs.</p>
       </div>
-      <div class="space-y-2">
-        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Status</span>
-        <div class="p-2.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs">
-          Use the global search bar above to filter licenses and software packages.
-        </div>
+      ${mode === "vms_software" ? `
+      <div class="space-y-1.5">
+        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">License Category</span>
+        ${licCategories.map(cat => `
+          <button onclick="window.selectedVmsLicCategory='${cat.id}'; buildSidebarFilters(); runActiveFilter();"
+            class="w-full text-left px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition flex items-center justify-between ${activeLicCat === cat.id ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 font-bold' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'}">
+            <span>${cat.label}</span>
+          </button>
+        `).join('')}
+      </div>
+      ` : ''}
+      <div class="pt-3 border-t border-slate-800/80 space-y-1.5">
+        <span class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider block mb-1">Official Genetec Reference Docs</span>
+        <a href="Datasheets/Genetec/SystemRequirements.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>System Requirements 5.14</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+        <a href="Datasheets/Genetec/ProductCompatability.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>Product Compatibility Matrix</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+        <a href="Datasheets/Genetec/SupportedPlugins.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>Supported Plugins & Drivers</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
+        <a href="Datasheets/Genetec/RSA.pdf" target="_blank" class="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-[11px] text-slate-300 transition">
+          <span>RSA Surveillance Datasheet</span>
+          <i data-lucide="external-link" class="w-3 h-3 text-indigo-400"></i>
+        </a>
       </div>
     </div>
   `;
