@@ -1591,8 +1591,16 @@ function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null, 
     }
   }
 
+  if (typeof VideoStorageSizer !== "undefined" && VideoStorageSizer.state) {
+    VideoStorageSizer.state.hasCustomGroups = false;
+    VideoStorageSizer.state.sourceMode = "auto";
+    if (typeof window !== "undefined") window.videoSourceMode = "auto";
+  }
   if (typeof deriveDemandFromBOM === "function") {
     deriveDemandFromBOM(true);
+  }
+  if (typeof renderGlobalDesignModeToggle === "function") {
+    renderGlobalDesignModeToggle();
   }
   FacilityStore.notifyWorkspaceChange();
   if (typeof buildCalculatorStrip === "function") {
@@ -1669,7 +1677,7 @@ function applyCameraCatalogSpecToBomInstance(bomCam, targetCatCam) {
 function upgradeGenericCameraTypeBulk(genericTypeId, targetSkuOverride = null) {
   if (!genericTypeId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
 
-  const selectEl = document.getElementById(`bulkUpgradeSelect-${genericTypeId}`);
+  const selectEl = document.getElementById(`bulk-upgrade-select-${genericTypeId}`) || document.getElementById(`bulkUpgradeSelect-${genericTypeId}`);
   const chosenSku = targetSkuOverride || (selectEl ? selectEl.value : null);
   if (!chosenSku) {
     if (typeof showToast === "function") showToast("Select a target camera SKU first.");
@@ -1702,6 +1710,9 @@ function upgradeGenericCameraTypeBulk(genericTypeId, targetSkuOverride = null) {
     }
     if (typeof deriveDemandFromBOM === "function") {
       deriveDemandFromBOM(true);
+    }
+    if (typeof renderGlobalDesignModeToggle === "function") {
+      renderGlobalDesignModeToggle();
     }
     if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
       FacilityStore.notifyWorkspaceChange();
@@ -1744,7 +1755,7 @@ function upgradeAllGenericCamerasToRecommended() {
 
   let totalUpgraded = 0;
   genericTypesInBom.forEach(typeId => {
-    const selectEl = document.getElementById(`bulkUpgradeSelect-${typeId}`);
+    const selectEl = document.getElementById(`bulk-upgrade-select-${typeId}`) || document.getElementById(`bulkUpgradeSelect-${typeId}`);
     const genericDef = (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : []).find(g => g.id === typeId || g.sku === typeId);
     const chosenSku = (selectEl && selectEl.value) || (genericDef && Array.isArray(genericDef.recommendedUpgradeSkus) ? genericDef.recommendedUpgradeSkus[0] : null);
     if (!chosenSku) return;
@@ -1766,6 +1777,9 @@ function upgradeAllGenericCamerasToRecommended() {
     }
     if (typeof deriveDemandFromBOM === "function") {
       deriveDemandFromBOM(true);
+    }
+    if (typeof renderGlobalDesignModeToggle === "function") {
+      renderGlobalDesignModeToggle();
     }
     if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
       FacilityStore.notifyWorkspaceChange();
@@ -1805,6 +1819,9 @@ function upgradeSingleCameraInstance(instanceId, targetSkuOrId) {
   }
   if (typeof deriveDemandFromBOM === "function") {
     deriveDemandFromBOM(true);
+  }
+  if (typeof renderGlobalDesignModeToggle === "function") {
+    renderGlobalDesignModeToggle();
   }
   if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
     FacilityStore.notifyWorkspaceChange();
@@ -2122,6 +2139,9 @@ function changeBomQty(instanceId, delta) {
       }
     }
 
+    if (typeof deriveDemandFromBOM === "function") deriveDemandFromBOM(true);
+    if (typeof renderGlobalDesignModeToggle === "function") renderGlobalDesignModeToggle();
+    if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
     FacilityStore.notifyWorkspaceChange();
     showToast(`Added individual camera unit (${item.model})`);
     return;
@@ -2147,6 +2167,9 @@ function changeBomQty(instanceId, delta) {
     }
   }
 
+  if (typeof deriveDemandFromBOM === "function") deriveDemandFromBOM(true);
+  if (typeof renderGlobalDesignModeToggle === "function") renderGlobalDesignModeToggle();
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   FacilityStore.notifyWorkspaceChange();
 }
 
@@ -2250,6 +2273,9 @@ function deleteDeviceFromBOM(instanceId, skipConfirm = false) {
   }
 
   // 6. Notify workspace and re-render all active UI tools
+  if (typeof deriveDemandFromBOM === "function") deriveDemandFromBOM(true);
+  if (typeof renderGlobalDesignModeToggle === "function") renderGlobalDesignModeToggle();
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
     FacilityStore.notifyWorkspaceChange();
   }
@@ -2275,6 +2301,9 @@ function clearBom() {
   if (typeof clearPhysicalLayoutDrops === "function") {
     clearPhysicalLayoutDrops();
   }
+  if (typeof deriveDemandFromBOM === "function") deriveDemandFromBOM(true);
+  if (typeof renderGlobalDesignModeToggle === "function") renderGlobalDesignModeToggle();
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   FacilityStore.notifyWorkspaceChange();
   showToast("Project BOM reset.");
 }

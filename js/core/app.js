@@ -47,13 +47,70 @@ window.FEATURE_FLAGS = FEATURE_FLAGS;
 // "specific" = Full Design Mode (Switch generic cameras to actual vendor SKUs via Bulk Mapping + Individual Override)
 let cameraDesignMode = "generic";
 let showCameraBulkUpgradePanel = true;
+// PoE Calculator Input Mode:
+// "camera_types" = Enter counts of the 11 Generic Camera Types (auto-syncs to BOM, PoE Classes, and Storage/Archiver Sizer)
+// "poe_classes"  = Enter raw IEEE 802.3 PoE Class port counts (af 15.4W, at 30W, bt 60W, bt 90W)
+let poeCalcInputMode = "camera_types";
+let poeCalcTargetLocation = "";
 window.cameraDesignMode = cameraDesignMode;
 window.showCameraBulkUpgradePanel = showCameraBulkUpgradePanel;
+window.poeCalcInputMode = poeCalcInputMode;
+window.poeCalcTargetLocation = poeCalcTargetLocation;
 
 function isGenericCameraModeActive() {
   return cameraDesignMode === "generic";
 }
 window.isGenericCameraModeActive = isGenericCameraModeActive;
+
+function renderGlobalDesignModeToggle() {
+  const el = document.getElementById("globalDesignModeToggleContainer");
+  if (!el) return;
+  const isGeneric = isGenericCameraModeActive();
+  const bomList = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM : [];
+  const genericCount = bomList
+    .filter(i => !i.parentInstanceId && (i.role === "Camera" || i.category === "camera" || i.category === "cameras") && (i.isGenericCamera || String(i.id || i.sku || "").startsWith("gen-cam-")))
+    .reduce((sum, i) => sum + (parseInt(i.qty, 10) || 1), 0);
+
+  el.innerHTML = `
+    <div class="inline-flex items-center bg-slate-950/90 border border-slate-700/80 rounded-lg p-0.5 text-[11px] shadow-sm">
+      <span class="hidden xl:inline text-[9px] font-mono uppercase tracking-wider text-slate-400 px-2 font-bold">Camera Mode:</span>
+      <button
+        type="button"
+        onclick="setCameraDesignMode('generic')"
+        class="px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isGeneric ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
+        title="Initial Design Mode: Size PoE & Video Storage using Generic Camera Types (2MP, 4MP, 5MP, 8MP 4K, 360°, Dual/Quad/5-Sensor, PTZ, 60W LPR)"
+      >
+        <i data-lucide="layers" class="w-3 h-3"></i>
+        <span>Initial Design</span>
+      </button>
+      <button
+        type="button"
+        onclick="setCameraDesignMode('specific')"
+        class="px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${!isGeneric ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
+        title="Full Design Mode: Select actual manufacturer camera SKUs and bulk-convert generic cameras to real parts"
+      >
+        <i data-lucide="cpu" class="w-3 h-3"></i>
+        <span>Full Design</span>
+        ${genericCount > 0 ? `<span class="ml-0.5 px-1.5 py-0.2 rounded-full text-[9px] font-mono ${!isGeneric ? 'bg-white/20 text-white' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}" title="${genericCount} Generic Camera(s) in Project">${genericCount}</span>` : ''}
+      </button>
+    </div>
+  `;
+  if (typeof safeCreateIcons === "function") safeCreateIcons(el);
+}
+window.renderGlobalDesignModeToggle = renderGlobalDesignModeToggle;
+
+function setPoeCalcInputMode(mode) {
+  poeCalcInputMode = mode === "poe_classes" ? "poe_classes" : "camera_types";
+  window.poeCalcInputMode = poeCalcInputMode;
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.setPoeCalcInputMode = setPoeCalcInputMode;
+
+function setPoeCalcTargetLocation(loc) {
+  poeCalcTargetLocation = loc || "";
+  window.poeCalcTargetLocation = poeCalcTargetLocation;
+}
+window.setPoeCalcTargetLocation = setPoeCalcTargetLocation;
 
 function setCameraDesignMode(mode) {
   const normalized = mode === "specific" ? "specific" : "generic";
@@ -65,8 +122,11 @@ function setCameraDesignMode(mode) {
     requireCamAnalytics = false;
     requireCamVandal = false;
     requireCamTaa = false;
+    poeCalcInputMode = "camera_types";
+    window.poeCalcInputMode = "camera_types";
   }
 
+  renderGlobalDesignModeToggle();
   if (typeof GlobalSearchEngine !== "undefined" && typeof GlobalSearchEngine.buildIndex === "function") {
     GlobalSearchEngine.buildIndex();
   }
@@ -818,9 +878,128 @@ function resetDemandInputs() {
   showToast("PoE demand targets reset to 0.");
 }
 
-function deriveDemandFromBOM() {
+function getGenericCameraTypeCountInBom(genericTypeId) {
+  if (!genericTypeId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return 0;
+  return projectBOM
+    .filter(i => !i.parentInstanceId && (i.role === "Camera" || i.category === "camera" || i.category === "cameras") &&
+      (i.genericCameraTypeId === genericTypeId || i.originGenericTypeId === genericTypeId || i.id === genericTypeId || i.sku === genericTypeId))
+    .reduce((sum, i) => sum + (parseInt(i.qty, 10) || 1), 0);
+}
+window.getGenericCameraTypeCountInBom = getGenericCameraTypeCountInBom;
+
+function setGenericCameraTypeCountFromSizer(genericTypeId, targetQty) {
+  if (!genericTypeId || typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  const desired = Math.max(0, Math.min(500, parseInt(targetQty, 10) || 0));
+
+  if (typeof unbundleMultiQtyCameras === "function") {
+    unbundleMultiQtyCameras(projectBOM);
+  }
+
+  const matchingInstances = projectBOM.filter(i =>
+    !i.parentInstanceId &&
+    (i.role === "Camera" || i.category === "camera" || i.category === "cameras") &&
+    (i.genericCameraTypeId === genericTypeId || i.originGenericTypeId === genericTypeId || i.id === genericTypeId || i.sku === genericTypeId)
+  );
+
+  const currentCount = matchingInstances.length;
+  if (desired === currentCount) return;
+
+  if (desired > currentCount) {
+    const toAdd = desired - currentCount;
+    let targetLoc = poeCalcTargetLocation;
+    if (!targetLoc && typeof FacilityStore !== "undefined") {
+      const locs = FacilityStore.getLocationNames(false);
+      if (locs.length > 0) {
+        targetLoc = locs.find(l => l.includes("IDF")) || locs[0];
+      }
+    }
+    if (typeof addCameraToBOM === "function") {
+      addCameraToBOM(genericTypeId, targetLoc || null, null, toAdd);
+    }
+  } else {
+    const toRemove = currentCount - desired;
+    // Prefer removing unplaced instances first (from newest to oldest)
+    const placedIds = new Set(
+      (typeof floorplanState !== "undefined" && Array.isArray(floorplanState.deviceDrops))
+        ? floorplanState.deviceDrops.map(d => d.instanceId)
+        : []
+    );
+    const sortedForRemoval = [...matchingInstances].reverse().sort((a, b) => {
+      const aPlaced = placedIds.has(a.instanceId) ? 1 : 0;
+      const bPlaced = placedIds.has(b.instanceId) ? 1 : 0;
+      return aPlaced - bPlaced;
+    });
+
+    const idsToRemove = new Set(sortedForRemoval.slice(0, toRemove).map(i => i.instanceId));
+
+    // Clean up switch port allocations and physical drops for removed cameras
+    projectBOM.forEach(item => {
+      if (idsToRemove.has(item.instanceId)) {
+        if (item.uplinkTargetId && item.assignedSwitchPort && typeof PortEngine !== "undefined") {
+          const hostSw = projectBOM.find(s => s.instanceId === item.uplinkTargetId);
+          if (hostSw && typeof PortEngine.disconnectPort === "function") {
+            PortEngine.disconnectPort(hostSw, item.assignedSwitchPort);
+          }
+        }
+        if (typeof removePhysicalLayoutDropByInstanceId === "function") {
+          removePhysicalLayoutDropByInstanceId(item.instanceId);
+        }
+      }
+    });
+
+    projectBOM = projectBOM.filter(i => !idsToRemove.has(i.instanceId) && !idsToRemove.has(i.parentInstanceId));
+    window.projectBOM = projectBOM;
+
+    if (typeof DeviceTaxonomy !== "undefined" && typeof DeviceTaxonomy.recalculateNumbers === "function") {
+      DeviceTaxonomy.recalculateNumbers(projectBOM);
+    }
+  }
+
+  // Keep VideoStorageSizer synced with BOM cameras
+  if (typeof VideoStorageSizer !== "undefined" && VideoStorageSizer.state) {
+    VideoStorageSizer.state.hasCustomGroups = false;
+    VideoStorageSizer.state.sourceMode = "auto";
+    videoSourceMode = "auto";
+    window.videoSourceMode = "auto";
+  }
+
+  deriveDemandFromBOM(true);
+  renderGlobalDesignModeToggle();
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof buildSidebarFilters === "function") buildSidebarFilters();
+  if (typeof runActiveFilter === "function") runActiveFilter();
+}
+window.setGenericCameraTypeCountFromSizer = setGenericCameraTypeCountFromSizer;
+
+function adjustGenericCameraTypeCountFromSizer(genericTypeId, delta) {
+  const cur = getGenericCameraTypeCountInBom(genericTypeId);
+  setGenericCameraTypeCountFromSizer(genericTypeId, Math.max(0, cur + (parseInt(delta, 10) || 0)));
+}
+window.adjustGenericCameraTypeCountFromSizer = adjustGenericCameraTypeCountFromSizer;
+
+function clearAllGenericCamerasFromSizer() {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const genericTypes = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
+  genericTypes.forEach(g => {
+    if (getGenericCameraTypeCountInBom(g.id) > 0) {
+      setGenericCameraTypeCountFromSizer(g.id, 0);
+    }
+  });
+  demandCounts = { af: 0, at: 0, bt60: 0, bt90: 0 };
+  buildCalculatorStrip();
+  buildSidebarFilters();
+  runActiveFilter();
+  if (typeof showToast === "function") {
+    showToast("Cleared all generic camera counts from PoE Sizer & Project BOM.");
+  }
+}
+window.clearAllGenericCamerasFromSizer = clearAllGenericCamerasFromSizer;
+
+function deriveDemandFromBOM(silent = false) {
   if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) {
-    if (typeof showToast === "function") showToast("Project BOM is empty.");
+    if (!silent && typeof showToast === "function") showToast("Project BOM is empty.");
     return;
   }
 
@@ -837,7 +1016,7 @@ function deriveDemandFromBOM() {
     const model = (item.model || "").toLowerCase();
 
     const isNonEdge = role.includes("switch") || role === "access" || role === "core" || role === "aggregation" ||
-                      role === "server" || role === "storage" || role === "ups" || role === "pdu" ||
+                      role === "server" || role === "workstation" || role === "storage" || role === "ups" || role === "pdu" ||
                       role === "structured cabling" || role === "optics & dac" || role.includes("license") ||
                       item.source === "cabling_sync" || item.source === "topology_auto_sync";
     if (isNonEdge) return;
@@ -856,11 +1035,11 @@ function deriveDemandFromBOM() {
 
       edgeDeviceCount += qty;
 
-      if (std.includes("bt4") || std.includes("90w") || std.includes("type 4") || watts > 60) {
+      if (item.poeTierKey === "bt90" || std.includes("bt4") || std.includes("90w") || std.includes("type 4") || watts > 60) {
         countBt90 += qty;
-      } else if (std.includes("bt") || std.includes("60w") || std.includes("type 3") || watts > 30) {
+      } else if (item.poeTierKey === "bt60" || std.includes("bt") || std.includes("60w") || std.includes("type 3") || watts > 30) {
         countBt60 += qty;
-      } else if (std.includes("at") || std.includes("poe+") || watts > 15.4) {
+      } else if (item.poeTierKey === "at" || std.includes("at") || std.includes("poe+") || watts > 15.4) {
         countAt += qty;
       } else {
         countAf += qty;
@@ -868,7 +1047,7 @@ function deriveDemandFromBOM() {
     }
   });
 
-  if (edgeDeviceCount === 0) {
+  if (edgeDeviceCount === 0 && !silent) {
     if (typeof showToast === "function") showToast("No PoE edge devices (cameras, access, APs) found in quote.");
     return;
   }
@@ -878,6 +1057,7 @@ function deriveDemandFromBOM() {
   demandCounts.bt60 = countBt60;
   demandCounts.bt90 = countBt90;
 
+  renderGlobalDesignModeToggle();
   buildCalculatorStrip();
   buildSidebarFilters();
   runActiveFilter();
@@ -889,9 +1069,11 @@ function deriveDemandFromBOM() {
     StorageService.queueAutoSave();
   }
 
-  const p = calculatePoETarget();
-  if (typeof showToast === "function") {
-    showToast(`Derived demands from BOM: ${edgeDeviceCount} edge devices (${countAf} af, ${countAt} at, ${countBt60} bt60, ${countBt90} bt90) totaling ${p.budgetWithHeadroom}W required.`);
+  if (!silent) {
+    const p = calculatePoETarget();
+    if (typeof showToast === "function") {
+      showToast(`Derived demands from BOM: ${edgeDeviceCount} edge devices (${countAf} af, ${countAt} at, ${countBt60} bt60, ${countBt90} bt90) totaling ${p.budgetWithHeadroom}W required.`);
+    }
   }
 }
 
@@ -934,6 +1116,7 @@ function setOpticQuickFilter(preset) {
 }
 
 function buildCalculatorStrip() {
+  renderGlobalDesignModeToggle();
   const container = document.getElementById("calculatorStripContainer");
   if (!container) return;
 
@@ -941,86 +1124,205 @@ function buildCalculatorStrip() {
     container.classList.remove("hidden");
     const p = calculatePoETarget();
     const hasDemand = p.totalCameras > 0;
+    const isGenericMode = isGenericCameraModeActive();
+    const isCameraTypesInput = poeCalcInputMode === "camera_types";
+    const genericTypes = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
+
+    // Resolve available closets/racks for newly added cameras from PoE Sizer
+    const allLocs = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(false) : ["IDF-1 • Rack-1", "MDF • Rack-1"];
+    if (!poeCalcTargetLocation && allLocs.length > 0) {
+      poeCalcTargetLocation = allLocs.find(l => l.includes("IDF")) || allLocs[0];
+    }
+
+    const shortLabels = {
+      "gen-cam-2mp-1080p": "Single 2MP (1080p)",
+      "gen-cam-4mp": "Single 4MP (2K)",
+      "gen-cam-5mp": "Single 5MP",
+      "gen-cam-8mp-4k": "Single 8MP (4K)",
+      "gen-cam-6mp-360": "6MP 360° Fisheye",
+      "gen-cam-12mp-360": "12MP 360° Fisheye",
+      "gen-cam-dual-1080p": "Dual-Sensor 1080P",
+      "gen-cam-quad-4mp": "Quad-Sensor 4MP",
+      "gen-cam-5sensor-ptz": "5-Sensor + PTZ",
+      "gen-cam-ptz": "PTZ Camera",
+      "gen-cam-lpr-60w": "LPR Camera (60W)"
+    };
+
+    const totalSyncedGenericCams = genericTypes.reduce((sum, g) => sum + getGenericCameraTypeCountInBom(g.id), 0);
 
     container.innerHTML = `
-      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4 shadow-lg">
-        <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
-            <i data-lucide="zap" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-                PoE Power Budget & Edge Capacity Calculator
-              </h4>
-              <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-bold">
-                IEEE 802.3 Sizing
-              </span>
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col gap-3 shadow-lg">
+        <!-- Top Row: Title, Design Mode Switcher, Input Mode Switcher & Live PoE Budget Summary -->
+        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <div class="flex items-start sm:items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+              <i data-lucide="zap" class="w-5 h-5"></i>
             </div>
-            <p class="text-[11px] text-slate-400 mt-0.5">
-              Spec connected cameras, intercoms, or APs to compute continuous PSE wattage, cable dissipation, and filter matching switches.
-            </p>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+                  PoE Power Budget &amp; Edge Capacity Calculator
+                </h4>
+
+                <!-- PoE Input Mode Toggle: By Generic Camera Types vs By PoE Class -->
+                <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800">
+                  <button
+                    type="button"
+                    onclick="setPoeCalcInputMode('camera_types')"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isCameraTypesInput ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
+                    title="Enter camera counts by Generic Type & Resolution (2MP, 4MP, 5MP, 8MP 4K, 360°, Dual/Quad/5-Sensor, PTZ, 60W LPR). Automatically syncs to BOM, PoE Classes, and Server Storage Calculator!"
+                  >
+                    <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                    <span>By Camera Types (Syncs BOM &amp; Storage)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onclick="setPoeCalcInputMode('poe_classes')"
+                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${!isCameraTypesInput ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
+                    title="Enter raw IEEE 802.3 PoE Class port counts directly (15W af, 30W at, 60W bt, 90W bt)"
+                  >
+                    <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                    <span>By PoE Class (15W / 30W / 60W / 90W)</span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-0.5">
+                ${isCameraTypesInput
+                  ? 'Enter camera counts by type below to <strong class="text-emerald-300">auto-sync across Switch PoE sizing, Quote BOM, Physical Security, and Video Storage / Genetec Archiver calculations</strong>.'
+                  : 'Spec connected PoE ports by IEEE 802.3 class to compute continuous PSE wattage, cable dissipation, and filter matching switches.'}
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2.5 text-xs">
+            <!-- 15.4W af -->
+            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3af: 15.4W PSE / 12.95W PD">
+              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">15W (af):</span>
+              <input type="number" min="0" max="500" value="${demandCounts.af || 0}" onchange="updateDemandInput('af', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-white focus:outline-none" />
+            </div>
+
+            <!-- 30W at -->
+            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3at: 30W PSE / 25.5W PD (PoE+)">
+              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">30W (at):</span>
+              <input type="number" min="0" max="500" value="${demandCounts.at || 0}" onchange="updateDemandInput('at', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-sky-400 focus:outline-none" />
+            </div>
+
+            <!-- 60W bt Type 3 -->
+            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 3: 60W PSE / 51W PD (PoE++ / 4PPoE)">
+              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">60W (bt):</span>
+              <input type="number" min="0" max="500" value="${demandCounts.bt60 || 0}" onchange="updateDemandInput('bt60', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-rose-400 focus:outline-none" />
+            </div>
+
+            <!-- 90W bt Type 4 -->
+            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 4: 90W PSE / 71.3W PD (High-Power PoE++)">
+              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">90W (bt):</span>
+              <input type="number" min="0" max="500" value="${demandCounts.bt90 || 0}" onchange="updateDemandInput('bt90', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-amber-400 focus:outline-none" />
+            </div>
+
+            <!-- Auto-Derive from BOM Button -->
+            <button onclick="deriveDemandFromBOM()" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl transition-all font-semibold text-[11px] cursor-pointer" title="Auto-detect PoE demands from devices in project BOM">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Derive from BOM</span>
+            </button>
+
+            <!-- Telemetry & Headroom Buffer Selection -->
+            <div class="flex items-center gap-3 border-l border-slate-800 pl-3">
+              <div class="text-right">
+                <span class="text-[10px] text-slate-400 uppercase font-mono block">
+                  Required Budget (+${extraHeadroomPercent}%):
+                </span>
+                <div class="flex items-baseline justify-end gap-1.5">
+                  <span class="text-sm font-mono font-black text-amber-400">${p.budgetWithHeadroom} W</span>
+                  ${p.rawWattsPD ? `<span class="text-[10px] text-slate-500 font-mono" title="Estimated device draw: ${p.rawWattsPD}W, Cable loss: ${p.cableLossWatts || 0}W">(${p.rawWatts || 0}W PSE)</span>` : ''}
+                </div>
+              </div>
+
+              <select onchange="updateHeadroom(this.value)" class="bg-slate-950 border border-slate-800 text-[11px] font-semibold rounded-lg px-2 py-1.5 text-slate-300 focus:outline-none focus:border-amber-500">
+                <option value="10" ${extraHeadroomPercent === 10 ? 'selected' : ''}>+10% Buffer</option>
+                <option value="15" ${extraHeadroomPercent === 15 ? 'selected' : ''}>+15% Buffer</option>
+                <option value="20" ${extraHeadroomPercent === 20 ? 'selected' : ''}>+20% Buffer</option>
+                <option value="25" ${extraHeadroomPercent === 25 ? 'selected' : ''}>+25% Buffer</option>
+                <option value="30" ${extraHeadroomPercent === 30 ? 'selected' : ''}>+30% Buffer</option>
+              </select>
+
+              ${hasDemand ? `
+                <button onclick="resetDemandInputs()" class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors" title="Clear Demand Targets">
+                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                </button>
+              ` : ''}
+            </div>
           </div>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2.5 text-xs">
-          <!-- 15.4W af -->
-          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3af: 15.4W PSE / 12.95W PD">
-            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">15W (af):</span>
-            <input type="number" min="0" max="96" value="${demandCounts.af || 0}" onchange="updateDemandInput('af', this.value)" class="w-8 bg-transparent text-center font-mono font-bold text-white focus:outline-none" />
-          </div>
+        ${isCameraTypesInput ? `
+          <!-- Interactive Generic Camera Types PoE & Storage Sync Matrix -->
+          <div class="bg-slate-950/90 border border-emerald-500/30 rounded-xl p-3 space-y-2.5">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-300 uppercase flex items-center gap-1">
+                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Live BOM &amp; Storage Sync
+                </span>
+                <span class="text-xs font-bold text-white">Enter Camera Counts by Generic Type (${totalSyncedGenericCams} Camera${totalSyncedGenericCams === 1 ? '' : 's'} Synced)</span>
+                <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2 py-0.5 text-[11px]">
+                  <span class="text-slate-400 font-mono text-[10px]">Assign Closet:</span>
+                  <select onchange="setPoeCalcTargetLocation(this.value)" class="bg-transparent text-indigo-300 font-bold text-[11px] focus:outline-none cursor-pointer">
+                    ${allLocs.map(loc => `<option value="${escapeHTML(loc)}" class="bg-slate-900" ${poeCalcTargetLocation === loc ? 'selected' : ''}>${escapeHTML(loc)}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
 
-          <!-- 30W at -->
-          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3at: 30W PSE / 25.5W PD (PoE+)">
-            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">30W (at):</span>
-            <input type="number" min="0" max="96" value="${demandCounts.at || 0}" onchange="updateDemandInput('at', this.value)" class="w-8 bg-transparent text-center font-mono font-bold text-sky-400 focus:outline-none" />
-          </div>
-
-          <!-- 60W bt Type 3 -->
-          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 3: 60W PSE / 51W PD (PoE++ / 4PPoE)">
-            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">60W (bt):</span>
-            <input type="number" min="0" max="96" value="${demandCounts.bt60 || 0}" onchange="updateDemandInput('bt60', this.value)" class="w-8 bg-transparent text-center font-mono font-bold text-indigo-400 focus:outline-none" />
-          </div>
-
-          <!-- 90W bt Type 4 -->
-          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 4: 90W PSE / 71.3W PD (High-Power PoE++)">
-            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">90W (bt):</span>
-            <input type="number" min="0" max="96" value="${demandCounts.bt90 || 0}" onchange="updateDemandInput('bt90', this.value)" class="w-8 bg-transparent text-center font-mono font-bold text-amber-400 focus:outline-none" />
-          </div>
-
-          <!-- Auto-Derive from BOM Button -->
-          <button onclick="deriveDemandFromBOM()" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl transition-all font-semibold text-[11px] cursor-pointer" title="Auto-detect PoE demands from devices in project BOM">
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span>Derive from BOM</span>
-          </button>
-
-          <!-- Telemetry & Headroom Buffer Selection -->
-          <div class="flex items-center gap-3 border-l border-slate-800 pl-3">
-            <div class="text-right">
-              <span class="text-[10px] text-slate-400 uppercase font-mono block">
-                Required Budget (+${extraHeadroomPercent}%):
-              </span>
-              <div class="flex items-baseline justify-end gap-1.5">
-                <span class="text-sm font-mono font-black text-amber-400">${p.budgetWithHeadroom} W</span>
-                ${p.rawWattsPD ? `<span class="text-[10px] text-slate-500 font-mono" title="Estimated device draw: ${p.rawWattsPD}W, Cable loss: ${p.cableLossWatts || 0}W">(${p.rawWatts || 0}W PSE)</span>` : ''}
+              <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" onclick="switchDomain('physical_security')" class="px-2.5 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Physical Security Cameras tab to view camera cards or bulk-upgrade to actual SKUs">
+                  <i data-lucide="camera" class="w-3 h-3"></i>
+                  <span>Cameras / Upgrade SKUs &rarr;</span>
+                </button>
+                <button type="button" onclick="switchDomain('compute_storage')" class="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Compute & Storage tab to view synced Video Storage & Genetec 5.14 Archiver sizing">
+                  <i data-lucide="hard-drive" class="w-3 h-3"></i>
+                  <span>Storage &amp; Archiver Sizer &rarr;</span>
+                </button>
+                ${totalSyncedGenericCams > 0 ? `
+                  <button type="button" onclick="clearAllGenericCamerasFromSizer()" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/60 text-rose-300 text-[10px] font-mono font-bold transition-all cursor-pointer" title="Clear all generic camera counts">
+                    Clear Cameras
+                  </button>
+                ` : ''}
               </div>
             </div>
 
-            <select onchange="updateHeadroom(this.value)" class="bg-slate-950 border border-slate-800 text-[11px] font-semibold rounded-lg px-2 py-1.5 text-slate-300 focus:outline-none focus:border-amber-500">
-              <option value="10" ${extraHeadroomPercent === 10 ? 'selected' : ''}>+10% Buffer</option>
-              <option value="15" ${extraHeadroomPercent === 15 ? 'selected' : ''}>+15% Buffer</option>
-              <option value="20" ${extraHeadroomPercent === 20 ? 'selected' : ''}>+20% Buffer</option>
-              <option value="25" ${extraHeadroomPercent === 25 ? 'selected' : ''}>+25% Buffer</option>
-              <option value="30" ${extraHeadroomPercent === 30 ? 'selected' : ''}>+30% Buffer</option>
-            </select>
-
-            ${hasDemand ? `
-              <button onclick="resetDemandInputs()" class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors" title="Clear Demand Targets">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-              </button>
-            ` : ''}
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2">
+              ${genericTypes.map(g => {
+                const cnt = getGenericCameraTypeCountInBom(g.id);
+                const label = shortLabels[g.id] || g.model.replace("Generic ", "");
+                const tierColor = g.poeTierKey === "bt60"
+                  ? "text-rose-300 border-rose-500/40 bg-rose-500/10"
+                  : (g.poeTierKey === "at" ? "text-sky-300 border-sky-500/40 bg-sky-500/10" : "text-amber-300 border-amber-500/40 bg-amber-500/10");
+                const tierShort = g.poeTierKey === "bt60" ? "60W bt" : (g.poeTierKey === "at" ? "30W at" : "15W af");
+                return `
+                  <div class="flex flex-col justify-between p-2 rounded-xl border transition-all ${cnt > 0 ? 'bg-emerald-950/30 border-emerald-500/50 shadow-sm' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'}">
+                    <div class="flex items-start justify-between gap-1 mb-1.5">
+                      <span class="text-[11px] font-bold ${cnt > 0 ? 'text-white' : 'text-slate-300'} leading-tight" title="${escapeHTML(g.model)} (${g.streamBitrateMbps} Mbps)">${escapeHTML(label)}</span>
+                      <span class="px-1.5 py-0.2 rounded border text-[9px] font-mono font-bold shrink-0 ${tierColor}">${tierShort}</span>
+                    </div>
+                    <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-slate-800/70">
+                      <span class="text-[9.5px] font-mono text-slate-400">${g.heads > 1 ? `${g.heads}x${g.mpPerHead}MP` : `${g.sensorMegapixels}MP`} &bull; ${g.streamBitrateMbps}M</span>
+                      <div class="flex items-center bg-slate-950 border ${cnt > 0 ? 'border-emerald-500/60' : 'border-slate-700'} rounded-lg overflow-hidden">
+                        <button type="button" onclick="adjustGenericCameraTypeCountFromSizer('${g.id}', -1)" class="px-1.5 py-0.5 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold cursor-pointer">-</button>
+                        <input
+                          type="number"
+                          min="0"
+                          max="500"
+                          value="${cnt}"
+                          onchange="setGenericCameraTypeCountFromSizer('${g.id}', this.value)"
+                          class="w-9 bg-transparent text-center font-mono text-xs font-bold ${cnt > 0 ? 'text-emerald-300' : 'text-slate-400'} focus:outline-none"
+                        />
+                        <button type="button" onclick="adjustGenericCameraTypeCountFromSizer('${g.id}', 1)" class="px-1.5 py-0.5 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold cursor-pointer">+</button>
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
           </div>
-        </div>
+        ` : ''}
       </div>
     `;
     safeCreateIcons(container);

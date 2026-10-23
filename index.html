@@ -682,7 +682,10 @@
     <div id="workspaceTabsList" class="flex items-end gap-1.5 overflow-x-auto flex-1 no-scrollbar pt-1.5 pb-0">
       <!-- Injected dynamically by TabManager in js/core/tab_manager.js -->
     </div>
-    <div class="flex items-center gap-1.5 shrink-0 pl-2 pb-1.5 border-l border-slate-800">
+    <div class="flex items-center gap-2 shrink-0 pl-2 pb-1.5 border-l border-slate-800">
+      <!-- Persistent Global Design Mode Toggle (Initial Design Generic vs Full Design Actual Parts) -->
+      <div id="globalDesignModeToggleContainer" class="flex items-center"></div>
+
       <div class="relative" id="newTabMenuWrapper">
         <button onclick="TabManager.toggleNewTabMenu(event)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer" title="Open New Workspace Tab (Ctrl+T)">
           <i data-lucide="plus" class="w-3.5 h-3.5 text-brand-400"></i>
