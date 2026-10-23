@@ -2755,27 +2755,41 @@ function addGenetecLicensesToBom() {
   [
     "genetec-gsc-base-s-513", "genetec-gsc-base-e-513",
     "genetec-gsc-om-s-base", "genetec-gsc-om-p-base", "genetec-gsc-base-514",
-    "genetec-gsc-sv-aio-1c", "genetec-gsc-om-s-1c", "genetec-gsc-om-p-1c", "genetec-gsc-1cam-lic",
+    "genetec-gsc-sv-aio-1c", "genetec-gsc-sv-aio-1pac", "genetec-gsc-sv-aio-1r",
+    "genetec-gsc-om-s-1c", "genetec-gsc-om-p-1c", "genetec-gsc-1cam-lic",
     "genetec-gsc-om-s-1pac", "genetec-gsc-om-e-1pac", "genetec-gsc-om-e-1dv", "genetec-gsc-om-e-1bwc",
     "genetec-gsc-failover-1cam", "genetec-gsc-1fod", "genetec-gsc-standby-svr",
     "genetec-gsc-sy-s-1re", "genetec-gsc-sy-e-1re", "genetec-gsc-sy-s-1r", "genetec-gsc-sy-e-1r",
     "genetec-gsc-sy-e-1wr", "genetec-gsc-sy-s-vis", "genetec-gsc-sy-e-vis",
-    "genetec-gsc-1u-client", "genetec-gsc-1stu-site", "genetec-gsc-1mobileu", "genetec-gsc-1wu",
+    "genetec-gsc-1u-client", "genetec-gsc-1stu-site", "genetec-gsc-1mobileu", "genetec-gsc-1mobilestu", "genetec-gsc-1wu",
     "genetec-pm-std-50", "genetec-pm-std-100", "genetec-pm-std-250", "genetec-pm-std-500", "genetec-pm-std-1000", "genetec-pm-std-site",
-    "genetec-ad-integration", "genetec-federation", "genetec-federation-20",
+    "genetec-ad-integration", "genetec-federation", "genetec-federation-20", "genetec-stratocast-fed",
     "genetec-kiwivision-privacy-1c", "genetec-kiwivision-security-1c", "genetec-kiwivision-unlimited-1c", "genetec-kiwivision-people-1c",
     "genetec-autovu-base", "genetec-autovu-1shp", "genetec-autovu-1patroller",
-    "genetec-sipelia-1sip", "genetec-intrusion-1ap",
+    "genetec-sipelia-1sip", "genetec-sipelia-1trunk", "genetec-sipelia-1pa",
+    "genetec-intrusion-1ap", "genetec-intrusion-dmp", "genetec-intrusion-dsc",
+    "genetec-intrusion-honeywell", "genetec-intrusion-bosch-map5000", "genetec-intrusion-vanderbilt-spc",
+    "genetec-gsc-1sdk", "genetec-sdk-lsp-netlink", "genetec-sdk-amg-ndm", "genetec-sdk-allied-streamconnect",
+    "genetec-sdk-vunetrix", "genetec-sdk-hid-is", "genetec-sdk-schlage-wifilock", "genetec-sdk-aa-accentra",
+    "genetec-sdk-alcatraz-rock", "genetec-sdk-raptor-connect", "genetec-sdk-evolv-express", "genetec-sdk-omnilert-gundetect",
+    "genetec-sdk-senstar-nms", "genetec-sdk-esri-arcgis", "genetec-sdk-vuwall-trx", "genetec-sdk-commend-duetto",
+    "genetec-sdk-tiger-bridge", "genetec-dap-bronze",
+    "genetec-plugin-elevator-dispatch", "genetec-plugin-opc-server", "genetec-plugin-keycabinet-base",
+    "genetec-plugin-keycabinet-1cab", "genetec-plugin-alarm-receiver",
+    "genetec-adv-mc-1opp-1y", "genetec-adv-mc-1opp-3y", "genetec-adv-mc-1opp-5y",
     "genetec-rsa-standard", "genetec-rsa-pro", "genetec-rsa-ent",
     "genetec-iiot-site", "genetec-iiot-1d",
     "genetec-cloud-perf-1tb", "genetec-cloud-lt-1tb", "genetec-clearance-1cam-1y",
-    "genetec-adv-cam-aio-1y", "genetec-adv-cam-s-1y", "genetec-adv-cam-s-3y", "genetec-adv-cam-s-5y",
+    "genetec-adv-cam-aio-1y", "genetec-adv-cam-aio-3y", "genetec-adv-cam-aio-5y",
+    "genetec-adv-cam-s-1y", "genetec-adv-cam-s-3y", "genetec-adv-cam-s-5y",
     "genetec-adv-cam-p-1y", "genetec-advantage-1cam-1yr", "genetec-adv-cam-e-3y", "genetec-adv-cam-e-5y",
+    "genetec-adv-rdr-aio-1y", "genetec-adv-rdr-aio-3y", "genetec-adv-rdr-aio-5y",
     "genetec-adv-rdr-s-1y", "genetec-adv-rdr-s-3y", "genetec-adv-rdr-s-5y",
     "genetec-adv-rdr-e-1y", "genetec-adv-rdr-e-3y", "genetec-adv-rdr-e-5y",
     "genetec-adv-lpr-f-1y", "genetec-adv-lpr-f-3y", "genetec-adv-lpr-f-5y",
     "genetec-adv-sip-1y", "genetec-adv-sip-3y", "genetec-adv-sip-5y",
-    "genetec-adv-1ap-1y", "genetec-adv-247-1y", "genetec-adv-247-3y", "genetec-adv-247-5y",
+    "genetec-adv-1ap-1y", "genetec-adv-1ap-3y", "genetec-adv-1ap-5y",
+    "genetec-adv-option-247-1y", "genetec-adv-option-247-3y", "genetec-adv-option-247-5y",
     "ms-sql-svr-2025-express", "ms-sql-svr-2022-std-4c"
   ].forEach(id => genetecCatalogIds.add(id));
 
@@ -2795,7 +2809,7 @@ function addGenetecLicensesToBom() {
   });
 
   if (typeof showToast === "function") {
-    showToast(`Synced ${items.length} Genetec Security Center License & Advantage SKU line(s) ($${licRes.totalSoftwareMsrp.toLocaleString()} MSRP) to BOM.`, "success");
+    showToast(`Synchronized ${items.length} Genetec Security Center License and Software Maintenance line item(s) ($${licRes.totalSoftwareMsrp.toLocaleString()} MSRP) to Bill of Materials.`, "success");
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
 }
@@ -2815,22 +2829,28 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
   const vLoad = licRes.videoLoad || {};
   const coreFailover = licRes.coreFailover || cfg.coreFailover || "none";
   const needsSqlStd = Boolean(licRes.needsSqlStandard);
+  const partnerSdkOptions = (typeof GenetecLicensingSizer !== "undefined" && Array.isArray(GenetecLicensingSizer.PARTNER_SDK_OPTIONS))
+    ? GenetecLicensingSizer.PARTNER_SDK_OPTIONS
+    : [];
 
   const tierBadgeMap = {
-    aio: { label: "Streamvault AIO Tier (≤32 Cams • $0 Base)", color: "bg-sky-500/20 border-sky-500/40 text-sky-300" },
+    aio: {
+      label: "Streamvault All-in-One Tier (Up to 32 Cameras • $0.00 Base)",
+      color: "bg-sky-500/20 border-sky-500/40 text-sky-300"
+    },
     standard: {
-      label: "GSC-BASE-S Unified Standard ($0 Base • ≤100 Cams / ≤256 Readers / 25 Clients)",
+      label: "Security Center Base Standard Package — GSC-BASE-S ($0.00 Base • Up to 100 Cameras / 100 Readers / 25 Clients)",
       color: "bg-emerald-500/20 border-emerald-500/40 text-emerald-300"
     },
     enterprise: {
-      label: "GSC-BASE-E Unified Enterprise ($0 Base • Unlimited Cams, Readers & Clients)",
+      label: "Security Center Base Enterprise Package — GSC-BASE-E ($0.00 Base • Unlimited Cameras, Readers & Clients)",
       color: "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
     }
   };
   const activeTierBadge = tierBadgeMap[licRes.effectiveTier] || tierBadgeMap.enterprise;
 
   return `
-    <div class="${isEmbeddedInServers ? 'bg-slate-950/90 border border-indigo-500/30 rounded-xl p-3.5' : 'bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-lg'} flex flex-col gap-3.5 max-h-[72vh] overflow-y-auto overscroll-contain custom-scrollbar">
+    <div class="${isEmbeddedInServers ? 'bg-slate-950/90 border border-indigo-500/30 rounded-xl p-3.5' : 'bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-lg'} flex flex-col gap-3.5 max-h-[75vh] overflow-y-auto overscroll-contain custom-scrollbar">
       <!-- Header Row -->
       <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 pb-2.5 border-b border-slate-800/80">
         <div class="flex items-start sm:items-center gap-3">
@@ -2846,39 +2866,39 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                 ${activeTierBadge.label}
               </span>
               <span class="px-2 py-0.5 rounded border text-[10px] font-bold ${needsSqlStd ? 'bg-amber-500/20 border-amber-500/40 text-amber-300' : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'}">
-                ${needsSqlStd ? 'DB: SQL Server Standard ($1,418 • Full Core Failover)' : 'DB: SQL Server 2025 Express (50 GB Cap • $0 Included)'}
+                ${needsSqlStd ? 'Database: Microsoft SQL Server Standard ($1,418 • Full Core Failover)' : 'Database: Microsoft SQL Server 2025 Express (50 GB Cap • $0.00 Included)'}
               </span>
               <a href="Datasheets/Genetec/ProductCompatability.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center gap-1 transition">
                 <i data-lucide="file-text" class="w-3 h-3 text-indigo-400"></i>
-                <span>Compatibility PDF</span>
+                <span>Product Compatibility Guide</span>
               </a>
               <a href="Datasheets/Genetec/SystemRequirements.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center gap-1 transition">
                 <i data-lucide="file-text" class="w-3 h-3 text-purple-400"></i>
-                <span>System Requirements PDF</span>
+                <span>System Requirements Guide</span>
               </a>
               <a href="Datasheets/Genetec/SupportedPlugins.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center gap-1 transition">
                 <i data-lucide="plug" class="w-3 h-3 text-emerald-400"></i>
-                <span>Plugins PDF</span>
+                <span>Supported Plugins Guide</span>
               </a>
               <a href="Datasheets/Genetec/RSA.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] font-semibold flex items-center gap-1 transition">
                 <i data-lucide="radar" class="w-3 h-3 text-amber-400"></i>
-                <span>RSA PDF</span>
+                <span>Restricted Security Area Guide</span>
               </a>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              Synced with <strong class="text-white">${licRes.cameraUnits} IP Cameras</strong>${licRes.totalSynergisReaders > 0 ? ` + <strong class="text-white">${licRes.totalSynergisReaders} Synergis Readers</strong>` : ''} (${vLoad.requiredUsableTb || 0} TB Usable / ${vLoad.peakIngressMbps || 0} Mbps / ${vLoad.genetec?.activeArchiverRoles || 1} Archiver Role${(vLoad.genetec?.activeArchiverRoles || 1) === 1 ? '' : 's'}). Official SKUs &amp; MSRPs from <code class="text-indigo-300">Genetec Licensing.xls</code>.
+              Synchronized with <strong class="text-white">${licRes.cameraUnits} IP Camera Connections</strong>${licRes.totalSynergisReaders > 0 ? ` and <strong class="text-white">${licRes.totalSynergisReaders} Synergis Access Control Reader Connections</strong>` : ''} (${vLoad.requiredUsableTb || 0} TB Usable Storage / ${vLoad.peakIngressMbps || 0} Mbps Recording Bitrate / ${vLoad.genetec?.activeArchiverRoles || 1} Archiver Role${(vLoad.genetec?.activeArchiverRoles || 1) === 1 ? '' : 's'}).
             </p>
           </div>
         </div>
 
-        <!-- KPI Summary & 1-Click Actions -->
+        <!-- Summary & One-Click Actions -->
         <div class="flex flex-wrap items-center gap-2 shrink-0">
           <div class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-right">
-            <div class="text-[9px] uppercase font-bold text-slate-400">Software + ${licRes.advantageYears}Y SMA</div>
+            <div class="text-[9px] uppercase font-bold text-slate-400">Software + ${licRes.advantageYears}-Year Maintenance</div>
             <div class="text-sm font-mono font-extrabold text-emerald-400">$${licRes.totalSoftwareMsrp.toLocaleString()}</div>
           </div>
           <div class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-right">
-            <div class="text-[9px] uppercase font-bold text-slate-400">Streamvault HW</div>
+            <div class="text-[9px] uppercase font-bold text-slate-400">Streamvault Hardware</div>
             <div class="text-sm font-mono font-extrabold text-indigo-400">$${licRes.totalHardwareMsrp.toLocaleString()}</div>
           </div>
           <button
@@ -2887,27 +2907,27 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
             class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
           >
             <i data-lucide="key" class="w-4 h-4"></i>
-            <span>+ Sync Licenses to BOM</span>
+            <span>+ Synchronize Licenses to Bill of Materials</span>
           </button>
           <button
             type="button"
             onclick="addTurnkeyGenetecPackageToBom()"
             class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-            title="Adds both the recommended Streamvault Appliance(s) and all calculated Genetec Security Center Licenses to the BOM"
+            title="Adds both the recommended Streamvault Hardware Appliance(s) and all calculated Genetec Security Center Licenses to the Bill of Materials"
           >
             <i data-lucide="package-check" class="w-4 h-4"></i>
-            <span>+ Add Turnkey HW + Licenses ($${licRes.combinedTurnkeyMsrp.toLocaleString()})</span>
+            <span>+ Add Turnkey Hardware + Licenses ($${licRes.combinedTurnkeyMsrp.toLocaleString()})</span>
           </button>
         </div>
       </div>
 
-      <!-- Bundled Features Included at $0.00 in SC 5.13 / 5.14 Unified Base Package (GSC-BASE-S / GSC-BASE-E) -->
+      <!-- Bundled Features Included at $0.00 in Security Center 5.13 / 5.14 Unified Base Package -->
       ${Array.isArray(licRes.includedBaseFeatures) && licRes.includedBaseFeatures.length > 0 ? `
         <div class="p-2.5 rounded-xl bg-emerald-950/30 border border-emerald-500/30 text-[11px] flex flex-col gap-1.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="font-bold uppercase tracking-wider text-[10px] text-emerald-300 flex items-center gap-1.5">
               <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
-              <span>Included at $0.00 in ${licRes.effectiveTier === 'standard' ? 'GSC-BASE-S (SC 5.13/5.14 Unified Standard Base)' : 'GSC-BASE-E (SC 5.13/5.14 Unified Enterprise Base)'}</span>
+              <span>Included at $0.00 in ${licRes.effectiveTier === 'standard' ? 'Security Center Base Standard Package (GSC-BASE-S)' : 'Security Center Base Enterprise Package (GSC-BASE-E)'}</span>
             </span>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-x-4 gap-y-1 text-slate-300 text-[10px]">
@@ -2934,84 +2954,124 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
 
       <!-- Configuration Controls Grid (6 Cards across 3 columns on XL) -->
       <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
-        <!-- Card 1: Base Package, Core Failover & SQL Server 2025 -->
+        <!-- Card 1: Main System — Base Package, Core Failover, SQL Server 2025 & Client Connections -->
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center justify-between">
-            <span>1. Base Package, Core Failover &amp; SQL 2025</span>
-            <span class="font-mono text-emerald-400">${needsSqlStd ? 'SQL Std ($1,418)' : 'SQL 2025 Exp (50GB $0)'}</span>
+            <span>1. Main System, Core Failover &amp; Client Connections</span>
+            <span class="font-mono text-emerald-400">${needsSqlStd ? 'SQL Standard ($1,418)' : 'SQL 2025 Express (50 GB Cap)'}</span>
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1">Security Center Base Tier:</label>
+            <label class="text-[10px] text-slate-400 block mb-1">Security Center Base Package Tier:</label>
             <select onchange="setGenetecLicParam('tierMode', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-xs font-bold text-white focus:outline-none">
-              <option value="auto" ${cfg.tierMode === 'auto' ? 'selected' : ''}>Auto-Select Tier (${licRes.effectiveTier.toUpperCase()})</option>
-              <option value="aio" ${cfg.tierMode === 'aio' ? 'selected' : ''}>Streamvault AIO (≤32 Cams • $0 Base, $120/cam)</option>
-              <option value="standard" ${cfg.tierMode === 'standard' ? 'selected' : ''}>GSC-BASE-S Unified Standard (≤100 Cams, 25 Clients • $0 Base, $200/cam)</option>
-              <option value="enterprise" ${cfg.tierMode === 'enterprise' ? 'selected' : ''}>GSC-BASE-E Unified Enterprise (Unlimited • $0 Base, $325/cam)</option>
+              <option value="auto" ${cfg.tierMode === 'auto' ? 'selected' : ''}>Automatically Select Tier (${licRes.effectiveTier === 'aio' ? 'Streamvault All-in-One' : licRes.effectiveTier === 'standard' ? 'Standard Base Package' : 'Enterprise Base Package'})</option>
+              <option value="aio" ${cfg.tierMode === 'aio' ? 'selected' : ''}>Streamvault All-in-One Tier (Up to 32 Cameras • $0.00 Base, $120/camera)</option>
+              <option value="standard" ${cfg.tierMode === 'standard' ? 'selected' : ''}>Security Center Base Standard Package — GSC-BASE-S ($0.00 Base, $200/camera)</option>
+              <option value="enterprise" ${cfg.tierMode === 'enterprise' ? 'selected' : ''}>Security Center Base Enterprise Package — GSC-BASE-E ($0.00 Base, $325/camera)</option>
             </select>
           </div>
           <div>
-            <label class="text-[10px] text-slate-400 block mb-1" title="SQL Server 2025 Express (50 GB Cap, $0.00) stays in play for None and Directory Only (Backup & Restore). Switches to SQL Server Standard ($1,418) only when Core Failover is set to Full.">
-              Core Failover &amp; SQL Server Edition:
+            <label class="text-[10px] text-slate-400 block mb-1" title="Microsoft SQL Server 2025 Express (50 GB Database Cap, $0.00 Included) stays in play for None and Directory Only (Backup and Restore). Automatically switches to Microsoft SQL Server Standard ($1,418) only when Core Failover is set to Full.">
+              Core Failover &amp; Microsoft SQL Server Edition:
             </label>
             <select onchange="setGenetecLicParam('coreFailover', this.value)" class="w-full bg-slate-900 border ${needsSqlStd ? 'border-amber-500/60 text-amber-300' : 'border-emerald-500/50 text-emerald-300'} rounded-lg px-2 py-1.5 text-xs font-bold focus:outline-none">
-              <option value="none" ${coreFailover === 'none' ? 'selected' : ''}>None — SQL Server 2025 Express (50 GB Cap • $0.00)</option>
-              <option value="directory_only" ${coreFailover === 'directory_only' ? 'selected' : ''}>Directory Only (Backup &amp; Restore) — SQL 2025 Express (50 GB Cap • $0.00)</option>
-              <option value="full" ${coreFailover === 'full' ? 'selected' : ''}>Full (Core + DB High Availability) — Upgrades to SQL Standard ($1,418)</option>
+              <option value="none" ${coreFailover === 'none' ? 'selected' : ''}>None — Microsoft SQL Server 2025 Express (50 GB Cap • $0.00)</option>
+              <option value="directory_only" ${coreFailover === 'directory_only' ? 'selected' : ''}>Directory Only (Backup and Restore) — SQL 2025 Express (50 GB Cap • $0.00)</option>
+              <option value="full" ${coreFailover === 'full' ? 'selected' : ''}>Full (Core + Database Failover) — Upgrades to SQL Server Standard ($1,418)</option>
             </select>
             <div class="text-[10px] text-slate-400 mt-1 leading-snug">
               ${needsSqlStd
-                ? '<span class="text-amber-300 font-semibold">Full Core Failover active:</span> Includes Failover Directory (<code class="text-indigo-300">GSC-1FOD</code>) + Microsoft SQL Server Standard (<code class="text-amber-300">7NQ-01025</code>, $1,418).'
+                ? '<span class="text-amber-300 font-semibold">Full Core Failover active:</span> Includes Failover Directory (<code class="text-indigo-300">GSC-1FOD</code>) and Microsoft SQL Server Standard Edition (<code class="text-amber-300">7NQ-01025</code>, $1,418).'
                 : coreFailover === 'directory_only'
-                  ? '<span class="text-emerald-300 font-semibold">Directory Only (Backup &amp; Restore):</span> Enables Failover Directory (<code class="text-emerald-300">GSC-1FOD</code> $0 in Enterprise) while keeping <strong class="text-white">SQL Server 2025 Express (50 GB Cap, $0)</strong>.'
-                  : 'Default <strong class="text-white">SQL Server 2025 Express (50 GB DB Cap)</strong> is included at $0.00. Plan Manager Maps &amp; AD SSO are included in Base.'}
+                  ? '<span class="text-emerald-300 font-semibold">Directory Only (Backup and Restore):</span> Enables Failover Directory (<code class="text-emerald-300">GSC-1FOD</code>, $0.00 in Enterprise) while keeping <strong class="text-white">Microsoft SQL Server 2025 Express (50 GB Cap, $0.00)</strong>.'
+                  : 'Default <strong class="text-white">Microsoft SQL Server 2025 Express (50 GB Database Cap)</strong> is included at $0.00.'}
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2 pt-0.5">
+          <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80">
             <div>
-              <label class="text-[10px] text-slate-400 block mb-1">Advantage SMA Term:</label>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Security Desk Operator Workstation Connections (25 included in Standard Base; Unlimited Site Login License included in Enterprise Base)">
+                Security Desk Workstations:
+              </label>
+              <input type="number" min="1" max="500" value="${licRes.workstationClients}" onchange="setGenetecLicParam('workstationClients', Math.max(1, parseInt(this.value,10)||5))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Genetec Mobile Application Connections ($250 per concurrent user via GSC-1MobileU, or $10,000 Unlimited Site License via GSC-1MobileSTU at 40+ users)">
+                Mobile Application Users:
+              </label>
+              <input type="number" min="0" max="500" value="${licRes.mobileClients}" onchange="setGenetecLicParam('mobileClients', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Security Center Web Client Connections ($200 per user via GSC-1WU; included at $0.00 in Enterprise Site Login License)">
+                Web Client Connections:
+              </label>
+              <input type="number" min="0" max="500" value="${licRes.webClients || 0}" onchange="setGenetecLicParam('webClients', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-1">Genetec Advantage Maintenance Term:</label>
               <select onchange="setGenetecLicParam('advantageYears', parseInt(this.value, 10) || 1)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold text-emerald-300 focus:outline-none">
-                <option value="1" ${licRes.advantageYears === 1 ? 'selected' : ''}>1-Year SMA (ADV-*-1Y)</option>
-                <option value="3" ${licRes.advantageYears === 3 ? 'selected' : ''}>3-Year SMA (Discounted)</option>
-                <option value="5" ${licRes.advantageYears === 5 ? 'selected' : ''}>5-Year SMA (Matches 5Y HW)</option>
+                <option value="1" ${licRes.advantageYears === 1 ? 'selected' : ''}>1-Year Software Maintenance</option>
+                <option value="3" ${licRes.advantageYears === 3 ? 'selected' : ''}>3-Year Software Maintenance (Discounted)</option>
+                <option value="5" ${licRes.advantageYears === 5 ? 'selected' : ''}>5-Year Software Maintenance (Matches 5-Year Hardware)</option>
               </select>
             </div>
             <div class="flex flex-col justify-end pb-1">
-              <label class="flex items-center gap-1.5 text-[10px] text-slate-300 cursor-pointer" title="Genetec Advantage 24/7 Telephone Support Upgrade (ADV-OPTION-247-1Y/3Y/5Y)">
+              <label class="flex items-center gap-1.5 text-[10px] text-slate-300 cursor-pointer" title="Genetec Advantage 24/7 Technical Assistance Center Support Upgrade (ADV-OPTION-247-1Y/3Y/5Y)">
                 <input type="checkbox" ${cfg.advantage247 ? 'checked' : ''} onchange="setGenetecLicParam('advantage247', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500" />
-                <span>24/7 TAC Support Upgrade</span>
+                <span>24/7 Technical Assistance Center Support</span>
               </label>
             </div>
           </div>
         </div>
 
-        <!-- Card 2: Omnicast Video Connections & Archiver Failover -->
+        <!-- Card 2: Omnicast Video, Sipelia Intercom & License Plate Recognition Connections -->
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center justify-between">
-            <span>2. Omnicast Video &amp; Archiver Failover</span>
-            <span class="font-mono text-white">${licRes.cameraUnits} IP Cams</span>
+            <span>2. Video, Sipelia Intercom &amp; License Plate Recognition</span>
+            <span class="font-mono text-white">${licRes.cameraUnits} IP Cameras</span>
           </div>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Analog Video Encoder Connections (GSC-OM-S-1PAC $60 / GSC-OM-E-1PAC $100)">Analog Enc.:</label>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Analog Video Encoder Channel Connections (GSC-OM-S-1PAC $60 / GSC-OM-E-1PAC $100 / GSC-SV-AIO-1PAC $36)">
+                Analog Video Encoder Channels:
+              </label>
               <input type="number" min="0" max="1000" value="${licRes.analogEncoderChannels || 0}" onchange="setGenetecLicParam('analogEncoderChannels', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="3rd-Party DVR/NVR Video Input Channels (GSC-Om-E-1DV $130)">DVR/NVR Ch:</label>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Third-Party Digital Video Recorder or Network Video Recorder Input Channels (GSC-Om-E-1DV $130)">
+                Third-Party Recorder Channels:
+              </label>
               <input type="number" min="0" max="1000" value="${licRes.dvrNvrChannels || 0}" onchange="setGenetecLicParam('dvrNvrChannels', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
             </div>
+          </div>
+          <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80">
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Body-Worn Camera Connections (GSC-OM-E-1BWC $325)">Body-Worn:</label>
-              <input type="number" min="0" max="1000" value="${licRes.bodyWornCameras || 0}" onchange="setGenetecLicParam('bodyWornCameras', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Sipelia Session Initiation Protocol (SIP) Intercom Station Connections (GSC-SIPELIA-1SIP $295 + Advantage Maintenance; Sipelia Base is included at $0.00)">
+                Sipelia Intercom Stations:
+              </label>
+              <input type="number" min="0" max="500" value="${licRes.effectiveSipIntercoms || 0}" onchange="setGenetecLicParam('sipIntercomsOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Sipelia Session Initiation Protocol (SIP) Trunk Connections to external VoIP PBX or Intercom Server (GSC-Sipelia-1Trunk $550)">
+                Sipelia SIP Trunks:
+              </label>
+              <input type="number" min="0" max="100" value="${licRes.sipTrunks || 0}" onchange="setGenetecLicParam('sipTrunks', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="AutoVu Fixed Sharp License Plate Recognition Camera Connections (GSC-Av-S-1SHP $500 + Advantage Maintenance; AutoVu Standard Base is included at $0.00)">
+                Fixed License Plate Cameras:
+              </label>
+              <input type="number" min="0" max="200" value="${licRes.effectiveLprCameras}" onchange="setGenetecLicParam('lprCamerasOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-amber-300" />
             </div>
           </div>
-          <div>
+          <div class="pt-1 border-t border-slate-800/80">
             <label class="text-[10px] text-slate-400 block mb-1">
-              Standby Archiver Failover ${licRes.effectiveTier === 'enterprise' ? '<span class="text-emerald-400 font-bold">(Included $0 in GSC-BASE-E!)</span>' : '(Requires GSC-BASE-E)'}:
+              Standby Archiver Failover ${licRes.effectiveTier === 'enterprise' ? '<span class="text-emerald-400 font-bold">(Included at $0.00 in Enterprise Base!)</span>' : '(Requires Enterprise Base Package)'}:
             </label>
             <div class="flex items-center gap-1.5">
               <select onchange="setGenetecLicParam('failoverMode', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold text-white focus:outline-none">
                 <option value="none" ${cfg.failoverMode === 'none' ? 'selected' : ''}>No Standby Archiver Failover</option>
-                <option value="all" ${cfg.failoverMode === 'all' ? 'selected' : ''}>All ${licRes.cameraUnits} Cameras ($0 Included in GSC-BASE-E)</option>
+                <option value="all" ${cfg.failoverMode === 'all' ? 'selected' : ''}>All ${licRes.cameraUnits} Cameras ($0.00 Included in Enterprise Base)</option>
                 <option value="custom" ${cfg.failoverMode === 'custom' ? 'selected' : ''}>Custom Camera Count</option>
               </select>
               ${cfg.failoverMode === 'custom' ? `
@@ -3020,132 +3080,173 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
             </div>
           </div>
           <div class="flex items-center justify-between gap-2 pt-0.5">
-            <label class="text-[10px] text-slate-400" title="3rd-Party High-Availability Clustering Standby Server (GSC-StandbyServer @ $1,500/server)">
-              3rd-Party HA Standby Servers (<code class="text-indigo-300">GSC-StandbyServer</code>):
+            <label class="text-[10px] text-slate-400" title="Third-Party High-Availability Clustering Standby Server License (GSC-StandbyServer @ $1,500 per server)">
+              Third-Party Clustering Standby Servers (<code class="text-indigo-300">GSC-StandbyServer</code>):
             </label>
             <input type="number" min="0" max="50" value="${cfg.standbyServerCount || 0}" onchange="setGenetecLicParam('standbyServerCount', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
           </div>
         </div>
 
-        <!-- Card 3: Operator Clients & Synergis Access Control -->
+        <!-- Card 3: Synergis Access Control Readers & Intrusion Alarm Panels -->
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center justify-between">
-            <span>3. Clients &amp; Synergis Access Control</span>
-            <span class="font-mono text-emerald-400">${licRes.effectiveTier === 'enterprise' ? 'Unlimited Clients $0' : '25 Clients $0'}</span>
+            <span>3. Access Control Readers &amp; Intrusion Alarm Panels</span>
+            <span class="font-mono text-purple-300">${licRes.totalSynergisReaders || 0} Readers • ${licRes.intrusionPanels || 0} Panels</span>
           </div>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="GSC-BASE-S includes 25 clients; GSC-BASE-E includes Unlimited Site Login License!">Workstations:</label>
-              <input type="number" min="1" max="500" value="${licRes.workstationClients}" onchange="setGenetecLicParam('workstationClients', Math.max(1, parseInt(this.value,10)||5))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Synergis Access Control Reader Connections for Hardware Purchased from Genetec — Cloud Link, Axis Powered by Genetec, and Mercury Panels (GSC-SY-S-1RE $65 / GSC-SY-E-1RE $125)">
+                Genetec-Supplied Hardware Readers:
+              </label>
+              <input type="number" min="0" max="2000" value="${licRes.synergisGenetecReaders || 0}" onchange="setGenetecLicParam('synergisGenetecReaders', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-purple-300" />
+              <span class="text-[9px] text-slate-400 block mt-0.5">
+                ${licRes.effectiveTier === 'standard' ? '$65.00/reader (GSC-SY-S-1RE)' : licRes.effectiveTier === 'aio' ? '$175.00/reader (GSC-SV-AIO-1R)' : '$125.00/reader (GSC-SY-E-1RE)'}
+              </span>
             </div>
             <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Genetec Mobile App Users (GSC-1MobileU @ $200/user)">Mobile App:</label>
-              <input type="number" min="0" max="500" value="${licRes.mobileClients}" onchange="setGenetecLicParam('mobileClients', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Security Center Web Client Connections (GSC-1WU @ $200)">Web Clients:</label>
-              <input type="number" min="0" max="500" value="${licRes.webClients || 0}" onchange="setGenetecLicParam('webClients', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
-            </div>
-          </div>
-          <div class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Synergis Reader Connections on Genetec-Supplied Mercury/Cloudlink Hardware (GSC-SY-S-1RE $65 / GSC-SY-E-1RE $125)">Genetec Rdrs:</label>
-              <input type="number" min="0" max="2000" value="${licRes.synergisGenetecReaders || 0}" onchange="setGenetecLicParam('synergisGenetecReaders', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-purple-300" />
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Synergis Reader Connections on Non-Genetec/External Hardware (GSC-Sy-S-1R $175 / GSC-Sy-E-1R $260)">3rd-Party Rdrs:</label>
-              <input type="number" min="0" max="2000" value="${licRes.synergisExternalReaders || 0}" onchange="setGenetecLicParam('synergisExternalReaders', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-purple-300" />
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Synergis Electronic Wireless / PoE Locks (Assa Abloy Aperio, Schlage, Salto — GSC-SY-E-1WR $90)">Wireless Locks:</label>
-              <input type="number" min="0" max="2000" value="${licRes.synergisWirelessLocks || 0}" onchange="setGenetecLicParam('synergisWirelessLocks', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-purple-300" />
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Synergis Access Control External Reader Connections when Controller Hardware is Not Purchased from Genetec (GSC-Sy-S-1R $175 / GSC-Sy-E-1R $260)">
+                Third-Party Hardware Readers:
+              </label>
+              <input type="number" min="0" max="2000" value="${licRes.synergisExternalReaders || 0}" onchange="setGenetecLicParam('synergisExternalReaders', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-purple-300" />
+              <span class="text-[9px] text-slate-400 block mt-0.5">
+                ${licRes.effectiveTier === 'standard' ? '$175.00/reader (GSC-Sy-S-1R)' : licRes.effectiveTier === 'aio' ? '$175.00/reader (GSC-SV-AIO-1R)' : '$260.00/reader (GSC-Sy-E-1R)'}
+              </span>
             </div>
           </div>
-          <div class="flex items-center justify-between pt-0.5">
-            <label class="flex items-center gap-1.5 text-[11px] text-slate-300 cursor-pointer" title="Synergis Visitor Management Module (GSC-Sy-S-Vis $1,000 / GSC-Sy-E-Vis $3,000)">
-              <input type="checkbox" ${cfg.visitorManagement ? 'checked' : ''} onchange="setGenetecLicParam('visitorManagement', this.checked)" class="rounded border-slate-700 bg-slate-900 text-purple-500" />
-              <span>Synergis Visitor Management (<code class="text-purple-300">${licRes.effectiveTier === 'standard' ? '$1,000' : '$3,000'}</code>)</span>
-            </label>
+          <div class="pt-1.5 border-t border-slate-800/80 space-y-2">
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Intrusion Alarm Panel Connections ($350.00 per panel + $65.00/year Advantage Maintenance; no separate Intrusion Base license is required in Security Center 5.13+)">
+                  Intrusion Alarm Panel Count:
+                </label>
+                <input type="number" min="0" max="200" value="${licRes.intrusionPanels || 0}" onchange="setGenetecLicParam('intrusionPanels', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-center font-mono font-bold text-amber-300" />
+              </div>
+              <div>
+                <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Select the Intrusion Alarm Panel Manufacturer SKU from Genetec Licensing.xls ($350.00 per panel)">
+                  Intrusion Panel Manufacturer:
+                </label>
+                <select onchange="setGenetecLicParam('intrusionPanelManufacturer', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1.5 text-[11px] font-bold text-white focus:outline-none">
+                  <option value="bosch" ${licRes.intrusionPanelManufacturer === 'bosch' ? 'selected' : ''}>Bosch B/G Series (GSC-1AP-Bosch • $350)</option>
+                  <option value="dmp" ${licRes.intrusionPanelManufacturer === 'dmp' ? 'selected' : ''}>Digital Monitoring Products — DMP (GSC-1AP-DMP • $350)</option>
+                  <option value="dsc" ${licRes.intrusionPanelManufacturer === 'dsc' ? 'selected' : ''}>Digital Security Controls — DSC (GSC-1AP-DSC • $350)</option>
+                  <option value="honeywell" ${licRes.intrusionPanelManufacturer === 'honeywell' ? 'selected' : ''}>Honeywell Intrusion Panel (GSC-1AP-CDC3-HW • $350)</option>
+                  <option value="bosch_map5000" ${licRes.intrusionPanelManufacturer === 'bosch_map5000' ? 'selected' : ''}>Bosch MAP5000 Panel (GSC-1AP-BOSCHMAP5000 • $350)</option>
+                  <option value="vanderbilt_spc" ${licRes.intrusionPanelManufacturer === 'vanderbilt_spc' ? 'selected' : ''}>Vanderbilt SPC Panel (GSC-1AP-CDC2-SPC • $350)</option>
+                </select>
+              </div>
+            </div>
+            <div class="text-[10px] text-slate-400 leading-snug">
+              Synergis Access Control Base Package (Access Manager &amp; Badge Designer) is included at <strong class="text-emerald-400">$0.00</strong> in the Unified Base Package.
+            </div>
           </div>
         </div>
 
-        <!-- Card 4: KiwiVision Analytics, AutoVu ALPR & Sipelia Intercoms -->
+        <!-- Card 4: Software Development Kit (SDK) Connections & Core Native Plugins -->
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
           <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between">
-            <span>4. KiwiVision, AutoVu LPR &amp; Sipelia</span>
-            <span class="font-mono text-slate-400">AutoVu Base $0</span>
+            <span>4. Software Development Kit (SDK) &amp; Native Plugins</span>
+            <span class="font-mono text-slate-400">$250 / SDK Connection</span>
           </div>
-          <div class="grid grid-cols-4 gap-1.5">
+          <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="KiwiVision Privacy Protector ($250/cam, GSC-OM-1PP300+)">Privacy:</label>
-              <input type="number" min="0" max="500" value="${cfg.kiwiPrivacyStreams || 0}" onchange="setGenetecLicParam('kiwiPrivacyStreams', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono font-bold text-emerald-300" />
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Generic Software Development Kit (SDK) Connections for custom or third-party integrations (GSC-1SDK @ $250.00 per connection)">
+                Generic SDK Connections (<code class="text-emerald-300">GSC-1SDK</code>):
+              </label>
+              <input type="number" min="0" max="200" value="${licRes.genericSdkConnections || 0}" onchange="setGenetecLicParam('genericSdkConnections', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-emerald-300" />
             </div>
-            <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="KiwiVision Security Analytics Single Scenario ($450/cam, GSC-OM-1VAS300+)">1-Scenario:</label>
-              <input type="number" min="0" max="500" value="${cfg.kiwiSecurityStreams || 0}" onchange="setGenetecLicParam('kiwiSecurityStreams', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono font-bold text-emerald-300" />
-            </div>
-            <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="KiwiVision Security Analytics Unlimited Scenarios ($850/cam, GSC-OM-1VASU300+)">Unlim VA:</label>
-              <input type="number" min="0" max="500" value="${cfg.kiwiUnlimitedStreams || 0}" onchange="setGenetecLicParam('kiwiUnlimitedStreams', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono font-bold text-emerald-300" />
-            </div>
-            <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="KiwiVision People Counter ($450/cam, GSC-OM-1PC300+)">People Ctr:</label>
-              <input type="number" min="0" max="500" value="${cfg.kiwiPeopleCounterStreams || 0}" onchange="setGenetecLicParam('kiwiPeopleCounterStreams', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono font-bold text-emerald-300" />
+            <div class="flex flex-col justify-end pb-1">
+              <label class="flex items-center gap-1.5 text-[10px] text-slate-300 cursor-pointer" title="Genetec Development Acceleration Program — 1-Year SDK Partner Assistance Bronze (GSC-DAP-A-BRONZE @ $3,500)">
+                <input type="checkbox" ${cfg.sdkPartnerAssistance ? 'checked' : ''} onchange="setGenetecLicParam('sdkPartnerAssistance', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500" />
+                <span>SDK Partner Assistance ($3,500)</span>
+              </label>
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2">
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="AutoVu Fixed Sharp LPR Cameras (GSC-Av-S-1SHP $500 + ADV-LPR-F SMA; AutoVu Base is included $0 in GSC-BASE-S/E)">Fixed LPR:</label>
-              <input type="number" min="0" max="200" value="${licRes.effectiveLprCameras}" onchange="setGenetecLicParam('lprCamerasOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-amber-300" />
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="AutoVu Patroller Mobile LPR Vehicles (GSC-Av-S-1PATROLLER $500)">Patroller:</label>
-              <input type="number" min="0" max="200" value="${licRes.autoVuPatrollers || 0}" onchange="setGenetecLicParam('autoVuPatrollers', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-amber-300" />
-            </div>
-            <div>
-              <label class="text-[10px] text-slate-400 block mb-0.5" title="Sipelia SIP Intercom Connections (GSC-SIPELIA-1SIP $295 + ADV-SIP SMA; Sipelia Base is included $0 in GSC-BASE-S/E)">SIP Intercom:</label>
-              <input type="number" min="0" max="500" value="${licRes.effectiveSipIntercoms || 0}" onchange="setGenetecLicParam('sipIntercomsOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
+          <div>
+            <label class="text-[10px] text-slate-300 block mb-1 font-semibold" title="Select a specific certified partner Software Development Kit (SDK) integration SKU from Genetec Licensing.xls ($250.00 per connection)">
+              Certified Partner SDK Integration (<code class="text-emerald-300">GSC-1SDK-*</code>):
+            </label>
+            <div class="flex items-center gap-1.5">
+              <select onchange="setGenetecLicParam('partnerSdkKey', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold text-white focus:outline-none">
+                ${partnerSdkOptions.map(opt => `
+                  <option value="${opt.key}" ${licRes.partnerSdkKey === opt.key ? 'selected' : ''}>${opt.label}</option>
+                `).join('')}
+              </select>
+              ${licRes.partnerSdkKey && licRes.partnerSdkKey !== 'none' ? `
+                <input type="number" min="1" max="200" value="${licRes.partnerSdkConnections || 1}" onchange="setGenetecLicParam('partnerSdkConnections', Math.max(1, parseInt(this.value,10)||1))" class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-center font-mono font-bold text-emerald-300" title="Partner SDK Connection Quantity" />
+              ` : ''}
             </div>
           </div>
-        </div>
-
-        <!-- Card 5: Federation, Intrusion, RSA, IIoT, Cloud Archive & Clearance -->
-        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
-          <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center justify-between">
-            <span>5. Enterprise Add-Ons &amp; Cloud Services</span>
-            <span class="font-mono text-slate-400">Multi-Site / Cloud</span>
-          </div>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Federated Remote Security Center Sites >20 Entities (GSC-1SCFED @ $1,000/site)">Fed &gt;20 Ent:</label>
-              <input type="number" min="0" max="100" value="${cfg.federationSites || 0}" onchange="setGenetecLicParam('federationSites', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Elevator Destination Dispatch Plugin — Otis Compass, KONE, ThyssenKrupp, or MCE Sentry ($8,000 per system)">
+                Elevator Dispatch Systems ($8,000):
+              </label>
+              <input type="number" min="0" max="50" value="${cfg.elevatorDispatchSystems || 0}" onchange="setGenetecLicParam('elevatorDispatchSystems', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Federated Remote Security Center Sites ≤20 Entities (GSC-1SCFED-20 @ $600/site)">Fed ≤20 Ent:</label>
-              <input type="number" min="0" max="100" value="${cfg.federationSmallSites || 0}" onchange="setGenetecLicParam('federationSmallSites', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
-            </div>
-            <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Intrusion Alarm Panel Connections — Bosch / DMP / DSC / Honeywell (GSC-1AP-* @ $350/panel)">Alarm Panels:</label>
-              <input type="number" min="0" max="200" value="${cfg.intrusionPanels || 0}" onchange="setGenetecLicParam('intrusionPanels', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Key & Asset Management Cabinets — Includes $1,500 Base Plugin (GSC-1P-KEYCABINETBASE) + $500 per Key Cabinet (Morse Watchmans, Traka, Deister)">
+                Key Management Cabinets ($500):
+              </label>
+              <input type="number" min="0" max="100" value="${cfg.keyCabinetCount || 0}" onchange="setGenetecLicParam('keyCabinetCount', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Restricted Security Area (RSA) Radar/Laser/Fence Perimeter Module">RSA Perimeter:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Open Platform Communications (OPC) Server Building Automation Plugin (GSC-1POPC-S @ $8,000)">
+                OPC Server Plugin ($8,000):
+              </label>
+              <input type="number" min="0" max="20" value="${cfg.opcServerSystems || 0}" onchange="setGenetecLicParam('opcServerSystems', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Genetec Mission Control Collaborative Decision Management Concurrent Operators ($0 Base + $3,000/yr Operator Maintenance)">
+                Mission Control Operators:
+              </label>
+              <input type="number" min="0" max="200" value="${cfg.missionControlOperators || 0}" onchange="setGenetecLicParam('missionControlOperators', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 5: Multi-Site Federation, Restricted Security Area, Industrial IoT & Cloud Services -->
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center justify-between">
+            <span>5. Federation, Perimeter &amp; Cloud Services</span>
+            <span class="font-mono text-slate-400">Multi-Site / Cloud</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Federated Remote Security Center Sites with Over 20 Entities (GSC-1SCFED @ $1,000 per site)">
+                Federation Sites (&gt;20 Entities):
+              </label>
+              <input type="number" min="0" max="100" value="${cfg.federationSites || 0}" onchange="setGenetecLicParam('federationSites', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Federated Remote Security Center Sites with 20 Entities or Fewer (GSC-1SCFED-20 @ $600 per site)">
+                Federation Sites (&le;20 Entities):
+              </label>
+              <input type="number" min="0" max="100" value="${cfg.federationSmallSites || 0}" onchange="setGenetecLicParam('federationSmallSites', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+            <div>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Restricted Security Area (RSA) Radar, LiDAR, and Fence Perimeter Surveillance Package">
+                Restricted Security Area (RSA):
+              </label>
               <select onchange="setGenetecLicParam('rsaTier', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-[10px] font-bold text-white focus:outline-none">
-                <option value="none" ${(cfg.rsaTier === 'none' || !cfg.rsaTier) && !cfg.rsaEnabled ? 'selected' : ''}>None</option>
-                <option value="standard" ${cfg.rsaTier === 'standard' || (cfg.rsaEnabled && (!cfg.rsaTier || cfg.rsaTier === 'none')) ? 'selected' : ''}>Standard ($1,000)</option>
-                <option value="pro" ${cfg.rsaTier === 'pro' ? 'selected' : ''}>Professional ($7,000)</option>
-                <option value="enterprise" ${cfg.rsaTier === 'enterprise' ? 'selected' : ''}>Enterprise ($14,000)</option>
+                <option value="none" ${(cfg.rsaTier === 'none' || !cfg.rsaTier) ? 'selected' : ''}>None</option>
+                <option value="standard" ${cfg.rsaTier === 'standard' ? 'selected' : ''}>Standard Package ($1,000)</option>
+                <option value="pro" ${cfg.rsaTier === 'pro' ? 'selected' : ''}>Professional Package ($7,000)</option>
+                <option value="enterprise" ${cfg.rsaTier === 'enterprise' ? 'selected' : ''}>Enterprise Package ($14,000)</option>
               </select>
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Industrial IoT Plugin (BACnet / Modbus /OPC-UA / SNMP)">Industrial IoT:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Industrial Internet of Things (IIoT) Plugin (BACnet, Modbus, OPC, SNMP, MQTT)">
+                Industrial Internet of Things:
+              </label>
               <div class="flex items-center gap-1">
                 <select onchange="setGenetecLicParam('iiotMode', this.value)" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-[10px] font-bold text-white focus:outline-none">
                   <option value="none" ${!cfg.iiotMode || cfg.iiotMode === 'none' ? 'selected' : ''}>None</option>
-                  <option value="devices" ${cfg.iiotMode === 'devices' ? 'selected' : ''}>Per-Dev ($149)</option>
-                  <option value="site" ${cfg.iiotMode === 'site' ? 'selected' : ''}>Site ($6,000)</option>
+                  <option value="devices" ${cfg.iiotMode === 'devices' ? 'selected' : ''}>Per Device ($149)</option>
+                  <option value="site" ${cfg.iiotMode === 'site' ? 'selected' : ''}>Unlimited Site ($6,000)</option>
                 </select>
                 ${cfg.iiotMode === 'devices' ? `
                   <input type="number" min="1" max="500" value="${cfg.iiotDevices || 1}" onchange="setGenetecLicParam('iiotDevices', Math.max(1, parseInt(this.value,10)||1))" class="w-12 bg-slate-900 border border-slate-700 rounded-lg px-1 py-1 text-center font-mono font-bold text-white" />
@@ -3153,32 +3254,38 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
               </div>
             </div>
           </div>
-          <div class="grid grid-cols-3 gap-2">
+          <div class="grid grid-cols-3 gap-2 pt-1 border-t border-slate-800/80">
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Omnicast Cloud Archives Storage Tier">Cloud Tier:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Omnicast Cloud Archive Storage Tier">
+                Cloud Storage Tier:
+              </label>
               <select onchange="setGenetecLicParam('cloudArchiveTier', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-[10px] font-bold text-sky-300 focus:outline-none">
-                <option value="performance" ${cfg.cloudArchiveTier !== 'long_term' ? 'selected' : ''}>Perf ($257/TB)</option>
-                <option value="long_term" ${cfg.cloudArchiveTier === 'long_term' ? 'selected' : ''}>LT ($122/TB)</option>
+                <option value="performance" ${cfg.cloudArchiveTier !== 'long_term' ? 'selected' : ''}>Performance ($257/TB)</option>
+                <option value="long_term" ${cfg.cloudArchiveTier === 'long_term' ? 'selected' : ''}>Long-Term ($122/TB)</option>
               </select>
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Cloud Archive Storage (TB)">Cloud TB:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Omnicast Cloud Archive Storage Capacity in Terabytes (TB)">
+                Cloud Archive (TB):
+              </label>
               <input type="number" min="0" max="500" value="${cfg.cloudArchiveTb || 0}" onchange="setGenetecLicParam('cloudArchiveTb', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
             </div>
             <div>
-              <label class="text-[9px] text-slate-400 block mb-0.5" title="Genetec Clearance Digital Evidence Management Camera Subscriptions ($24/cam/yr, CLR-1CCST1-US-1Y)">Clearance:</label>
+              <label class="text-[10px] text-slate-400 block mb-0.5" title="Genetec Clearance Digital Evidence Management Camera Subscriptions ($24/camera/year via CLR-1CCST1-US-1Y)">
+                Clearance Cameras:
+              </label>
               <input type="number" min="0" max="1000" value="${cfg.clearanceCameras || 0}" onchange="setGenetecLicParam('clearanceCameras', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
             </div>
           </div>
         </div>
 
-        <!-- Card 6: Streamvault Appliance Recommender -->
+        <!-- Card 6: Streamvault Turnkey Hardware Appliance Fit -->
         <div class="bg-slate-950/80 border border-indigo-500/30 rounded-xl p-3 space-y-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center justify-between">
-            <span>6. Streamvault Hardware Fit</span>
+            <span>6. Streamvault Turnkey Appliance Fit</span>
             <select onchange="setGenetecLicParam('applianceFormFactor', this.value)" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-200 focus:outline-none">
-              <option value="rack" ${cfg.applianceFormFactor === 'rack' ? 'selected' : ''}>Rackmount (1U/2U)</option>
-              <option value="tower" ${cfg.applianceFormFactor === 'tower' ? 'selected' : ''}>Tower / Desktop (0U)</option>
+              <option value="rack" ${cfg.applianceFormFactor === 'rack' ? 'selected' : ''}>Rackmount (1U / 2U)</option>
+              <option value="tower" ${cfg.applianceFormFactor === 'tower' ? 'selected' : ''}>Tower / Small Form Factor</option>
               <option value="any" ${cfg.applianceFormFactor === 'any' ? 'selected' : ''}>Any Form Factor</option>
             </select>
           </div>
@@ -3192,38 +3299,32 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
               <div class="flex items-center justify-between pt-1">
                 <a href="${prim.datasheetPath}" target="_blank" class="text-[10px] text-indigo-400 hover:underline flex items-center gap-1">
                   <i data-lucide="external-link" class="w-3 h-3"></i>
-                  <span>Datasheet PDF</span>
+                  <span>Official Hardware Datasheet</span>
                 </a>
                 <button type="button" onclick="autoFitStreamvaultToBom()" class="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold cursor-pointer">
-                  + Add to BOM
+                  + Add Hardware to Bill of Materials
                 </button>
               </div>
             </div>
           ` : `
             <div class="p-2.5 rounded-lg bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400">
-              Add cameras to the project or storage calculator to auto-size Streamvault appliances.
+              Add cameras to the project or storage calculator to automatically size Streamvault turnkey appliances.
             </div>
           `}
-          ${svPlan.analyticsAppliance ? `
-            <div class="p-1.5 rounded-lg bg-emerald-950/30 border border-emerald-500/30 flex items-center justify-between text-[10px]">
-              <span class="text-emerald-300 font-bold">+ ${svPlan.analyticsQty}x ${svPlan.analyticsAppliance.applianceSeries} Analytics Server</span>
-              <span class="font-mono text-white">$${(svPlan.analyticsQty * (svPlan.analyticsAppliance.msrp || 0)).toLocaleString()}</span>
-            </div>
-          ` : ''}
           ${svPlan.directoryAppliance ? `
             <div class="p-1.5 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-center justify-between text-[10px]">
-              <span class="text-amber-300 font-bold">+ ${svPlan.directoryQty}x ${svPlan.directoryAppliance.applianceSeries} Directory Host</span>
+              <span class="text-amber-300 font-bold">+ ${svPlan.directoryQty}x ${svPlan.directoryAppliance.applianceSeries} Dedicated Directory / Failover Server</span>
               <span class="font-mono text-white">$${(svPlan.directoryQty * (svPlan.directoryAppliance.msrp || 0)).toLocaleString()}</span>
             </div>
           ` : ''}
         </div>
       </div>
 
-      <!-- Itemized Genetec License & Maintenance Breakdown Table -->
+      <!-- Itemized Genetec License & Software Maintenance Breakdown Table -->
       <div class="bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden">
         <div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
           <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300">
-            Calculated Genetec Security Center License &amp; Advantage BOM (${licRes.lineItems.length} Line Items)
+            Calculated Genetec Security Center License &amp; Software Maintenance Bill of Materials (${licRes.lineItems.length} Line Items)
           </span>
           <span class="text-[11px] font-mono font-bold text-emerald-400">
             Total Software MSRP: $${licRes.totalSoftwareMsrp.toLocaleString()}
@@ -3235,11 +3336,11 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
               <thead>
                 <tr class="border-b border-slate-800/80 text-[9px] uppercase text-slate-400">
                   <th class="py-1.5 px-3">Part Number (SKU)</th>
-                  <th class="py-1.5 px-3">License Description</th>
+                  <th class="py-1.5 px-3">Full License Description</th>
                   <th class="py-1.5 px-3">Category</th>
-                  <th class="py-1.5 px-3 text-center">Qty</th>
+                  <th class="py-1.5 px-3 text-center">Quantity</th>
                   <th class="py-1.5 px-3 text-right">Unit MSRP</th>
-                  <th class="py-1.5 px-3 text-right">Extended</th>
+                  <th class="py-1.5 px-3 text-right">Extended MSRP</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800/50">
@@ -3252,7 +3353,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                     </td>
                     <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel}</td>
                     <td class="py-1.5 px-3 text-center font-bold text-amber-300">${li.qty}</td>
-                    <td class="py-1.5 px-3 text-right text-slate-300">${li.isIncludedZeroCost ? '<span class="text-emerald-400 font-bold">INCLUDED ($0)</span>' : '$' + li.unitMsrp.toLocaleString()}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-300">${li.isIncludedZeroCost ? '<span class="text-emerald-400 font-bold">INCLUDED ($0.00)</span>' : '$' + li.unitMsrp.toLocaleString()}</td>
                     <td class="py-1.5 px-3 text-right font-bold text-emerald-400">$${li.extendedMsrp.toLocaleString()}</td>
                   </tr>
                 `).join('')}
@@ -3261,7 +3362,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           </div>
         ` : `
           <div class="p-4 text-center text-xs text-slate-400">
-            No camera, reader, or client licenses calculated yet. Add cameras in Initial Design / PoE / Physical Security or set a manual camera/reader count above.
+            No camera, reader, or client licenses calculated yet. Add cameras in Initial Design, Power over Ethernet Calculator, or Physical Security, or enter reader/panel/SDK counts above.
           </div>
         `}
       </div>
