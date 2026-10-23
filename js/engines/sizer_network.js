@@ -1661,29 +1661,46 @@ const VideoStorageSizer = {
 
 const GenetecLicensingSizer = {
   /**
-   * Default configuration for the Genetec Licensing & Appliance Sizer
+   * Default configuration for the Genetec Security Center 5.13 / 5.14 License & Appliance Designer
    */
   getDefaultConfig() {
     return {
-      pricingEdition: 'sc513_unified', // 'sc513_unified' (SC 5.13/5.14 $0 Unified Base Packages) | 'legacy_510' (Legacy SC 5.10-5.12 Expansion)
-      tierMode: 'auto',          // 'auto' | 'aio' | 'standard' | 'pro' | 'enterprise'
-      advantageYears: 1,         // 1 | 3 | 5
-      failoverMode: 'none',      // 'none' | 'all' | 'custom'
-      customFailoverCameras: 0,
-      failoverDirectory: false,
-      standbyServerCount: 0,
-      workstationClients: 5,     // 25 free in GSC-BASE-S, Unlimited free in GSC-BASE-E (5 free in Legacy)
-      mobileClients: 0,
-      planManagerTier: 'none',   // 'none' | 'auto' | '50' | '100' | '250' | '500' | '1000' | 'site'
-      adIntegration: false,
-      federationSites: 0,
-      kiwiPrivacyStreams: 0,
-      kiwiSecurityStreams: 0,
-      lprCamerasOverride: null,  // null = auto-detect from BOM
-      sipeliaOverride: null,     // null = auto-detect from BOM
-      rsaEnabled: false,
-      includeSqlStandard: 'auto', // 'auto' | 'yes' | 'no'
-      applianceFormFactor: 'rack' // 'rack' | 'tower' | 'any'
+      tierMode: 'auto',                  // 'auto' | 'aio' | 'standard' | 'enterprise'
+      advantageYears: 1,                 // 1 | 3 | 5
+      advantage247: false,               // ADV-OPTION-247-1Y ($6,000) / 3Y ($14,400) / 5Y ($21,000)
+      coreFailover: 'none',              // 'none' | 'directory_only' (Backup & Restore) | 'full' (Triggers SQL Standard)
+      archiverFailoverMode: 'none',      // 'none' | 'standby' (Included $0 in GSC-BASE-E) | 'clustering' (GSC-StandbyServer $1,500)
+      standbyServerCount: 1,             // Used when archiverFailoverMode === 'clustering'
+      workstationClients: 5,             // 25 free in GSC-BASE-S, Unlimited free in GSC-BASE-E
+      mobileClients: 0,                  // Unlimited free in GSC-BASE-E ($250 GSC-1MobileU in Standard)
+      // Additional Omnicast Video Inputs
+      analogCameras: 0,                  // GSC-OM-S-1PAC ($60) / GSC-OM-E-1PAC ($100)
+      dvrNvrCameras: 0,                  // GSC-Om-E-1DV ($130)
+      bodyWornCameras: 0,                // GSC-OM-E-1BWC ($325)
+      // Synergis Access Control Connections
+      synergisGenetecReaders: 0,         // GSC-SY-S-1RE ($65) / GSC-SY-E-1RE ($125) + ADV-RDR
+      synergisExternalReaders: 0,        // GSC-Sy-S-1R ($175) / GSC-Sy-E-1R ($260) + ADV-RDR
+      synergisWirelessLocks: 0,          // GSC-SY-E-1WR ($90)
+      visitorManagement: false,          // GSC-Sy-S-Vis ($1,000) / GSC-Sy-E-Vis ($3,000)
+      // KiwiVision Analytics, AutoVu ALPR & Sipelia Intercom
+      kiwiPrivacyStreams: 0,             // GSC-OM-1PP300+ ($250/cam)
+      kiwiSecurityStreams: 0,            // GSC-OM-1VAS300+ ($450/cam — 1 scenario)
+      kiwiUnlimitedStreams: 0,           // GSC-OM-1VASU300+ ($850/cam — unlimited scenarios)
+      kiwiPeopleCounterStreams: 0,       // GSC-OM-1PC300+ ($450/cam)
+      lprCamerasOverride: null,          // null = auto-detect from BOM (GSC-Av-S-1SHP $500 + ADV-LPR-F)
+      patrollerVehicles: 0,              // GSC-Av-S-1PATROLLER ($500)
+      sipeliaOverride: null,             // null = auto-detect from BOM (GSC-SIPELIA-1SIP $295 + ADV-SIP)
+      // Enterprise Federation, Intrusion, RSA, IIoT, Cloud Archive & Clearance
+      federationSites: 0,                // GSC-1SCFED ($1,000/site >20 entities)
+      federationSmallSites: 0,           // GSC-1SCFED-20 ($600/site <=20 entities)
+      intrusionPanels: 0,                // GSC-1AP-Bosch/DMP/HW/DSC ($350/panel + ADV-1AP)
+      rsaTier: 'none',                   // 'none' | 'standard' ($1,000) | 'pro' ($7,000) | 'enterprise' ($14,000)
+      iiotMode: 'none',                  // 'none' | 'devices' ($149/dev) | 'site' ($6,000 Unlimited)
+      iiotDevices: 0,
+      cloudArchiveTb: 0,
+      cloudArchiveTier: 'performance',   // 'performance' ($257/TB/yr) | 'longterm' ($122/TB/yr)
+      clearanceEnabled: false,           // CLR-1CCST1-US-1Y ($24/cam/yr)
+      applianceFormFactor: 'rack'        // 'rack' | 'tower' | 'any'
     };
   },
 
@@ -1713,10 +1730,7 @@ const GenetecLicensingSizer = {
     let archiverReason = '';
 
     if (cams > 0) {
-      // Candidate pool sorted by capacity/MSRP
       let candidates = svServers.slice().sort((a, b) => (a.msrp || 0) - (b.msrp || 0));
-
-      // Exclude rugged SVR unless very small edge deployment
       const standardCandidates = candidates.filter(s => !String(s.applianceSeries || '').startsWith('SVR-') && s.applianceSeries !== 'SV-7000EX');
 
       if (formPref === 'rack') {
@@ -1729,7 +1743,6 @@ const GenetecLicensingSizer = {
         candidates = standardCandidates;
       }
 
-      // If RAID 6 is required, prefer appliances supporting RAID 6 (SV-2041E-R4, SV-2041E-R15, SV-4041EX-R28)
       if (raid === 'RAID6') {
         const raid6Pool = candidates.filter(s => String(s.raidSupport || '').includes('RAID 6'));
         if (raid6Pool.length > 0) candidates = raid6Pool;
@@ -1738,7 +1751,6 @@ const GenetecLicensingSizer = {
         if (raid5Pool.length > 0) candidates = raid5Pool;
       }
 
-      // Try single-appliance fit first
       const singleFit = candidates.find(s =>
         (s.usableStorageTb || 0) >= reqTb &&
         (s.maxRecordMbps || s.maxThroughputMbps || 300) >= reqMbps &&
@@ -1750,7 +1762,6 @@ const GenetecLicensingSizer = {
         primaryQty = 1;
         archiverReason = `Single ${singleFit.sku} satisfies ${reqTb} TB usable (${singleFit.usableStorageTb} TB cap) & ${reqMbps} Mbps (${singleFit.maxThroughputMbps} Mbps max).`;
       } else {
-        // Multi-appliance fit using high-capacity rackmount (SV-2041E-R15 or SV-4041EX-R28 or largest in pool)
         const scaleTarget = candidates.find(s => s.id === 'genetec-sv-2041e-r15' && reqTb <= 600)
           || candidates[candidates.length - 1]
           || svServers[0];
@@ -1766,21 +1777,23 @@ const GenetecLicensingSizer = {
       }
     }
 
-    // Check if Dedicated Directory / Failover Server is needed (>300 cameras or Failover Directory enabled)
+    // Check if Dedicated Directory / Core Failover Server is needed (>300 cameras or Core Failover enabled)
     let directoryAppliance = null;
     let directoryQty = 0;
-    if (cams > 300 || licConfig.failoverDirectory) {
+    const hasCoreFailover = licConfig.coreFailover === 'directory_only' || licConfig.coreFailover === 'full';
+    if (cams > 300 || hasCoreFailover) {
       directoryAppliance = serversDb.find(s => s.id === 'genetec-sv-7041ex-r6s') || serversDb.find(s => s.id === 'genetec-sv-1041e-rs2');
-      directoryQty = (cams > 300 && licConfig.failoverDirectory) ? 2 : 1;
+      directoryQty = (cams > 300 && hasCoreFailover) ? 2 : 1;
     }
 
     // Check if KiwiVision Video Analytics Appliance (SVA-100E / SVA-1000E) is needed
     let analyticsAppliance = null;
     let analyticsQty = 0;
     const totalPrivacy = Number(licConfig.kiwiPrivacyStreams) || 0;
-    const totalSecurity = Number(licConfig.kiwiSecurityStreams) || 0;
+    const totalSecurity = (Number(licConfig.kiwiSecurityStreams) || 0) +
+      ((Number(licConfig.kiwiUnlimitedStreams) || 0) * 2) +
+      (Number(licConfig.kiwiPeopleCounterStreams) || 0);
     if (totalPrivacy > 0 || totalSecurity > 0) {
-      // Load ratio on SVA-100E (max 28 privacy or 16 object/security) vs SVA-1000E (max 75 privacy or 29 security)
       const sva100Load = (totalPrivacy / 28) + (totalSecurity / 16);
       const sva1000Load = (totalPrivacy / 75) + (totalSecurity / 29);
       if (sva100Load <= 1.0 && formPref !== 'rack') {
@@ -1794,7 +1807,6 @@ const GenetecLicensingSizer = {
 
     // Recommend Streamvault Workstation (SVW-100E, SVW-300E-T3, SVW-500E-R)
     let workstationAppliance = null;
-    const wsClients = Math.max(1, Number(licConfig.workstationClients) || 1);
     if (cams > 64) {
       workstationAppliance = workstationsDb.find(w => w.id === 'genetec-svw-502e-soc-workstation') || workstationsDb[0];
     } else if (cams > 16) {
@@ -1818,8 +1830,8 @@ const GenetecLicensingSizer = {
   },
 
   /**
-   * Calculates the complete Genetec Security Center License & Advantage Maintenance BOM,
-   * validates compatibility rules against ProductCompatability.pdf & SystemRequirements.pdf,
+   * Calculates the complete Genetec Security Center 5.13/5.14 License & Advantage Maintenance BOM,
+   * enforces SQL Server 2025 (50 GB Cap) vs SQL Standard (Core Failover = Full),
    * and returns recommended Streamvault appliances.
    */
   calculate(bomList = [], customConfig = {}) {
@@ -1868,134 +1880,101 @@ const GenetecLicensingSizer = {
       ? Math.max(0, Number(baseConfig.sipeliaOverride) || 0)
       : bomIntercoms;
 
+    const analogCameras = Math.max(0, Number(baseConfig.analogCameras) || 0);
+    const dvrNvrCameras = Math.max(0, Number(baseConfig.dvrNvrCameras) || 0);
+    const bodyWornCameras = Math.max(0, Number(baseConfig.bodyWornCameras) || 0);
+    const totalVideoConnections = cameraUnits + analogCameras + dvrNvrCameras + bodyWornCameras;
+
+    const synergisGenetecReaders = Math.max(0, Number(baseConfig.synergisGenetecReaders) || 0);
+    const synergisExternalReaders = Math.max(0, Number(baseConfig.synergisExternalReaders) || 0);
+    const synergisWirelessLocks = Math.max(0, Number(baseConfig.synergisWirelessLocks) || 0);
+    const totalReadersAndLocks = synergisGenetecReaders + synergisExternalReaders + synergisWirelessLocks;
+
     const workstationClients = Math.max(1, Number(baseConfig.workstationClients) || Math.max(5, bomWorkstations));
     const mobileClients = Math.max(0, Number(baseConfig.mobileClients) || 0);
     const advantageYears = [1, 3, 5].includes(Number(baseConfig.advantageYears)) ? Number(baseConfig.advantageYears) : 1;
 
-    // Failover camera count
-    let failoverCameras = 0;
-    if (baseConfig.failoverMode === 'all') {
-      failoverCameras = cameraUnits;
-    } else if (baseConfig.failoverMode === 'custom') {
-      failoverCameras = Math.min(cameraUnits, Math.max(0, Number(baseConfig.customFailoverCameras) || 0));
-    }
+    const coreFailover = ['none', 'directory_only', 'full'].includes(baseConfig.coreFailover)
+      ? baseConfig.coreFailover
+      : 'none';
+    const archiverFailoverMode = ['none', 'standby', 'clustering'].includes(baseConfig.archiverFailoverMode)
+      ? baseConfig.archiverFailoverMode
+      : 'none';
 
-    const isUnified513 = (baseConfig.pricingEdition || 'sc513_unified') === 'sc513_unified';
+    const federationSites = Math.max(0, Number(baseConfig.federationSites) || 0);
+    const federationSmallSites = Math.max(0, Number(baseConfig.federationSmallSites) || 0);
+    const intrusionPanels = Math.max(0, Number(baseConfig.intrusionPanels) || 0);
 
-    // Determine effective Omnicast / Unified Security Center Tier
+    // Determine effective Security Center 5.13 / 5.14 Unified Base Tier
     let effectiveTier = baseConfig.tierMode || 'auto';
+    const requiresEnterpriseFeatures =
+      coreFailover !== 'none' ||
+      archiverFailoverMode !== 'none' ||
+      federationSites > 0 ||
+      federationSmallSites > 0 ||
+      dvrNvrCameras > 0 ||
+      baseConfig.rsaTier === 'pro' ||
+      baseConfig.rsaTier === 'enterprise';
+
     if (effectiveTier === 'auto') {
-      if (cameraUnits > 0 && cameraUnits <= 32 && hasSv300AioInBom && failoverCameras === 0 && !baseConfig.failoverDirectory && !baseConfig.federationSites) {
+      if (
+        totalVideoConnections > 0 &&
+        totalVideoConnections <= 32 &&
+        totalReadersAndLocks <= 32 &&
+        hasSv300AioInBom &&
+        !requiresEnterpriseFeatures &&
+        activeArchiverRoles <= 1
+      ) {
         effectiveTier = 'aio';
-      } else if (isUnified513) {
-        // In Security Center 5.13 / 5.14 Unified Base Packages:
-        // GSC-BASE-S ($0) supports up to 100 cameras, 100 readers, 25 clients, 1 Archiver, 1 AD integration, and includes AutoVu Standard Base!
-        // Pro tier was retired/consolidated into GSC-BASE-S (<=100 cams) and GSC-BASE-E (Unlimited).
-        if (
-          cameraUnits > 0 &&
-          cameraUnits <= 100 &&
-          activeArchiverRoles <= 1 &&
-          failoverCameras === 0 &&
-          !baseConfig.failoverDirectory &&
-          !baseConfig.federationSites &&
-          workstationClients <= 25 &&
-          (baseConfig.planManagerTier === 'none' || !baseConfig.planManagerTier)
-        ) {
-          effectiveTier = 'standard';
-        } else {
-          effectiveTier = 'enterprise';
-        }
+      } else if (
+        (totalVideoConnections > 0 || totalReadersAndLocks > 0) &&
+        totalVideoConnections <= 100 &&
+        totalReadersAndLocks <= 100 &&
+        activeArchiverRoles <= 1 &&
+        workstationClients <= 25 &&
+        !requiresEnterpriseFeatures
+      ) {
+        effectiveTier = 'standard';
       } else {
-        // Legacy SC 5.10 - 5.12 separate base package rules
-        if (
-          cameraUnits > 0 &&
-          cameraUnits <= 50 &&
-          activeArchiverRoles <= 1 &&
-          failoverCameras === 0 &&
-          !baseConfig.failoverDirectory &&
-          !baseConfig.federationSites &&
-          workstationClients <= 5
-        ) {
-          effectiveTier = 'standard';
-        } else if (
-          cameraUnits > 0 &&
-          cameraUnits <= 100 &&
-          failoverCameras === 0 &&
-          !baseConfig.failoverDirectory &&
-          !baseConfig.federationSites &&
-          workstationClients <= 10
-        ) {
-          effectiveTier = 'pro';
-        } else {
-          effectiveTier = 'enterprise';
-        }
+        effectiveTier = 'enterprise';
       }
     }
 
-    // Compatibility & Tier Constraint Warnings (from ProductCompatability.pdf & Genetec Licensing.xls)
+    // Compatibility & Tier Constraint Warnings (ProductCompatability.pdf & Genetec Licensing.xls)
     const compatibilityWarnings = [];
-    const maxStdCams = isUnified513 ? 100 : 50;
-    const maxStdClients = isUnified513 ? 25 : 5;
-
     if (effectiveTier === 'aio') {
-      if (cameraUnits > 32) {
-        compatibilityWarnings.push(`Streamvault All-in-One (GSC-SV-AIO-1C) is capped at 32 cameras max (current: ${cameraUnits}). Switch to Standard or Enterprise.`);
+      if (totalVideoConnections > 32) {
+        compatibilityWarnings.push(`Streamvault All-in-One (GSC-SV-AIO-1C) is capped at 32 cameras max (current: ${totalVideoConnections}). Switch to Standard (GSC-BASE-S) or Enterprise (GSC-BASE-E).`);
       }
-      if (failoverCameras > 0 || baseConfig.failoverDirectory) {
-        compatibilityWarnings.push(`Streamvault All-in-One tier does not support Standby Archiver Failover or Failover Directory. Enterprise tier (GSC-BASE-E) required.`);
+      if (requiresEnterpriseFeatures) {
+        compatibilityWarnings.push(`Streamvault All-in-One tier does not support Core Failover, Archiver Failover, or Federation. Enterprise tier (GSC-BASE-E) required.`);
       }
     } else if (effectiveTier === 'standard') {
-      if (cameraUnits > maxStdCams) {
-        compatibilityWarnings.push(`${isUnified513 ? 'GSC-BASE-S (SC 5.13/5.14 Standard)' : 'Omnicast Standard (GSC-Om-S)'} is capped at ${maxStdCams} cameras maximum (current: ${cameraUnits}). Upgrade to Enterprise (GSC-BASE-E).`);
+      if (totalVideoConnections > 100) {
+        compatibilityWarnings.push(`GSC-BASE-S (Standard Base) is capped at 100 cameras maximum (current: ${totalVideoConnections}). Switch to Enterprise (GSC-BASE-E).`);
+      }
+      if (totalReadersAndLocks > 100) {
+        compatibilityWarnings.push(`GSC-BASE-S (Standard Base) is capped at 100 readers maximum (current: ${totalReadersAndLocks}). Switch to Enterprise (GSC-BASE-E).`);
       }
       if (activeArchiverRoles > 1) {
-        compatibilityWarnings.push(`Standard tier only supports 1 Archiver role (current design requires ${activeArchiverRoles} Archiver roles). Upgrade to Enterprise (GSC-BASE-E) for multi-Archiver support.`);
+        compatibilityWarnings.push(`GSC-BASE-S (Standard Base) supports 1 Archiver role (current design requires ${activeArchiverRoles} Archiver roles). Switch to Enterprise (GSC-BASE-E) for multi-Archiver support.`);
       }
-      if (workstationClients > maxStdClients) {
-        compatibilityWarnings.push(`${isUnified513 ? 'GSC-BASE-S' : 'Omnicast Standard'} is capped at ${maxStdClients} concurrent Security Desk/Web clients (requested: ${workstationClients}). Upgrade to Enterprise (GSC-BASE-E includes Unlimited Site Login License).`);
+      if (workstationClients > 25) {
+        compatibilityWarnings.push(`GSC-BASE-S (Standard Base) includes 25 concurrent clients (requested: ${workstationClients}). Switch to Enterprise (GSC-BASE-E) for Unlimited Client Site Login License at $0.`);
       }
-      if (failoverCameras > 0 || baseConfig.failoverDirectory || baseConfig.federationSites > 0) {
-        compatibilityWarnings.push(`Standard tier does not support Standby Failover Cameras, Failover Directory, or Federation. Upgrade to Enterprise (GSC-BASE-E includes Failover Cameras & Failover Directory for $0).`);
-      }
-    } else if (effectiveTier === 'pro') {
-      if (isUnified513) {
-        compatibilityWarnings.push(`Note: In Security Center 5.13+, the Professional Base Package (GSC-Om-P) was retired in favor of GSC-BASE-S ($0, expanded to 100 cameras / 25 clients) and GSC-BASE-E ($0 Enterprise). Use Pro only when expanding an existing SC 5.10–5.12 Pro system.`);
-      }
-      if (cameraUnits > 100) {
-        compatibilityWarnings.push(`Omnicast Professional (GSC-Om-P) is capped at 100 cameras maximum (current: ${cameraUnits}). Upgrade to Enterprise.`);
-      }
-      if (workstationClients > 10) {
-        compatibilityWarnings.push(`Omnicast Professional is capped at 10 concurrent Security Desk/Web clients (requested: ${workstationClients}). Upgrade to Enterprise.`);
-      }
-      if (failoverCameras > 0 || baseConfig.failoverDirectory || baseConfig.federationSites > 0) {
-        compatibilityWarnings.push(`Omnicast Professional does not support Standby Failover or Federation. Upgrade to Enterprise.`);
+      if (requiresEnterpriseFeatures) {
+        compatibilityWarnings.push(`GSC-BASE-S (Standard Base) does not support Core Failover (${coreFailover}), Archiver Failover, DVR/NVR inputs, or Federation. Switch to Enterprise (GSC-BASE-E).`);
       }
     }
 
-    // Track features bundled at $0.00 in the new Security Center 5.13 / 5.14 Base Packages (GSC-BASE-S & GSC-BASE-E)
-    const includedBaseFeatures = [];
-    let unifiedSavingsMsrp = 0;
-
-    if (isUnified513 && effectiveTier === 'standard') {
-      includedBaseFeatures.push(
-        { label: 'GSC-BASE-S Unified Base Package (Omnicast Std + Synergis Std + AutoVu Std)', legacyValue: 590 + 1000 + (effectiveLprCameras > 0 ? 1495 : 0) },
-        { label: 'Expanded 100-Camera & 100-Reader Ceiling (Up from 50 Cams / 64 Readers)', legacyValue: 0 },
-        { label: '25 Concurrent Security Desk / Web Client Connections Included (Up from 5)', legacyValue: Math.max(0, Math.min(25, workstationClients) - 5) * 300 },
-        { label: '1 Active Directory Integration Included Free (Replaces GSC-1AD-USCH)', legacyValue: baseConfig.adIntegration ? 1720 : 0 },
-        { label: 'Plan Manager Basic, Badge Designer & Zone Monitoring Included Free', legacyValue: 0 }
-      );
-      unifiedSavingsMsrp = includedBaseFeatures.reduce((s, f) => s + (f.legacyValue || 0), 0);
-    } else if (isUnified513 && effectiveTier === 'enterprise') {
-      includedBaseFeatures.push(
-        { label: 'GSC-BASE-E Unified Base Package (Omnicast Ent + Synergis Ent + AutoVu Std)', legacyValue: 3650 + (effectiveLprCameras > 0 ? 1495 : 0) },
-        { label: 'Standby Failover Cameras Included Free (Replaces $23/cam GSC-Om-E-1FC)', legacyValue: failoverCameras * 23 },
-        { label: 'Failover Directory Role Included Free (Replaces $1,000 GSC-1FOD)', legacyValue: baseConfig.failoverDirectory ? 1000 : 0 },
-        { label: 'Plan Manager Advanced GIS + Unlimited Entities Included Free (Replaces $28,250 GSC-PM-STD-Site + $4,750 Adv)', legacyValue: baseConfig.planManagerTier && baseConfig.planManagerTier !== 'none' ? 7050 : 0 },
-        { label: 'Unlimited Client Site Login License Included Free (Replaces $300 GSC-1U / $12,000 GSC-1STU)', legacyValue: Math.max(0, workstationClients - 5) * 300 },
-        { label: 'Unlimited Active Directory & ADFS SSO Included Free (Replaces $1,720 GSC-1AD-USCH)', legacyValue: baseConfig.adIntegration ? 1720 : 0 },
-        { label: 'Threat Level Module, Auxiliary Archiving & Badge Designer Included Free', legacyValue: 0 }
-      );
-      unifiedSavingsMsrp = includedBaseFeatures.reduce((s, f) => s + (f.legacyValue || 0), 0);
+    // SQL Server 2025 Express (50 GB Cap, Included Default) vs SQL Server Standard (Triggered ONLY when Core Failover = Full)
+    const sqlExpressMaxGb = 50;
+    const estimatedSqlDbGb = Math.round(
+      (0.5 + (totalVideoConnections * 0.03) + (totalReadersAndLocks * 0.06) + (effectiveLprCameras * 0.45)) * 10
+    ) / 10;
+    const needsSqlStandard = coreFailover === 'full';
+    if (!needsSqlStandard && estimatedSqlDbGb > sqlExpressMaxGb) {
+      compatibilityWarnings.push(`Estimated SQL Database footprint (~${estimatedSqlDbGb} GB) approaches or exceeds the 50 GB SQL Server 2025 Express cap. Consider setting Core Failover to Full (SQL Standard) or reducing metadata retention.`);
     }
 
     // Build Itemized License BOM
@@ -2015,97 +1994,61 @@ const GenetecLicensingSizer = {
       });
     };
 
-    // 1. Base Package & Per-Camera Licenses
+    const hasAnySystemEntities = totalVideoConnections > 0 || totalReadersAndLocks > 0 || effectiveLprCameras > 0 || effectiveIntercoms > 0 || intrusionPanels > 0;
+
+    // 1. Unified Base Package (GSC-BASE-S or GSC-BASE-E at $0.00) & Omnicast Video Connections
+    if (hasAnySystemEntities) {
+      if (effectiveTier === 'standard') {
+        addLineItem(
+          'GSC-BASE-S',
+          'Genetec Security Center Unified Base Standard Package (SC 5.13 / 5.14)',
+          'Base & Video Connections',
+          1,
+          0,
+          'genetec-gsc-base-s-513',
+          'Includes Omnicast Std (≤100 cams, 1 Archiver), Synergis Std (≤100 readers, 1 Access Mgr, Badge Designer), AutoVu Std Base, 25 Clients, 1 AD SSO & Maps',
+          true
+        );
+      } else if (effectiveTier === 'enterprise') {
+        addLineItem(
+          'GSC-BASE-E',
+          'Genetec Security Center Unified Base Enterprise Package (SC 5.13 / 5.14)',
+          'Base & Video Connections',
+          1,
+          0,
+          'genetec-gsc-base-e-513',
+          'Includes Omnicast Ent, Synergis Ent, AutoVu Std Base, Failover Cameras, Failover Directory, Unlimited Client Site License, Unlimited AD/ADFS, GIS Maps & Threat Level',
+          true
+        );
+      }
+    }
+
     if (cameraUnits > 0) {
       if (effectiveTier === 'aio') {
         addLineItem(
           'GSC-SV-AIO-1C',
           'Genetec Streamvault All-in-One — 1 Camera Connection License',
-          'Base & Camera Licenses',
+          'Base & Video Connections',
           cameraUnits,
           120,
           'genetec-gsc-sv-aio-1c',
-          'Streamvault SV-300E All-in-One discounted camera connection (up to 32 cams)'
+          'Streamvault SV-100E / SV-300E All-in-One camera connection (up to 32 cameras)'
         );
       } else if (effectiveTier === 'standard') {
-        if (isUnified513) {
-          addLineItem(
-            'GSC-BASE-S',
-            'Genetec Security Center Unified Base Standard Package (SC 5.13 / 5.14)',
-            'Base & Camera Licenses',
-            1,
-            0,
-            'genetec-gsc-base-s-513',
-            'INCLUDED ($0.00): Omnicast Std (≤100 cams, 1 Archiver), Synergis Std (≤100 readers), AutoVu Std Base, 25 Clients, 1 Active Directory SSO, Plan Manager Basic',
-            true
-          );
-        } else {
-          addLineItem(
-            'GSC-Om-S',
-            'Genetec Omnicast Standard Base Package (Legacy SC 5.10–5.12)',
-            'Base & Camera Licenses',
-            1,
-            590,
-            'genetec-gsc-om-s-base',
-            'Legacy SC 5.10–5.12 Base: Directory, 1 Archiver Role, Media Router & 5 Security Desk clients (max 50 cams)'
-          );
-        }
         addLineItem(
           'GSC-Om-S-1C',
           'Genetec Omnicast Standard — 1 Camera Connection License',
-          'Base & Camera Licenses',
+          'Base & Video Connections',
           cameraUnits,
           200,
           'genetec-gsc-om-s-1c',
           '1 license per IP camera connection'
         );
-      } else if (effectiveTier === 'pro') {
-        addLineItem(
-          'GSC-Om-P',
-          'Genetec Omnicast Professional Base Package (Legacy SC 5.10–5.12)',
-          'Base & Camera Licenses',
-          1,
-          1750,
-          'genetec-gsc-om-p-base',
-          'Legacy SC 5.10–5.12 Pro Base: Directory, Multi-Archiver support & 5 Security Desk clients (max 100 cams)'
-        );
-        addLineItem(
-          'GSC-Om-P-1C',
-          'Genetec Omnicast Professional — 1 Camera Connection License',
-          'Base & Camera Licenses',
-          cameraUnits,
-          260,
-          'genetec-gsc-om-p-1c',
-          '1 license per IP camera connection'
-        );
       } else {
-        // Enterprise
-        if (isUnified513) {
-          addLineItem(
-            'GSC-BASE-E',
-            'Genetec Security Center Unified Base Enterprise Package (SC 5.13 / 5.14)',
-            'Base & Camera Licenses',
-            1,
-            0,
-            'genetec-gsc-base-e-513',
-            'INCLUDED ($0.00): Omnicast Ent + Synergis Ent + AutoVu Base + Standby Failover Cameras + Failover Directory + Plan Manager Advanced Unlimited + Unlimited Client Site Login + Unlimited AD/ADFS + Threat Level',
-            true
-          );
-        } else {
-          addLineItem(
-            'GSC-Om-E',
-            'Genetec Omnicast Enterprise Base Package (Legacy SC 5.10–5.12)',
-            'Base & Camera Licenses',
-            1,
-            3650,
-            'genetec-gsc-base-514',
-            'Legacy SC 5.10–5.12 Base: Unlimited cameras, Multi-Role Archivers, Failover & 5 Security Desk clients included'
-          );
-        }
         addLineItem(
           'GSC-Om-E-1C',
           'Genetec Omnicast Enterprise — 1 Camera Connection License',
-          'Base & Camera Licenses',
+          'Base & Video Connections',
           cameraUnits,
           325,
           'genetec-gsc-1cam-lic',
@@ -2114,80 +2057,227 @@ const GenetecLicensingSizer = {
       }
     }
 
-    // 2. Failover & High Availability Licenses
-    // Note: In SC 5.13/5.14 Unified Enterprise (GSC-BASE-E), Failover Cameras and Failover Directory Role are INCLUDED at $0!
-    if (failoverCameras > 0) {
-      if (isUnified513 && effectiveTier === 'enterprise') {
-        // Already included in GSC-BASE-E at $0!
+    if (analogCameras > 0) {
+      if (effectiveTier === 'standard' || effectiveTier === 'aio') {
+        addLineItem(
+          'GSC-OM-S-1PAC',
+          'Genetec Omnicast Standard — 1 Analog Encoder Camera Connection',
+          'Base & Video Connections',
+          analogCameras,
+          60,
+          'genetec-gsc-om-s-1pac',
+          '1 license per analog camera channel on supported encoder'
+        );
       } else {
         addLineItem(
-          'GSC-Om-E-1FC',
-          'Genetec Omnicast Standby Archiver Failover — 1 Camera License',
-          'Failover & High Availability',
-          failoverCameras,
-          23,
-          'genetec-gsc-failover-1cam',
-          'Hot-standby Archiver failover per camera (Legacy SC 5.10–5.12; included free in SC 5.13+ GSC-BASE-E)'
+          'GSC-OM-E-1PAC',
+          'Genetec Omnicast Enterprise — 1 Analog Encoder Camera Connection',
+          'Base & Video Connections',
+          analogCameras,
+          100,
+          'genetec-gsc-om-e-1pac',
+          '1 license per analog camera channel on supported encoder'
         );
       }
     }
-    if (baseConfig.failoverDirectory) {
-      if (isUnified513 && effectiveTier === 'enterprise') {
-        // Already included in GSC-BASE-E at $0!
-      } else {
-        addLineItem(
-          'GSC-1FOD',
-          'Genetec Security Center Failover Directory License',
-          'Failover & High Availability',
-          1,
-          1000,
-          'genetec-gsc-1fod',
-          'Hot-standby Failover Directory synchronization role (Legacy SC 5.10–5.12; included free in SC 5.13+ GSC-BASE-E)'
-        );
-      }
-    }
-    if (Number(baseConfig.standbyServerCount) > 0) {
+
+    if (dvrNvrCameras > 0) {
       addLineItem(
-        'GSC-StandbyServer',
-        'Genetec Security Center Standby Server License (3rd-Party HA Clustering)',
-        'Failover & High Availability',
-        Number(baseConfig.standbyServerCount),
-        1500,
-        'genetec-gsc-standby-svr',
-        'Required only when deploying 3rd-party Windows/NEC clustering standby server'
+        'GSC-Om-E-1DV',
+        'Genetec Omnicast Enterprise — 1 DVR/NVR Camera Input Connection',
+        'Base & Video Connections',
+        dvrNvrCameras,
+        130,
+        'genetec-gsc-om-e-1dv',
+        'Third-party DVR/NVR camera channel ingestion'
       );
     }
 
-    // 3. Additional Security Desk / Web & Mobile Client Connections
-    // In SC 5.13/5.14: GSC-BASE-S includes 25 clients; GSC-BASE-E includes Unlimited Site Login License!
-    const freeClientsIncluded = isUnified513
-      ? (effectiveTier === 'enterprise' ? 999999 : effectiveTier === 'standard' ? 25 : 5)
-      : 5;
-    const extraClients = Math.max(0, workstationClients - freeClientsIncluded);
-    if (extraClients > 0) {
-      if (extraClients >= 40) {
+    if (bodyWornCameras > 0) {
+      addLineItem(
+        'GSC-OM-E-1BWC',
+        'Genetec Omnicast — 1 Body-Worn Camera Connection License',
+        'Base & Video Connections',
+        bodyWornCameras,
+        325,
+        'genetec-gsc-om-1bwc',
+        '1 license per body-wearable camera holder'
+      );
+    }
+
+    // 2. Core Failover, Archiver Failover & SQL Server 2025 / Standard Database
+    if (coreFailover === 'directory_only') {
+      addLineItem(
+        'GSC-1FOD',
+        'Genetec Failover Directory Role (Directory Only — Backup & Restore)',
+        'Core Failover & SQL Database',
+        1,
+        0,
+        'genetec-gsc-1fod',
+        'Included in GSC-BASE-E ($0.00) — Automated Directory Backup & Restore failover (SQL 2025 Express 50 GB stays in play)',
+        true
+      );
+    } else if (coreFailover === 'full') {
+      addLineItem(
+        'GSC-1FOD',
+        'Genetec Failover Directory Role (Full Core High Availability)',
+        'Core Failover & SQL Database',
+        1,
+        0,
+        'genetec-gsc-1fod',
+        'Included in GSC-BASE-E ($0.00) — Full Core Directory + SQL High Availability failover',
+        true
+      );
+    }
+
+    if (archiverFailoverMode === 'standby' && cameraUnits > 0) {
+      addLineItem(
+        'GSC-Om-E-1FC',
+        'Genetec Omnicast Standby Archiver Failover Camera Connections',
+        'Core Failover & SQL Database',
+        cameraUnits,
+        0,
+        'genetec-gsc-failover-1cam',
+        'Included in GSC-BASE-E ($0.00) — Hot-standby Archiver failover across all camera channels',
+        true
+      );
+    } else if (archiverFailoverMode === 'clustering') {
+      const sbCount = Math.max(1, Number(baseConfig.standbyServerCount) || 1);
+      addLineItem(
+        'GSC-StandbyServer',
+        'Genetec Security Center Standby Server License (3rd-Party HA Clustering)',
+        'Core Failover & SQL Database',
+        sbCount,
+        1500,
+        'genetec-gsc-standby-svr',
+        'Required for 3rd-party Windows Failover Cluster / NEC ExpressCluster standby server node(s)'
+      );
+    }
+
+    // SQL Database Line Item: SQL 2025 Express (50 GB Cap, $0) unless Core Failover === 'full'
+    if (needsSqlStandard) {
+      addLineItem(
+        '7NQ-01025',
+        'Microsoft SQL Server Standard Edition (Server + 5 CALs — Full Core Failover HA)',
+        'Core Failover & SQL Database',
+        1,
+        1418,
+        'ms-sql-svr-2022-std-4c',
+        `Required because Core Failover is set to Full (Est. DB: ~${estimatedSqlDbGb} GB; unlocks SQL HA Clustering & unlimited DB size)`
+      );
+    } else if (hasAnySystemEntities) {
+      addLineItem(
+        'SQL-2025-EXP',
+        'Microsoft SQL Server 2025 Express Edition (50 GB Cap — Included Default)',
+        'Core Failover & SQL Database',
+        1,
+        0,
+        'ms-sql-svr-2025-express',
+        `Included Free ($0.00) with 50 GB DB cap (Est. DB: ~${estimatedSqlDbGb} GB / 50 GB • Core Failover: ${coreFailover === 'directory_only' ? 'Directory Only Backup & Restore' : 'None'})`,
+        true
+      );
+    }
+
+    // 3. Synergis Access Control Connections
+    if (synergisGenetecReaders > 0) {
+      if (effectiveTier === 'standard' || effectiveTier === 'aio') {
         addLineItem(
-          'GSC-1STU',
-          'Genetec Unlimited Security Desk Client Connections — Site License',
-          'Client & Mobile Access',
-          1,
-          12000,
-          'genetec-gsc-1stu-site',
-          `Site license is more cost-effective than ${extraClients} individual GSC-1U licenses ($${(extraClients * 300).toLocaleString()})`
+          'GSC-SY-S-1RE',
+          'Genetec Synergis Standard — 1 Reader Connection (Genetec Hardware)',
+          'Synergis Access Control',
+          synergisGenetecReaders,
+          65,
+          'genetec-gsc-sy-s-1re',
+          'Reader connection for Cloud Link / Axis Powered by Genetec / Mercury hardware purchased from Genetec'
         );
       } else {
         addLineItem(
-          'GSC-1U',
-          'Genetec Security Desk / Web Client — 1 Additional User Connection',
-          'Client & Mobile Access',
-          extraClients,
-          300,
-          'genetec-gsc-1u-client',
-          `${workstationClients} total clients requested (first ${freeClientsIncluded} included in Base Package)`
+          'GSC-SY-E-1RE',
+          'Genetec Synergis Enterprise — 1 Reader Connection (Genetec Hardware)',
+          'Synergis Access Control',
+          synergisGenetecReaders,
+          125,
+          'genetec-gsc-sy-e-1re',
+          'Reader connection for Cloud Link / Axis Powered by Genetec / Mercury hardware purchased from Genetec'
         );
       }
     }
-    if (mobileClients > 0 && !(isUnified513 && effectiveTier === 'enterprise')) {
+
+    if (synergisExternalReaders > 0) {
+      if (effectiveTier === 'standard' || effectiveTier === 'aio') {
+        addLineItem(
+          'GSC-Sy-S-1R',
+          'Genetec Synergis Standard — 1 External Reader Connection (Non-Genetec HW)',
+          'Synergis Access Control',
+          synergisExternalReaders,
+          175,
+          'genetec-gsc-sy-s-1r',
+          'External reader connection when controller hardware is not purchased from Genetec'
+        );
+      } else {
+        addLineItem(
+          'GSC-Sy-E-1R',
+          'Genetec Synergis Enterprise — 1 External Reader Connection (Non-Genetec HW)',
+          'Synergis Access Control',
+          synergisExternalReaders,
+          260,
+          'genetec-gsc-sy-e-1r',
+          'External reader connection when controller hardware is not purchased from Genetec'
+        );
+      }
+    }
+
+    if (synergisWirelessLocks > 0) {
+      addLineItem(
+        'GSC-SY-E-1WR',
+        'Genetec Synergis — 1 Wireless / PoE Electronic Lock Connection',
+        'Synergis Access Control',
+        synergisWirelessLocks,
+        90,
+        'genetec-gsc-sy-1wr',
+        'Wireless or PoE lock connection (Assa Abloy Aperio, Schlage NDE/LE, Salto, SimonsVoss)'
+      );
+    }
+
+    if (baseConfig.visitorManagement) {
+      if (effectiveTier === 'standard' || effectiveTier === 'aio') {
+        addLineItem(
+          'GSC-Sy-S-Vis',
+          'Genetec Synergis Standard — Visitor Management Module',
+          'Synergis Access Control',
+          1,
+          1000,
+          'genetec-gsc-sy-vis-s',
+          'Visitor check-in, badge printing, and escort management'
+        );
+      } else {
+        addLineItem(
+          'GSC-Sy-E-Vis',
+          'Genetec Synergis Enterprise — Visitor Management Module',
+          'Synergis Access Control',
+          1,
+          3000,
+          'genetec-gsc-sy-vis-e',
+          'Enterprise multi-lobby visitor check-in and credential management'
+        );
+      }
+    }
+
+    // 4. Operator Workstations & Mobile Clients
+    const freeClientsIncluded = effectiveTier === 'enterprise' ? 999999 : effectiveTier === 'standard' ? 25 : 5;
+    const extraClients = Math.max(0, workstationClients - freeClientsIncluded);
+    if (extraClients > 0) {
+      addLineItem(
+        'GSC-1U',
+        'Genetec Security Desk / Web Client — 1 Additional User Connection',
+        'Client & Mobile Access',
+        extraClients,
+        300,
+        'genetec-gsc-1u-client',
+        `${workstationClients} total clients requested (first ${freeClientsIncluded} included in Base Package)`
+      );
+    }
+    if (mobileClients > 0 && effectiveTier !== 'enterprise') {
       addLineItem(
         'GSC-1MobileU',
         'Genetec Mobile App — 1 Concurrent User Connection',
@@ -2195,62 +2285,11 @@ const GenetecLicensingSizer = {
         mobileClients,
         250,
         'genetec-gsc-1mobileu',
-        'iOS/Android Genetec Mobile live/playback & alarm connection'
+        'iOS/Android Genetec Mobile connection (included free in GSC-BASE-E Enterprise)'
       );
     }
 
-    // 4. Plan Manager Interactive Maps
-    // In SC 5.13/5.14: GSC-BASE-E includes Plan Manager Advanced for GIS Map servers with Unlimited Entities at $0!
-    const totalEntities = cameraUnits + effectiveLprCameras + effectiveIntercoms;
-    let pmTier = baseConfig.planManagerTier || 'none';
-    if (pmTier === 'auto') {
-      if (totalEntities === 0) pmTier = 'none';
-      else if (totalEntities <= 50) pmTier = '50';
-      else if (totalEntities <= 100) pmTier = '100';
-      else if (totalEntities <= 250) pmTier = '250';
-      else if (totalEntities <= 500) pmTier = '500';
-      else if (totalEntities <= 1000) pmTier = '1000';
-      else pmTier = 'site';
-    }
-    const pmMap = {
-      '50': { sku: 'GSC-PM-STD-50', model: 'Genetec Plan Manager Standard — Up to 50 Entities', msrp: 2350, id: 'genetec-pm-std-50' },
-      '100': { sku: 'GSC-PM-STD-100', model: 'Genetec Plan Manager Standard — Up to 100 Entities', msrp: 4250, id: 'genetec-pm-std-100' },
-      '250': { sku: 'GSC-PM-STD-250', model: 'Genetec Plan Manager Standard — Up to 250 Entities', msrp: 7050, id: 'genetec-pm-std-250' },
-      '500': { sku: 'GSC-PM-STD-500', model: 'Genetec Plan Manager Standard — Up to 500 Entities', msrp: 9400, id: 'genetec-pm-std-500' },
-      '1000': { sku: 'GSC-PM-STD-1000', model: 'Genetec Plan Manager Standard — Up to 1,000 Entities', msrp: 18800, id: 'genetec-pm-std-1000' },
-      'site': { sku: 'GSC-PM-STD-SiteLicense', model: 'Genetec Plan Manager Standard — Unlimited Site License', msrp: 28250, id: 'genetec-pm-std-site' }
-    };
-    if (pmMap[pmTier] && !(isUnified513 && effectiveTier === 'enterprise')) {
-      const pm = pmMap[pmTier];
-      addLineItem(pm.sku, pm.model, 'Maps, Identity & Federation', 1, pm.msrp, pm.id, `Interactive vector/CAD floorplans (${totalEntities} current project entities)`);
-    }
-
-    // 5. Active Directory & Federation
-    // In SC 5.13/5.14: GSC-BASE-S includes 1 Active Directory connection free; GSC-BASE-E includes Unlimited AD & ADFS free!
-    if (baseConfig.adIntegration && !isUnified513) {
-      addLineItem(
-        'GSC-1AD-USCH',
-        'Genetec Active Directory User & Cardholder Synchronization',
-        'Maps, Identity & Federation',
-        1,
-        1720,
-        'genetec-ad-integration',
-        'Windows Active Directory SSO (Legacy SC 5.10–5.12; included free in SC 5.13+ GSC-BASE-S and GSC-BASE-E)'
-      );
-    }
-    if (Number(baseConfig.federationSites) > 0) {
-      addLineItem(
-        'GSC-1SCFED',
-        'Genetec Security Center Federation Connection License',
-        'Maps, Identity & Federation',
-        Number(baseConfig.federationSites),
-        1000,
-        'genetec-federation',
-        'Centralized multi-site Security Center Federation'
-      );
-    }
-
-    // 6. KiwiVision Analytics, AutoVu LPR, Sipelia Intercom & RSA
+    // 5. KiwiVision Video Analytics, AutoVu ALPR & Sipelia Communications
     if (Number(baseConfig.kiwiPrivacyStreams) > 0) {
       addLineItem(
         'GSC-OM-1PP300+',
@@ -2265,27 +2304,37 @@ const GenetecLicensingSizer = {
     if (Number(baseConfig.kiwiSecurityStreams) > 0) {
       addLineItem(
         'GSC-OM-1VAS300+',
-        'Genetec KiwiVision Security Analytics (Intrusion / Object) — 1 Camera License',
+        'Genetec KiwiVision Security Analytics (Single Scenario) — 1 Camera License',
         'Analytics, LPR & Intercom',
         Number(baseConfig.kiwiSecurityStreams),
         450,
         'genetec-kiwivision-security-1c',
-        'Perimeter intrusion, loitering, or object detection stream'
+        'Perimeter protection, area protection, direction control, object, or tailgating (1 scenario/cam)'
+      );
+    }
+    if (Number(baseConfig.kiwiUnlimitedStreams) > 0) {
+      addLineItem(
+        'GSC-OM-1VASU300+',
+        'Genetec KiwiVision Security Analytics (Unlimited Scenarios) — 1 Camera License',
+        'Analytics, LPR & Intercom',
+        Number(baseConfig.kiwiUnlimitedStreams),
+        850,
+        'genetec-kiwivision-vasu-1c',
+        'Unlimited simultaneous KiwiVision security analytics scenarios per camera'
+      );
+    }
+    if (Number(baseConfig.kiwiPeopleCounterStreams) > 0) {
+      addLineItem(
+        'GSC-OM-1PC300+',
+        'Genetec KiwiVision People Counter & Crowd Estimation — 1 Camera License',
+        'Analytics, LPR & Intercom',
+        Number(baseConfig.kiwiPeopleCounterStreams),
+        450,
+        'genetec-kiwivision-pc-1c',
+        'Directional people counting and crowd estimation per camera'
       );
     }
     if (effectiveLprCameras > 0) {
-      // In SC 5.13/5.14: AutoVu Standard Base Package is included at $0 in both GSC-BASE-S and GSC-BASE-E!
-      if (!isUnified513) {
-        addLineItem(
-          'GSC-Av-S',
-          'Genetec AutoVu Standard ALPR Base Package (Legacy SC 5.10–5.12)',
-          'Analytics, LPR & Intercom',
-          1,
-          1495,
-          'genetec-autovu-base',
-          'AutoVu ALPR base module (included free in SC 5.13+ GSC-BASE-S and GSC-BASE-E)'
-        );
-      }
       addLineItem(
         'GSC-Av-S-1SHP',
         'Genetec AutoVu Fixed Sharp LPR — 1 Camera Connection License',
@@ -2293,9 +2342,18 @@ const GenetecLicensingSizer = {
         effectiveLprCameras,
         500,
         'genetec-autovu-1shp',
-        isUnified513
-          ? 'Fixed ALPR camera stream connection (AutoVu Standard Base included free in GSC-BASE-S / GSC-BASE-E)'
-          : 'Fixed ALPR camera stream connection'
+        'Fixed ALPR camera stream connection (AutoVu Standard Base included free in GSC-BASE-S / GSC-BASE-E)'
+      );
+    }
+    if (Number(baseConfig.patrollerVehicles) > 0) {
+      addLineItem(
+        'GSC-Av-S-1PATROLLER',
+        'Genetec AutoVu Mobile Patroller — 1 Vehicle Connection License',
+        'Analytics, LPR & Intercom',
+        Number(baseConfig.patrollerVehicles),
+        500,
+        'genetec-autovu-1patroller',
+        'Mobile ALPR Patroller vehicle connection to Security Center'
       );
     }
     if (effectiveIntercoms > 0) {
@@ -2306,38 +2364,80 @@ const GenetecLicensingSizer = {
         effectiveIntercoms,
         295,
         'genetec-sipelia-1sip',
-        'Includes failover & bidirectional audio/video call recording (no separate Sipelia Base fee in SC 5.13+)'
-      );
-    }
-    if (baseConfig.rsaEnabled) {
-      addLineItem(
-        'GSC-GAP-RSA-STA',
-        'Genetec Restricted Security Area (RSA) Surveillance Module — Standard',
-        'Analytics, LPR & Intercom',
-        1,
-        1000,
-        'genetec-rsa-standard',
-        'Radar, LiDAR, and fence intrusion sensor fusion w/ PTZ slew-to-cue'
+        'Includes failover & bidirectional audio/video call recording'
       );
     }
 
-    // 7. Mandatory Genetec Advantage Maintenance (1Y / 3Y / 5Y)
-    if (cameraUnits > 0) {
+    // 6. Federation, Intrusion Panels, RSA, IIoT, Cloud Archive & Clearance
+    if (federationSites > 0) {
+      addLineItem(
+        'GSC-1SCFED',
+        'Genetec Security Center Federation Connection License (>20 Entities)',
+        'Federation, Intrusion & Cloud',
+        federationSites,
+        1000,
+        'genetec-federation',
+        'Centralized multi-site Security Center Federation directory connection'
+      );
+    }
+    if (federationSmallSites > 0) {
+      addLineItem(
+        'GSC-1SCFED-20',
+        'Genetec Security Center Federation Connection — Small Site (≤20 Entities)',
+        'Federation, Intrusion & Cloud',
+        federationSmallSites,
+        600,
+        'genetec-federation-20',
+        'Federated remote Security Center directory with 20 or fewer cameras/readers'
+      );
+    }
+    if (intrusionPanels > 0) {
+      addLineItem(
+        'GSC-1AP-Bosch',
+        'Genetec Intrusion Alarm Panel Connection (Bosch / DMP / Honeywell / DSC)',
+        'Federation, Intrusion & Cloud',
+        intrusionPanels,
+        350,
+        'genetec-gsc-1ap-panel',
+        '1 connection per intrusion panel (no separate GSC-AP-Base required in SC 5.13+)'
+      );
+    }
+    if (baseConfig.rsaTier === 'standard') {
+      addLineItem('GSC-GAP-RSA-STA', 'Genetec Restricted Security Area (RSA) Surveillance — Standard', 'Federation, Intrusion & Cloud', 1, 1000, 'genetec-rsa-standard', 'Perimeter radar, LiDAR & fence intrusion event integration');
+    } else if (baseConfig.rsaTier === 'pro') {
+      addLineItem('GSC-GAP-RSA-PRO', 'Genetec Restricted Security Area (RSA) Surveillance — Professional', 'Federation, Intrusion & Cloud', 1, 7000, 'genetec-rsa-pro', 'Up to 20 short-range sensors, 5 radars, 1 fence controller & 10km fence');
+    } else if (baseConfig.rsaTier === 'enterprise') {
+      addLineItem('GSC-GAP-RSA-ENT', 'Genetec Restricted Security Area (RSA) Surveillance — Enterprise', 'Federation, Intrusion & Cloud', 1, 14000, 'genetec-rsa-ent', 'Unrestricted enterprise perimeter radar, LiDAR & multi-zone fence fusion');
+    }
+    if (baseConfig.iiotMode === 'site') {
+      addLineItem('GSC-IIOT', 'Genetec Industrial IoT Plugin — Unlimited Site License (BACnet / Modbus / OPC / SNMP)', 'Federation, Intrusion & Cloud', 1, 6000, 'genetec-gsc-iiot-site', 'Unlimited BACnet, Modbus, OPC, SNMP, MQTT & HTTP device/data-point connections');
+    } else if (baseConfig.iiotMode === 'devices' && Number(baseConfig.iiotDevices) > 0) {
+      addLineItem('GSC-IIOT-1D', 'Genetec Industrial IoT Plugin — 1 Device Connection', 'Federation, Intrusion & Cloud', Number(baseConfig.iiotDevices), 149, 'genetec-gsc-iiot-1d', 'BACnet / Modbus / SNMP / MQTT individual device connection');
+    }
+    if (Number(baseConfig.cloudArchiveTb) > 0) {
+      const caTb = Number(baseConfig.cloudArchiveTb);
+      if (baseConfig.cloudArchiveTier === 'longterm') {
+        addLineItem('SCS-CSA-USA-1TB-1Y', 'Genetec Cloud Archives — 1 TB Long-Term Tier (Archive-LRS, 1-Year)', 'Federation, Intrusion & Cloud', caTb, 122, 'genetec-cloud-archive-lt-1tb', 'Long-term cloud video retention (min 180 days retention)');
+      } else {
+        addLineItem('SCS-CSP-USA-1TB-1Y', 'Genetec Cloud Archives — 1 TB Performance Tier (Cool-LRS, 1-Year)', 'Federation, Intrusion & Cloud', caTb, 257, 'genetec-cloud-archive-perf-1tb', 'Performance tier cloud video retention (min 30 days retention)');
+      }
+    }
+    if (baseConfig.clearanceEnabled && cameraUnits > 0) {
+      addLineItem('CLR-1CCST1-US-1Y', 'Genetec Clearance Digital Evidence Management — 1 Camera Subscription (1-Year)', 'Federation, Intrusion & Cloud', cameraUnits, 24, 'genetec-clearance-1cam-1y', 'Includes unlimited users, unlimited cases & 1 GB cloud storage per camera');
+    }
+
+    // 7. Mandatory Genetec Advantage Maintenance (1Y / 3Y / 5Y across Cameras, Readers, LPR, Sipelia, Intrusion & 24/7 TAC)
+    if (totalVideoConnections > 0) {
       const advTierTable = {
         aio: {
           1: { sku: 'ADV-CAM-AIO-1Y', model: 'Genetec Advantage Maintenance — 1 Streamvault AIO Camera (1-Year)', msrp: 25, id: 'genetec-adv-cam-aio-1y' },
-          3: { sku: 'ADV-CAM-AIO-3Y', model: 'Genetec Advantage Maintenance — 1 Streamvault AIO Camera (3-Year)', msrp: 60, id: 'genetec-adv-cam-aio-1y' },
-          5: { sku: 'ADV-CAM-AIO-5Y', model: 'Genetec Advantage Maintenance — 1 Streamvault AIO Camera (5-Year)', msrp: 85, id: 'genetec-adv-cam-aio-1y' }
+          3: { sku: 'ADV-CAM-AIO-3Y', model: 'Genetec Advantage Maintenance — 1 Streamvault AIO Camera (3-Year)', msrp: 60, id: 'genetec-adv-cam-aio-3y' },
+          5: { sku: 'ADV-CAM-AIO-5Y', model: 'Genetec Advantage Maintenance — 1 Streamvault AIO Camera (5-Year)', msrp: 85, id: 'genetec-adv-cam-aio-5y' }
         },
         standard: {
           1: { sku: 'ADV-CAM-S-1Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Standard Camera (1-Year)', msrp: 35, id: 'genetec-adv-cam-s-1y' },
-          3: { sku: 'ADV-CAM-S-3Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Standard Camera (3-Year)', msrp: 85, id: 'genetec-adv-cam-s-1y' },
-          5: { sku: 'ADV-CAM-S-5Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Standard Camera (5-Year)', msrp: 130, id: 'genetec-adv-cam-s-1y' }
-        },
-        pro: {
-          1: { sku: 'ADV-CAM-P-1Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Pro Camera (1-Year)', msrp: 45, id: 'genetec-adv-cam-p-1y' },
-          3: { sku: 'ADV-CAM-P-3Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Pro Camera (3-Year)', msrp: 115, id: 'genetec-adv-cam-p-1y' },
-          5: { sku: 'ADV-CAM-P-5Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Pro Camera (5-Year)', msrp: 165, id: 'genetec-adv-cam-p-1y' }
+          3: { sku: 'ADV-CAM-S-3Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Standard Camera (3-Year)', msrp: 85, id: 'genetec-adv-cam-s-3y' },
+          5: { sku: 'ADV-CAM-S-5Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Standard Camera (5-Year)', msrp: 130, id: 'genetec-adv-cam-s-5y' }
         },
         enterprise: {
           1: { sku: 'ADV-CAM-E-1Y', model: 'Genetec Advantage Maintenance — 1 Omnicast Enterprise Camera (1-Year)', msrp: 55, id: 'genetec-advantage-1cam-1yr' },
@@ -2346,47 +2446,108 @@ const GenetecLicensingSizer = {
         }
       };
       const advEntry = (advTierTable[effectiveTier] || advTierTable.enterprise)[advantageYears];
-      const oneYrAnnual = (advTierTable[effectiveTier] || advTierTable.enterprise)[1].msrp;
-      const multiYrSavingsPerCam = (oneYrAnnual * advantageYears) - advEntry.msrp;
       addLineItem(
         advEntry.sku,
         advEntry.model,
         'Genetec Advantage SMA',
-        cameraUnits,
+        totalVideoConnections,
         advEntry.msrp,
         advEntry.id,
-        multiYrSavingsPerCam > 0
-          ? `Mandatory ${advantageYears}-Year SMA (saves $${(multiYrSavingsPerCam * cameraUnits).toLocaleString()} vs annual renewals)`
-          : 'Mandatory 1-Year Software Maintenance Agreement (SMA)'
+        `Mandatory ${advantageYears}-Year Software Maintenance Agreement (SMA)`
+      );
+    }
+
+    if (totalReadersAndLocks > 0) {
+      const rdrAdvTable = {
+        standard: {
+          1: { sku: 'ADV-RDR-S-1Y', model: 'Genetec Advantage Maintenance — 1 Synergis Standard Reader (1-Year)', msrp: 15, id: 'genetec-adv-rdr-s-1y' },
+          3: { sku: 'ADV-RDR-S-3Y', model: 'Genetec Advantage Maintenance — 1 Synergis Standard Reader (3-Year)', msrp: 35, id: 'genetec-adv-rdr-s-3y' },
+          5: { sku: 'ADV-RDR-S-5Y', model: 'Genetec Advantage Maintenance — 1 Synergis Standard Reader (5-Year)', msrp: 55, id: 'genetec-adv-rdr-s-5y' }
+        },
+        enterprise: {
+          1: { sku: 'ADV-RDR-E-1Y', model: 'Genetec Advantage Maintenance — 1 Synergis Enterprise Reader (1-Year)', msrp: 25, id: 'genetec-adv-rdr-e-1y' },
+          3: { sku: 'ADV-RDR-E-3Y', model: 'Genetec Advantage Maintenance — 1 Synergis Enterprise Reader (3-Year)', msrp: 60, id: 'genetec-adv-rdr-e-3y' },
+          5: { sku: 'ADV-RDR-E-5Y', model: 'Genetec Advantage Maintenance — 1 Synergis Enterprise Reader (5-Year)', msrp: 90, id: 'genetec-adv-rdr-e-5y' }
+        }
+      };
+      const rdrKey = (effectiveTier === 'standard' || effectiveTier === 'aio') ? 'standard' : 'enterprise';
+      const rdrEntry = rdrAdvTable[rdrKey][advantageYears];
+      addLineItem(
+        rdrEntry.sku,
+        rdrEntry.model,
+        'Genetec Advantage SMA',
+        totalReadersAndLocks,
+        rdrEntry.msrp,
+        rdrEntry.id,
+        `Mandatory ${advantageYears}-Year Synergis Reader Maintenance`
       );
     }
 
     if (effectiveLprCameras > 0) {
-      const lprAdvPrice = advantageYears === 5 ? 280 : advantageYears === 3 ? 192 : 80;
-      const lprAdvSku = `ADV-LPR-F-${advantageYears}Y`;
+      const lprAdvTable = {
+        1: { sku: 'ADV-LPR-F-1Y', msrp: 80, id: 'genetec-adv-lpr-f-1y' },
+        3: { sku: 'ADV-LPR-F-3Y', msrp: 192, id: 'genetec-adv-lpr-f-3y' },
+        5: { sku: 'ADV-LPR-F-5Y', msrp: 280, id: 'genetec-adv-lpr-f-5y' }
+      }[advantageYears];
       addLineItem(
-        lprAdvSku,
+        lprAdvTable.sku,
         `Genetec Advantage Maintenance — 1 Fixed Sharp LPR Camera (${advantageYears}-Year)`,
         'Genetec Advantage SMA',
         effectiveLprCameras,
-        lprAdvPrice,
-        'genetec-adv-lpr-f-1y',
+        lprAdvTable.msrp,
+        lprAdvTable.id,
         `Mandatory ${advantageYears}-Year AutoVu LPR Maintenance`
       );
     }
 
-    // 8. Microsoft SQL Server Standard Check (SystemRequirements.pdf: >100 cameras or ALPR exceeds SQL Express 10GB limit)
-    const needsSqlStandard = baseConfig.includeSqlStandard === 'yes' ||
-      (baseConfig.includeSqlStandard === 'auto' && (cameraUnits > 100 || effectiveLprCameras > 0));
-    if (needsSqlStandard) {
+    if (effectiveIntercoms > 0) {
+      const sipAdvTable = {
+        1: { sku: 'ADV-SIP-1Y', msrp: 40, id: 'genetec-adv-sip-1y' },
+        3: { sku: 'ADV-SIP-3Y', msrp: 95, id: 'genetec-adv-sip-3y' },
+        5: { sku: 'ADV-SIP-5Y', msrp: 140, id: 'genetec-adv-sip-5y' }
+      }[advantageYears];
       addLineItem(
-        '7NQ-01025',
-        'Microsoft SQL Server 2022 Standard Edition (Server + 5 CALs)',
-        'Database & OS Infrastructure',
+        sipAdvTable.sku,
+        `Genetec Advantage Maintenance — 1 Sipelia Intercom Connection (${advantageYears}-Year)`,
+        'Genetec Advantage SMA',
+        effectiveIntercoms,
+        sipAdvTable.msrp,
+        sipAdvTable.id,
+        `Mandatory ${advantageYears}-Year Sipelia Intercom Maintenance`
+      );
+    }
+
+    if (intrusionPanels > 0) {
+      const apAdvTable = {
+        1: { sku: 'ADV-1AP-1Y', msrp: 65, id: 'genetec-adv-1ap-1y' },
+        3: { sku: 'ADV-1AP-3Y', msrp: 160, id: 'genetec-adv-1ap-3y' },
+        5: { sku: 'ADV-1AP-5Y', msrp: 230, id: 'genetec-adv-1ap-5y' }
+      }[advantageYears];
+      addLineItem(
+        apAdvTable.sku,
+        `Genetec Advantage Maintenance — 1 Intrusion Alarm Panel (${advantageYears}-Year)`,
+        'Genetec Advantage SMA',
+        intrusionPanels,
+        apAdvTable.msrp,
+        apAdvTable.id,
+        `Mandatory ${advantageYears}-Year Intrusion Panel Maintenance`
+      );
+    }
+
+    if (baseConfig.advantage247) {
+      const tacTable = {
+        1: { sku: 'ADV-OPTION-247-1Y', msrp: 6000, id: 'genetec-adv-option-247-1y' },
+        3: { sku: 'ADV-OPTION-247-3Y', msrp: 14400, id: 'genetec-adv-option-247-3y' },
+        5: { sku: 'ADV-OPTION-247-5Y', msrp: 21000, id: 'genetec-adv-option-247-5y' }
+      }[advantageYears];
+      addLineItem(
+        tacTable.sku,
+        `Genetec Advantage 24/7 Technical Assistance Center Option (${advantageYears}-Year)`,
+        'Genetec Advantage SMA',
         1,
-        1418,
-        'ms-sql-svr-2022-std-4c',
-        'Replaces SQL Server Express (10 GB / 1 GB RAM limit) per Genetec System Requirements for >100 cameras or AutoVu ALPR'
+        tacTable.msrp,
+        tacTable.id,
+        '24/7/365 emergency TAC support with 30-minute SLA callback'
       );
     }
 
@@ -2402,21 +2563,30 @@ const GenetecLicensingSizer = {
 
     return {
       config: baseConfig,
-      isUnified513,
-      includedBaseFeatures,
-      unifiedSavingsMsrp,
-      freeClientsIncluded,
       videoLoad,
       cameraUnits,
+      analogCameras,
+      dvrNvrCameras,
+      bodyWornCameras,
+      totalVideoConnections,
+      synergisGenetecReaders,
+      synergisExternalReaders,
+      synergisWirelessLocks,
+      totalReadersAndLocks,
       effectiveTier,
       advantageYears,
-      failoverCameras,
+      coreFailover,
+      archiverFailoverMode,
+      sqlExpressMaxGb,
+      estimatedSqlDbGb,
+      needsSqlStandard,
+      freeClientsIncluded,
       workstationClients,
       extraClients,
       mobileClients,
       effectiveLprCameras,
       effectiveIntercoms,
-      needsSqlStandard,
+      intrusionPanels,
       compatibilityWarnings,
       lineItems,
       totalSoftwareMsrp,

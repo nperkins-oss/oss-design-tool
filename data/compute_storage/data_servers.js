@@ -1059,7 +1059,7 @@ const SOFTWARE_DATABASE = {
       datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
     },
 
-    // --- GENETEC CAMERA CONNECTION LICENSES ---
+    // --- GENETEC CAMERA & VIDEO INPUT CONNECTION LICENSES ---
     {
       id: "genetec-gsc-sv-aio-1c",
       vendor: "Genetec",
@@ -1090,30 +1090,11 @@ const SOFTWARE_DATABASE = {
       licenseType: "Per-Camera License",
       tier: "Standard",
       msrp: 200,
-      description: "Single IP camera connection license for Genetec Security Center Omnicast Standard systems (up to 50 cameras max).",
+      description: "Single IP camera connection license for Genetec Security Center Standard (GSC-BASE-S, up to 100 cameras max).",
       keyFeatures: [
-        "Licenses 1 IP camera on Genetec Security Center Omnicast Standard (GSC-Om-S)",
-        "Supports H.264, H.265, and MJPEG multistreaming",
+        "Licenses 1 IP camera on Genetec Security Center Standard (GSC-BASE-S)",
+        "Supports H.264, H.265, Edge Recording, Trickling, and Camera Dewarping",
         "Pairs with ADV-CAM-S-1Y ($35/yr) / 3Y ($85) / 5Y ($130) Advantage maintenance"
-      ],
-      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
-    },
-    {
-      id: "genetec-gsc-om-p-1c",
-      vendor: "Genetec",
-      model: "Genetec Omnicast Professional — 1 Camera Connection License",
-      sku: "GSC-Om-P-1C",
-      role: "Software License",
-      category: "vms_software",
-      type: "license",
-      licenseType: "Per-Camera License",
-      tier: "Professional",
-      msrp: 260,
-      description: "Single IP camera connection license for Genetec Security Center Omnicast Professional systems (up to 100 cameras max).",
-      keyFeatures: [
-        "Licenses 1 IP camera on Genetec Security Center Omnicast Professional (GSC-Om-P)",
-        "Supports Edge Trickling, Audio Recording, and Bookmarking",
-        "Pairs with ADV-CAM-P-1Y ($45/yr) / 3Y ($115) / 5Y ($165) Advantage maintenance"
       ],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
@@ -1128,13 +1109,206 @@ const SOFTWARE_DATABASE = {
       licenseType: "Per-Camera License",
       tier: "Enterprise",
       msrp: 325,
-      description: "Single IP camera connection license for Genetec Security Center Omnicast Enterprise (supports single-sensor and single-IP multi-sensor cameras).",
+      description: "Single IP camera connection license for Genetec Security Center Enterprise (GSC-BASE-E, supports single-sensor and single-IP multi-sensor cameras).",
       keyFeatures: [
-        "Licenses 1 IP camera or single-IP multi-sensor camera on Genetec Security Center Omnicast Enterprise",
+        "Licenses 1 IP camera or single-IP multi-sensor camera on Genetec Security Center Enterprise",
         "Supports H.264, H.265, Auxiliary Archiving, Standby Failover, and Cloud Archives",
         "Pairs with ADV-CAM-E-1Y ($55/yr) / 3Y ($135) / 5Y ($190) Advantage maintenance"
       ],
       datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
+    },
+    {
+      id: "genetec-gsc-om-s-1pac",
+      vendor: "Genetec",
+      model: "Genetec Omnicast Standard — 1 Analog Encoder Camera Connection",
+      sku: "GSC-OM-S-1PAC",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Per-Camera License",
+      tier: "Standard",
+      msrp: 60,
+      description: "Single analog camera channel connection (via supported video encoders) for Genetec Security Center Standard (GSC-BASE-S).",
+      keyFeatures: [
+        "Discounted analog encoder channel connection for coax-to-IP migration deployments",
+        "Compatible with Axis, Bosch, and Hanwha multi-channel video encoders"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-om-e-1pac",
+      vendor: "Genetec",
+      model: "Genetec Omnicast Enterprise — 1 Analog Encoder Camera Connection",
+      sku: "GSC-OM-E-1PAC",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Per-Camera License",
+      tier: "Enterprise",
+      msrp: 100,
+      description: "Single analog camera channel connection (via supported video encoders) for Genetec Security Center Enterprise (GSC-BASE-E).",
+      keyFeatures: [
+        "Discounted analog encoder channel connection for Enterprise coax-to-IP migrations",
+        "Supports full Enterprise archiving, failover, and federated viewing"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-om-e-1dv",
+      vendor: "Genetec",
+      model: "Genetec Omnicast Enterprise — 1 DVR/NVR Camera Input Connection",
+      sku: "GSC-Om-E-1DV",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Per-Camera License",
+      tier: "Enterprise",
+      msrp: 130,
+      description: "Single third-party DVR/NVR camera input connection for Genetec Security Center Enterprise.",
+      keyFeatures: [
+        "Integrates legacy DVR/NVR camera channels into Security Desk for unified live and playback viewing"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-om-1bwc",
+      vendor: "Genetec",
+      model: "Genetec Omnicast — 1 Body-Worn Camera Connection License",
+      sku: "GSC-OM-E-1BWC",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Per-Camera License",
+      msrp: 325,
+      description: "Single body-wearable camera connection license (1 required per body-worn camera holder).",
+      keyFeatures: [
+        "Automated docking station video offload and metadata ingestion into Security Center Archivers"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+
+    // --- GENETEC SYNERGIS ACCESS CONTROL CONNECTION LICENSES (SC 5.13 / 5.14) ---
+    {
+      id: "genetec-gsc-sy-s-1re",
+      vendor: "Genetec",
+      model: "Genetec Synergis Standard — 1 Reader Connection (Genetec Hardware)",
+      sku: "GSC-SY-S-1RE",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Reader License",
+      tier: "Standard",
+      msrp: 65,
+      description: "Single Synergis Standard reader connection when access control hardware (Cloud Link / Axis Powered by Genetec / Mercury) is purchased from Genetec.",
+      keyFeatures: [
+        "Discounted $65/reader connection when paired with Genetec-supplied Synergis hardware",
+        "Requires ADV-RDR-S-1Y ($15/yr), 3Y ($35), or 5Y ($55) Advantage maintenance"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-sy-e-1re",
+      vendor: "Genetec",
+      model: "Genetec Synergis Enterprise — 1 Reader Connection (Genetec Hardware)",
+      sku: "GSC-SY-E-1RE",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Reader License",
+      tier: "Enterprise",
+      msrp: 125,
+      description: "Single Synergis Enterprise reader connection when access control hardware (Cloud Link / Axis Powered by Genetec / Mercury) is purchased from Genetec.",
+      keyFeatures: [
+        "Discounted $125/reader connection when paired with Genetec-supplied Synergis hardware",
+        "Requires ADV-RDR-E-1Y ($25/yr), 3Y ($60), or 5Y ($90) Advantage maintenance"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-sy-s-1r",
+      vendor: "Genetec",
+      model: "Genetec Synergis Standard — 1 External Reader Connection (Non-Genetec HW)",
+      sku: "GSC-Sy-S-1R",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Reader License",
+      tier: "Standard",
+      msrp: 175,
+      description: "Single Synergis Standard external reader connection required when access control hardware is not purchased from Genetec.",
+      keyFeatures: [
+        "Supports third-party or existing Mercury/HID/Axis controllers on Synergis Standard (up to 100 readers)",
+        "Requires ADV-RDR-S-1Y ($15/yr), 3Y ($35), or 5Y ($55) Advantage maintenance"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-sy-e-1r",
+      vendor: "Genetec",
+      model: "Genetec Synergis Enterprise — 1 External Reader Connection (Non-Genetec HW)",
+      sku: "GSC-Sy-E-1R",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Reader License",
+      tier: "Enterprise",
+      msrp: 260,
+      description: "Single Synergis Enterprise external reader connection required when access control hardware is not purchased from Genetec.",
+      keyFeatures: [
+        "Supports third-party or existing controllers on Synergis Enterprise with Global Cardholder & Threat Level support",
+        "Requires ADV-RDR-E-1Y ($25/yr), 3Y ($60), or 5Y ($90) Advantage maintenance"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-sy-1wr",
+      vendor: "Genetec",
+      model: "Genetec Synergis — 1 Wireless / PoE Electronic Lock Connection",
+      sku: "GSC-SY-E-1WR",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Reader License",
+      msrp: 90,
+      description: "Single license connection for supported wireless or PoE electronic locks (Assa Abloy Aperio, Schlage NDE/LE, SimonsVoss, Salto).",
+      keyFeatures: [
+        "Discounted $90/lock connection for wireless/PoE electronic locks in Synergis"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-sy-vis-s",
+      vendor: "Genetec",
+      model: "Genetec Synergis Standard — Visitor Management Module",
+      sku: "GSC-Sy-S-Vis",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Add-On",
+      tier: "Standard",
+      msrp: 1000,
+      description: "Visitor Management Module for Synergis Standard enabling visitor pre-registration, check-in, badge printing, and escort tracking.",
+      keyFeatures: [
+        "Native Security Desk visitor check-in/check-out workflow and temporary credential issuance"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-gsc-sy-vis-e",
+      vendor: "Genetec",
+      model: "Genetec Synergis Enterprise — Visitor Management Module",
+      sku: "GSC-Sy-E-Vis",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Access Add-On",
+      tier: "Enterprise",
+      msrp: 3000,
+      description: "Enterprise Visitor Management Module for Synergis Enterprise supporting multi-lobby visitor registration, badge printing, and host notifications.",
+      keyFeatures: [
+        "Enterprise-wide visitor management across unlimited lobbies and Security Desk workstations"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
 
     // --- GENETEC FAILOVER & HIGH AVAILABILITY ---
@@ -1387,6 +1561,22 @@ const SOFTWARE_DATABASE = {
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
+      id: "genetec-federation-20",
+      vendor: "Genetec",
+      model: "Genetec Security Center Federation Connection — Small Site (≤20 Entities)",
+      sku: "GSC-1SCFED-20",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Enterprise Add-On",
+      msrp: 600,
+      description: "Federates a small remote Genetec Security Center site (20 or fewer cameras/readers/LPR entities) into a central Enterprise head-end.",
+      keyFeatures: [
+        "Cost-optimized Federation connection for branch sites with up to 20 total entities"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
       id: "genetec-kiwivision-privacy-1c",
       vendor: "Genetec",
       model: "Genetec KiwiVision Privacy Protector — 1 Camera Stream License",
@@ -1406,17 +1596,49 @@ const SOFTWARE_DATABASE = {
     {
       id: "genetec-kiwivision-security-1c",
       vendor: "Genetec",
-      model: "Genetec KiwiVision Security Analytics (Intrusion / Object) — 1 Camera License",
+      model: "Genetec KiwiVision Security Analytics (Single Scenario) — 1 Camera License",
       sku: "GSC-OM-1VAS300+",
       role: "Software License",
       category: "vms_software",
       type: "license",
       licenseType: "Analytics License",
       msrp: 450,
-      description: "Licenses 1 camera stream for KiwiVision Intrusion Detector, Perimeter Protection, Stopped Vehicle, or Object Detection.",
+      description: "Licenses 1 camera stream for 1 KiwiVision Security scenario (Perimeter, Area, Direction, Object, Stopped Vehicle, or Tailgating).",
       keyFeatures: [
-        "Server-side video analytics for perimeter intrusion, loitering, tailgating, and left/removed object detection",
+        "Server-side video analytics for perimeter intrusion, loitering, tailgating, or object detection",
         "Runs on Streamvault SVA-100E or SVA-1000E analytics appliances"
+      ],
+      datasheetPath: "Datasheets/Genetec/Datasheet_EN_Streamvault-SVA-1000E.pdf"
+    },
+    {
+      id: "genetec-kiwivision-vasu-1c",
+      vendor: "Genetec",
+      model: "Genetec KiwiVision Security Analytics (Unlimited Scenarios) — 1 Camera License",
+      sku: "GSC-OM-1VASU300+",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Analytics License",
+      msrp: 850,
+      description: "Licenses 1 camera stream for unlimited simultaneous KiwiVision Security scenarios (Perimeter, Area, Direction, Object, Stopped Vehicle, Tailgating).",
+      keyFeatures: [
+        "Enables multiple simultaneous security analytics rules on a single camera stream"
+      ],
+      datasheetPath: "Datasheets/Genetec/Datasheet_EN_Streamvault-SVA-1000E.pdf"
+    },
+    {
+      id: "genetec-kiwivision-pc-1c",
+      vendor: "Genetec",
+      model: "Genetec KiwiVision People Counter & Crowd Estimation — 1 Camera License",
+      sku: "GSC-OM-1PC300+",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Analytics License",
+      msrp: 450,
+      description: "Enables KiwiVision People Counter and Crowd Estimation analytics for 1 camera connection.",
+      keyFeatures: [
+        "Directional people counting, occupancy tracking, and crowd density estimation"
       ],
       datasheetPath: "Datasheets/Genetec/Datasheet_EN_Streamvault-SVA-1000E.pdf"
     },
@@ -1432,7 +1654,7 @@ const SOFTWARE_DATABASE = {
       msrp: 1495,
       description: "Base software package for Genetec AutoVu Automatic License Plate Recognition (ALPR) hotlist matching, read archiving, and reporting.",
       keyFeatures: [
-        "Enables native ALPR plate reading, wanted hotlist alerts, and parking/access integration in Security Center",
+        "Included at $0.00 in SC 5.13/5.14 GSC-BASE-S and GSC-BASE-E",
         "Requires GSC-Av-S-1SHP ($500) per fixed LPR camera connection"
       ],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
@@ -1455,6 +1677,23 @@ const SOFTWARE_DATABASE = {
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
+      id: "genetec-autovu-1patroller",
+      vendor: "Genetec",
+      model: "Genetec AutoVu Mobile Patroller — 1 Vehicle Connection License",
+      sku: "GSC-Av-S-1PATROLLER",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "LPR License",
+      msrp: 500,
+      description: "Single Genetec AutoVu Patroller mobile ALPR vehicle connection to Security Center.",
+      keyFeatures: [
+        "Wireless hotlist synchronization and mobile ALPR read/hit offload to Security Center",
+        "Requires ADV-LPR-M-1Y ($200/yr), 3Y ($480), or 5Y ($700) Advantage maintenance"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
       id: "genetec-sipelia-1sip",
       vendor: "Genetec",
       model: "Genetec Sipelia Communications Management — 1 SIP Intercom Connection",
@@ -1464,10 +1703,59 @@ const SOFTWARE_DATABASE = {
       type: "license",
       licenseType: "Intercom License",
       msrp: 295,
-      description: "Single SIP intercom station connection license for Genetec Sipelia (includes audio/video recording and Security Desk call handling).",
+      description: "Single SIP intercom station connection license for Genetec Sipelia (includes failover and bidirectional audio/video call recording).",
       keyFeatures: [
         "Unifies SIP intercom stations (Axis, 2N, Zenitel, Commend) directly into Genetec Security Desk",
-        "Includes audio and video call recording and bi-directional SIP trunking"
+        "Pairs with ADV-SIP-1Y ($40/yr), 3Y ($95), or 5Y ($140) Advantage maintenance"
+      ],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-gsc-1ap-panel",
+      vendor: "Genetec",
+      model: "Genetec Intrusion Alarm Panel Connection (Bosch / DMP / Honeywell / DSC)",
+      sku: "GSC-1AP-Bosch",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Intrusion License",
+      msrp: 350,
+      description: "Single intrusion alarm control panel connection (Bosch B/G/MAP5000, DMP, Honeywell, DSC PowerSeries) in Security Center 5.13/5.14.",
+      keyFeatures: [
+        "Arm/disarm intrusion areas, bypass zones, and link panel alarms to cameras in Security Desk",
+        "No separate GSC-AP-Base required in SC 5.13+; pairs with ADV-1AP-1Y ($65), 3Y ($160), or 5Y ($230)"
+      ],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-gsc-iiot-1d",
+      vendor: "Genetec",
+      model: "Genetec Industrial IoT (BACnet / Modbus / SNMP / MQTT) — 1 Device Connection",
+      sku: "GSC-IIOT-1D",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "IIoT Plugin",
+      msrp: 149,
+      description: "Single Industrial IoT device connection for BACnet, Modbus, OPC Client, SNMP, MQTT, or TCP/HTTP integration.",
+      keyFeatures: [
+        "Brings building management, environmental, power, and industrial telemetry into Security Center"
+      ],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-gsc-iiot-site",
+      vendor: "Genetec",
+      model: "Genetec Industrial IoT Plugin — Unlimited Site License (BACnet / Modbus / OPC / SNMP)",
+      sku: "GSC-IIOT",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "IIoT Plugin",
+      msrp: 6000,
+      description: "Unlimited site license for Genetec Industrial IoT plugin (BACnet, Modbus, OPC, HTTP, MQTT, SNMP, TCP) with unlimited data points.",
+      keyFeatures: [
+        "Unlimited IIoT device and data point connections across all supported industrial/building protocols"
       ],
       datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
     },
@@ -1481,12 +1769,91 @@ const SOFTWARE_DATABASE = {
       type: "license",
       licenseType: "Perimeter RSA License",
       msrp: 1000,
-      description: "Restricted Security Area (RSA) perimeter surveillance base package for radar, laser, and fence intrusion sensor fusion (up to 5 tracking devices).",
+      description: "Restricted Security Area (RSA) perimeter surveillance standard package for radar, laser, and fence intrusion sensor events.",
       keyFeatures: [
-        "Fuses radar, LiDAR, and fence intrusion targets on Plan Manager maps with automatic PTZ camera slew-to-cue",
-        "Standard tier supports up to 5 RSA devices; Pro ($7,000, <=20 devices) and Enterprise ($14,000, unlimited) available"
+        "Integrates supported radar, LiDAR, and fence intrusion sensors into Security Center Event-to-Action"
       ],
       datasheetPath: "Datasheets/Genetec/RSA.pdf"
+    },
+    {
+      id: "genetec-rsa-pro",
+      vendor: "Genetec",
+      model: "Genetec Restricted Security Area (RSA) Surveillance Module — Professional",
+      sku: "GSC-GAP-RSA-PRO",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Perimeter RSA License",
+      msrp: 7000,
+      description: "Full-featured RSA Perimeter Surveillance Professional Package (up to 20 short-range sensors, 5 radars, 1 fence controller, 10km fence).",
+      keyFeatures: [
+        "Dynamic map target tracking, threat fusion, and automatic PTZ camera slew-to-cue"
+      ],
+      datasheetPath: "Datasheets/Genetec/RSA.pdf"
+    },
+    {
+      id: "genetec-rsa-ent",
+      vendor: "Genetec",
+      model: "Genetec Restricted Security Area (RSA) Surveillance Module — Enterprise",
+      sku: "GSC-GAP-RSA-ENT",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Perimeter RSA License",
+      msrp: 14000,
+      description: "Unrestricted Enterprise RSA Perimeter Surveillance Package supporting unlimited radars, LiDARs, and multi-zone fence PIDS.",
+      keyFeatures: [
+        "Unlimited perimeter sensor fusion, flight/drone tracking, and automated multi-PTZ target handoff"
+      ],
+      datasheetPath: "Datasheets/Genetec/RSA.pdf"
+    },
+    {
+      id: "genetec-cloud-archive-perf-1tb",
+      vendor: "Genetec",
+      model: "Genetec Cloud Archives — 1 TB Performance Tier (Cool-LRS, 1-Year US)",
+      sku: "SCS-CSP-USA-1TB-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Cloud Storage Subscription",
+      msrp: 257,
+      description: "1 TB of Genetec Cloud Archives storage in Performance Tier (Cool-LRS, min 30-day retention) for 1 year in US datacenter.",
+      keyFeatures: [
+        "Instant on-demand video retrieval from cloud storage directly inside Security Desk"
+      ],
+      datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
+    },
+    {
+      id: "genetec-cloud-archive-lt-1tb",
+      vendor: "Genetec",
+      model: "Genetec Cloud Archives — 1 TB Long-Term Tier (Archive-LRS, 1-Year US)",
+      sku: "SCS-CSA-USA-1TB-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Cloud Storage Subscription",
+      msrp: 122,
+      description: "1 TB of Genetec Cloud Archives storage in Long-Term Tier (Archive-LRS, min 180-day retention) for 1 year in US datacenter.",
+      keyFeatures: [
+        "Low-cost long-term compliance video retention in US cloud datacenter"
+      ],
+      datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
+    },
+    {
+      id: "genetec-clearance-1cam-1y",
+      vendor: "Genetec",
+      model: "Genetec Clearance Digital Evidence Management — 1 Camera Subscription (1-Year)",
+      sku: "CLR-1CCST1-US-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Evidence Management",
+      msrp: 24,
+      description: "Genetec Clearance camera subscription (1-Year) including unlimited users, unlimited cases, and 1 GB cloud evidence storage per camera.",
+      keyFeatures: [
+        "Browser-based digital evidence management, redaction, and secure external sharing from Security Center"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
 
     // --- GENETEC ADVANTAGE MAINTENANCE (MANDATORY 1Y / 3Y / 5Y) ---
@@ -1504,9 +1871,40 @@ const SOFTWARE_DATABASE = {
       msrp: 25,
       description: "Mandatory Genetec Advantage Software Maintenance Agreement (SMA) per Streamvault All-in-One camera connection (1-Year).",
       keyFeatures: [
-        "Includes Security Center version upgrades, firmware packs, and System Availability Monitor (SAM)",
-        "Multi-year discounted SKUs: ADV-CAM-AIO-3Y ($60) and ADV-CAM-AIO-5Y ($85)"
+        "Includes Security Center version upgrades, firmware packs, and System Availability Monitor (SAM)"
       ],
+      datasheetPath: "Datasheets/Genetec/Datasheet_EN_Streamvault-SV-300E.pdf"
+    },
+    {
+      id: "genetec-adv-cam-aio-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Streamvault AIO Camera (3-Year)",
+      sku: "ADV-CAM-AIO-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Streamvault AIO",
+      termYears: 3,
+      msrp: 60,
+      description: "3-Year Genetec Advantage Software Maintenance Agreement per Streamvault All-in-One camera connection.",
+      keyFeatures: ["3-Year multi-year discounted SMA for Streamvault AIO cameras"],
+      datasheetPath: "Datasheets/Genetec/Datasheet_EN_Streamvault-SV-300E.pdf"
+    },
+    {
+      id: "genetec-adv-cam-aio-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Streamvault AIO Camera (5-Year)",
+      sku: "ADV-CAM-AIO-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Streamvault AIO",
+      termYears: 5,
+      msrp: 85,
+      description: "5-Year Genetec Advantage Software Maintenance Agreement per Streamvault All-in-One camera connection.",
+      keyFeatures: ["5-Year multi-year discounted SMA for Streamvault AIO cameras"],
       datasheetPath: "Datasheets/Genetec/Datasheet_EN_Streamvault-SV-300E.pdf"
     },
     {
@@ -1523,28 +1921,40 @@ const SOFTWARE_DATABASE = {
       msrp: 35,
       description: "Mandatory Genetec Advantage Software Maintenance Agreement (SMA) per Omnicast Standard camera connection (1-Year).",
       keyFeatures: [
-        "Includes Security Center version upgrades, driver packs, and System Availability Monitor (SAM)",
-        "Multi-year discounted SKUs: ADV-CAM-S-3Y ($85) and ADV-CAM-S-5Y ($130)"
+        "Includes Security Center version upgrades, driver packs, and System Availability Monitor (SAM)"
       ],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
-      id: "genetec-adv-cam-p-1y",
+      id: "genetec-adv-cam-s-3y",
       vendor: "Genetec",
-      model: "Genetec Advantage Maintenance — 1 Omnicast Pro Camera (1-Year)",
-      sku: "ADV-CAM-P-1Y",
+      model: "Genetec Advantage Maintenance — 1 Omnicast Standard Camera (3-Year)",
+      sku: "ADV-CAM-S-3Y",
       role: "Software License",
       category: "vms_software",
       type: "license",
-      licenseType: "Annual SMA",
-      tier: "Professional",
-      termYears: 1,
-      msrp: 45,
-      description: "Mandatory Genetec Advantage Software Maintenance Agreement (SMA) per Omnicast Professional camera connection (1-Year).",
-      keyFeatures: [
-        "Includes Security Center version upgrades, driver packs, and System Availability Monitor (SAM)",
-        "Multi-year discounted SKUs: ADV-CAM-P-3Y ($115) and ADV-CAM-P-5Y ($165)"
-      ],
+      licenseType: "Multi-Year SMA",
+      tier: "Standard",
+      termYears: 3,
+      msrp: 85,
+      description: "3-Year Genetec Advantage Software Maintenance Agreement (SMA) per Omnicast Standard camera connection.",
+      keyFeatures: ["Saves $20 per camera compared to three 1-year renewals"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-cam-s-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Omnicast Standard Camera (5-Year)",
+      sku: "ADV-CAM-S-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Standard",
+      termYears: 5,
+      msrp: 130,
+      description: "5-Year Genetec Advantage Software Maintenance Agreement (SMA) per Omnicast Standard camera connection.",
+      keyFeatures: ["Saves $45 per camera compared to five 1-year renewals"],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
@@ -1605,6 +2015,102 @@ const SOFTWARE_DATABASE = {
       datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
     },
     {
+      id: "genetec-adv-rdr-s-1y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Synergis Standard Reader (1-Year)",
+      sku: "ADV-RDR-S-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Annual SMA",
+      tier: "Standard",
+      termYears: 1,
+      msrp: 15,
+      description: "Mandatory 1-Year Genetec Advantage SMA per Synergis Standard reader connection.",
+      keyFeatures: ["Includes Synergis Softwire updates and reader/controller firmware packs"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-rdr-s-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Synergis Standard Reader (3-Year)",
+      sku: "ADV-RDR-S-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Standard",
+      termYears: 3,
+      msrp: 35,
+      description: "3-Year Genetec Advantage SMA per Synergis Standard reader connection.",
+      keyFeatures: ["Multi-year discounted SMA for Synergis Standard readers"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-rdr-s-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Synergis Standard Reader (5-Year)",
+      sku: "ADV-RDR-S-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Standard",
+      termYears: 5,
+      msrp: 55,
+      description: "5-Year Genetec Advantage SMA per Synergis Standard reader connection.",
+      keyFeatures: ["Multi-year discounted SMA for Synergis Standard readers"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-rdr-e-1y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Synergis Enterprise Reader (1-Year)",
+      sku: "ADV-RDR-E-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Annual SMA",
+      tier: "Enterprise",
+      termYears: 1,
+      msrp: 25,
+      description: "Mandatory 1-Year Genetec Advantage SMA per Synergis Enterprise reader connection.",
+      keyFeatures: ["Includes Synergis Enterprise upgrades and Softwire firmware packs"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-rdr-e-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Synergis Enterprise Reader (3-Year)",
+      sku: "ADV-RDR-E-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Enterprise",
+      termYears: 3,
+      msrp: 60,
+      description: "3-Year Genetec Advantage SMA per Synergis Enterprise reader connection.",
+      keyFeatures: ["Saves $15/reader vs three 1-year renewals"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-rdr-e-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Synergis Enterprise Reader (5-Year)",
+      sku: "ADV-RDR-E-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      tier: "Enterprise",
+      termYears: 5,
+      msrp: 90,
+      description: "5-Year Genetec Advantage SMA per Synergis Enterprise reader connection.",
+      keyFeatures: ["Saves $35/reader vs five 1-year renewals"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
       id: "genetec-adv-lpr-f-1y",
       vendor: "Genetec",
       model: "Genetec Advantage Maintenance — 1 Fixed Sharp LPR Camera (1-Year)",
@@ -1615,10 +2121,173 @@ const SOFTWARE_DATABASE = {
       licenseType: "Annual SMA",
       termYears: 1,
       msrp: 80,
-      description: "1-Year Genetec Advantage Software Maintenance Agreement for 1 Fixed AutoVu Sharp LPR connection (3Y: $192, 5Y: $280).",
-      keyFeatures: [
-        "Includes AutoVu neural network OCR updates, state/province plate library updates, and support"
-      ],
+      description: "1-Year Genetec Advantage Software Maintenance Agreement for 1 Fixed AutoVu Sharp LPR connection.",
+      keyFeatures: ["Includes AutoVu neural network OCR updates and plate library updates"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-lpr-f-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Fixed Sharp LPR Camera (3-Year)",
+      sku: "ADV-LPR-F-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      termYears: 3,
+      msrp: 192,
+      description: "3-Year Genetec Advantage Software Maintenance Agreement for 1 Fixed AutoVu Sharp LPR connection.",
+      keyFeatures: ["Multi-year discounted SMA for AutoVu Fixed LPR"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-lpr-f-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Fixed Sharp LPR Camera (5-Year)",
+      sku: "ADV-LPR-F-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      termYears: 5,
+      msrp: 280,
+      description: "5-Year Genetec Advantage Software Maintenance Agreement for 1 Fixed AutoVu Sharp LPR connection.",
+      keyFeatures: ["Multi-year discounted SMA for AutoVu Fixed LPR"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-sip-1y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Sipelia Intercom Connection (1-Year)",
+      sku: "ADV-SIP-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Annual SMA",
+      termYears: 1,
+      msrp: 40,
+      description: "1-Year Genetec Advantage SMA per Sipelia SIP Intercom connection.",
+      keyFeatures: ["Mandatory annual SMA for GSC-SIPELIA-1SIP intercom stations"],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-adv-sip-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Sipelia Intercom Connection (3-Year)",
+      sku: "ADV-SIP-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      termYears: 3,
+      msrp: 95,
+      description: "3-Year Genetec Advantage SMA per Sipelia SIP Intercom connection.",
+      keyFeatures: ["3-Year discounted SMA for Sipelia intercom stations"],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-adv-sip-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Sipelia Intercom Connection (5-Year)",
+      sku: "ADV-SIP-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      termYears: 5,
+      msrp: 140,
+      description: "5-Year Genetec Advantage SMA per Sipelia SIP Intercom connection.",
+      keyFeatures: ["5-Year discounted SMA for Sipelia intercom stations"],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-adv-1ap-1y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Intrusion Alarm Panel (1-Year)",
+      sku: "ADV-1AP-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Annual SMA",
+      termYears: 1,
+      msrp: 65,
+      description: "Mandatory 1-Year Genetec Advantage SMA per Intrusion Alarm Panel connection.",
+      keyFeatures: ["Includes intrusion panel plugin updates and technical support"],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-adv-1ap-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Intrusion Alarm Panel (3-Year)",
+      sku: "ADV-1AP-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      termYears: 3,
+      msrp: 160,
+      description: "3-Year Genetec Advantage SMA per Intrusion Alarm Panel connection.",
+      keyFeatures: ["3-Year discounted SMA for Intrusion Alarm Panel connections"],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-adv-1ap-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage Maintenance — 1 Intrusion Alarm Panel (5-Year)",
+      sku: "ADV-1AP-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Multi-Year SMA",
+      termYears: 5,
+      msrp: 230,
+      description: "5-Year Genetec Advantage SMA per Intrusion Alarm Panel connection.",
+      keyFeatures: ["5-Year discounted SMA for Intrusion Alarm Panel connections"],
+      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+    },
+    {
+      id: "genetec-adv-option-247-1y",
+      vendor: "Genetec",
+      model: "Genetec Advantage 24/7 Technical Assistance Center Option (1-Year)",
+      sku: "ADV-OPTION-247-1Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "24/7 TAC Support",
+      termYears: 1,
+      msrp: 6000,
+      description: "24/7/365 Genetec Technical Assistance Center (TAC) support option with 30-minute SLA callback (1-Year).",
+      keyFeatures: ["24/7 emergency TAC support with 30-minute guaranteed specialist callback"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-option-247-3y",
+      vendor: "Genetec",
+      model: "Genetec Advantage 24/7 Technical Assistance Center Option (3-Year)",
+      sku: "ADV-OPTION-247-3Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "24/7 TAC Support",
+      termYears: 3,
+      msrp: 14400,
+      description: "24/7/365 Genetec Technical Assistance Center (TAC) support option with 30-minute SLA callback (3-Year).",
+      keyFeatures: ["Saves $3,600 vs three annual 24/7 support renewals"],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-adv-option-247-5y",
+      vendor: "Genetec",
+      model: "Genetec Advantage 24/7 Technical Assistance Center Option (5-Year)",
+      sku: "ADV-OPTION-247-5Y",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "24/7 TAC Support",
+      termYears: 5,
+      msrp: 21000,
+      description: "24/7/365 Genetec Technical Assistance Center (TAC) support option with 30-minute SLA callback (5-Year).",
+      keyFeatures: ["Saves $9,000 vs five annual 24/7 support renewals"],
       datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
 
@@ -1660,19 +2329,36 @@ const SOFTWARE_DATABASE = {
       datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
     },
     {
+      id: "ms-sql-svr-2025-express",
+      vendor: "Microsoft",
+      model: "Microsoft SQL Server 2025 Express Edition (50 GB Cap — Included Default)",
+      sku: "SQL-2025-EXP",
+      role: "OS / Hypervisor",
+      category: "os_virtualization",
+      type: "license",
+      licenseType: "Database License",
+      msrp: 0,
+      description: "Included free with Genetec Security Center 5.13/5.14. Supports databases up to 50 GB for Single Directory or Directory-Only (Backup & Restore) Core Failover.",
+      keyFeatures: [
+        "Included at $0.00 by default with expanded 50 GB max database size cap in SQL Server 2025",
+        "Supports Core Failover: None and Core Failover: Directory Only (Backup & Restore)"
+      ],
+      datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
+    },
+    {
       id: "ms-sql-svr-2022-std-4c",
       vendor: "Microsoft",
-      model: "Microsoft SQL Server 2022 Standard Edition (Server + 5 CALs)",
+      model: "Microsoft SQL Server Standard Edition (Server + 5 CALs — Full HA Failover)",
       sku: "7NQ-01025",
       role: "OS / Hypervisor",
       category: "os_virtualization",
       type: "license",
       licenseType: "Database License",
       msrp: 1418,
-      description: "Production relational database license for high-scale Genetec Directory, ALPR reads, and enterprise audit trails (replaces SQL Express 10GB limit).",
+      description: "Required when Core Failover is set to Full (SQL High Availability / Always On / Clustering) or when database size exceeds the 50 GB SQL 2025 Express cap.",
       keyFeatures: [
-        "Removes the 10 GB database size cap and 1 GB RAM limit of SQL Server Express",
-        "Required for enterprise Genetec deployments with >100 cameras, AutoVu LPR, or long-term event retention"
+        "Enables Full Core Failover with SQL High Availability / Clustering / Mirroring",
+        "Removes the 50 GB database size cap of SQL Server 2025 Express"
       ],
       datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf"
     },
