@@ -1155,6 +1155,32 @@ function auditProjectHealth() {
         badgeText: `${missingMilestoneSkus.length} SKUS UNSYNCED`
       });
     }
+
+    // 17M-2: Milestone Husky IVO Xeon Rackmount VMD GPU Acceleration Advisory
+    const quotedXeonHuskyServers = projectBOM.filter(i =>
+      !i.parentInstanceId &&
+      (i.id === "milestone-husky-ivo-1000r" || i.id === "milestone-husky-ivo-1800r" || i.id === "milestone-husky-ivo-2800r" ||
+       String(i.sku || "").includes("IVO-1000R") || String(i.sku || "").includes("IVO-1800R") || String(i.sku || "").includes("IVO-2800R"))
+    );
+    const hasT1000GpuQuoted = projectBOM.some(i =>
+      i.id === "milestone-husky-nvidia-t1000" || String(i.sku || "").includes("HUSKY-NVIDIA-T1000") ||
+      (i.selectedBuildOptions && i.selectedBuildOptions.gpuExpansion === "NVIDIA-T1000-4GB")
+    );
+    if (quotedXeonHuskyServers.length > 0 && totalCameras >= 100 && !hasT1000GpuQuoted) {
+      issues.push({
+        id: "milestone_husky_xeon_gpu_vmd_advisory",
+        category: "hardware",
+        severity: "warning",
+        priority: 2,
+        standardsReference: "Milestone Husky IVO 1000R / 1800R / 2800R Datasheets • Video Motion Detection (VMD) GPU Offload",
+        title: `Husky IVO Xeon Rackmount VMD GPU Offload Advisory (${totalCameras} Cameras)`,
+        summary: `Intel Xeon Silver 4310 (IVO-1000R/1800R/2800R) lacks Intel Quick Sync iGPU; server-side VMD on ${totalCameras} cameras requires NVIDIA T1000 GPU`,
+        details: `Unlike Desktop/1U Husky IVO models with Intel Core iGPU Quick Sync, Intel Xeon Silver 4310 processors in the IVO-1000R, IVO-1800R, and IVO-2800R do not have integrated graphics. For deployments running server-side XProtect Video Motion Detection (VMD) across ${totalCameras} cameras, add the factory-validated NVIDIA T1000 PCIe GPU Kit (HUSKY-NVIDIA-T1000) to prevent CPU decoding exhaustion.`,
+        actionLabel: "+ Add NVIDIA T1000 VMD GPU Kit (HUSKY-NVIDIA-T1000)",
+        actionFn: "if(typeof addServerAccessoryToBom==='function'){addServerAccessoryToBom('milestone-husky-nvidia-t1000', 1); updateProjectHealthUI(); renderProjectHealthModal();}",
+        badgeText: "XEON VMD GPU"
+      });
+    }
   } else if (typeof GenetecLicensingSizer !== "undefined" && typeof GenetecLicensingSizer.calculate === "function") {
     const licRes = GenetecLicensingSizer.calculate(projectBOM);
     const mrSpec = licRes.multiRoleServerSpec || {};
@@ -1486,6 +1512,47 @@ function auditProjectHealth() {
             badgeText: "VCS UNSUPPORTED"
           });
         }
+      }
+
+      // 17I. Mission Control 3.4.1.0 Incident Manager Directory Isolation & High-Performance Server Rule
+      if (licRes.missionControlOps > 0) {
+        const totalQuotedServersCount = quotedHardwareServers.reduce((s, srv) => s + (parseInt(srv.qty, 10) || 1), 0);
+        if (totalQuotedServersCount < 2) {
+          issues.push({
+            id: "genetec_mission_control_directory_isolation",
+            category: "hardware",
+            severity: "critical",
+            priority: 1,
+            isConflict: true,
+            conflictBadge: "MISSION CONTROL 3.4.1.0 DIRECTORY CO-HOSTING VIOLATION",
+            standardsReference: "EN.Genetec Mission Control Deployment Guide 3.4.1.0.pdf Page 30",
+            conflictDetails: `Mission Control 3.4.1.0 (${licRes.missionControlOps} concurrent operator(s)) explicitly prohibits co-hosting the Incident Manager role (max 1 per system) on the Security Center Directory server. Additionally, Incident Document Service (migrated to SQL Server in 3.4.1.0, ~150 KB/incident) requires a dedicated server (${licRes.missionControlOps >= 5 ? 'High-Performance Dual Xeon Silver 4416+ 40-core, 64 GB RAM, 10GbE' : 'Xeon E-2434, 16 GB RAM'}).`,
+            title: `Mission Control 3.4.1.0 Incident Manager Must Not Be Co-Hosted on Directory Server`,
+            summary: `${licRes.missionControlOps} Mission Control operator(s) active with only ${totalQuotedServersCount} server quoted; Incident Manager role must be isolated from the Directory server`,
+            details: `Per the Genetec Mission Control 3.4.1.0 Deployment Guide (p. 30), the Incident Manager role (max 1 per system) must NEVER be co-hosted on the Directory server. Furthermore, for ${licRes.missionControlOps >= 5 ? '5+ operators (up to 300 concurrent connections), a High-Performance Server (Dual Xeon Silver 4416+ 40-core, 64 GB RAM, 10GbE) is required' : '1–4 operators, a dedicated Recommended Server (Xeon E-2434, 16 GB RAM) is required'}, and high-volume incident logging (~150 GB/yr at 3,000–4,000 incidents/day) requires SQL Server Standard.`,
+            actionLabel: "+ Add Dedicated Streamvault Server for Mission Control",
+            actionFn: "quickAddDedicatedDirectoryServer()",
+            badgeText: "MC ISOLATION REQ"
+          });
+        }
+      }
+
+      // 17J. DMP Intrusion Panel Extension 4.5.0 Role Scaling (>100 Panels per Role)
+      if (licRes.intrusionPanels > 100) {
+        const dmpRolesReq = Math.ceil(licRes.intrusionPanels / 100);
+        issues.push({
+          id: "genetec_dmp_intrusion_role_scaling",
+          category: "capacity",
+          severity: "warning",
+          priority: 2,
+          standardsReference: "EN.DMP Intrusion Panel Extension Guide 4.5.0.pdf Page 11 • Scalability Limits",
+          title: `DMP Intrusion Extension 4.5.0 Multi-Role Scaling (${licRes.intrusionPanels} Panels → ${dmpRolesReq} Roles)`,
+          summary: `${licRes.intrusionPanels} DMP intrusion panels exceed the 100-panel / 8,800-entity / 70-events/sec cap of a single Intrusion Manager role`,
+          details: `Per the DMP Intrusion Panel Extension Guide 4.5.0 (p. 11), each Intrusion Manager role supports up to 100 DMP panels, 8,800 entities, and 70 events/sec sustained (100/sec burst). Deploy ${dmpRolesReq} Intrusion Manager roles across your Security Center servers (up to 20 roles / 2,000 panels max per Directory) and ensure DMP panels do not use XR150FC/XR550FC FIRE keypads.`,
+          actionLabel: "Open VMS & Licensing Studio",
+          actionFn: "if(typeof openVmsSizerModal==='function'){openVmsSizerModal();}",
+          badgeText: `${dmpRolesReq} DMP ROLES`
+        });
       }
     }
   }

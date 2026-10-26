@@ -926,13 +926,95 @@ const VIDEO_STORAGE_CONSTANTS = {
   STORAGE_SAFETY_BUFFER: 1.10 // 10% filesystem, database index & pre-event buffer overhead
 };
 
-// Genetec Security Center 5.14.1.0 Official System Requirements (Datasheets/Genetec/SystemRequirements.pdf)
+// Genetec Security Center 5.14.1.0 Official System Requirements (Datasheets/Genetec/SystemRequirements.pdf & Administrator Guide 5.14)
 const GENETEC_514_REQUIREMENTS = {
   datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf",
+  adminGuidePath: "Datasheets/Genetec/EN.Security Center Administrator Guide 5.14.pdf",
+  synergisHardwarePath: "Datasheets/Genetec/EN.Synergis Supported Hardware and Features 12.0_3.3_5.14.xlsx",
+  missionControlGuidePath: "Datasheets/Genetec/Plugins/EN.Genetec Mission Control Deployment Guide 3.4.1.0.pdf",
+  dmpGuidePath: "Datasheets/Genetec/Plugins/EN.DMP Intrusion Panel Extension Guide 4.5.0.pdf",
+  sipeliaGuidePath: "Datasheets/Genetec/Plugins/EN.Sipelia User Guide 2.14.0.0.pdf",
   version: "5.14.1.0",
   maxLogicalVolumeSizeTb: 30,              // 30 TB max usable per Windows Volume (and each Archiver role requires separate Windows volumes)
   directoryIsolationThresholdCameras: 300, // Page 15 Sec 1.10: >300 cameras requires dedicated Directory server
+  maxDirectoryLoadBalancedServers: 5,      // EN.Security Center Administrator Guide 5.14: Up to 5 load-balanced Directory servers via Directory Manager
+  maxMediaGatewayConnections: 500,         // EN.Security Center Administrator Guide 5.14: ~500 stream cap per Media Gateway (never co-host with Archiver)
+  maxAutoVuUnitsPerAlprManagerRole: 100,   // EN.Security Center Administrator Guide 5.14: Max 100 AutoVu units per ALPR Manager role
+  maxFederationRolesPerGroup: 100,         // EN.Security Center Administrator Guide 5.14: Max 100 Federation roles per Federation Role Group (up to 500 sites/server, max 2 levels)
   maxPlaybackMbpsOnHighPerf: 100,
+
+  // Synergis 12.0 / Cloud Link 3.3 / SC 5.14 Controller & Reader Capacity Rules (EN.Synergis Supported Hardware and Features 12.0_3.3_5.14.xlsx)
+  SYNERGIS_CONTROLLER_RULES: {
+    cloudLink: {
+      model: "Synergis Cloud Link (SCL)",
+      maxCardholders: 600000,
+      maxOfflineEvents: 5000000,
+      maxReadersTotal: 256,
+      maxMercuryPanels: 32,          // LP1501, LP1502, LP2500, LP4502, MP1501, MP1502, MP2500, MP4502
+      maxAxisNetworkControllers: 30, // Axis A1001, A1601 via Cloud Link
+      maxHidVertxPanels: 32,         // HID V100, V200, V300
+      maxAperioHubs: 32,             // 32 AH30 or 64 AH40
+      maxSchlageEngageGateways: 32,  // Up to 10 locks per IP gateway
+      maxSimonsVossNodes: 64
+    },
+    cloudLink312: {
+      model: "Synergis Cloud Link-312 (12x RS-485 OSDP Appliance)",
+      rs485Ports: 12,
+      maxOsdpIoModules: 32,          // STid / phg OSDP I/O modules
+      maxOsdpNonTransparentReaders: 48,
+      maxOsdpTransparentReaders: 24
+    },
+    axisPoweredByGenetec: {
+      model: "Axis Powered by Genetec (A1210 / A1210-B / A1610 / A1610-B / A1710-B / A1810-B)",
+      requiresCloudLink: false,      // Connects directly to Security Center Access Manager over IP (0 Cloud Links required)
+      maxCardholders: 250000,
+      maxOfflineEvents: 150000,
+      controllers: {
+        "A1210": { onboardReaders: 1, maxReadersWithExpansion: 2, doors: 1 },
+        "A1610": { onboardReaders: 2, maxReadersWithExpansion: 4, doors: 2 },
+        "A1710-B": { onboardReaders: 4, maxReadersWithExpansion: 8, doors: 4 },
+        "A1810-B": { onboardReaders: 8, maxReadersWithExpansion: 16, doors: 8 }
+      }
+    }
+  },
+
+  // DMP Intrusion Panel Extension 4.5.0 Rules (EN.DMP Intrusion Panel Extension Guide 4.5.0.pdf)
+  DMP_INTRUSION_RULES: {
+    version: "4.5.0",
+    maxPanelsPerIntrusionManagerRole: 100,
+    maxEntitiesPerIntrusionManagerRole: 8800,
+    maxEventsPerSecSustained: 70,
+    maxEventsPerSecBurst: 100,
+    maxIntrusionManagerRolesPerDirectory: 20,
+    maxPanelsPerDirectory: 2000,
+    supportedPanels: ["XR500N", "XR500E", "XR150DN", "XR550DN", "XR550INT"],
+    unsupportedPanels: ["XR150FC (FIRE Keypad Incompatible)", "XR550FC (FIRE Keypad Incompatible)"],
+    networkPorts: "Integrator TCP 8011/8001, Receiver Failover TCP 21002"
+  },
+
+  // Genetec Mission Control 3.4.1.0 Rules (EN.Genetec Mission Control Deployment Guide 3.4.1.0.pdf)
+  MISSION_CONTROL_RULES: {
+    version: "3.4.1.0",
+    requiresSecurityCenterEnterprise: "5.14",
+    maxIncidentManagerRolesPerSystem: 1,
+    mustNotCoHostOnDirectory: true,
+    sqlStorageKbPerIncident: 150, // ~150 KB/incident in SQL Server (~150 GB/yr at 3,000-4,000 incidents/day -> requires SQL Standard)
+    rabbitMqClusterMinNodes: 3,   // Minimum 3 standalone nodes on same LAN (Raft consensus (N/2)+1, TCP 5671 SSL)
+    serverProfiles: {
+      recommended_1_to_4_ops: { cpu: "Intel Xeon E-2434 3.4 GHz", ramGb: 16, nic: "1 GbE", maxOperators: 4 },
+      high_perf_5_plus_ops: { cpu: "Dual Intel Xeon Silver 4416+ (40 Cores)", ramGb: 64, nic: "10 GbE", maxOperators: 300 }
+    }
+  },
+
+  // Genetec Sipelia 2.14.0.0 Rules (EN.Sipelia User Guide 2.14.0.0.pdf)
+  SIPELIA_RULES: {
+    version: "2.14.0.0",
+    maxSipeliaServerRolesPerDirectory: 1,
+    unifiedSku511To514: "GSC-SIPELIA-1SIP",
+    unifiedSkuMsrp: 250,
+    maxNativeSipVideoResolution: "720p (1080p+ intercom cameras must be enrolled as Security Center video units and linked to the SIP entity)",
+    networkPorts: "SIP UDP/TCP 5060, TLS 5061, Sipelia Client TCP 8202, RTP UDP 20000-20500"
+  },
 
   // Server Profiles for Archiver Role (Pages 7, 8, 9, 15, 16, 17)
   // Note: Physical servers can host multiple Archiver roles within the server's total throughput & role limits,
@@ -1123,10 +1205,10 @@ const GENETEC_514_REQUIREMENTS = {
 
 // Milestone XProtect 2026 R1/R2 & Husky IVO Official System Requirements (Datasheets/Milestone/)
 const MILESTONE_2026_REQUIREMENTS = {
-  datasheetPath: "Datasheets/Milestone/XProtect VMS Product comparison chart.pdf",
-  huskyOverviewPath: "Datasheets/Milestone/Husky-IVO-Units-flyer.pdf",
-  viewingStationPath: "Datasheets/Milestone/Milestone-Husky-IVO-Viewing-Stations-flyer.pdf",
-  version: "XProtect 2026 R2 / Husky IVO",
+  datasheetPath: "Datasheets/Milestone/Milestone_XProtect_VMS_Product_Comparison_Chart.pdf",
+  huskyOverviewPath: "Datasheets/Milestone/Husky IVO Units flyer.pdf",
+  viewingStationPath: "Datasheets/Milestone/7_Milestone Husky IVO Viewing Stations flyer.pdf",
+  version: "XProtect 2026 R2 / Husky IVO (Jan 2026)",
 
   // Recording Server & Husky IVO Hardware Appliance Profiles
   RECORDING_SERVER_PROFILES: {
@@ -1134,93 +1216,93 @@ const MILESTONE_2026_REQUIREMENTS = {
       id: "husky_150d",
       label: "Milestone Husky IVO 150D Desktop (150 Mbps / 20 Channels)",
       shortLabel: "Husky IVO 150D",
-      cpuSpec: "Intel® Core™ i3 (12th/13th Gen)",
+      cpuSpec: "Intel® Pentium® Gold G7400 (Dual-Core 3.7 GHz)",
       ramGb: 16,
       nicSpec: "2x 1 GbE RJ45",
       maxCamerasPerRole: 20,
       maxBitrateMbpsPerRole: 150,
       maxRolesPerServer: 1,
       maxServerBitrateMbps: 150,
-      maxRawStorageTb: 16,
-      maxUsableStorageTb: 16,
-      supportedRaid: "JBOD (2x 3.5\" Bays)",
+      maxRawStorageTb: 24,
+      maxUsableStorageTb: 24,
+      supportedRaid: "JBOD (1x 3.5\" Internal Bay: 4 / 8 / 12 / 16 / 20 / 24 TB)",
       catalogId: "milestone-husky-ivo-150d",
       catalogSku: "HIVO-150D-16TB",
-      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-150D-spec-sheet.pdf"
+      datasheet: "Datasheets/Milestone/1_Husky IVO 150D Specification Sheet.pdf"
     },
     husky_350: {
       id: "husky_350",
       label: "Milestone Husky IVO 350T Tower / 350R 1U Rack (360 Mbps / 50 Channels)",
       shortLabel: "Husky IVO 350T/350R",
-      cpuSpec: "Intel® Core™ i3 / i5 (12th/13th Gen)",
-      ramGb: 16,
-      nicSpec: "2x 1 GbE RJ45",
+      cpuSpec: "Intel® Core™ i3-12100 (350T) / Intel® Xeon® E-2434 (350R)",
+      ramGb: 32,
+      nicSpec: "2x 1 GbE RJ45 + 1x iDRAC Mgmt (Optional 4x 1GbE / 2x 10GbE)",
       maxCamerasPerRole: 50,
       maxBitrateMbpsPerRole: 360,
       maxRolesPerServer: 1,
       maxServerBitrateMbps: 360,
-      maxRawStorageTb: 32,
-      maxUsableStorageTb: 16,
-      supportedRaid: "JBOD, RAID 0, RAID 1 (2x 3.5\" Hot-Swap Bays)",
+      maxRawStorageTb: 48,
+      maxUsableStorageTb: 48,
+      supportedRaid: "JBOD, RAID 1 (2x 3.5\" Bays: 4 / 8 / 16 / 24 / 32 / 40 / 48 TB, Single or Dual 600W PSU on 350R)",
       catalogId: "milestone-husky-ivo-350r",
       catalogSku: "HIVO-350R-32TB",
       towerCatalogId: "milestone-husky-ivo-350t",
-      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-350R-spec-sheet.pdf"
+      datasheet: "Datasheets/Milestone/3_Husky IVO 350R Specification Sheet.pdf"
     },
     husky_700r: {
       id: "husky_700r",
       label: "Milestone Husky IVO 700R 1U Rack (720 Mbps / 100 Channels)",
       shortLabel: "Husky IVO 700R",
-      cpuSpec: "Intel® Xeon® E-2324G",
-      ramGb: 16,
-      nicSpec: "2x 1 GbE RJ45 (Optional 4x 1GbE / 2x 10GbE)",
+      cpuSpec: "Intel® Xeon® E-2436 (Optional Intel® Xeon® E-2488)",
+      ramGb: 32,
+      nicSpec: "2x 1 GbE RJ45 + 1x iDRAC (Optional 4x 1GbE / 2x 10GbE Base-T or SFP+)",
       maxCamerasPerRole: 100,
       maxBitrateMbpsPerRole: 720,
       maxRolesPerServer: 1,
       maxServerBitrateMbps: 720,
-      maxRawStorageTb: 64,
-      maxUsableStorageTb: 48,
-      supportedRaid: "RAID 0, 1, 5, 6, 10 (4x 3.5\" Hot-Swap Bays, Dual 600W PSU)",
+      maxRawStorageTb: 96,
+      maxUsableStorageTb: 72,
+      supportedRaid: "JBOD, RAID 1, 5, 6, 10 (4x 3.5\" Hot-Swap Bays: 16–96 TB Raw, Dual 600W PSU)",
       catalogId: "milestone-husky-ivo-700r",
       catalogSku: "HIVO-700R-64TB",
-      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-700R-spec-sheet.pdf"
+      datasheet: "Datasheets/Milestone/4_Husky IVO 700R Specification Sheet.pdf"
     },
     husky_1000r: {
       id: "husky_1000r",
       label: "Milestone Husky IVO 1000R 2U Rack (1,080 Mbps / 150 Channels)",
       shortLabel: "Husky IVO 1000R",
-      cpuSpec: "Intel® Xeon® Silver 4310 (12C/24T)",
-      ramGb: 16,
-      nicSpec: "4x 1 GbE RJ45 (Optional 2x 10GbE SFP+)",
+      cpuSpec: "Intel® Xeon® Silver 4410Y 12C (Optional Dual Xeon Silver 4410Y 24C)",
+      ramGb: 32,
+      nicSpec: "2x 1 GbE RJ45 + 1x iDRAC (Optional 4x 1GbE / 2x 10GbE Base-T or SFP+)",
       maxCamerasPerRole: 150,
       maxBitrateMbpsPerRole: 1080,
       maxRolesPerServer: 1,
       maxServerBitrateMbps: 1080,
-      maxRawStorageTb: 128,
-      maxUsableStorageTb: 112,
-      supportedRaid: "RAID 0, 1, 5, 6, 10 (8x 3.5\" Hot-Swap Bays, Dual 800W PSU)",
+      maxRawStorageTb: 192,
+      maxUsableStorageTb: 168,
+      supportedRaid: "JBOD, RAID 1, 5, 6, 10 (8x 3.5\" Hot-Swap Bays: 16–192 TB Raw, Dual 800W PSU)",
       catalogId: "milestone-husky-ivo-1000r",
       catalogSku: "HIVO-1000R-128TB",
-      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-1000R-spec-sheet.pdf"
+      datasheet: "Datasheets/Milestone/5_Husky IVO 1000R Specification Sheet.pdf"
     },
     husky_1800r: {
       id: "husky_1800r",
       label: "Milestone Husky IVO 1800R 2U Flagship (1,800 Mbps / 250 Channels)",
       shortLabel: "Husky IVO 1800R",
-      cpuSpec: "Dual Intel® Xeon® Silver 4310 (24C/48T)",
+      cpuSpec: "Intel® Xeon® Silver 4410Y 12C (Optional Dual Xeon Silver 4410Y 24C)",
       ramGb: 32,
-      nicSpec: "2x 10 GbE SFP+/RJ45 + 4x 1 GbE",
+      nicSpec: "2x 10 GbE RJ45 + 2x 1 GbE + 1x iDRAC (Optional 2x 10GbE SFP+)",
       maxCamerasPerRole: 250,
       maxBitrateMbpsPerRole: 1800,
       maxRolesPerServer: 2,
       maxServerBitrateMbps: 1800,
       maxRawStorageTb: 384,
       maxUsableStorageTb: 352,
-      supportedRaid: "RAID 5, 6, 10, 50, 60 (16x/24x 3.5\" Hot-Swap Bays, Dual 1100W PSU)",
-      catalogId: "milestone-husky-ivo-1800r",
+      supportedRaid: "RAID 5, 6, 10, 50, 60 (16x 3.5\" Bays: 32–384 TB Raw, Dual 1100W Hot-Swap PSU)",
+      catalogId: "milestone-husky-ivo-1800r-192tb",
       catalogSku: "HIVO-1800R-192TB",
       highCapCatalogId: "milestone-husky-ivo-1800r-384tb",
-      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-1800R-spec-sheet.pdf"
+      datasheet: "Datasheets/Milestone/6_Husky IVO 1800R Specification Sheet.pdf"
     },
     custom_enterprise: {
       id: "custom_enterprise",
@@ -1238,7 +1320,7 @@ const MILESTONE_2026_REQUIREMENTS = {
       supportedRaid: "Enterprise Hardware RAID 6 / RAID 60 (24-Bay 4U SAN)",
       catalogId: "bcd-224-enterprise-nvr",
       catalogSku: "BCD424-ESV-384T",
-      datasheet: "Datasheets/Milestone/XProtect Corporate datasheet.pdf"
+      datasheet: "Datasheets/Milestone/Milestone_XProtect_Corporate_Datasheet.pdf"
     }
   },
 
@@ -1261,11 +1343,11 @@ const MILESTONE_2026_REQUIREMENTS = {
       maxMonitors: 2,
       testedDisplaySpec: "1x–2x 4K UHD (3840x2160 @ 60Hz) Monitors",
       supports4kMonitors: true,
-      recommendedStreamvaultId: "milestone-husky-ivo-150d-viewing-station",
+      recommendedStreamvaultId: "milestone-husky-ivo-150d-vs",
       recommendedStreamvaultSku: "HIVO-150D-VS",
       recommendedStreamvaultModel: "Milestone Husky IVO 150D Viewing Station",
       alternateCatalogId: "dell-optiplex-7020-mff-client",
-      referencePage: "Milestone Husky IVO Viewing Stations Flyer",
+      referencePage: "Datasheets/Milestone/7_Milestone Husky IVO Viewing Stations flyer.pdf",
       notes: "Official Milestone benchmark: 1x 4K display = up to 16x 1080p (H.264/H.265) or 9x 4K (H.264) / 4x 4K (H.265); 2x 4K displays = up to 8x 1080p total (2x2 per monitor)."
     },
     recommended: {
@@ -1285,11 +1367,11 @@ const MILESTONE_2026_REQUIREMENTS = {
       maxMonitors: 4,
       testedDisplaySpec: "Up to 4x 4K UHD (3840x2160 @ 60Hz) Monitors",
       supports4kMonitors: true,
-      recommendedStreamvaultId: "milestone-husky-ivo-350t-viewing-station",
+      recommendedStreamvaultId: "milestone-husky-ivo-350t-vs",
       recommendedStreamvaultSku: "HIVO-350T-VS",
       recommendedStreamvaultModel: "Milestone Husky IVO 350T Viewing Station",
       alternateCatalogId: "dell-precision-3680-soc-tower",
-      referencePage: "Milestone Husky IVO Viewing Stations Flyer",
+      referencePage: "Datasheets/Milestone/7_Milestone Husky IVO Viewing Stations flyer.pdf",
       notes: "Official Milestone benchmark: 1x 4K display = up to 36x 1080p (H.264) or 25x 1080p (H.265) or 16x 4K (H.265); 2x 4K displays = up to 18x 1080p or 8x 4K; 3–4x 4K displays = 12–16x 1080p."
     },
     high_performance: {
@@ -2207,6 +2289,12 @@ const VideoStorageSizer = {
           text: `XProtect Tier Requirement: ${totalSensorHeads} streams across ${msPrimaryServers} Recording Server(s) exceeds XProtect Express+ limits (max 100 cameras / 1 Recording Server). Recommended edition: XProtect ${recommendedXProtectTier}.`
         });
       }
+      if (["husky_350", "husky_700r", "husky_1000r", "husky_1800r"].includes(milestoneProfileKey)) {
+        milestoneFindings.push({
+          severity: "info",
+          text: `Husky IVO Rackmount VMD Benchmark Note: Max throughput (${msMaxMbpsPerServer} Mbps) is rated with camera-side motion detection or no server VMD. Because Intel Xeon CPUs lack Quick Sync iGPU, add an optional NVIDIA T400/T1000/A1000 GPU (requires XProtect Expert/Corporate) if server-side VMD is enabled.`
+        });
+      }
     }
 
     const storageDeficitTb = Math.max(0, Math.round((requiredUsableTb - quotedUsableTb) * 10) / 10);
@@ -2632,21 +2720,27 @@ const GenetecLicensingSizer = {
       }
     }
 
-    // Check if Dedicated Directory / Core Failover Server is needed (>300 cameras or Core Failover enabled)
+    // Check if Dedicated Directory / Core Failover / Mission Control Expansion Server is needed
+    // (>300 cameras, Core Failover enabled, or Mission Control Incident Manager active which MUST NOT co-host on Directory)
     let directoryAppliance = null;
     let directoryQty = 0;
     const hasCoreFailover = licConfig.coreFailover === 'directory_only' || licConfig.coreFailover === 'full';
-    if (cams > 300 || hasCoreFailover) {
-      directoryAppliance = serversDb.find(s => s.id === 'genetec-sv-7041ex-r6s') || serversDb.find(s => s.id === 'genetec-sv-1041e-rs2');
-      directoryQty = (cams > 300 && hasCoreFailover) ? 2 : 1;
+    const mcOps = Number(licConfig.missionControlOperators) || 0;
+    if (cams > 300 || hasCoreFailover || mcOps > 0) {
+      directoryAppliance = (mcOps >= 5 || cams > 300)
+        ? (serversDb.find(s => s.id === 'genetec-sv-7041ex-r6s') || serversDb.find(s => s.id === 'genetec-sv-1041e-rs2'))
+        : (serversDb.find(s => s.id === 'genetec-sv-1041e-rs2') || serversDb.find(s => s.id === 'genetec-sv-7041ex-r6s'));
+      directoryQty = ((cams > 300 && hasCoreFailover) || (mcOps > 0 && hasCoreFailover)) ? 2 : 1;
     }
 
-    // Recommend Streamvault Workstation (SVW-100E, SVW-300E-T3, SVW-500E-R)
+    // Recommend Streamvault Workstation (SVW-100E, SVW-300E-SF1, SVW-300E-T3, SVW-500E-R)
     let workstationAppliance = null;
     if (cams > 64) {
       workstationAppliance = workstationsDb.find(w => w.id === 'genetec-svw-502e-soc-workstation') || workstationsDb[0];
-    } else if (cams > 16) {
+    } else if (cams > 24) {
       workstationAppliance = workstationsDb.find(w => w.id === 'genetec-svw-300e-t3') || workstationsDb[0];
+    } else if (cams > 8) {
+      workstationAppliance = workstationsDb.find(w => w.id === 'genetec-svw-300e-sf1') || workstationsDb.find(w => w.id === 'genetec-svw-300e-t3') || workstationsDb[0];
     } else {
       workstationAppliance = workstationsDb.find(w => w.id === 'genetec-svw-100e-micro') || workstationsDb[0];
     }
@@ -3014,17 +3108,35 @@ const GenetecLicensingSizer = {
       }
     }
 
-    // SQL Server 2025 Express (50 GB Cap, Included Default, Not on BOM) vs SQL Server Standard (Triggered ONLY when Core Failover = Full)
+    // SQL Server 2025 Express (50 GB Cap, Included Default, Not on BOM) vs SQL Server Standard
+    // Triggered when Core Failover = Full OR Mission Control 3.4.1.0 is active (Incident Document Service migrated to SQL Server: ~150 KB/incident = ~150 GB/yr)
     const sqlExpressMaxGb = 50;
+    const missionControlSqlFootprintGb = missionControlOperators > 0 ? 55 : 0;
     const estimatedSqlDbGb = Math.round(
-      (0.5 + (totalVideoConnections * 0.03) + (totalSynergisReaders * 0.06) + (effectiveLprCameras * 0.45) + (clearIdIdentities * 0.0005) + (supremaDevices * 0.02)) * 10
+      (0.5 + (totalVideoConnections * 0.03) + (totalSynergisReaders * 0.06) + (effectiveLprCameras * 0.45) + (clearIdIdentities * 0.0005) + (supremaDevices * 0.02) + (intrusionPanels * 0.15) + missionControlSqlFootprintGb) * 10
     ) / 10;
-    const needsSqlStandard = coreFailover === 'full';
+    const needsSqlStandard = coreFailover === 'full' || missionControlOperators > 0;
     if (!needsSqlStandard && estimatedSqlDbGb > sqlExpressMaxGb) {
       compatibilityWarnings.push(`Estimated Microsoft SQL Server database footprint (~${estimatedSqlDbGb} GB) approaches or exceeds the 50 GB SQL Server 2025 Express cap. Consider setting Core Failover to Full (Microsoft SQL Server Standard) or reducing event retention.`);
     }
     if (supremaDevices > 0 && totalSynergisReaders < supremaDevices) {
       compatibilityWarnings.push(`Suprema Integration Rule (Page 16): Each Suprema device assigned to a door as a reader requires 1 Synergis Reader License (GSC-Sy-X-1R or GSC-Sy-X-1RE). You have ${supremaDevices} Suprema device(s) configured alongside ${totalSynergisReaders} total Synergis reader license(s).`);
+    }
+    // DMP Intrusion Panel Extension 4.5.0 Rules (EN.DMP Intrusion Panel Extension Guide 4.5.0.pdf)
+    const intrusionManagerRolesRequired = intrusionPanels > 0 ? Math.ceil(intrusionPanels / 100) : 0;
+    if (intrusionPanels > 2000) {
+      compatibilityWarnings.push(`DMP Intrusion Panel Extension 4.5.0 Limit: Maximum 2,000 DMP panels (20 Intrusion Manager roles × 100 panels/role) supported per Security Center Directory (${intrusionPanels} panels configured).`);
+    }
+    if (intrusionPanelManufacturer === 'dmp' && intrusionPanels > 0 && totalSynergisReaders === 0) {
+      compatibilityWarnings.push(`DMP Intrusion Panel Extension 4.5.0 Advisory: Synchronizing Security Center cardholders/credentials to DMP panels (via Wiegand H10302 37-bit format) requires Synergis Access Control; linking cameras to DMP intrusion areas requires Omnicast Pro/Enterprise. Note: DMP XR150FC/XR550FC FIRE keypads are incompatible.`);
+    }
+    // AutoVu ALPR Manager Role Limit (EN.Security Center Administrator Guide 5.14.pdf: max 100 AutoVu units per ALPR Manager role)
+    const alprManagerRolesRequired = effectiveLprCameras > 0 ? Math.ceil(effectiveLprCameras / 100) : 0;
+    // Federation Role Group Limit (EN.Security Center Administrator Guide 5.14.pdf: max 100 Federation roles per group, up to 500 sites/server)
+    const totalFederatedSites = federationSites + federationSmallSites + stratocastFedSites;
+    const federationRoleGroupsRequired = totalFederatedSites > 0 ? Math.ceil(totalFederatedSites / 100) : 0;
+    if (totalFederatedSites > 500) {
+      compatibilityWarnings.push(`Security Center 5.14 Federation Limit (Administrator Guide 5.14): A single High-Capacity Federation host supports up to 500 federated remote sites across 5 Federation Role Groups (${totalFederatedSites} remote sites configured).`);
     }
 
     // Bundled Features Included at $0.00 in Security Center 5.13 / 5.14 Unified Base Package
@@ -3452,38 +3564,64 @@ const GenetecLicensingSizer = {
       } else if (effectiveSipIntercoms > 0) {
         addLineItem(
           'GSC-SIPELIA-1SIP',
-          'Genetec Sipelia Communications Management — 1 Unified 5.13 SIP Intercom Station Connection',
+          'Genetec Sipelia Communications Management — 1 Unified 5.11–5.14 SIP Intercom Station Connection',
           'Video, Intercom, LPR & Cloud Archives',
           effectiveSipIntercoms,
-          295,
+          250,
           'genetec-sipelia-1sip',
-          'Includes Sipelia Standard + Advanced failover & bidirectional audio/video call recording (Sipelia Base included in 5.13+)'
+          'Unified SC 5.11–5.14 Sipelia SKU ($250/SIP device per Sipelia User Guide 2.14.0.0): Includes Sipelia Base plugin, bidirectional audio/video call recording, failover, SIP trunking, and Public Address (PA) without separate legacy SKUs. Native SIP video max 720p (enroll 1080p+ intercom cameras as Security Center video units).'
         );
       }
     }
 
     if (sipTrunks > 0) {
-      addLineItem(
-        'GSC-Sipelia-1Trunk',
-        'Genetec Sipelia Communications Management — 1 Session Initiation Protocol (SIP) Trunk Connection',
-        'Video, Intercom, LPR & Cloud Archives',
-        sipTrunks,
-        550,
-        'genetec-sipelia-1trunk',
-        'SIP Trunk connection to external VoIP PBX or hardware intercom server'
-      );
+      if (sipeliaMode === 'unified_513') {
+        addLineItem(
+          'GSC-Sipelia-1Trunk',
+          'Genetec Sipelia Communications Management — SIP Trunk Connection (Included in Unified GSC-SIPELIA-1SIP)',
+          'Video, Intercom, LPR & Cloud Archives',
+          sipTrunks,
+          0,
+          'genetec-sipelia-1trunk',
+          'Included at $0.00 in Unified SC 5.11–5.14 Sipelia licensing (GSC-SIPELIA-1SIP per Sipelia User Guide 2.14.0.0)',
+          true
+        );
+      } else {
+        addLineItem(
+          'GSC-Sipelia-1Trunk',
+          'Genetec Sipelia Communications Management — 1 Session Initiation Protocol (SIP) Trunk Connection',
+          'Video, Intercom, LPR & Cloud Archives',
+          sipTrunks,
+          550,
+          'genetec-sipelia-1trunk',
+          'SIP Trunk connection to external VoIP PBX or hardware intercom server (Legacy SC 5.10 / Standard-Advanced licensing)'
+        );
+      }
     }
 
     if (sipPublicAddress > 0) {
-      addLineItem(
-        'GSC-SIPELIA-1PA',
-        'Genetec Sipelia Communications Management — 1 Public Address (PA) System Connection',
-        'Video, Intercom, LPR & Cloud Archives',
-        sipPublicAddress,
-        550,
-        'genetec-sipelia-1pa',
-        'Public Address voice paging connection per system'
-      );
+      if (sipeliaMode === 'unified_513') {
+        addLineItem(
+          'GSC-SIPELIA-1PA',
+          'Genetec Sipelia Communications Management — Public Address (PA) Connection (Included in Unified GSC-SIPELIA-1SIP)',
+          'Video, Intercom, LPR & Cloud Archives',
+          sipPublicAddress,
+          0,
+          'genetec-sipelia-1pa',
+          'Included at $0.00 in Unified SC 5.11–5.14 Sipelia licensing (GSC-SIPELIA-1SIP per Sipelia User Guide 2.14.0.0)',
+          true
+        );
+      } else {
+        addLineItem(
+          'GSC-SIPELIA-1PA',
+          'Genetec Sipelia Communications Management — 1 Public Address (PA) System Connection',
+          'Video, Intercom, LPR & Cloud Archives',
+          sipPublicAddress,
+          550,
+          'genetec-sipelia-1pa',
+          'Public Address voice paging connection per system (Legacy SC 5.10 / Standard-Advanced licensing)'
+        );
+      }
     }
 
     if (effectiveLprCameras > 0) {
@@ -4159,7 +4297,7 @@ const GenetecLicensingSizer = {
 
     const roleSharingRules = [];
     const exceedsUnifiedServerCap = totalVideoConnections > 100 || (videoLoad.peakIngressMbps || 0) > 200 || totalSynergisReaders > 200;
-    const requiresDedicatedDirectory = totalVideoConnections > 300 || totalSynergisReaders > 1000 || coreFailover !== 'none';
+    const requiresDedicatedDirectory = totalVideoConnections > 300 || totalSynergisReaders > 1000 || coreFailover !== 'none' || missionControlOperators > 0;
 
     if (exceedsUnifiedServerCap) {
       roleSharingRules.push('Exceeds Unified Single-Server Cap (100 cameras / 200 Mbps / 200 readers per SystemRequirements.pdf Page 9): Separate Archiver and Directory/Plugin roles or scale out to High-Performance 32–64 GB server.');
@@ -4168,18 +4306,54 @@ const GenetecLicensingSizer = {
     }
 
     if (requiresDedicatedDirectory) {
-      roleSharingRules.push('Dedicated Directory Server Required (>300 cameras, >1,000 readers, or Core Failover active per SystemRequirements.pdf Page 15): Host Directory and Plugin Manager roles on a dedicated server (SV-1041E / SV-7041EX).');
+      roleSharingRules.push('Dedicated Directory / Expansion Server Required (>300 cameras, >1,000 readers, Core Failover active, or Mission Control Incident Manager deployed per SystemRequirements.pdf Page 15 & Mission Control Guide 3.4.1.0): Host Directory and isolated roles on SV-1041E / SV-7041EX.');
     }
 
-    if (effectiveSipIntercoms > 0 || sipTrunks > 0) {
+    if (effectiveSipIntercoms > 0 || sipTrunks > 0 || sipPublicAddress > 0) {
       requiredServerRamGb += 4;
       requiredServerCores += 2;
       activeRolesAndPlugins.push({
-        name: `Sipelia Communications Role (${effectiveSipIntercoms} stations, ${sipTrunks} trunks)`,
+        name: `Sipelia 2.14.0.0 Communications Role (${effectiveSipIntercoms} SIP stations, ${sipTrunks} trunks, ${sipPublicAddress} PA)`,
         ramGb: 4,
         cores: 2,
-        rule: 'Can co-host on Directory/Expansion server up to 250 SIP endpoints; requires Media Gateway for video calls.',
-        datasheet: 'Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf'
+        rule: 'Max 1 Sipelia Server role per Directory (dedicated expansion server recommended; failover requires centralized shared SQL DB + shared network drive for call recordings/PA audio). Unified SC 5.11–5.14 SKU GSC-SIPELIA-1SIP ($250) includes Base, call recording, failover, SIP trunking & PA. Native SIP video max 720p (1080p+ intercom cameras must be enrolled as Security Center video units and linked to the SIP intercom entity). Ports: UDP/TCP 5060, TLS 5061, TCP 8202, RTP UDP 20000–20500.',
+        datasheet: 'Datasheets/Genetec/Plugins/EN.Sipelia User Guide 2.14.0.0.pdf'
+      });
+    }
+
+    if (intrusionPanels > 0) {
+      const dmpRam = Math.max(4, intrusionManagerRolesRequired * 4);
+      const dmpCores = Math.max(2, intrusionManagerRolesRequired * 2);
+      requiredServerRamGb += dmpRam;
+      requiredServerCores += dmpCores;
+      activeRolesAndPlugins.push({
+        name: `Intrusion Manager Role (${intrusionPanels} ${intrusionPanelManufacturer.toUpperCase()} Panel(s) • ${intrusionManagerRolesRequired} Role(s))`,
+        ramGb: dmpRam,
+        cores: dmpCores,
+        rule: intrusionPanelManufacturer === 'dmp'
+          ? `DMP Intrusion Panel Extension 4.5.0: Max 100 DMP panels / 8,800 entities / 70 events/sec sustained (100 burst) per Intrusion Manager role (up to 20 roles / 2,000 panels per Directory). GSC-AP-BASE included at $0 in SC 5.11+; requires Synergis for DMP user/cardholder sync (Wiegand H10302 37-bit) and Omnicast Pro/Enterprise for camera-to-area linking. Supported: XR500N, XR500E, XR150DN, XR550DN, XR550INT (XR150FC/XR550FC FIRE keypads incompatible). Ports: TCP 8011/8001, Receiver Failover TCP 21002.`
+          : `Intrusion Manager Role (${intrusionPanels} panels across ${intrusionManagerRolesRequired} role(s)): Max 100 panels per Intrusion Manager role; GSC-AP-BASE included at $0 in SC 5.11+.`,
+        datasheet: 'Datasheets/Genetec/Plugins/EN.DMP Intrusion Panel Extension Guide 4.5.0.pdf'
+      });
+    }
+
+    if (effectiveLprCameras > 0) {
+      activeRolesAndPlugins.push({
+        name: `AutoVu ALPR Manager Role (${effectiveLprCameras} Sharp LPR Camera(s) • ${alprManagerRolesRequired} Role(s))`,
+        ramGb: alprManagerRolesRequired * 4,
+        cores: alprManagerRolesRequired * 2,
+        rule: `Security Center 5.14 Administrator Guide: Maximum 100 AutoVu units per ALPR Manager role (${alprManagerRolesRequired} role(s) required for ${effectiveLprCameras} LPR cameras).`,
+        datasheet: 'Datasheets/Genetec/EN.Security Center Administrator Guide 5.14.pdf'
+      });
+    }
+
+    if (totalFederatedSites > 0) {
+      activeRolesAndPlugins.push({
+        name: `Security Center Federation (${totalFederatedSites} Remote Site(s) • ${federationRoleGroupsRequired} Role Group(s))`,
+        ramGb: federationRoleGroupsRequired * 4,
+        cores: federationRoleGroupsRequired * 2,
+        rule: `Security Center 5.14 Administrator Guide: Max 100 Federation roles per Federation Role Group, up to 500 federated sites per High-Capacity server, and max 2 federation levels.`,
+        datasheet: 'Datasheets/Genetec/EN.Security Center Administrator Guide 5.14.pdf'
       });
     }
 
@@ -4292,21 +4466,36 @@ const GenetecLicensingSizer = {
       });
     }
 
-    if (winGuardNodes > 0 || elevatorDispatchSystems > 0 || opcServerSystems > 0 || missionControlOperators > 0) {
+    if (winGuardNodes > 0 || elevatorDispatchSystems > 0 || opcServerSystems > 0) {
       requiredServerRamGb += 8;
       requiredServerCores += 4;
       activeRolesAndPlugins.push({
-        name: `PSIM / Building / Mission Control (${[
+        name: `PSIM / Building Automation (${[
           winGuardNodes > 0 ? `${winGuardNodes} WinGuard Node(s)` : '',
           elevatorDispatchSystems > 0 ? `${elevatorDispatchSystems} Elevator Dispatch` : '',
-          opcServerSystems > 0 ? `${opcServerSystems} OPC Server` : '',
-          missionControlOperators > 0 ? `${missionControlOperators} Mission Control Operators` : ''
+          opcServerSystems > 0 ? `${opcServerSystems} OPC Server` : ''
         ].filter(Boolean).join(', ')})`,
         ramGb: 8,
         cores: 4,
-        rule: 'Mission Control / WinGuard / OPC / Elevator Dispatch: Requires +8 GB RAM, +4 CPU cores, and dedicated SQL database instance.',
+        rule: 'WinGuard / OPC / Elevator Dispatch: Requires +8 GB RAM, +4 CPU cores, and dedicated SQL database instance.',
         datasheet: 'Datasheets/Genetec/Plugins/Advancis_WinGuard_PSIM_Genetec_Integration.pdf'
       });
+    }
+
+    if (missionControlOperators > 0) {
+      const mcHighPerf = missionControlOperators >= 5;
+      const mcRam = mcHighPerf ? 64 : 16;
+      const mcCores = mcHighPerf ? 40 : 4;
+      requiredServerRamGb = Math.max(requiredServerRamGb, mcRam);
+      requiredServerCores = Math.max(requiredServerCores, mcCores);
+      activeRolesAndPlugins.push({
+        name: `Genetec Mission Control 3.4.1.0 (${missionControlOperators} Concurrent Operator(s) • ${mcHighPerf ? 'High-Performance 40C/64GB' : 'Recommended 4C/16GB'})`,
+        ramGb: mcRam,
+        cores: mcCores,
+        rule: `Mission Control Deployment Guide 3.4.1.0 (Requires SC Enterprise 5.14): ${mcHighPerf ? '5+ concurrent operators (up to 300 max) requires High-Performance Server (Dual Xeon Silver 4416+ 40-Core, 64 GB RAM, 10 GbE)' : '1–4 concurrent operators requires Recommended Server (Xeon E-2434, 16 GB RAM)'}. MANDATORY ISOLATION: Incident Manager role (max 1 per system) MUST NOT be co-hosted on the Directory server. Incident Document Service migrated to SQL Server in 3.4.1.0 (~150 KB/incident = ~150 GB/yr at 3,000–4,000 incidents/day, requiring SQL Server Standard). RabbitMQ 3.13.7.19 HA cluster requires minimum 3 standalone nodes on the same LAN (Raft consensus (N/2)+1, TCP 5671 SSL).${sipPublicAddress > 0 ? ' Sipelia Client must be installed on the Mission Control server for PA workflow actions.' : ''}`,
+        datasheet: 'Datasheets/Genetec/Plugins/EN.Genetec Mission Control Deployment Guide 3.4.1.0.pdf'
+      });
+      roleSharingRules.push(`Mission Control 3.4.1.0 Isolation Rule: Incident Manager role (max 1 per system) MUST NOT be co-hosted on the Directory server; Incident Document Service requires SQL Server Standard (~150 KB/incident); RabbitMQ 3.13.7.19 HA requires min 3 standalone nodes on the same LAN.`);
     }
 
     // Media Gateway & GPU Analytics Isolation Check (SystemRequirements.pdf Page 12 & BriefCam/Corsight Guide)
@@ -4467,17 +4656,17 @@ const MilestoneLicensingSizer = {
       label: "XProtect Express+",
       shortLabel: "Express+",
       baseSku: "XPEXPLUSBL",
-      baseCatalogId: "milestone-xpexplusbl",
+      baseCatalogId: "milestone-xpexplus-bl",
       baseMsrp: 29,
       deviceSku: "XPEXPLUSDL",
-      deviceCatalogId: "milestone-xpexplusdl",
+      deviceCatalogId: "milestone-xpexplus-dl",
       deviceMsrp: 109,
       carePlusSku: "MCPL-XPEXPLUSDL",
-      carePlusCatalogId: "milestone-mcpl-xpexplusdl",
+      carePlusCatalogId: "milestone-mcpl-xpexplus-1y",
       carePlusMonthlyMsrp: 1.65,
       carePlusAnnualMsrp: 19.80,
       carePremSku: "MCPR-XPEXPLUSDL",
-      carePremCatalogId: "milestone-mcpr-xpexplusdl",
+      carePremCatalogId: "milestone-mcpr-xpexplus-1y",
       carePremMonthlyMsrp: 0.65,
       carePremAnnualMsrp: 7.80,
       maxCameras: 100,
@@ -4488,7 +4677,7 @@ const MilestoneLicensingSizer = {
       supportsFailoverRecording: false,
       supportsFederation: false,
       supportsInterconnectCentral: false,
-      datasheet: "Datasheets/Milestone/XProtect Express+ datasheet.pdf",
+      datasheet: "Datasheets/Milestone/Milestone_XProtect_Express_Plus_Datasheet.pdf",
       summary: "Single-server BMS/alarm-capable VMS for up to 100 cameras (1 Recording Server max)."
     },
     professional_plus: {
@@ -4496,17 +4685,17 @@ const MilestoneLicensingSizer = {
       label: "XProtect Professional+",
       shortLabel: "Professional+",
       baseSku: "XPPPLUSBL",
-      baseCatalogId: "milestone-xppplusbl",
+      baseCatalogId: "milestone-xppplus-bl",
       baseMsrp: 566,
       deviceSku: "XPPPLUSDL",
-      deviceCatalogId: "milestone-xppplusdl",
+      deviceCatalogId: "milestone-xppplus-dl",
       deviceMsrp: 192,
       carePlusSku: "MCPL-XPPPLUSDL",
-      carePlusCatalogId: "milestone-mcpl-xppplusdl",
+      carePlusCatalogId: "milestone-mcpl-xppplus-1y",
       carePlusMonthlyMsrp: 2.97,
       carePlusAnnualMsrp: 35.64,
       carePremSku: "MCPR-XPPPLUSDL",
-      carePremCatalogId: "milestone-mcpr-xppplusdl",
+      carePremCatalogId: "milestone-mcpr-xppplus-1y",
       carePremMonthlyMsrp: 1.14,
       carePremAnnualMsrp: 13.68,
       maxCameras: 999999,
@@ -4517,7 +4706,7 @@ const MilestoneLicensingSizer = {
       supportsFailoverRecording: false,
       supportsFederation: false,
       supportsInterconnectCentral: false,
-      datasheet: "Datasheets/Milestone/XProtect Professional+ datasheet.pdf",
+      datasheet: "Datasheets/Milestone/Milestone_XProtect_Professional_Plus_Datasheet.pdf",
       summary: "Multi-site / multi-server VMS with unrestricted cameras, Smart Map, Access, LPR & Transact."
     },
     expert: {
@@ -4525,17 +4714,17 @@ const MilestoneLicensingSizer = {
       label: "XProtect Expert",
       shortLabel: "Expert",
       baseSku: "XPETBL",
-      baseCatalogId: "milestone-xpetbl",
+      baseCatalogId: "milestone-xpet-bl",
       baseMsrp: 2267,
       deviceSku: "XPETDL",
-      deviceCatalogId: "milestone-xpetdl",
+      deviceCatalogId: "milestone-xpet-dl",
       deviceMsrp: 305,
       carePlusSku: "MCPL-XPETDL",
-      carePlusCatalogId: "milestone-mcpl-xpetdl",
+      carePlusCatalogId: "milestone-mcpl-xpet-1y",
       carePlusMonthlyMsrp: 4.59,
       carePlusAnnualMsrp: 55.08,
       carePremSku: "MCPR-XPETDL",
-      carePremCatalogId: "milestone-mcpr-xpetdl",
+      carePremCatalogId: "milestone-mcpr-xpet-1y",
       carePremMonthlyMsrp: 1.79,
       carePremAnnualMsrp: 21.48,
       maxCameras: 999999,
@@ -4546,7 +4735,7 @@ const MilestoneLicensingSizer = {
       supportsFailoverRecording: true,
       supportsFederation: false,
       supportsInterconnectCentral: false,
-      datasheet: "Datasheets/Milestone/XProtect Expert datasheet.pdf",
+      datasheet: "Datasheets/Milestone/Milestone_XProtect_Expert_Datasheet.pdf",
       summary: "Enterprise VMS with Hot/Cold Failover Recording Servers ($0), Multi-Stage Grooming, AES-256 DB Encryption & GPU Server VMD."
     },
     corporate: {
@@ -4554,17 +4743,17 @@ const MilestoneLicensingSizer = {
       label: "XProtect Corporate",
       shortLabel: "Corporate",
       baseSku: "XPCOBT",
-      baseCatalogId: "milestone-xpcobt",
+      baseCatalogId: "milestone-xpcobt-bl",
       baseMsrp: 3610,
       deviceSku: "XPCODL",
-      deviceCatalogId: "milestone-xpcodl",
+      deviceCatalogId: "milestone-xprotect-corp-dev",
       deviceMsrp: 373,
       carePlusSku: "MCPL-XPCODL",
-      carePlusCatalogId: "milestone-mcpl-xpcodl",
+      carePlusCatalogId: "milestone-mcpl-xpco-1y",
       carePlusMonthlyMsrp: 5.67,
       carePlusAnnualMsrp: 68.04,
       carePremSku: "MCPR-XPCODL",
-      carePremCatalogId: "milestone-mcpr-xpcodl",
+      carePremCatalogId: "milestone-mcpr-xpco-1y",
       carePremMonthlyMsrp: 2.22,
       carePremAnnualMsrp: 26.64,
       maxCameras: 999999,
@@ -4575,7 +4764,7 @@ const MilestoneLicensingSizer = {
       supportsFailoverRecording: true,
       supportsFederation: true,
       supportsInterconnectCentral: true,
-      datasheet: "Datasheets/Milestone/XProtect Corporate datasheet.pdf",
+      datasheet: "Datasheets/Milestone/Milestone_XProtect_Corporate_Datasheet.pdf",
       summary: "Flagship mission-critical VMS: Includes Smart Wall ($15,799 value) & Incident Manager ($9,975 value) free, Federated Architecture, Interconnect, Evidence Lock & 2FA."
     }
   },
@@ -4633,7 +4822,7 @@ const MilestoneLicensingSizer = {
     const reqMbps = videoLoad.peakIngressMbps || 0;
     const formPref = licConfig.applianceFormFactor || "rack";
 
-    const huskyIvoList = serversDb.filter(s => s.isMilestoneHusky && s.applianceSeries && s.applianceSeries.includes("Husky IVO"));
+    const huskyIvoList = serversDb.filter(s => (s.isMilestoneHusky || s.isHusky) && s.applianceSeries && s.applianceSeries.includes("Husky IVO"));
     let primaryAppliance = null;
     let primaryQty = 1;
     let recordingReason = "";
@@ -4652,8 +4841,8 @@ const MilestoneLicensingSizer = {
       }
 
       const singleFit = pool.find(s =>
-        (s.maxCameraChannels || 150) >= cams &&
-        (s.maxIngestBandwidthMbps || 720) >= reqMbps &&
+        (s.maxCameraChannels || s.maxCameras || 150) >= cams &&
+        (s.maxIngestBandwidthMbps || s.maxThroughputMbps || 720) >= reqMbps &&
         (s.usableStorageTb || 0) >= reqTb
       );
 
@@ -4663,13 +4852,13 @@ const MilestoneLicensingSizer = {
         recordingReason = `1x ${singleFit.model} satisfies ${cams} streams (${Math.round(reqMbps)} Mbps / ${reqTb} TB usable).`;
       } else {
         const largest = huskyIvoList.find(s => s.id === "milestone-husky-ivo-1800r-384tb")
-          || huskyIvoList.find(s => s.id === "milestone-husky-ivo-1800r")
+          || huskyIvoList.find(s => s.id === "milestone-husky-ivo-1800r-192tb")
           || huskyIvoList.find(s => s.id === "milestone-husky-ivo-1000r")
           || pool[pool.length - 1];
         if (largest) {
           primaryAppliance = largest;
-          const byCams = Math.ceil(cams / (largest.maxCameraChannels || 250));
-          const byMbps = Math.ceil(reqMbps / (largest.maxIngestBandwidthMbps || 1800));
+          const byCams = Math.ceil(cams / (largest.maxCameraChannels || largest.maxCameras || 250));
+          const byMbps = Math.ceil(reqMbps / (largest.maxIngestBandwidthMbps || largest.maxThroughputMbps || 1800));
           const byTb = Math.ceil(reqTb / (largest.usableStorageTb || 160));
           primaryQty = Math.max(1, byCams, byMbps, byTb);
           recordingReason = `${primaryQty}x ${largest.model} scaled across ${cams} streams (${Math.round(reqMbps)} Mbps / ${reqTb} TB usable).`;
@@ -4694,13 +4883,13 @@ const MilestoneLicensingSizer = {
     if (licConfig.enableRapidReview && (licConfig.rapidReviewCameras || cams) > 0) {
       const rrCams = licConfig.rapidReviewCameras > 0 ? licConfig.rapidReviewCameras : Math.min(cams || 10, 50);
       if (rrCams <= 20) {
-        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xa20r") || serversDb.find(s => s.id === "milestone-husky-xa20t");
+        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xa-20r") || serversDb.find(s => s.id === "milestone-husky-xa-20t");
         analyticsQty = 1;
       } else if (rrCams <= 50) {
-        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xa50r");
+        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xa-50r");
         analyticsQty = 1;
       } else {
-        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xe700r") || serversDb.find(s => s.id === "milestone-husky-xa50r");
+        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xe-700r") || serversDb.find(s => s.id === "milestone-husky-xa-50r");
         analyticsQty = Math.max(1, Math.ceil(rrCams / 100));
       }
     }
@@ -4711,16 +4900,16 @@ const MilestoneLicensingSizer = {
     if (licConfig.enableArculesCloud) {
       const gwCh = licConfig.arculesChannels > 0 ? licConfig.arculesChannels : Math.max(16, cams);
       if (gwCh <= 25) {
-        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwd-2tb");
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gw-gwd-2tb");
         cloudGatewayQty = 1;
       } else if (gwCh <= 50) {
-        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwde-8tb");
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gw-gwde-8tb");
         cloudGatewayQty = 1;
       } else if (gwCh <= 110) {
-        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwr-16tb");
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gw-gwr-16tb");
         cloudGatewayQty = 1;
       } else {
-        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwre-32tb");
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gw-gwre-32tb");
         cloudGatewayQty = Math.max(1, Math.ceil(gwCh / 150));
       }
     }
@@ -4728,8 +4917,8 @@ const MilestoneLicensingSizer = {
     // Viewing Stations (Husky IVO 150D VS / 350T VS)
     const wsCount = Math.max(0, parseInt(licConfig.workstationClients ?? 2, 10) || 0);
     const viewingStation = (cams > 20 || licConfig.enableSmartWall)
-      ? (workstationsDb.find(w => w.id === "milestone-husky-ivo-350t-viewing-station") || workstationsDb[0])
-      : (workstationsDb.find(w => w.id === "milestone-husky-ivo-150d-viewing-station") || workstationsDb[0]);
+      ? (workstationsDb.find(w => w.id === "milestone-husky-ivo-350t-vs") || workstationsDb[0])
+      : (workstationsDb.find(w => w.id === "milestone-husky-ivo-150d-vs") || workstationsDb[0]);
 
     return {
       primaryAppliance,
@@ -5132,16 +5321,22 @@ const MilestoneLicensingSizer = {
       ((huskyPlan.cloudGatewayAppliance?.msrp || 0) * (huskyPlan.cloudGatewayQty || 0)) +
       ((huskyPlan.viewingStation?.msrp || 0) * (huskyPlan.viewingStationQty || 0));
 
+    const combinedTurnkeyMsrp = Math.round((totalSoftwareMsrp + totalHardwareMsrp) * 100) / 100;
+
     return {
       config: baseConfig,
       videoLoad,
       cameraUnits,
+      totalDeviceLicenses: deviceLicenseCount,
       totalSensorHeads,
       effectiveTierKey,
       tierDef,
+      editionInfo: tierDef,
       tierPromotionReasons,
+      autoUpgradedReasons: tierPromotionReasons,
       careYears,
       careDiscountPct,
+      multiYearDiscountPct: careDiscountPct,
       carePremium: Boolean(baseConfig.carePremium),
       failoverRecordingMode,
       managementServerFailover,
@@ -5170,7 +5365,8 @@ const MilestoneLicensingSizer = {
       totalSoftwareMsrp,
       huskyPlan,
       totalHardwareMsrp,
-      combinedTurnkeyMsrp: Math.round((totalSoftwareMsrp + totalHardwareMsrp) * 100) / 100
+      combinedTurnkeyMsrp,
+      totalTurnkeyMsrp: combinedTurnkeyMsrp
     };
   },
 

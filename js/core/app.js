@@ -4077,16 +4077,16 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                 <span class="text-[11px] font-bold ${licRes.enableSipelia ? 'text-sky-300' : 'text-slate-300'}">Sipelia SIP Intercom (Standard / Advanced / Unified)</span>
               </label>
               <div class="flex items-center gap-1.5">
-                <a href="Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf" target="_blank" class="text-[9px] text-sky-400 hover:underline">PDF</a>
+                <a href="Datasheets/Genetec/Plugins/EN.Sipelia User Guide 2.14.0.0.pdf" target="_blank" class="text-[9px] text-sky-400 hover:underline">2.14 PDF</a>
                 <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableSipelia ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableSipelia ? 'ON' : 'OFF'}</span>
               </div>
             </div>
             ${licRes.enableSipelia ? `
               <div class="space-y-1.5 pt-1 border-t border-slate-800/80">
                 <select onchange="setGenetecLicParam('sipeliaMode', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[10px] font-bold text-sky-300 focus:outline-none">
-                  <option value="unified_513" ${licRes.sipeliaMode === 'unified_513' ? 'selected' : ''}>Unified 5.13+ — GSC-SIPELIA-1SIP ($295/station • Base Included)</option>
-                  <option value="standard" ${licRes.sipeliaMode === 'standard' ? 'selected' : ''}>Sipelia Standard — GSC-Sipelia-Base ($1,500) + GSC-Sipelia-1SIP-STD ($160/station)</option>
-                  <option value="advanced" ${licRes.sipeliaMode === 'advanced' ? 'selected' : ''}>Sipelia Advanced — Base ($1,500) + 1SIP-STD ($160) + 1SIP-ADV ($100 Failover &amp; Recording)</option>
+                  <option value="unified_513" ${licRes.sipeliaMode === 'unified_513' ? 'selected' : ''}>Unified SC 5.11–5.14 — GSC-SIPELIA-1SIP ($250/station • Base, Failover, Recording, Trunks &amp; PA Included)</option>
+                  <option value="standard" ${licRes.sipeliaMode === 'standard' ? 'selected' : ''}>Sipelia Standard (Legacy) — GSC-Sipelia-Base ($1,500) + GSC-Sipelia-1SIP-STD ($160/station)</option>
+                  <option value="advanced" ${licRes.sipeliaMode === 'advanced' ? 'selected' : ''}>Sipelia Advanced (Legacy) — Base ($1,500) + 1SIP-STD ($160) + 1SIP-ADV ($100 Failover &amp; Recording)</option>
                 </select>
                 <div class="grid grid-cols-3 gap-2">
                   <div>
@@ -4640,12 +4640,13 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
             </select>
           </div>
           ${prim ? `
-            <div class="p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/30 space-y-1">
+            <div class="p-2 rounded-lg bg-indigo-950/40 border border-indigo-500/30 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="font-bold text-white text-[11px]">${svPlan.primaryQty}x ${prim.applianceSeries} (${prim.sku})</span>
                 <span class="font-mono font-bold text-indigo-300 text-[11px]">$${(svPlan.primaryQty * (prim.msrp || 0)).toLocaleString()}</span>
               </div>
               <div class="text-[10px] text-slate-300 leading-snug">${svPlan.archiverReason}</div>
+              ${typeof renderApplianceBuildOptionsAndAccessoriesHtml === 'function' ? renderApplianceBuildOptionsAndAccessoriesHtml(prim) : ''}
               <div class="flex items-center justify-between pt-1">
                 <a href="${prim.datasheetPath}" target="_blank" class="text-[10px] text-indigo-400 hover:underline flex items-center gap-1">
                   <i data-lucide="external-link" class="w-3 h-3"></i>
@@ -4663,7 +4664,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           `}
           ${svPlan.directoryAppliance ? `
             <div class="p-1.5 rounded-lg bg-amber-950/30 border border-amber-500/30 flex items-center justify-between text-[10px]">
-              <span class="text-amber-300 font-bold">+ ${svPlan.directoryQty}x ${svPlan.directoryAppliance.applianceSeries} Dedicated Directory / Failover Server</span>
+              <span class="text-amber-300 font-bold">+ ${svPlan.directoryQty}x ${svPlan.directoryAppliance.applianceSeries} Dedicated Directory / Expansion Server</span>
               <span class="font-mono text-white">$${(svPlan.directoryQty * (svPlan.directoryAppliance.msrp || 0)).toLocaleString()}</span>
             </div>
           ` : ''}
@@ -4707,7 +4708,11 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           <span>Plugin &amp; Multi-Role Server Sizing Datasheets:</span>
         </span>
         <div class="flex flex-wrap items-center gap-1.5">
-          <a href="Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-sky-300 font-semibold">Sipelia Standard/Adv</a>
+          <a href="Datasheets/Genetec/EN.Security Center Administrator Guide 5.14.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-indigo-500/50 text-indigo-300 font-semibold">SC 5.14 Admin Guide</a>
+          <a href="Datasheets/Genetec/EN.Synergis Supported Hardware and Features 12.0_3.3_5.14.xlsx" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-purple-500/50 text-purple-300 font-semibold">Synergis 12.0 / SCL 3.3 Matrix</a>
+          <a href="Datasheets/Genetec/Plugins/EN.Sipelia User Guide 2.14.0.0.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-sky-500/50 text-sky-300 font-semibold">Sipelia 2.14 User Guide</a>
+          <a href="Datasheets/Genetec/Plugins/EN.DMP Intrusion Panel Extension Guide 4.5.0.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-amber-500/50 text-amber-300 font-semibold">DMP Intrusion 4.5.0 Guide</a>
+          <a href="Datasheets/Genetec/Plugins/EN.Genetec Mission Control Deployment Guide 3.4.1.0.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-emerald-500/50 text-emerald-300 font-semibold">Mission Control 3.4.1.0 Guide</a>
           <a href="Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 font-semibold">RSA / SpotterRF / SWM</a>
           <a href="Datasheets/Genetec/Plugins/Quanergy_Genetec_RSA_Integration.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 font-semibold">Quanergy LiDAR RSA</a>
           <a href="Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-purple-300 font-semibold">Suprema Plugin v1.00</a>
@@ -4718,7 +4723,6 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           <a href="Datasheets/Genetec/Plugins/Telaeris_XPressEntry_Genetec_Integration.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-emerald-300 font-semibold">Telaeris XpressEntry</a>
           <a href="Datasheets/Genetec/Plugins/Genetec_Medeco_Key_Asset_Management_Datasheet.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-amber-300 font-semibold">Medeco XT &amp; Key Cabinets</a>
           <a href="Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-indigo-300 font-semibold">BriefCam Analytics</a>
-          <a href="Datasheets/Genetec/Plugins/Advancis_WinGuard_PSIM_Genetec_Integration.pdf" target="_blank" class="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold">Advancis WinGuard PSIM</a>
         </div>
       </div>
 
@@ -4774,6 +4778,191 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
 window.renderGenetecLicensingBuilderHtml = renderGenetecLicensingBuilderHtml;
 
 // =========================================================================
+// SERVER & WORKSTATION BUILD OPTIONS & ACCESSORY CONFIGURATOR
+// =========================================================================
+
+window.applianceBuildSelections = window.applianceBuildSelections || {};
+
+function setApplianceBuildSelection(applianceId, optKey, val) {
+  if (!applianceId) return;
+  if (!window.applianceBuildSelections[applianceId]) {
+    window.applianceBuildSelections[applianceId] = {};
+  }
+  window.applianceBuildSelections[applianceId][optKey] = val;
+  if (typeof showToast === "function") {
+    showToast(`Updated ${applianceId} build option (${optKey}: ${val}).`, "info");
+  }
+}
+window.setApplianceBuildSelection = setApplianceBuildSelection;
+
+function addServerAccessoryToBom(sku, label, msrp, parentVendor) {
+  if (!sku) return;
+  // First check if SKU is in catalog (e.g. HEMS-* warranties)
+  if (typeof addToBOM === "function") {
+    const swDb = (typeof window !== "undefined" && window.SOFTWARE_DATABASE && Array.isArray(window.SOFTWARE_DATABASE.vms))
+      ? window.SOFTWARE_DATABASE.vms
+      : [];
+    const matchedCatalogItem = swDb.find(s => s.sku === sku || s.id === sku);
+    if (matchedCatalogItem) {
+      addToBOM(matchedCatalogItem.id, 1);
+      if (typeof showToast === "function") {
+        showToast(`Added ${matchedCatalogItem.sku} (${matchedCatalogItem.model}) to BOM.`, "success");
+      }
+      if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+      return;
+    }
+  }
+  // Otherwise add as a custom hardware accessory line item on projectBOM
+  if (Array.isArray(projectBOM)) {
+    const existing = projectBOM.find(entry => entry && entry.item && entry.item.sku === sku);
+    if (existing) {
+      existing.qty = (Number(existing.qty) || 1) + 1;
+    } else {
+      projectBOM.push({
+        id: `acc_${sku.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+        qty: 1,
+        item: {
+          id: `acc_${sku.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
+          sku: sku,
+          vendor: parentVendor || "Server Option / Accessory",
+          model: label || sku,
+          category: "servers",
+          subcategory: "Server Build Option / Accessory",
+          msrp: Number(msrp) || 0,
+          description: label || sku
+        }
+      });
+    }
+    if (typeof updateBOMTable === "function") updateBOMTable();
+    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+    if (typeof showToast === "function") {
+      showToast(`Added Server Accessory ${sku} (${label}${msrp ? ' • $' + Number(msrp).toLocaleString() : ''}) to BOM.`, "success");
+    }
+  }
+}
+window.addServerAccessoryToBom = addServerAccessoryToBom;
+
+function renderApplianceBuildOptionsAndAccessoriesHtml(appliance) {
+  if (!appliance) return "";
+  const bo = appliance.buildOptions || {};
+  const accs = Array.isArray(appliance.compatibleAccessories) ? appliance.compatibleAccessories : [];
+  const hasBuildOpts = Object.keys(bo).length > 0;
+  if (!hasBuildOpts && accs.length === 0) return "";
+
+  const sel = (window.applianceBuildSelections && window.applianceBuildSelections[appliance.id]) || {};
+  const storageList = Array.isArray(bo.storageCapacitiesTb) ? bo.storageCapacitiesTb : [];
+  const raidList = Array.isArray(bo.raidOptions) ? bo.raidOptions : [];
+  const cpuList = Array.isArray(bo.cpuOptions) ? bo.cpuOptions : [];
+  const ramList = Array.isArray(bo.ramOptionsGb) ? bo.ramOptionsGb : [];
+  const nicList = Array.isArray(bo.nicOptions) ? bo.nicOptions : [];
+  const gpuList = Array.isArray(bo.gpuOptions) ? bo.gpuOptions : [];
+  const psuList = Array.isArray(bo.powerSupplyOptions) ? bo.powerSupplyOptions : [];
+
+  return `
+    <details class="group rounded-lg bg-slate-950/90 border border-slate-800/90 px-2.5 py-1.5 text-[10px]">
+      <summary class="cursor-pointer select-none font-bold text-amber-300 flex items-center justify-between gap-2">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="sliders" class="w-3 h-3 text-amber-400"></i>
+          <span>Configure Factory Build Options &amp; Accessories (${accs.length} Add-Ons)</span>
+        </span>
+        <span class="text-[9px] font-mono text-slate-400 group-open:rotate-180 transition-transform">&#9660;</span>
+      </summary>
+      <div class="pt-2 mt-1.5 border-t border-slate-800/80 space-y-2">
+        ${hasBuildOpts ? `
+          <div class="grid grid-cols-2 gap-1.5">
+            ${storageList.length > 0 ? `
+              <div>
+                <label class="text-[9px] text-slate-400 block mb-0.5">Raw Storage Build (TB):</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'storageTb', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono font-bold text-white">
+                  ${storageList.map(tb => `<option value="${tb}" ${(sel.storageTb ? Number(sel.storageTb) === tb : Number(appliance.rawStorageTb) === tb) ? 'selected' : ''}>${tb} TB Raw Capacity</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${raidList.length > 0 ? `
+              <div>
+                <label class="text-[9px] text-slate-400 block mb-0.5">Factory RAID Level:</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'raid', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono font-bold text-emerald-300">
+                  ${raidList.map(r => `<option value="${r}" ${sel.raid === r ? 'selected' : ''}>${r}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${cpuList.length > 0 ? `
+              <div class="col-span-2">
+                <label class="text-[9px] text-slate-400 block mb-0.5">Processor (CPU) Build Option:</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'cpu', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-sky-300">
+                  ${cpuList.map(c => `<option value="${String(c).replace(/"/g, '&quot;')}" ${sel.cpu === c ? 'selected' : ''}>${c}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${ramList.length > 0 ? `
+              <div>
+                <label class="text-[9px] text-slate-400 block mb-0.5">System Memory (RAM):</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'ramGb', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono font-bold text-white">
+                  ${ramList.map(g => `<option value="${g}" ${(sel.ramGb ? Number(sel.ramGb) === g : Number(appliance.ramGb) === g) ? 'selected' : ''}>${g} GB RAM</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${nicList.length > 0 ? `
+              <div>
+                <label class="text-[9px] text-slate-400 block mb-0.5">Network Interface (NIC):</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'nic', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-indigo-300">
+                  ${nicList.map(n => `<option value="${String(n).replace(/"/g, '&quot;')}" ${sel.nic === n ? 'selected' : ''}>${n}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${gpuList.length > 0 ? `
+              <div class="col-span-2">
+                <label class="text-[9px] text-slate-400 block mb-0.5">GPU / VMD Decoding Accelerator:</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'gpu', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-purple-300">
+                  ${gpuList.map(g => `<option value="${String(g).replace(/"/g, '&quot;')}" ${sel.gpu === g ? 'selected' : ''}>${g}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+            ${psuList.length > 0 ? `
+              <div class="col-span-2">
+                <label class="text-[9px] text-slate-400 block mb-0.5">Power Supply Configuration:</label>
+                <select onchange="setApplianceBuildSelection('${appliance.id}', 'psu', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[9.5px] font-mono text-amber-300">
+                  ${psuList.map(p => `<option value="${String(p).replace(/"/g, '&quot;')}" ${sel.psu === p ? 'selected' : ''}>${p}</option>`).join('')}
+                </select>
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
+        ${accs.length > 0 ? `
+          <div class="space-y-1 pt-1 border-t border-slate-800/80">
+            <div class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Compatible Server Accessories &amp; Warranties:</div>
+            <div class="space-y-1 max-h-28 overflow-y-auto custom-scrollbar pr-1">
+              ${accs.map((acc, idx) => {
+                const isObj = acc && typeof acc === 'object';
+                const sku = isObj ? (acc.sku || `ACC-${idx+1}`) : String(acc).split(':')[0].trim();
+                const label = isObj ? (acc.label || acc.sku) : String(acc);
+                const msrp = isObj ? (Number(acc.msrp) || 0) : 0;
+                const safeSku = String(sku).replace(/'/g, "\\'");
+                const safeLabel = String(label).replace(/'/g, "\\'");
+                const safeVendor = String(appliance.vendor || "Server Accessory").replace(/'/g, "\\'");
+                return `
+                  <div class="flex items-center justify-between gap-2 bg-slate-900/80 border border-slate-800 rounded px-2 py-1">
+                    <div class="text-[9px] text-slate-200 leading-tight">
+                      <span class="font-mono font-bold text-amber-300">${sku}</span>
+                      <span class="text-slate-300"> — ${label}</span>
+                      ${msrp > 0 ? `<span class="font-mono text-emerald-400 ml-1">($${msrp.toLocaleString()})</span>` : ''}
+                    </div>
+                    <button type="button" onclick="addServerAccessoryToBom('${safeSku}', '${safeLabel}', ${msrp}, '${safeVendor}')" class="px-1.5 py-0.5 rounded bg-amber-600/80 hover:bg-amber-500 text-white text-[9px] font-bold shrink-0 cursor-pointer">
+                      + Add
+                    </button>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    </details>
+  `;
+}
+window.renderApplianceBuildOptionsAndAccessoriesHtml = renderApplianceBuildOptionsAndAccessoriesHtml;
+
+// =========================================================================
 // MILESTONE HUSKY IVO APPLIANCE & XPROTECT 2026 R2 LICENSING CONTROLLERS
 // =========================================================================
 
@@ -4796,7 +4985,21 @@ function setMilestoneLicParam(key, val) {
       ? MilestoneLicensingSizer.getDefaultConfig()
       : {};
   }
-  window.milestoneLicensingConfig[key] = val;
+  const cfg = window.milestoneLicensingConfig;
+  cfg[key] = val;
+  // Synchronize UI alias keys with MilestoneLicensingSizer engine keys
+  if (key === "edition") cfg.tierMode = val;
+  if (key === "tierMode") cfg.edition = val;
+  if (key === "includeCarePremium") cfg.carePremium = Boolean(val);
+  if (key === "carePremium") cfg.includeCarePremium = Boolean(val);
+  if (key === "lprLanesOverride") cfg.lprCamerasOverride = val;
+  if (key === "lprCountryModules") cfg.lprCountryLibs = val;
+  if (key === "interconnectDevices") cfg.interconnectCameras = val;
+  if (key === "transactConnectors") cfg.transactSources = val;
+  if (key === "axisSecureEntryDoorsOverride") {
+    cfg.accessMode = "axis_secure_entry";
+    cfg.accessReadersOverride = val;
+  }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 }
@@ -4812,26 +5015,31 @@ function toggleMilestoneFeature(toggleKey, enabled) {
   const isOn = Boolean(enabled);
   cfg[toggleKey] = isOn;
 
-  if (isOn) {
-    if (toggleKey === "enableAccessControl" && !(cfg.accessReadersOverride > 0)) {
+  if (toggleKey === "enableAxisSecureEntry") {
+    cfg.enableAccessControl = isOn;
+    cfg.accessMode = isOn ? "axis_secure_entry" : "xprotect_access";
+    if (isOn && !(cfg.accessReadersOverride > 0)) {
       cfg.accessReadersOverride = 4;
-    } else if (toggleKey === "enableAxisSecureEntry" && !(cfg.axisSecureEntryDoorsOverride > 0)) {
       cfg.axisSecureEntryDoorsOverride = 4;
-    } else if (toggleKey === "enableLpr" && !(cfg.lprLanesOverride > 0)) {
+    }
+  } else if (isOn) {
+    if (toggleKey === "enableAccessControl") {
+      cfg.accessMode = "xprotect_access";
+      if (!(cfg.accessReadersOverride > 0)) cfg.accessReadersOverride = 4;
+    } else if (toggleKey === "enableLpr" && !(cfg.lprCamerasOverride > 0)) {
+      cfg.lprCamerasOverride = 1;
       cfg.lprLanesOverride = 1;
-      cfg.lprCountryModules = Math.max(1, cfg.lprCountryModules || 1);
-    } else if (toggleKey === "enableTransact" && !(cfg.transactConnectors > 0)) {
+      cfg.lprCountryLibs = Math.max(1, cfg.lprCountryLibs || 1);
+    } else if (toggleKey === "enableTransact" && !(cfg.transactSources > 0)) {
+      cfg.transactSources = 2;
       cfg.transactConnectors = 2;
-    } else if (toggleKey === "enableInterconnect" && !(cfg.interconnectDevices > 0)) {
+    } else if (toggleKey === "enableInterconnect" && !(cfg.interconnectCameras > 0)) {
+      cfg.interconnectCameras = 8;
       cfg.interconnectDevices = 8;
     } else if (toggleKey === "enableRapidReview" && !(cfg.rapidReviewCameras > 0)) {
       cfg.rapidReviewCameras = 5;
-    } else if (toggleKey === "enableBriefCam" && !(cfg.briefCamChannels > 0)) {
-      cfg.briefCamChannels = 10;
-    } else if (toggleKey === "enableArculesHybrid" && !(cfg.arculesGateways > 0)) {
-      cfg.arculesGateways = 1;
-    } else if (toggleKey === "enableHospitalAssist" && !(cfg.hospitalAssistDevices > 0)) {
-      cfg.hospitalAssistDevices = 4;
+    } else if (toggleKey === "enableHospitalAssist" && !(cfg.hospitalAssistCameras > 0)) {
+      cfg.hospitalAssistCameras = 4;
     }
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
@@ -4856,9 +5064,9 @@ function autoFitHuskyToBom() {
     addToBOM(hp.analyticsAppliance.id, hp.analyticsQty);
     addedDesc.push(`${hp.analyticsQty}x ${hp.analyticsAppliance.model}`);
   }
-  if (hp.gatewayAppliance && hp.gatewayQty > 0) {
-    addToBOM(hp.gatewayAppliance.id, hp.gatewayQty);
-    addedDesc.push(`${hp.gatewayQty}x ${hp.gatewayAppliance.model}`);
+  if (hp.cloudGatewayAppliance && hp.cloudGatewayQty > 0) {
+    addToBOM(hp.cloudGatewayAppliance.id, hp.cloudGatewayQty);
+    addedDesc.push(`${hp.cloudGatewayQty}x ${hp.cloudGatewayAppliance.model}`);
   }
 
   if (typeof showToast === "function") {
@@ -4881,8 +5089,9 @@ function addMilestoneLicensesToBom() {
   const milestoneSkus = new Set(res.lineItems.map(li => li.sku));
   if (Array.isArray(projectBOM)) {
     for (let i = projectBOM.length - 1; i >= 0; i--) {
-      const item = projectBOM[i];
-      if (item && (milestoneSkus.has(item.sku) || String(item.id || "").startsWith("milestone-xp"))) {
+      const entry = projectBOM[i];
+      const item = entry && (entry.item || entry);
+      if (item && (milestoneSkus.has(item.sku) || String(item.id || "").startsWith("milestone-xp") || String(item.id || "").startsWith("milestone-mc"))) {
         projectBOM.splice(i, 1);
       }
     }
@@ -4890,8 +5099,8 @@ function addMilestoneLicensesToBom() {
 
   let count = 0;
   res.lineItems.forEach(li => {
-    if (li.qty > 0 && !li.isIncludedZeroCost) {
-      addToBOM(li.id || li.sku, li.qty);
+    if (li.qty > 0 && !li.isIncludedZeroCost && (li.unitMsrp || 0) > 0) {
+      addToBOM(li.catalogId || li.id || li.sku, li.qty);
       count++;
     }
   });
@@ -4914,7 +5123,9 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
   const cfg = licRes.config || {};
   const hp = licRes.huskyPlan || {};
   const prim = hp.primaryAppliance;
-  const ed = licRes.editionInfo || {};
+  const ed = licRes.editionInfo || licRes.tierDef || {};
+  const isAxisMode = licRes.enableAccessControl && licRes.accessMode === "axis_secure_entry";
+  const isXpAccessMode = licRes.enableAccessControl && licRes.accessMode !== "axis_secure_entry";
 
   return `
     <div class="bg-slate-900/95 border border-sky-500/40 rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-xl">
@@ -4930,15 +5141,15 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 Milestone XProtect 2026 R2 &amp; Husky IVO Turnkey Sizer
               </h5>
               <span class="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-mono font-bold">
-                Edition: ${ed.label || 'XProtect Corporate'} &bull; ${licRes.totalDeviceLicenses} Device Lic &bull; ${licRes.careYears}Y Care Plus (${licRes.multiYearDiscountPct}% Multi-Year Disc)
+                Edition: ${ed.label || 'XProtect Corporate'} &bull; ${licRes.totalDeviceLicenses ?? licRes.cameraUnits ?? 0} Device Lic &bull; ${licRes.careYears}Y Care Plus (${licRes.multiYearDiscountPct ?? licRes.careDiscountPct ?? 0}% Multi-Year Disc)
               </span>
-              <a href="Datasheets/Milestone/Systems Comparison Chart.pdf" target="_blank" class="text-[10px] text-sky-400 hover:text-sky-300 underline flex items-center gap-1">
+              <a href="Datasheets/Milestone/Milestone_XProtect_VMS_Product_Comparison_Chart.pdf" target="_blank" class="text-[10px] text-sky-400 hover:text-sky-300 underline flex items-center gap-1">
                 <i data-lucide="file-text" class="w-3 h-3"></i>
                 <span>2026 R2 Comparison Chart</span>
               </a>
-              <a href="Datasheets/Milestone/Milestone Price List Effective January 1 2027_USD.pdf" target="_blank" class="text-[10px] text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1">
+              <a href="Datasheets/Milestone/XProtect_Price List_USD-US_January 1_2027.xlsx" target="_blank" class="text-[10px] text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1">
                 <i data-lucide="dollar-sign" class="w-3 h-3"></i>
-                <span>Official USD Price List</span>
+                <span>Official USD Price List (Jan 2027)</span>
               </a>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
@@ -4951,7 +5162,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           <div class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-right">
             <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Total Software + Husky IVO</div>
             <div class="text-xs font-mono font-bold text-emerald-400">
-              $${licRes.totalSoftwareMsrp.toLocaleString()} SW <span class="text-slate-500">+</span> <span class="text-sky-300">$${licRes.totalHardwareMsrp.toLocaleString()} HW</span>
+              $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} SW <span class="text-slate-500">+</span> <span class="text-sky-300">$${(licRes.totalHardwareMsrp || 0).toLocaleString()} HW</span>
             </div>
           </div>
           <button
@@ -4960,7 +5171,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             class="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 hover:from-sky-500 hover:to-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
           >
             <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-            <span>+ Quote Full Turnkey Milestone Package ($${licRes.totalTurnkeyMsrp.toLocaleString()})</span>
+            <span>+ Quote Full Turnkey Milestone Package ($${(licRes.totalTurnkeyMsrp ?? licRes.combinedTurnkeyMsrp ?? 0).toLocaleString()})</span>
           </button>
         </div>
       </div>
@@ -4985,15 +5196,15 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="col-span-2">
-              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Select Milestone XProtect VMS Edition (Auto promotes to Professional+ >100 cams, Expert for Failover/Smart Wall, or Corporate for Smart Wall Included / Multi-Stage Storage)">
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Select Milestone XProtect VMS Edition (Auto promotes to Professional+ >48 cams, Expert for Failover, or Corporate for Smart Wall Included / Federation)">
                 XProtect Edition Tier:
               </label>
-              <select onchange="setMilestoneLicParam('edition', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none">
-                <option value="auto" ${cfg.edition === 'auto' ? 'selected' : ''}>Auto-Select Edition (${ed.shortLabel || 'Corporate'})</option>
-                <option value="express_plus" ${cfg.edition === 'express_plus' ? 'selected' : ''}>XProtect Express+ (≤100 Cams, 1 Server • $0 Base + $115/dev)</option>
-                <option value="professional_plus" ${cfg.edition === 'professional_plus' ? 'selected' : ''}>XProtect Professional+ (Unlimited Cams • $0 Base + $209/dev)</option>
-                <option value="expert" ${cfg.edition === 'expert' ? 'selected' : ''}>XProtect Expert (Failover &amp; Encryption • $1,959 Base + $269/dev)</option>
-                <option value="corporate" ${cfg.edition === 'corporate' ? 'selected' : ''}>XProtect Corporate (Mission-Critical &amp; Smart Wall Included • $3,259 Base + $349/dev)</option>
+              <select onchange="setMilestoneLicParam('tierMode', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none">
+                <option value="auto" ${(cfg.tierMode === 'auto' || !cfg.tierMode) ? 'selected' : ''}>Auto-Select Edition (${ed.shortLabel || 'Professional+'})</option>
+                <option value="express_plus" ${cfg.tierMode === 'express_plus' ? 'selected' : ''}>XProtect Express+ (≤100 Cams, 1 Server • $29 Base + $109/dev)</option>
+                <option value="professional_plus" ${cfg.tierMode === 'professional_plus' ? 'selected' : ''}>XProtect Professional+ (Unlimited Cams • $566 Base + $192/dev)</option>
+                <option value="expert" ${cfg.tierMode === 'expert' ? 'selected' : ''}>XProtect Expert (Failover &amp; Encryption • $2,267 Base + $305/dev)</option>
+                <option value="corporate" ${cfg.tierMode === 'corporate' ? 'selected' : ''}>XProtect Corporate (Smart Wall &amp; Incident Mgr Included • $3,610 Base + $373/dev)</option>
               </select>
             </div>
             <div>
@@ -5009,15 +5220,15 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
               </select>
             </div>
             <div>
-              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Milestone licences per Hardware Device IP/MAC address (multi-sensor cameras with 1 IP count as 1 Device License!)">
-                Extra Device Lic:
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Milestone Smart Client Workstations (Unlimited $0 Smart Client licenses; sizes Husky IVO 150D-VS / 350T-VS Viewing Stations)">
+                Viewing Stations:
               </label>
-              <input type="number" min="0" max="5000" value="${licRes.extraDeviceLicenses || 0}" onchange="setMilestoneLicParam('extraDeviceLicenses', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+              <input type="number" min="0" max="500" value="${licRes.workstationClients ?? 2}" onchange="setMilestoneLicParam('workstationClients', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
             </div>
           </div>
           <label class="flex items-center justify-between gap-2 pt-1 cursor-pointer select-none">
-            <span class="text-[11px] text-slate-300" title="Care Premium 24/7 direct Milestone technical support add-on ($1,969/yr Base + $11–$21/yr per device)">Include Care Premium 24/7 Direct Support</span>
-            <input type="checkbox" ${licRes.includeCarePremium ? 'checked' : ''} onchange="setMilestoneLicParam('includeCarePremium', this.checked)" class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
+            <span class="text-[11px] text-slate-300" title="Care Premium 24/7 direct Milestone technical support add-on (MCPR-* per device)">Include Care Premium 24/7 Direct Support</span>
+            <input type="checkbox" ${licRes.carePremium ? 'checked' : ''} onchange="setMilestoneLicParam('carePremium', this.checked)" class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
           </label>
         </div>
 
@@ -5031,7 +5242,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.managementServerFailover ? 'border-cyan-500/40 bg-cyan-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
             <div>
               <div class="text-[11px] font-bold ${licRes.managementServerFailover ? 'text-cyan-300' : 'text-slate-300'}">Management Server Failover (<code class="text-cyan-400">XPMSFSL</code>)</div>
-              <div class="text-[9.5px] text-slate-400">Zero-downtime Management Server HA cluster ($1,499)</div>
+              <div class="text-[9.5px] text-slate-400">Zero-downtime Management Server HA cluster ($7,650)</div>
             </div>
             <input type="checkbox" ${licRes.managementServerFailover ? 'checked' : ''} onchange="setMilestoneLicParam('managementServerFailover', this.checked)" class="rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0" />
           </label>
@@ -5039,17 +5250,17 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.enableSmartWall || ed.includesSmartWall ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
             <div>
               <div class="text-[11px] font-bold ${licRes.enableSmartWall || ed.includesSmartWall ? 'text-indigo-300' : 'text-slate-300'}">XProtect Smart Wall Video Wall (<code class="text-indigo-400">XPSWBL</code>)</div>
-              <div class="text-[9.5px] text-slate-400">${ed.includesSmartWall ? 'Included FREE ($0) in XProtect Corporate!' : 'Add-On for XProtect Expert ($1,299)'}</div>
+              <div class="text-[9.5px] text-slate-400">${ed.includesSmartWall ? 'Included FREE ($0) in XProtect Corporate ($15,799 Value)!' : 'Add-On for XProtect Expert ($15,799) — Auto-upgrades to Corporate'}</div>
             </div>
             <input type="checkbox" ${licRes.enableSmartWall || ed.includesSmartWall ? 'checked' : ''} onchange="setMilestoneLicParam('enableSmartWall', this.checked)" class="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-0" />
           </label>
 
-          <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.enableIncidentManager ? 'border-purple-500/40 bg-purple-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
+          <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.enableIncidentManager || ed.includesIncidentManager ? 'border-purple-500/40 bg-purple-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
             <div>
-              <div class="text-[11px] font-bold ${licRes.enableIncidentManager ? 'text-purple-300' : 'text-slate-300'}">XProtect Incident Manager (<code class="text-purple-400">XPIMBL</code>)</div>
-              <div class="text-[9.5px] text-slate-400">Case documentation &amp; video evidence packaging ($1,089)</div>
+              <div class="text-[11px] font-bold ${licRes.enableIncidentManager || ed.includesIncidentManager ? 'text-purple-300' : 'text-slate-300'}">XProtect Incident Manager (<code class="text-purple-400">XPIMBL</code>)</div>
+              <div class="text-[9.5px] text-slate-400">${ed.includesIncidentManager ? 'Included FREE ($0) in XProtect Corporate ($9,975 Value)!' : 'Case documentation &amp; video evidence packaging ($9,975)'}</div>
             </div>
-            <input type="checkbox" ${licRes.enableIncidentManager ? 'checked' : ''} onchange="setMilestoneLicParam('enableIncidentManager', this.checked)" class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0" />
+            <input type="checkbox" ${licRes.enableIncidentManager || ed.includesIncidentManager ? 'checked' : ''} onchange="setMilestoneLicParam('enableIncidentManager', this.checked)" class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0" />
           </label>
         </div>
 
@@ -5060,34 +5271,34 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             <span class="font-mono text-slate-400">XPABL / XPSEADL</span>
           </div>
 
-          <div class="rounded-lg border ${licRes.enableAccessControl ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+          <div class="rounded-lg border ${isXpAccessMode ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
             <div class="flex items-center justify-between gap-2">
               <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
-                <input type="checkbox" ${licRes.enableAccessControl ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAccessControl', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
-                <span class="text-[11px] font-bold ${licRes.enableAccessControl ? 'text-amber-300' : 'text-slate-300'}">XProtect Access (3rd-Party ACS Integration)</span>
+                <input type="checkbox" ${isXpAccessMode ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAccessControl', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${isXpAccessMode ? 'text-amber-300' : 'text-slate-300'}">XProtect Access (3rd-Party ACS Integration)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableAccessControl ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableAccessControl ? `${licRes.accessReaders} Rdrs` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${isXpAccessMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${isXpAccessMode ? `${licRes.effectiveAccessCount || 0} Rdrs` : 'OFF'}</span>
             </div>
-            ${licRes.enableAccessControl ? `
+            ${isXpAccessMode ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
                 <span class="text-[10px] text-slate-300">Base ($129) + Access Door/Reader Licenses ($39/rdr):</span>
-                <input type="number" min="0" max="2000" value="${licRes.accessReaders || 0}" onchange="setMilestoneLicParam('accessReadersOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
+                <input type="number" min="0" max="2000" value="${licRes.effectiveAccessCount || 0}" onchange="setMilestoneLicParam('accessReadersOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
               </div>
             ` : ''}
           </div>
 
-          <div class="rounded-lg border ${licRes.enableAxisSecureEntry ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+          <div class="rounded-lg border ${isAxisMode ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
             <div class="flex items-center justify-between gap-2">
               <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
-                <input type="checkbox" ${licRes.enableAxisSecureEntry ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAxisSecureEntry', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0" />
-                <span class="text-[11px] font-bold ${licRes.enableAxisSecureEntry ? 'text-emerald-300' : 'text-slate-300'}">XProtect AXIS Secure Entry (A1001 / A1610)</span>
+                <input type="checkbox" ${isAxisMode ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAxisSecureEntry', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${isAxisMode ? 'text-emerald-300' : 'text-slate-300'}">XProtect AXIS Secure Entry (A1001 / A1610)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableAxisSecureEntry ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableAxisSecureEntry ? `${licRes.axisDoors} Doors` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${isAxisMode ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${isAxisMode ? `${licRes.effectiveAccessCount || 0} Doors` : 'OFF'}</span>
             </div>
-            ${licRes.enableAxisSecureEntry ? `
+            ${isAxisMode ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
                 <span class="text-[10px] text-slate-300">Base ($0) + Axis Controller Door Lic ($89/door):</span>
-                <input type="number" min="0" max="500" value="${licRes.axisDoors || 0}" onchange="setMilestoneLicParam('axisSecureEntryDoorsOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
+                <input type="number" min="0" max="500" value="${licRes.effectiveAccessCount || 0}" onchange="setMilestoneLicParam('axisSecureEntryDoorsOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
               </div>
             ` : ''}
           </div>
@@ -5097,7 +5308,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center justify-between">
             <span>4. LPR, Rapid REVIEW &amp; BriefCam Analytics</span>
-            <a href="Datasheets/Milestone/Husky XA20T XA20R.pdf" target="_blank" class="text-[9px] text-purple-300 hover:underline">Husky XA PDF</a>
+            <a href="Datasheets/Milestone/8_Husky XA20T-XA20R Specification Sheet.pdf" target="_blank" class="text-[9px] text-purple-300 hover:underline">Husky XA PDF</a>
           </div>
 
           <div class="rounded-lg border ${licRes.enableLpr ? 'border-purple-500/40 bg-purple-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
@@ -5106,17 +5317,17 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 <input type="checkbox" ${licRes.enableLpr ? 'checked' : ''} onchange="toggleMilestoneFeature('enableLpr', this.checked)" class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0" />
                 <span class="text-[11px] font-bold ${licRes.enableLpr ? 'text-purple-300' : 'text-slate-300'}">XProtect LPR License Plate Recognition</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableLpr ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableLpr ? `${licRes.lprLanes} Lanes` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableLpr ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableLpr ? `${licRes.effectiveLprCameras || 0} Lanes` : 'OFF'}</span>
             </div>
             ${licRes.enableLpr ? `
               <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
                 <div>
-                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">LPR Lanes ($709):</label>
-                  <input type="number" min="1" max="200" value="${licRes.lprLanes || 1}" onchange="setMilestoneLicParam('lprLanesOverride', Math.max(1, parseInt(this.value,10)||1))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-purple-300" />
+                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">LPR Cameras ($1,295):</label>
+                  <input type="number" min="1" max="200" value="${licRes.effectiveLprCameras || 1}" onchange="setMilestoneLicParam('lprCamerasOverride', Math.max(1, parseInt(this.value,10)||1))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-purple-300" />
                 </div>
                 <div>
-                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">Country Packs ($709):</label>
-                  <input type="number" min="1" max="20" value="${licRes.lprCountries || 1}" onchange="setMilestoneLicParam('lprCountryModules', Math.max(1, parseInt(this.value,10)||1))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-white" />
+                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">Country Packs ($645):</label>
+                  <input type="number" min="1" max="20" value="${licRes.lprCountryLibs || 1}" onchange="setMilestoneLicParam('lprCountryLibs', Math.max(1, parseInt(this.value,10)||1))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-white" />
                 </div>
               </div>
             ` : ''}
@@ -5132,7 +5343,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             </div>
             ${licRes.enableRapidReview ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                <span class="text-[10px] text-slate-300">Rapid REVIEW Camera Licenses ($399/cam):</span>
+                <span class="text-[10px] text-slate-300">Rapid REVIEW Camera Licenses ($220/cam):</span>
                 <input type="number" min="1" max="500" value="${licRes.rapidReviewCameras || 5}" onchange="setMilestoneLicParam('rapidReviewCameras', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-sky-300" />
               </div>
             ` : ''}
@@ -5143,21 +5354,21 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between">
             <span>5. Interconnect, POS &amp; Arcules Cloud</span>
-            <a href="Datasheets/Milestone/Husky GW.pdf" target="_blank" class="text-[9px] text-emerald-300 hover:underline">Husky GW PDF</a>
+            <a href="Datasheets/Milestone/Husky GW Units Flyer.pdf" target="_blank" class="text-[9px] text-emerald-300 hover:underline">Husky GW PDF</a>
           </div>
 
           <div class="rounded-lg border ${licRes.enableInterconnect ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
             <div class="flex items-center justify-between gap-2">
               <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
                 <input type="checkbox" ${licRes.enableInterconnect ? 'checked' : ''} onchange="toggleMilestoneFeature('enableInterconnect', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0" />
-                <span class="text-[11px] font-bold ${licRes.enableInterconnect ? 'text-emerald-300' : 'text-slate-300'}">Milestone Interconnect (<code class="text-emerald-400">XPCOMIDL</code> @ $79/cam)</span>
+                <span class="text-[11px] font-bold ${licRes.enableInterconnect ? 'text-emerald-300' : 'text-slate-300'}">Milestone Interconnect (<code class="text-emerald-400">XPCOMIDL</code> @ $77.76/cam)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableInterconnect ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableInterconnect ? `${licRes.interconnectDevices} Dev` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableInterconnect ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableInterconnect ? `${licRes.interconnectCameras || 0} Dev` : 'OFF'}</span>
             </div>
             ${licRes.enableInterconnect ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
                 <span class="text-[10px] text-slate-300">Remote Interconnected Cameras (Corporate Required):</span>
-                <input type="number" min="1" max="2000" value="${licRes.interconnectDevices || 8}" onchange="setMilestoneLicParam('interconnectDevices', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
+                <input type="number" min="1" max="2000" value="${licRes.interconnectCameras || 8}" onchange="setMilestoneLicParam('interconnectCameras', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
               </div>
             ` : ''}
           </div>
@@ -5168,12 +5379,12 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 <input type="checkbox" ${licRes.enableTransact ? 'checked' : ''} onchange="toggleMilestoneFeature('enableTransact', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
                 <span class="text-[11px] font-bold ${licRes.enableTransact ? 'text-amber-300' : 'text-slate-300'}">XProtect Transact POS / ATM (<code class="text-amber-400">XPTBS</code>)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableTransact ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableTransact ? `${licRes.transactConnectors} POS` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableTransact ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableTransact ? `${licRes.transactSources || 0} POS` : 'OFF'}</span>
             </div>
             ${licRes.enableTransact ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                <span class="text-[10px] text-slate-300">POS / ATM Register Connectors ($159/reg):</span>
-                <input type="number" min="1" max="500" value="${licRes.transactConnectors || 2}" onchange="setMilestoneLicParam('transactConnectors', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
+                <span class="text-[10px] text-slate-300">POS / ATM Sources ($299 Base + $269/extra):</span>
+                <input type="number" min="1" max="500" value="${licRes.transactSources || 2}" onchange="setMilestoneLicParam('transactSources', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
               </div>
             ` : ''}
           </div>
@@ -5190,12 +5401,13 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             </select>
           </div>
           ${prim ? `
-            <div class="p-2 rounded-lg bg-sky-950/40 border border-sky-500/30 space-y-1">
+            <div class="p-2 rounded-lg bg-sky-950/40 border border-sky-500/30 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="font-bold text-white text-[11px]">${hp.primaryQty}x ${prim.model} (${prim.sku})</span>
                 <span class="font-mono font-bold text-sky-300 text-[11px]">$${(hp.primaryQty * (prim.msrp || 0)).toLocaleString()}</span>
               </div>
-              <div class="text-[10px] text-slate-300 leading-snug">${hp.recorderReason}</div>
+              <div class="text-[10px] text-slate-300 leading-snug">${hp.recordingReason || hp.recorderReason || ''}</div>
+              ${typeof renderApplianceBuildOptionsAndAccessoriesHtml === 'function' ? renderApplianceBuildOptionsAndAccessoriesHtml(prim) : ''}
               <div class="flex items-center justify-between pt-1">
                 <a href="${prim.datasheetPath}" target="_blank" class="text-[10px] text-sky-400 hover:underline flex items-center gap-1">
                   <i data-lucide="external-link" class="w-3 h-3"></i>
@@ -5227,7 +5439,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             Calculated Milestone XProtect 2026 R2 License &amp; Care Plus Bill of Materials (${licRes.lineItems.length} Line Items)
           </span>
           <span class="text-[11px] font-mono font-bold text-emerald-400">
-            Total Software MSRP: $${licRes.totalSoftwareMsrp.toLocaleString()}
+            Total Software MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()}
           </span>
         </div>
         ${licRes.lineItems.length > 0 ? `
@@ -5244,25 +5456,28 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-800/50">
-                ${licRes.lineItems.map(li => `
-                  <tr class="${li.isIncludedZeroCost ? 'bg-emerald-950/20' : 'hover:bg-slate-900/60'}">
-                    <td class="py-1.5 px-3 font-bold ${li.isIncludedZeroCost ? 'text-emerald-300' : 'text-sky-300'} whitespace-nowrap">${li.sku}</td>
+                ${licRes.lineItems.map(li => {
+                  const isZero = Boolean(li.isIncludedZeroCost || (li.unitMsrp || 0) === 0);
+                  return `
+                  <tr class="${isZero ? 'bg-emerald-950/20' : 'hover:bg-slate-900/60'}">
+                    <td class="py-1.5 px-3 font-bold ${isZero ? 'text-emerald-300' : 'text-sky-300'} whitespace-nowrap">${li.sku}</td>
                     <td class="py-1.5 px-3 font-sans text-slate-200">
                       <div class="font-semibold">${li.model}</div>
-                      ${li.notes ? `<div class="text-[10px] ${li.isIncludedZeroCost ? 'text-emerald-300/90' : 'text-slate-400'}">${li.notes}</div>` : ''}
+                      ${li.notes ? `<div class="text-[10px] ${isZero ? 'text-emerald-300/90' : 'text-slate-400'}">${li.notes}</div>` : ''}
                     </td>
-                    <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel}</td>
+                    <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel || li.category || ''}</td>
                     <td class="py-1.5 px-3 text-center font-bold text-amber-300">${li.qty}</td>
-                    <td class="py-1.5 px-3 text-right text-slate-300">${li.isIncludedZeroCost ? '<span class="text-emerald-400 font-bold">INCLUDED ($0.00)</span>' : '$' + li.unitMsrp.toLocaleString()}</td>
-                    <td class="py-1.5 px-3 text-right font-bold text-emerald-400">$${li.extendedMsrp.toLocaleString()}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-300">${isZero ? '<span class="text-emerald-400 font-bold">INCLUDED ($0.00)</span>' : '$' + (li.unitMsrp || 0).toLocaleString()}</td>
+                    <td class="py-1.5 px-3 text-right font-bold text-emerald-400">$${(li.extendedMsrp || 0).toLocaleString()}</td>
                   </tr>
-                `).join('')}
+                `;
+                }).join('')}
               </tbody>
             </table>
           </div>
         ` : `
           <div class="p-4 text-center text-xs text-slate-400">
-            No Milestone XProtect device licenses calculated yet. Add cameras in Initial Design, Power over Ethernet Calculator, or Physical Security, or enter Extra Device Licenses above.
+            No Milestone XProtect device licenses calculated yet. Add cameras in Initial Design, Power over Ethernet Calculator, or Physical Security.
           </div>
         `}
       </div>
@@ -5610,7 +5825,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                 ${wsCalc.totalViewedCameras} Cameras (${wsCalc.totalViewedStreams} Simultaneously Decoded Streams &bull; ${wsCalc.totalPixelRateMpPerSec} MP/s)
               </span>
               ${isMilestoneWs ? `
-                <button onclick="openDatasheetModal('Datasheets/Milestone/Husky 350T.pdf', 'Milestone Husky IVO 350T Viewing Station & Server Datasheet', 'HIVO-350T-VS')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone Husky IVO 150D/350T Viewing Station Datasheet PDF">
+                <button onclick="openDatasheetModal('Datasheets/Milestone/7_Milestone Husky IVO Viewing Stations flyer.pdf', 'Milestone Husky IVO 150D / 350T Viewing Station Datasheet', 'HIVO-350T-VS')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone Husky IVO 150D/350T Viewing Station Datasheet PDF">
                   <i data-lucide="file-text" class="w-3 h-3"></i>
                   <span>Husky IVO VS Spec</span>
                 </button>
@@ -5990,7 +6205,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
             </span>
             <span class="text-[10px] font-mono text-slate-400">Click + Add to quote into Project BOM</span>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto custom-scrollbar pr-1">
             ${(wsCalc.matchedCatalogWorkstations || []).map(w => `
               <div class="p-2.5 rounded-xl border flex flex-col justify-between gap-1.5 ${
                 recHw && recHw.id === w.id
@@ -6010,6 +6225,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                 <div class="text-[9.5px] font-mono text-slate-400 leading-snug">
                   ${w.processor} &bull; ${w.ramGb}GB RAM &bull; ${w.gpu} &bull; Up to ${w.maxMonitors} Monitors
                 </div>
+                ${typeof renderApplianceBuildOptionsAndAccessoriesHtml === 'function' ? renderApplianceBuildOptionsAndAccessoriesHtml(w) : ''}
                 <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
                   <span class="text-[9px] font-mono ${w.meetsSpec ? 'text-emerald-400' : 'text-rose-400'}">
                     ${w.meetsSpec ? '✓ Meets Viewed Stream Spec' : 'Below Required Tier/Monitors'}
@@ -6030,16 +6246,19 @@ window.renderWorkstationSizerStudioHtml = renderWorkstationSizerStudioHtml;
 
 // =========================================================================
 // DOORS & ACCESS CONTROL SCHEDULE BUILDER STUDIO
+// (EN.Synergis Supported Hardware and Features 12.0_3.3_5.14.xlsx & Milestone XProtect Access)
 // =========================================================================
 
 const DOOR_BUILDER_PRESETS = {
   standard_strike: {
     id: "standard_strike",
     vendor: "mercury",
-    label: "Mercury LP1502 • Standard Interior / Mortise Strike Door",
+    label: "Mercury LP1502 • Standard Interior / Mortise Strike Door (2-Door Panel)",
     controllerId: "mercury-lp1502",
-    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
+    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller via Cloud Link)",
     doorsPerController: 2,
+    requiresCloudLink: true,
+    isGenetecSuppliedHardware: true,
     readerId: "hid-signo-40",
     readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
     lockId: "hes-1006-electric-strike",
@@ -6055,10 +6274,12 @@ const DOOR_BUILDER_PRESETS = {
   rim_exit_strike: {
     id: "rim_exit_strike",
     vendor: "mercury",
-    label: "Mercury LP1502 • Crash-Bar Rim Exit Device Door",
+    label: "Mercury LP1502 • Crash-Bar Rim Exit Device Door (2-Door Panel)",
     controllerId: "mercury-lp1502",
-    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
+    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller via Cloud Link)",
     doorsPerController: 2,
+    requiresCloudLink: true,
+    isGenetecSuppliedHardware: true,
     readerId: "hid-signo-40",
     readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
     lockId: "hes-9600-surface-strike",
@@ -6076,8 +6297,10 @@ const DOOR_BUILDER_PRESETS = {
     vendor: "mercury",
     label: "Mercury LP1502 • Perimeter / Double-Glass Maglock Door (1200 lb)",
     controllerId: "mercury-lp1502",
-    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
+    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller via Cloud Link)",
     doorsPerController: 2,
+    requiresCloudLink: true,
+    isGenetecSuppliedHardware: true,
     readerId: "hid-signo-40",
     readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
     lockId: "securitron-m62-maglock",
@@ -6090,13 +6313,57 @@ const DOOR_BUILDER_PRESETS = {
     enclosureLabel: "Altronix Trove2M2 Enclosure (Up to 8 Doors / 4 Panels)",
     lockMilliamps12v: 250
   },
+  mercury_mp1502_strike: {
+    id: "mercury_mp1502_strike",
+    vendor: "mercury_mp",
+    label: "Mercury MP1502 (SC 5.12.1+ Native) • Next-Gen 2-Door OSDP Controller Kit",
+    controllerId: "mercury-lp1502",
+    controllerLabel: "Mercury MP1502 Next-Gen 2-Door Controller (Up to 32/Cloud Link)",
+    doorsPerController: 2,
+    requiresCloudLink: true,
+    isGenetecSuppliedHardware: true,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP Secure Channel Reader",
+    lockId: "hes-1006-electric-strike",
+    lockLabel: "HES 1006 Series Heavy-Duty Electric Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: "altronix-trove2m2",
+    enclosureLabel: "Altronix Trove2M2 Enclosure (Up to 8 Doors / 4 MP Panels)",
+    lockMilliamps12v: 450
+  },
+  axis_pbg_a1610: {
+    id: "axis_pbg_a1610",
+    vendor: "axis_pbg",
+    label: "Axis A1610 Powered by Genetec • 2-Door PoE+ Direct IP (0 Cloud Links Needed!)",
+    controllerId: "axis-a1001",
+    controllerLabel: "Axis A1610 Powered by Genetec (2-Door • 250k Cardholders • Direct to Access Mgr)",
+    doorsPerController: 2,
+    requiresCloudLink: false,
+    isGenetecSuppliedHardware: true,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
+    lockId: "hes-1006-electric-strike",
+    lockLabel: "HES 1006 Series Heavy-Duty Electric Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: null,
+    enclosureLabel: "Plenum PoE+ Edge Mount (Direct IP to Security Center — 0 Cloud Links)",
+    lockMilliamps12v: 450
+  },
   ip_edge_door: {
     id: "ip_edge_door",
     vendor: "axis",
     label: "Axis A1001 • Single-Door PoE+ IP Edge Controller Kit",
     controllerId: "axis-a1001",
-    controllerLabel: "Axis A1001 Network PoE+ Door Controller",
+    controllerLabel: "Axis A1001 Network PoE+ Door Controller (30/Cloud Link or Milestone Secure Entry)",
     doorsPerController: 1,
+    requiresCloudLink: true,
+    isGenetecSuppliedHardware: false,
     readerId: "hid-signo-40",
     readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
     lockId: "hes-1006-electric-strike",
@@ -6116,6 +6383,8 @@ const DOOR_BUILDER_PRESETS = {
     controllerId: "axis-a1001",
     controllerLabel: "Axis A1001 Network PoE+ Door Controller",
     doorsPerController: 1,
+    requiresCloudLink: true,
+    isGenetecSuppliedHardware: false,
     readerId: "hid-signo-40",
     readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
     lockId: "hes-9600-surface-strike",
@@ -6127,6 +6396,27 @@ const DOOR_BUILDER_PRESETS = {
     enclosureId: null,
     enclosureLabel: "Plenum Above-Door PoE+ Edge Mount",
     lockMilliamps12v: 450
+  },
+  scl312_osdp_direct: {
+    id: "scl312_osdp_direct",
+    vendor: "scl312",
+    label: "Synergis Cloud Link-312 • 12x RS-485 Direct OSDP Bus (Up to 48 Readers / 24 Doors)",
+    controllerId: "genetec-synergis-cloudlink",
+    controllerLabel: "Synergis Cloud Link-312 (12x RS-485 Ports • 32 OSDP I/O • 48 OSDP Readers)",
+    doorsPerController: 24,
+    requiresCloudLink: false,
+    isGenetecSuppliedHardware: true,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP Direct RS-485 Bus Reader",
+    lockId: "hes-1006-electric-strike",
+    lockLabel: "HES 1006 Series Heavy-Duty Electric Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: "altronix-trove2m2",
+    enclosureLabel: "Synergis Cloud Link-312 Direct RS-485 OSDP Architecture",
+    lockMilliamps12v: 450
   }
 };
 
@@ -6137,13 +6427,16 @@ function setDoorBuilderParam(key, val) {
   } else if (key === "controllerVendor") {
     doorBuilderControllerVendor = val;
     window.doorBuilderControllerVendor = val;
-    const defaultPreset = val === "axis" ? "ip_edge_door" : "standard_strike";
+    const defaultPresetMap = {
+      mercury: "standard_strike",
+      mercury_mp: "mercury_mp1502_strike",
+      axis_pbg: "axis_pbg_a1610",
+      axis: "ip_edge_door",
+      scl312: "scl312_osdp_direct"
+    };
+    const targetPreset = defaultPresetMap[val] || "standard_strike";
     doorScheduleGroups.forEach(g => {
-      if (val === "axis" && !String(g.preset).startsWith("axis") && g.preset !== "ip_edge_door") {
-        g.preset = defaultPreset;
-      } else if (val === "mercury" && (String(g.preset).startsWith("axis") || g.preset === "ip_edge_door")) {
-        g.preset = "standard_strike";
-      }
+      g.preset = targetPreset;
     });
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
@@ -6199,7 +6492,14 @@ window.updateDoorScheduleGroup = updateDoorScheduleGroup;
 function calculateDoorScheduleRollup() {
   let totalDoors = 0;
   let totalReaders = 0;
+  let genetecSuppliedReaders = 0;
+  let externalReaders = 0;
   let mercuryDoors = 0;
+  let mercuryReaders = 0;
+  let axisPbgDoors = 0;
+  let axisStandardDoors = 0;
+  let scl312Doors = 0;
+  let scl312Readers = 0;
   let edgePoEDoors = 0;
   let totalLockCurrentMa = 0;
   const partTotals = {};
@@ -6220,11 +6520,27 @@ function calculateDoorScheduleRollup() {
     totalDoors += doors;
     totalReaders += readers;
     totalLockCurrentMa += lockMa;
-    if (p.vendor === "axis" || p.id === "ip_edge_door" || p.id === "axis_rim_exit") {
+
+    if (p.isGenetecSuppliedHardware) {
+      genetecSuppliedReaders += readers;
+    } else {
+      externalReaders += readers;
+    }
+
+    if (p.vendor === "axis_pbg") {
+      axisPbgDoors += doors;
       edgePoEDoors += doors;
-      addPart("axis-a1001", doors);
+      addPart("axis-a1001", controllers);
+    } else if (p.vendor === "axis" || p.id === "ip_edge_door" || p.id === "axis_rim_exit") {
+      axisStandardDoors += doors;
+      edgePoEDoors += doors;
+      addPart("axis-a1001", controllers);
+    } else if (p.vendor === "scl312") {
+      scl312Doors += doors;
+      scl312Readers += readers;
     } else {
       mercuryDoors += doors;
+      mercuryReaders += readers;
     }
 
     addPart(p.readerId, readers);
@@ -6248,14 +6564,40 @@ function calculateDoorScheduleRollup() {
   if (totalMercuryControllers > 0) addPart("mercury-lp1502", totalMercuryControllers);
   if (totalTroveEnclosures > 0) addPart("altronix-trove2m2", totalTroveEnclosures);
 
+  // Synergis Cloud Link Sizing (EN.Synergis Supported Hardware and Features 12.0_3.3_5.14.xlsx):
+  // - Standard Synergis Cloud Link: max 32 Mercury LP/MP panels, max 30 Axis A1001/A1601, max 256 readers
+  // - Axis Powered by Genetec (A1210/A1610/A1710-B/A1810-B): connects directly to Access Manager (0 Cloud Links!)
+  // - Synergis Cloud Link-312: 12x RS-485 ports, max 48 OSDP non-transparent readers / 24 doors
+  const sclForMercuryAndAxis = (totalMercuryControllers > 0 || axisStandardDoors > 0)
+    ? Math.max(
+        Math.ceil(totalMercuryControllers / 32),
+        Math.ceil(axisStandardDoors / 30),
+        Math.ceil((mercuryReaders + axisStandardDoors) / 256)
+      )
+    : 0;
+  const scl312Units = scl312Readers > 0 ? Math.ceil(Math.max(scl312Readers / 48, scl312Doors / 24)) : 0;
+  const totalCloudLinksRequired = doorBuilderAcsPlatform === "genetec_synergis"
+    ? (sclForMercuryAndAxis + scl312Units)
+    : 0;
+  if (totalCloudLinksRequired > 0) {
+    addPart("genetec-synergis-cloudlink", totalCloudLinksRequired);
+  }
+
   return {
     rows,
     totalDoors,
     totalReaders,
+    genetecSuppliedReaders,
+    externalReaders,
     mercuryDoors,
+    axisPbgDoors,
+    axisStandardDoors,
+    scl312Doors,
     edgePoEDoors,
     totalMercuryControllers,
     totalTroveEnclosures,
+    totalCloudLinksRequired,
+    scl312Units,
     totalLockCurrentAmps: Math.round((totalLockCurrentMa / 1000) * 100) / 100,
     partTotals
   };
@@ -6271,13 +6613,14 @@ function addFullDoorScheduleToBom() {
     setMilestoneLicParam("enableAccessControl", true);
     setMilestoneLicParam("accessReadersOverride", rollup.totalReaders);
   } else if (doorBuilderAcsPlatform === "milestone_axis_secure_entry" && typeof setMilestoneLicParam === "function") {
-    setMilestoneLicParam("enableAxisSecureEntry", true);
+    toggleMilestoneFeature("enableAxisSecureEntry", true);
     setMilestoneLicParam("axisSecureEntryDoorsOverride", rollup.totalDoors);
   } else if (typeof setGenetecLicParam === "function") {
-    setGenetecLicParam("readerConnectionsOverride", rollup.totalReaders);
+    setGenetecLicParam("synergisGenetecReaders", rollup.genetecSuppliedReaders);
+    setGenetecLicParam("synergisExternalReaders", rollup.externalReaders);
   }
   if (typeof showToast === "function") {
-    showToast(`Added ${rollup.totalDoors}-Door Schedule (${rollup.totalReaders} Readers, ${rollup.totalMercuryControllers} LP1502 Panels, ${rollup.edgePoEDoors} Axis PoE+ Controllers) to Project BOM.`, "success");
+    showToast(`Added ${rollup.totalDoors}-Door Schedule (${rollup.totalReaders} Readers, ${rollup.totalMercuryControllers} Mercury LP/MP Panels, ${rollup.edgePoEDoors} Axis Controllers, ${rollup.totalCloudLinksRequired} Synergis Cloud Links) to Project BOM.`, "success");
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
@@ -6300,11 +6643,15 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
                 Access Control Door Schedule &amp; Multi-Manufacturer Kit Builder
               </h4>
               <span class="px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-700/50 text-[10px] font-mono font-bold text-amber-300">
-                ${rollup.totalDoors} Doors &bull; ${rollup.totalReaders} OSDP Readers &bull; ${rollup.totalMercuryControllers} Mercury LP1502 &bull; ${rollup.edgePoEDoors} Axis A1001
+                ${rollup.totalDoors} Doors &bull; ${rollup.totalReaders} OSDP Readers &bull; ${rollup.totalMercuryControllers} Mercury LP/MP &bull; ${rollup.edgePoEDoors} Axis PoE+ &bull; ${rollup.totalCloudLinksRequired} Cloud Link(s)
               </span>
+              <a href="Datasheets/Genetec/EN.Synergis Supported Hardware and Features 12.0_3.3_5.14.xlsx" target="_blank" class="text-[10px] text-purple-400 hover:underline flex items-center gap-1">
+                <i data-lucide="file-spreadsheet" class="w-3 h-3"></i>
+                <span>Synergis 12.0 / SCL 3.3 Hardware Matrix</span>
+              </a>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              Build multi-zone door schedules across <strong class="text-white">Mercury Security (LP1502)</strong> and <strong class="text-white">Axis Network Door Controllers (A1001)</strong> with automatic <strong class="text-white">Altronix Trove2M2</strong> enclosure packing and live <strong class="text-indigo-300">Genetec Synergis</strong> / <strong class="text-sky-300">Milestone XProtect Access</strong> licensing sync.
+              Build multi-zone door schedules across <strong class="text-white">Mercury LP/MP Series (LP1502 / MP1502)</strong>, <strong class="text-emerald-300">Axis Powered by Genetec (A1610/A1210 — 0 Cloud Links!)</strong>, <strong class="text-sky-300">Axis A1001</strong>, and <strong class="text-purple-300">Synergis Cloud Link-312 (12x RS-485 OSDP)</strong> with live <strong class="text-indigo-300">Genetec Synergis</strong> / <strong class="text-sky-300">Milestone XProtect Access</strong> licensing sync.
             </p>
           </div>
         </div>
@@ -6312,10 +6659,13 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
         <div class="flex flex-wrap items-center gap-2.5 shrink-0">
           <!-- Controller Ecosystem Quick Switcher -->
           <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">Controller Brand:</span>
+            <span class="text-[9px] font-bold uppercase text-slate-400">Controller Architecture:</span>
             <select onchange="setDoorBuilderParam('controllerVendor', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="mercury" class="bg-slate-900" ${doorBuilderControllerVendor === 'mercury' ? 'selected' : ''}>Mercury Security (LP1502 + Trove2)</option>
+              <option value="mercury" class="bg-slate-900" ${doorBuilderControllerVendor === 'mercury' ? 'selected' : ''}>Mercury LP Series (LP1502 + Cloud Link + Trove2)</option>
+              <option value="mercury_mp" class="bg-slate-900" ${doorBuilderControllerVendor === 'mercury_mp' ? 'selected' : ''}>Mercury MP Series (MP1502 SC 5.12.1+ Native)</option>
+              <option value="axis_pbg" class="bg-slate-900" ${doorBuilderControllerVendor === 'axis_pbg' ? 'selected' : ''}>Axis Powered by Genetec (A1610 — 0 Cloud Links!)</option>
               <option value="axis" class="bg-slate-900" ${doorBuilderControllerVendor === 'axis' ? 'selected' : ''}>Axis Network Controllers (A1001 PoE+)</option>
+              <option value="scl312" class="bg-slate-900" ${doorBuilderControllerVendor === 'scl312' ? 'selected' : ''}>Synergis Cloud Link-312 (12x RS-485 Direct OSDP)</option>
             </select>
           </div>
 
@@ -6351,7 +6701,7 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
             </button>
           </div>
           <span class="text-[10px] font-mono text-slate-400">
-            Mercury LP1502 controllers pack at 2 doors/board &bull; Altronix Trove2M2 enclosures pack at 4 LP1502 boards (8 doors)/enclosure
+            Synergis Cloud Link: 32 Mercury LP/MP panels / 256 readers / 600k cardholders &bull; Axis Powered by Genetec (A1610): Direct IP to Access Manager (0 Cloud Links) &bull; SCL-312: 12x RS-485 / 48 OSDP Readers
           </span>
         </div>
 
@@ -6360,7 +6710,7 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
             <thead>
               <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400">
                 <th class="py-1.5 px-2 min-w-[180px]">Door Zone / Group Name</th>
-                <th class="py-1.5 px-2 min-w-[240px]">Door Hardware Kit Preset</th>
+                <th class="py-1.5 px-2 min-w-[260px]">Door Hardware Kit Preset</th>
                 <th class="py-1.5 px-1.5 w-24 text-center">Door Qty</th>
                 <th class="py-1.5 px-1.5 w-36">Readers / Door</th>
                 <th class="py-1.5 px-2">Included Lock &amp; Peripherals</th>
@@ -6393,7 +6743,7 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
                     ${row.presetObj.lockLabel} + ${row.presetObj.rexLabel} + ${row.presetObj.dpsLabel}
                   </td>
                   <td class="py-1.5 px-2 text-right font-mono text-sky-300 font-bold">
-                    ${row.controllers}x ${row.presetObj.id === 'ip_edge_door' ? 'Axis A1001' : 'LP1502'}
+                    ${row.controllers}x ${row.presetObj.vendor === 'axis_pbg' ? 'Axis A1610 (Direct IP)' : row.presetObj.vendor === 'axis' ? 'Axis A1001' : row.presetObj.vendor === 'scl312' ? 'SCL-312' : row.presetObj.vendor === 'mercury_mp' ? 'MP1502' : 'LP1502'}
                   </td>
                   <td class="py-1.5 px-2 text-right font-mono text-emerald-400">
                     ${Math.round((row.lockMa / 1000) * 100) / 100} A
