@@ -79,7 +79,7 @@ function getBomItemCategoryKey(item) {
   const cat = String(item.category || "").toLowerCase();
   const role = String(item.role || "").toLowerCase();
 
-  if (cat === "licensing" || cat === "software" || role.includes("license") || role.includes("subscription")) {
+  if (cat === "licensing" || cat === "software" || cat === "vms_software" || role.includes("license") || role.includes("subscription") || role.includes("maintenance") || role.includes("database")) {
     return "licensing";
   }
   if (cat === "camera" || role.includes("camera") || role.includes("surveillance") || item.deviceTypePrefix === "CAM" || item.deviceTypePrefix === "LPR") {
@@ -1439,13 +1439,13 @@ function addOpticsToBOM(sku, name, msrp, qty, vendor) {
   showToast(`Added ${qty}x ${sku} to Project BOM.`);
 }
 
-function addServerToBOM(serverId, targetLocation = null) {
+function addServerToBOM(serverId, targetLocation = null, qty = 1) {
   const srv = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(serverId) : null) ||
               (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId) ||
               (typeof WORKSTATIONS_DATABASE !== "undefined" ? WORKSTATIONS_DATABASE : []).find(w => w.id === serverId || w.sku === serverId);
   if (!srv) return;
 
-  const instanceId = `srv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+  const count = Math.max(1, parseInt(qty, 10) || 1);
   let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
   if (targetLocation && targetLocation !== "new_location") {
     assignedLoc = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(targetLocation) : targetLocation;
@@ -1456,40 +1456,169 @@ function addServerToBOM(serverId, targetLocation = null) {
     }
   }
 
+  const isVmsSoftware = srv.category === "vms_software" ||
+    String(srv.role || "").includes("License") ||
+    String(srv.role || "").includes("Maintenance") ||
+    String(srv.role || "").includes("Database");
+
+  if (isVmsSoftware) {
+    const existingLic = projectBOM.find(i => !i.parentInstanceId && (i.id === srv.id || i.sku === srv.sku));
+    if (existingLic) {
+      existingLic.qty = (parseInt(existingLic.qty, 10) || 1) + count;
+    } else {
+      projectBOM.push({
+        instanceId: `lic-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: srv.id,
+        model: srv.model,
+        sku: srv.sku,
+        role: srv.role || "Security License",
+        category: "vms_software",
+        serverType: srv.serverType || "vms_license",
+        vendor: srv.vendor || "Genetec",
+        msrp: srv.msrp || 0,
+        ports: 0,
+        poeBudget: 0,
+        baseWatts: 0,
+        maxPowerWatts: 0,
+        rackUnits: 0,
+        depthInches: 0,
+        dualPsu: false,
+        qty: count,
+        closetName: assignedLoc,
+        rackId: assignedLoc,
+        rackSlot: null,
+        rackU: null,
+        isDinMounted: false
+      });
+    }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+    return;
+  }
+
   const isWorkstation = srv.category === "workstations" || srv.role === "Workstation";
 
-  projectBOM.push({
-    instanceId: instanceId,
-    id: srv.id,
-    model: srv.model,
-    sku: srv.sku,
-    role: isWorkstation ? "Workstation" : "Server",
-    category: isWorkstation ? "workstations" : "servers",
-    serverType: srv.serverType || (isWorkstation ? "operator_client" : "vms_recording"),
-    vendor: srv.vendor,
-    msrp: srv.msrp,
-    ports: srv.ports || 2,
-    portSpeed: srv.portSpeed || (isWorkstation ? "2.5G" : "10G"),
-    maxBackboneSpeed: srv.portSpeed || (isWorkstation ? "2.5G" : "10G"),
-    baseWatts: srv.baseWatts || (isWorkstation ? 220 : 300),
-    maxPowerWatts: srv.maxPowerWatts || (isWorkstation ? 450 : 500),
-    rackUnits: srv.rackUnits !== undefined ? srv.rackUnits : (isWorkstation ? 0 : 2),
-    depthInches: srv.depthInches || 28,
-    dualPsu: srv.dualPsu !== false,
-    qty: 1,
-    closetName: assignedLoc,
-    rackId: assignedLoc,
-    rackSlot: null,
-    rackU: null,
-    isDinMounted: false,
-    hostedRoles: [...(srv.hostedRoles || (isWorkstation ? ["SOC Operator Client"] : ["VMS Ingest & Recording"]))],
-    maxIngestBandwidthMbps: srv.maxIngestBandwidthMbps || (isWorkstation ? 0 : 750),
-    powerSource: srv.dualPsu === false ? "single_ac" : "dual_ac",
-    uplinkTargetId: null
-  });
+  for (let idx = 0; idx < count; idx++) {
+    const instanceId = `srv-${Date.now()}-${Math.random().toString(36).substring(2, 6)}${count > 1 ? `-${idx + 1}` : ''}`;
+    projectBOM.push({
+      instanceId: instanceId,
+      id: srv.id,
+      model: srv.model,
+      sku: srv.sku,
+      role: isWorkstation ? "Workstation" : "Server",
+      category: isWorkstation ? "workstations" : "servers",
+      serverType: srv.serverType || (isWorkstation ? "operator_client" : "vms_recording"),
+      vendor: srv.vendor,
+      msrp: srv.msrp,
+      ports: srv.ports || 2,
+      portSpeed: srv.portSpeed || (isWorkstation ? "2.5G" : "10G"),
+      maxBackboneSpeed: srv.portSpeed || (isWorkstation ? "2.5G" : "10G"),
+      baseWatts: srv.baseWatts || (isWorkstation ? 220 : 300),
+      maxPowerWatts: srv.maxPowerWatts || (isWorkstation ? 450 : 500),
+      rackUnits: srv.rackUnits !== undefined ? srv.rackUnits : (isWorkstation ? 0 : 2),
+      depthInches: srv.depthInches || 28,
+      dualPsu: srv.dualPsu !== false,
+      ramGb: srv.ramGb || (isWorkstation ? 16 : 32),
+      cpuModel: srv.cpuModel || "",
+      gpuModel: srv.gpuModel || null,
+      usableStorageTb: srv.usableStorageTb || 0,
+      rawStorageTb: srv.rawStorageTb || 0,
+      raidLevel: srv.raidLevel || "",
+      maxCamerasSupported: srv.maxCamerasSupported || 0,
+      qty: 1,
+      closetName: assignedLoc,
+      rackId: assignedLoc,
+      rackSlot: null,
+      rackU: null,
+      isDinMounted: false,
+      hostedRoles: [...(srv.hostedRoles || (isWorkstation ? ["SOC Operator Client"] : ["VMS Ingest & Recording"]))],
+      maxIngestBandwidthMbps: srv.maxIngestBandwidthMbps || (isWorkstation ? 0 : 750),
+      powerSource: srv.dualPsu === false ? "single_ac" : "dual_ac",
+      uplinkTargetId: null
+    });
+  }
 
   FacilityStore.notifyWorkspaceChange();
-  showToast(`Added ${srv.model} to ${assignedLoc}`);
+  showToast(`Added ${count > 1 ? `${count}x ` : ''}${srv.model} to ${assignedLoc}`);
+}
+
+function addToBOM(idOrSku, qty = 1, targetLocation = null) {
+  if (!idOrSku) return;
+  const count = Math.max(1, parseInt(qty, 10) || 1);
+
+  const isSrvOrLic = (typeof SERVERS_DATABASE !== "undefined" && SERVERS_DATABASE.some(s => s.id === idOrSku || s.sku === idOrSku)) ||
+                     (typeof WORKSTATIONS_DATABASE !== "undefined" && WORKSTATIONS_DATABASE.some(w => w.id === idOrSku || w.sku === idOrSku));
+  if (isSrvOrLic) {
+    addServerToBOM(idOrSku, targetLocation, count);
+    return;
+  }
+
+  const isCam = (typeof CAMERAS_DATABASE !== "undefined" && CAMERAS_DATABASE.some(c => c.id === idOrSku || c.sku === idOrSku)) ||
+                (typeof GENERIC_CAMERA_TYPES !== "undefined" && GENERIC_CAMERA_TYPES.some(c => c.id === idOrSku || c.sku === idOrSku));
+  if (isCam) {
+    addCameraToBOM(idOrSku, targetLocation, null, count);
+    return;
+  }
+
+  const isAcc = typeof ACCESS_CONTROL_DATABASE !== "undefined" && ACCESS_CONTROL_DATABASE.some(a => a.id === idOrSku || a.sku === idOrSku);
+  if (isAcc) {
+    for (let i = 0; i < count; i++) {
+      addAccessDeviceToBOM(idOrSku, targetLocation);
+    }
+    return;
+  }
+
+  const isSw = typeof SWITCH_DATABASE !== "undefined" && SWITCH_DATABASE.some(s => s.id === idOrSku || s.sku === idOrSku);
+  if (isSw) {
+    for (let i = 0; i < count; i++) {
+      addToProjectBOM(idOrSku, targetLocation);
+    }
+    return;
+  }
+
+  const isFw = typeof FIREWALL_DATABASE !== "undefined" && FIREWALL_DATABASE.some(f => f.id === idOrSku || f.sku === idOrSku);
+  if (isFw) {
+    for (let i = 0; i < count; i++) {
+      addFirewallToBOM(idOrSku, targetLocation);
+    }
+    return;
+  }
+
+  const catItem = typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(idOrSku) : null;
+  if (catItem) {
+    const existing = projectBOM.find(i => !i.parentInstanceId && (i.id === catItem.id || i.sku === catItem.sku));
+    if (existing) {
+      existing.qty = (parseInt(existing.qty, 10) || 1) + count;
+    } else {
+      const locs = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(false) : [];
+      const assignedLoc = targetLocation || locs.find(l => l.includes("MDF")) || locs[0] || "MDF • Rack-1";
+      projectBOM.push({
+        instanceId: `item-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        id: catItem.id || catItem.sku,
+        model: catItem.model || catItem.name || idOrSku,
+        sku: catItem.sku || catItem.id,
+        role: catItem.role || "Accessory",
+        category: catItem.category || "accessories",
+        vendor: catItem.vendor || "Generic",
+        msrp: catItem.msrp || 0,
+        rackUnits: catItem.rackUnits || 0,
+        baseWatts: catItem.baseWatts || 0,
+        poeBudget: catItem.poeBudget || 0,
+        qty: count,
+        closetName: assignedLoc,
+        rackId: assignedLoc,
+        rackSlot: null
+      });
+    }
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    }
+    if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+  }
 }
 
 function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null, qty = 1) {
@@ -4105,6 +4234,7 @@ function jumpToBomTarget(instanceId) {
 }
 
 // Window Compatibility Exports
+window.addToBOM = addToBOM;
 window.addToProjectBOM = addToProjectBOM;
 window.addFirewallToBOM = addFirewallToBOM;
 window.addOpticsToBOM = addOpticsToBOM;

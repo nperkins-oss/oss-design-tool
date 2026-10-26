@@ -2934,10 +2934,15 @@ function addGenetecLicensesToBom() {
     "ms-sql-svr-2025-express", "ms-sql-svr-2022-std-4c"
   ].forEach(id => genetecCatalogIds.add(id));
 
+  const genetecCatalogSkus = new Set(items.map(li => li.sku).filter(Boolean));
   if (Array.isArray(projectBOM)) {
     for (let i = projectBOM.length - 1; i >= 0; i--) {
-      const bItem = projectBOM[i]?.item;
-      if (bItem && (genetecCatalogIds.has(bItem.id) || (bItem.vendor === "Genetec" && bItem.category === "vms_software"))) {
+      const bItem = projectBOM[i]?.item || projectBOM[i];
+      if (!bItem) continue;
+      const isGenetecVms = genetecCatalogIds.has(bItem.id) ||
+        genetecCatalogSkus.has(bItem.sku) ||
+        (bItem.vendor === "Genetec" && (bItem.category === "vms_software" || String(bItem.role || "").includes("License") || String(bItem.role || "").includes("Maintenance")));
+      if (isGenetecVms) {
         projectBOM.splice(i, 1);
       }
     }
@@ -2949,6 +2954,8 @@ function addGenetecLicensesToBom() {
     }
   });
 
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
   if (typeof showToast === "function") {
     showToast(`Synchronized ${items.length} Genetec Security Center License and Software Maintenance line item(s) ($${licRes.totalSoftwareMsrp.toLocaleString()} MSRP) to Bill of Materials.`, "success");
   }

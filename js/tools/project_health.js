@@ -368,14 +368,25 @@ function auditProjectHealth() {
   // =========================================================================
   const cameraItems = projectBOM.filter(i =>
     !i.parentInstanceId &&
-    (i.category === "cameras" || i.role === "Camera" || i.deviceType === "camera" || (i.model || '').toLowerCase().includes("camera"))
+    (i.category === "cameras" || i.category === "camera" || i.role === "Camera" || i.deviceType === "camera" || (i.model || '').toLowerCase().includes("camera"))
   );
   const totalCameras = cameraItems.reduce((acc, i) => acc + (i.qty || 1), 0);
   stats.totalCameras = totalCameras;
 
-  const licenseItems = projectBOM.filter(i =>
-    i.role === "Mgmt License" || i.role === "Security License" || i.role === "Feature License" || (i.sku || '').startsWith("LIC-")
-  );
+  const genetecCamLicSkus = new Set([
+    "GSC-Om-E-1C", "GSC-Om-S-1C", "GSC-SV-AIO-1C",
+    "GSC-Om-E-1PAC", "GSC-Om-S-1PAC", "GSC-SV-AIO-1PAC",
+    "GSC-Om-E-1DV", "GSC-Om-E-1BWC", "LIC-VMS-CAM-CORE"
+  ]);
+  const licenseItems = projectBOM.filter(i => {
+    const sku = String(i.sku || "");
+    const id = String(i.id || "");
+    if (genetecCamLicSkus.has(sku) || sku.startsWith("LIC-") || id.includes("1c") || id.includes("1cam")) return true;
+    const modelLower = String(i.model || "").toLowerCase();
+    const isCamLic = (i.category === "vms_software" || String(i.role || "").includes("License")) &&
+      (modelLower.includes("camera connection") || modelLower.includes("camera channel"));
+    return isCamLic;
+  });
   const totalLicenses = licenseItems.reduce((acc, i) => acc + (i.qty || 1), 0);
   stats.totalLicenses = totalLicenses;
 
@@ -385,10 +396,13 @@ function auditProjectHealth() {
       id: "missing_licenses",
       category: "scope",
       severity: "warning",
-      title: "Missing VMS Camera Channel Licenses",
-      summary: `${missingLic} Camera${missingLic === 1 ? '' : 's'} without VMS Core Channel Recording Licenses`,
-      details: `Project contains ${totalCameras} IP camera(s) but only ${totalLicenses} VMS recording license(s) have been added to the BOM. Cameras cannot record without valid channel keys.`,
-      actionLabel: `+ Add ${missingLic} Missing VMS License${missingLic === 1 ? '' : 's'}`,
+      standardsReference: "Genetec Security Center 5.13/5.14 ProductCompatability.pdf • Omnicast Channel Licensing",
+      title: "Missing VMS Camera Channel & Software Maintenance Licenses",
+      summary: `${missingLic} IP Camera${missingLic === 1 ? '' : 's'} without Genetec Omnicast Camera Connection Licenses (GSC-Om-X-1C + Mandatory Advantage)`,
+      details: `Project contains ${totalCameras} IP camera(s) but only ${totalLicenses} VMS camera channel license(s) have been added to the BOM. Every IP camera (including multi-sensor panoramic cameras at 1 connection per IP address) requires a matching Omnicast Camera Connection SKU plus mandatory Genetec Advantage software maintenance.`,
+      actionLabel: typeof addGenetecLicensesToBom === "function"
+        ? `+ Synchronize Genetec Licenses (${totalCameras} Cameras) to BOM`
+        : `+ Add ${missingLic} Missing VMS License${missingLic === 1 ? '' : 's'}`,
       actionFn: "autoAddMissingLicenses()",
       badgeText: `${missingLic} LICENSES MISSING`
     });
@@ -404,17 +418,24 @@ function auditProjectHealth() {
       if (vmsEnabled && totalCameras > 0) {
         const hasVmsServer = projectBOM.some(i =>
           !i.parentInstanceId &&
-          (i.role === "Server" || i.role === "Compute & Storage" || i.role === "VMS Server" || (i.category || '').includes("server") || (i.model || '').toLowerCase().includes("nvr") || (i.model || '').toLowerCase().includes("server"))
+          i.category !== "vms_software" &&
+          !String(i.role || "").includes("License") &&
+          !String(i.role || "").includes("Maintenance") &&
+          !String(i.role || "").includes("Database") &&
+          (i.role === "Server" || i.role === "Compute & Storage" || i.role === "VMS Server" || (i.category || '') === "servers" || (i.model || '').toLowerCase().includes("nvr") || (i.model || '').toLowerCase().includes("streamvault"))
         );
         if (!hasVmsServer) {
           issues.push({
             id: "missing_vms_server",
             category: "scope",
             severity: "warning",
-            title: "Missing VMS Recording Server / NVR",
-            summary: `${totalCameras} Camera(s) in scope, but no VMS Recording Server or NVR has been quoted`,
-            details: `Video surveillance is in-scope with ${totalCameras} IP camera(s), but no enterprise server appliance, storage array, or NVR has been added to the BOM to record camera streams.`,
-            actionLabel: "+ Add 2U NVR Recording Server",
+            standardsReference: "Genetec Streamvault SV-2000E / SV-4000E Hardware Sizing Guide",
+            title: "Missing VMS Recording Server / Streamvault Appliance",
+            summary: `${totalCameras} Camera(s) in scope, but no Streamvault / VMS Recording Server has been quoted`,
+            details: `Video surveillance is in-scope with ${totalCameras} IP camera(s), but no physical Streamvault appliance or VMS recording server has been added to the BOM to host the Security Center Archiver role and RAID storage.`,
+            actionLabel: typeof autoFitStreamvaultToBom === "function"
+              ? "+ Auto-Fit Streamvault Appliance to BOM"
+              : "+ Add 2U NVR Recording Server",
             actionFn: "quickAddDefaultNvrServer()",
             badgeText: "NO SERVER"
           });
@@ -1083,12 +1104,352 @@ function auditProjectHealth() {
     });
   }
 
+  // =========================================================================
+  // RULE 17: GENETEC SECURITY CENTER SERVER SPEC, ROLE ISOLATION & LICENSING AUDIT
+  // Enforces Genetec 5.13/5.14 ProductCompatability.pdf, SystemRequirements.pdf,
+  // Suprema Integration Guide, Corsight Syfty Guide, and StreamConnect v2.1 Rules
+  // =========================================================================
+  if (typeof GenetecLicensingSizer !== "undefined" && typeof GenetecLicensingSizer.calculate === "function") {
+    const licRes = GenetecLicensingSizer.calculate(projectBOM);
+    const mrSpec = licRes.multiRoleServerSpec || {};
+    const vLoad = licRes.videoLoad || {};
+
+    // Identify physical VMS / Directory / Analytics servers quoted on the BOM
+    const quotedHardwareServers = projectBOM.filter(i =>
+      !i.parentInstanceId &&
+      i.category !== "vms_software" &&
+      !String(i.role || "").includes("License") &&
+      !String(i.role || "").includes("Maintenance") &&
+      !String(i.role || "").includes("Database") &&
+      (i.role === "Server" || i.category === "servers" || String(i.model || "").toLowerCase().includes("streamvault") || String(i.model || "").toLowerCase().includes("nvr"))
+    );
+
+    const quotedGenetecLicItems = projectBOM.filter(i =>
+      !i.parentInstanceId &&
+      (i.category === "vms_software" || (i.vendor === "Genetec" && (String(i.role || "").includes("License") || String(i.role || "").includes("Maintenance"))))
+    );
+
+    const hasActiveGenetecScope = totalCameras > 0 ||
+      licRes.totalSynergisReaders > 0 ||
+      quotedHardwareServers.length > 0 ||
+      quotedGenetecLicItems.length > 0 ||
+      (mrSpec.activeRoleCount && mrSpec.activeRoleCount > 1);
+
+    if (hasActiveGenetecScope) {
+      // 17A. Unsynchronized Genetec Software Licenses or Mandatory Advantage Maintenance
+      const requiredPaidLineItems = (licRes.lineItems || []).filter(li => li.qty > 0 && li.unitMsrp > 0);
+      const missingOrUnderQuotedSkus = [];
+      requiredPaidLineItems.forEach(reqLi => {
+        const quotedQty = projectBOM
+          .filter(b => !b.parentInstanceId && (b.sku === reqLi.sku || b.id === reqLi.catalogId))
+          .reduce((sum, b) => sum + (parseInt(b.qty, 10) || 1), 0);
+        if (quotedQty < reqLi.qty) {
+          missingOrUnderQuotedSkus.push(`${reqLi.qty - quotedQty}x ${reqLi.sku}`);
+        }
+      });
+
+      if (missingOrUnderQuotedSkus.length > 0) {
+        issues.push({
+          id: "genetec_unsynced_bom_licenses",
+          category: "scope",
+          severity: "warning",
+          priority: 2,
+          standardsReference: "Genetec Security Center 5.13/5.14 ProductCompatability.pdf • Mandatory Advantage SMA",
+          title: `Unsynchronized Genetec Licenses & Mandatory Advantage (${missingOrUnderQuotedSkus.length} SKU${missingOrUnderQuotedSkus.length === 1 ? '' : 's'})`,
+          summary: `Genetec Security Center sizer requires ${missingOrUnderQuotedSkus.slice(0, 4).join(", ")}${missingOrUnderQuotedSkus.length > 4 ? ` (+${missingOrUnderQuotedSkus.length - 4} more)` : ''} not yet synchronized to the BOM`,
+          details: `Every Genetec Omnicast camera connection, Synergis reader connection, Sipelia intercom, AutoVu LPR unit, Intrusion panel, and Partner SDK connection requires matching perpetual SKUs and mandatory Genetec Advantage software maintenance (${licRes.advantageYears}-Year term) on the Bill of Materials.`,
+          actionLabel: `+ Synchronize All Genetec Licenses ($${licRes.totalSoftwareMsrp.toLocaleString()}) to BOM`,
+          actionFn: "if(typeof addGenetecLicensesToBom==='function'){addGenetecLicensesToBom(); updateProjectHealthUI(); renderProjectHealthModal();}",
+          badgeText: `${missingOrUnderQuotedSkus.length} SKUS UNSYNCED`
+        });
+      }
+
+      // 17B. Tier Compatibility & Entity Cap Violations (Standard vs Enterprise / AIO)
+      if (Array.isArray(licRes.compatibilityWarnings) && licRes.compatibilityWarnings.length > 0) {
+        issues.push({
+          id: "genetec_tier_compatibility_violation",
+          category: "scope",
+          severity: "critical",
+          priority: 1,
+          isConflict: true,
+          conflictBadge: "GENETEC TIER ENTITY CAP / FEATURE CONFLICT",
+          standardsReference: "Genetec Security Center 5.13/5.14 ProductCompatability.pdf",
+          conflictDetails: licRes.compatibilityWarnings.join(" "),
+          title: `Genetec Base Package Tier Compatibility Conflict (${licRes.effectiveTier.toUpperCase()} Tier)`,
+          summary: licRes.compatibilityWarnings[0],
+          details: `Security Center Base Standard (GSC-BASE-S) is capped at 100 cameras, 100 readers, 1 Archiver role, and 25 concurrent clients, and excludes Enterprise-only features (Standby/Failover Archiver, Multi-Site Federation, Global Cardholder Sync, Sipelia, Intrusion Panels, RSA, Threat Level, and Partner SDKs). Streamvault All-in-One (AIO) is capped at 32 cameras. Upgrade the Base Package Tier to Enterprise (GSC-BASE-E) to resolve.`,
+          actionLabel: "+ Upgrade to Enterprise Tier (GSC-BASE-E) & Re-Sync",
+          actionFn: "quickUpgradeGenetecToEnterpriseTier()",
+          badgeText: "TIER CAP EXCEEDED"
+        });
+      }
+
+      // 17C. Microsoft SQL Server 2025 Express 50 GB Database Cap Exceeded
+      if (licRes.coreFailover !== "full" && licRes.estimatedSqlDbGb > (licRes.sqlExpressMaxGb || 50)) {
+        issues.push({
+          id: "genetec_sql_express_50gb_cap_exceeded",
+          category: "capacity",
+          severity: "warning",
+          priority: 2,
+          isConflict: true,
+          conflictBadge: "SQL SERVER 2025 EXPRESS 50 GB CAP EXCEEDED",
+          standardsReference: "Genetec SystemRequirements.pdf • SQL Database Sizing",
+          conflictDetails: `Estimated Security Center SQL database size is ${licRes.estimatedSqlDbGb} GB across ${licRes.cameraUnits} cameras, ${licRes.totalSynergisReaders} readers, and active LPR/metadata plugins, exceeding the 50 GB cap of bundled Microsoft SQL Server 2025 Express.`,
+          title: `SQL Server 2025 Express 50 GB Limit Exceeded (Est. ${licRes.estimatedSqlDbGb} GB DB)`,
+          summary: `Estimated SQL DB footprint (${licRes.estimatedSqlDbGb} GB) exceeds the 50 GB cap of bundled SQL Server 2025 Express`,
+          details: `While Microsoft SQL Server 2025 Express (50 GB limit, included at $0.00) is default for Core Failover = None or Directory Only, deployments exceeding 50 GB of event/LPR/access history or requiring Full Core + Database Failover must license Microsoft SQL Server Standard (7NQ-01025 @ $1,418).`,
+          actionLabel: "+ Upgrade to Full Core Failover & SQL Standard ($1,418)",
+          actionFn: "quickEnableGenetecSqlStandard()",
+          badgeText: `${licRes.estimatedSqlDbGb} GB > 50 GB CAP`
+        });
+      }
+
+      // 17D. Multi-Role Server Hardware Inspection (RAM, Throughput, Storage, Dedicated Directory & GPU Isolation)
+      if (quotedHardwareServers.length > 0) {
+        let totalServerUnits = 0;
+        let maxQuotedServerRamGb = 0;
+        let totalQuotedIngestMbps = 0;
+        let totalQuotedUsableTb = 0;
+        let hasGpuAnalyticsServer = false;
+
+        quotedHardwareServers.forEach(srv => {
+          const catSrv = (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === srv.id || s.sku === srv.sku) || {};
+          const qty = parseInt(srv.qty, 10) || 1;
+          totalServerUnits += qty;
+          const ram = Number(srv.ramGb || catSrv.ramGb || 16);
+          if (ram > maxQuotedServerRamGb) maxQuotedServerRamGb = ram;
+          const ingest = Number(srv.maxIngestBandwidthMbps || catSrv.maxIngestBandwidthMbps || 300);
+          totalQuotedIngestMbps += ingest * qty;
+          const tb = Number(srv.usableStorageTb !== undefined ? srv.usableStorageTb : (catSrv.usableStorageTb || 0));
+          totalQuotedUsableTb += tb * qty;
+          if (srv.gpuModel || catSrv.gpuModel || srv.serverType === "video_analytics" || catSrv.serverType === "video_analytics" || String(srv.sku || "").includes("SVA-")) {
+            hasGpuAnalyticsServer = true;
+          }
+        });
+
+        // 17D-1: Dedicated Directory Server Isolation Required (>300 cameras, >1,000 readers, or Core Failover active)
+        if (mrSpec.dedicatedDirectoryRequired && totalServerUnits < 2) {
+          issues.push({
+            id: "genetec_dedicated_directory_isolation",
+            category: "hardware",
+            severity: "critical",
+            priority: 2,
+            isConflict: true,
+            conflictBadge: "MULTI-ROLE CO-HOSTING VIOLATION (DIRECTORY ISOLATION)",
+            standardsReference: "Genetec SystemRequirements.pdf Page 15 • Dedicated Directory Rule",
+            conflictDetails: `Co-hosting the Directory, Archiver, and SQL roles on a single server above 300 cameras (${licRes.cameraUnits} cameras), 1,000 readers (${licRes.totalSynergisReaders} readers), or when Core Failover (${licRes.coreFailover}) is active causes severe SQL contention and Archiver frame drops.`,
+            title: "Dedicated Streamvault Directory Server Required (Role Isolation)",
+            summary: `Only ${totalServerUnits} server quoted for ${licRes.cameraUnits} cameras / ${licRes.totalSynergisReaders} readers (Core Failover: ${licRes.coreFailover})`,
+            details: `Per Genetec Security Center 5.13/5.14 System Requirements (Page 15), the Directory role must be isolated onto a dedicated 1U management appliance (SV-2012E-R2-1T-8-110) whenever cameras exceed 300, readers exceed 1,000, or Core Failover is enabled.`,
+            actionLabel: "+ Add Dedicated 1U Streamvault Directory Server (SV-2012E)",
+            actionFn: "quickAddDedicatedDirectoryServer()",
+            badgeText: "ISOLATE DIRECTORY"
+          });
+        }
+
+        // 17D-2: Multi-Role Server RAM Deficit
+        if (mrSpec.recommendedRamGb && maxQuotedServerRamGb < mrSpec.recommendedRamGb) {
+          const roleNames = Array.isArray(mrSpec.roleBreakdown) ? mrSpec.roleBreakdown.map(r => r.role).join(" + ") : "Multi-Role Security Center";
+          issues.push({
+            id: "genetec_server_ram_deficit",
+            category: "hardware",
+            severity: "warning",
+            priority: 2,
+            isConflict: true,
+            conflictBadge: "MULTI-ROLE SERVER RAM UNDERSIZED",
+            standardsReference: "Genetec SystemRequirements.pdf & Suprema Integration Guide Page 3",
+            conflictDetails: `Quoted server has ${maxQuotedServerRamGb} GB RAM, but co-hosting ${mrSpec.activeRoleCount} active roles (${roleNames}) requires ${mrSpec.recommendedRamGb} GB RAM (${mrSpec.cpuTier}).`,
+            title: `Server Memory Deficit for Co-Hosted Roles (${maxQuotedServerRamGb} GB vs ${mrSpec.recommendedRamGb} GB Required)`,
+            summary: `Quoted server provides ${maxQuotedServerRamGb} GB RAM; ${mrSpec.activeRoleCount} active Genetec roles require at least ${mrSpec.recommendedRamGb} GB RAM`,
+            details: `When sharing multiple Security Center roles and plugins (${roleNames}) on a server, RAM requirements are additive (e.g., Suprema Plugin requires 32 GB minimum / 64 GB recommended; >100 cameras or >3 roles require 32–64+ GB RAM). Auto-fit Streamvault hardware to upgrade to a compliant appliance.`,
+            actionLabel: `+ Auto-Fit Streamvault Hardware (${mrSpec.recommendedRamGb} GB+ Spec)`,
+            actionFn: "if(typeof autoFitStreamvaultToBom==='function'){autoFitStreamvaultToBom(); updateProjectHealthUI(); renderProjectHealthModal();}",
+            badgeText: `${maxQuotedServerRamGb}GB < ${mrSpec.recommendedRamGb}GB RAM`
+          });
+        }
+
+        // 17D-3: Server Recording Bitrate / Ingress Throughput Deficit
+        if (vLoad.peakIngressMbps > 0 && totalQuotedIngestMbps > 0 && vLoad.peakIngressMbps > totalQuotedIngestMbps) {
+          issues.push({
+            id: "genetec_server_throughput_deficit",
+            category: "capacity",
+            severity: "critical",
+            priority: 2,
+            standardsReference: "Genetec Streamvault SV-2000E / SV-4000E Throughput Specs (300/600 Mbps RAID Cap)",
+            title: `Streamvault Recording Bitrate Deficit (${vLoad.peakIngressMbps} Mbps Load vs ${totalQuotedIngestMbps} Mbps Rated)`,
+            summary: `Camera recording bitrate (${vLoad.peakIngressMbps} Mbps) exceeds quoted server RAID ingest ceiling (${totalQuotedIngestMbps} Mbps)`,
+            details: `Genetec Omnicast Archiver roles are capped at 300 Mbps per single-RAID appliance (up to 600 Mbps on dual-RAID SV-4000E appliances with 10GbE NICs). Add or upgrade Streamvault recording appliances to prevent dropped keyframes.`,
+            actionLabel: "+ Auto-Fit Streamvault Archivers for Bitrate",
+            actionFn: "if(typeof autoFitStreamvaultToBom==='function'){autoFitStreamvaultToBom(); updateProjectHealthUI(); renderProjectHealthModal();}",
+            badgeText: `${vLoad.peakIngressMbps} MBPS LOAD`
+          });
+        }
+
+        // 17D-4: Server Usable RAID Storage Deficit
+        if (vLoad.requiredUsableTb > 0 && totalQuotedUsableTb < vLoad.requiredUsableTb * 0.95) {
+          const deficitTb = Math.round((vLoad.requiredUsableTb - totalQuotedUsableTb) * 10) / 10;
+          issues.push({
+            id: "genetec_server_storage_deficit",
+            category: "capacity",
+            severity: "warning",
+            priority: 2,
+            standardsReference: "Genetec Omnicast Retention & RAID-6 Usable Capacity Standard",
+            title: `VMS Usable Storage Deficit (${totalQuotedUsableTb} TB Quoted vs ${vLoad.requiredUsableTb} TB Required)`,
+            summary: `Quoted server usable storage (${totalQuotedUsableTb} TB) is ${deficitTb} TB below the ${vLoad.retentionDays || 30}-day retention requirement (${vLoad.requiredUsableTb} TB)`,
+            details: `Recording ${licRes.cameraUnits} camera(s) for ${vLoad.retentionDays || 30} days requires ${vLoad.requiredUsableTb} TB of net usable RAID storage (${vLoad.recommendedRawTb || vLoad.requiredUsableTb} TB raw). Click below to auto-fit Streamvault RAID-5/RAID-6 appliances.`,
+            actionLabel: `+ Auto-Fit Streamvault Storage (${vLoad.requiredUsableTb} TB Needed)`,
+            actionFn: "if(typeof autoFitStreamvaultToBom==='function'){autoFitStreamvaultToBom(); updateProjectHealthUI(); renderProjectHealthModal();}",
+            badgeText: `${deficitTb} TB SHORT`
+          });
+        }
+
+        // 17E. Dedicated GPU Analytics Server Isolation (BriefCam / Corsight AI)
+        if (mrSpec.dedicatedAnalyticsServerRequired && !hasGpuAnalyticsServer) {
+          issues.push({
+            id: "genetec_gpu_analytics_isolation",
+            category: "hardware",
+            severity: "critical",
+            priority: 2,
+            isConflict: true,
+            conflictBadge: "GPU ANALYTICS CO-HOSTING VIOLATION",
+            standardsReference: "Genetec SVA-1000E Datasheet & Corsight Syfty Genetec User Guide 2026",
+            conflictDetails: `BriefCam (${licRes.briefCamConnections} ch) and/or Corsight AI (${licRes.corsightAiBridges} bridge(s)) require dedicated NVIDIA RTX/Tesla GPU acceleration and must NEVER be co-hosted on a Security Center Archiver server.`,
+            title: "Dedicated GPU Video Analytics Appliance Required (SVA-1000E)",
+            summary: `AI Video Analytics enabled (${licRes.briefCamConnections > 0 ? `BriefCam: ${licRes.briefCamConnections} ch` : ''}${licRes.briefCamConnections > 0 && licRes.corsightAiBridges > 0 ? ', ' : ''}${licRes.corsightAiBridges > 0 ? `Corsight AI: ${licRes.corsightAiBridges} bridge(s)` : ''}), but no GPU Analytics Server is on the BOM`,
+            details: `Co-hosting deep-learning facial recognition or video synopsis on a VMS recording server exhausts CPU/PCIe lanes and causes recording failure. Add a dedicated Genetec Streamvault SVA-1000E GPU Analytics Appliance.`,
+            actionLabel: "+ Add Dedicated SVA-1000E GPU Analytics Appliance",
+            actionFn: "quickAddDedicatedAnalyticsServer()",
+            badgeText: "MISSING GPU SERVER"
+          });
+        }
+      } else if (mrSpec.dedicatedAnalyticsServerRequired) {
+        issues.push({
+          id: "genetec_gpu_analytics_isolation",
+          category: "hardware",
+          severity: "critical",
+          priority: 2,
+          isConflict: true,
+          conflictBadge: "GPU ANALYTICS APPLIANCE MISSING",
+          standardsReference: "Genetec SVA-1000E Datasheet & Corsight Syfty Genetec User Guide 2026",
+          conflictDetails: `BriefCam and/or Corsight AI Syfty Suite require a dedicated GPU Analytics Server (SVA-1000E) isolated from the Archiver.`,
+          title: "Dedicated GPU Video Analytics Appliance Required (SVA-1000E)",
+          summary: `BriefCam / Corsight AI enabled in licensing, but no SVA-1000E GPU Analytics Server is quoted on the BOM`,
+          details: `Add a dedicated Genetec Streamvault SVA-1000E GPU Analytics Appliance to process AI video streams offloaded from the Archiver.`,
+          actionLabel: "+ Add Dedicated SVA-1000E GPU Analytics Appliance",
+          actionFn: "quickAddDedicatedAnalyticsServer()",
+          badgeText: "MISSING GPU SERVER"
+        });
+      }
+
+      // 17F. Corsight AI Syfty Suite v1.1 H.264 Stream & Media Gateway RTSPS Conflict
+      if (licRes.corsightAiBridges > 0) {
+        const sizerCodec = (typeof VideoStorageSizer !== "undefined" && VideoStorageSizer.state && VideoStorageSizer.state.codec)
+          ? VideoStorageSizer.state.codec
+          : "H.265";
+        const hasH265Cameras = sizerCodec === "H.265" || cameraItems.some(c => String(c.compression || "").toUpperCase() === "H.265");
+        if (hasH265Cameras) {
+          issues.push({
+            id: "genetec_corsight_h264_rtsps_conflict",
+            category: "hardware",
+            severity: "warning",
+            priority: 1,
+            isConflict: true,
+            conflictBadge: "CORSIGHT AI H.265 CODEC & RTSPS CONFLICT",
+            standardsReference: "Corsight Syfty Genetec User Guide 2026 (v1.1) Page 11",
+            conflictDetails: `Corsight Fortify facial recognition requires H.264 RTSP camera streams (H.265 and MJPEG are NOT supported) and requires the Genetec Media Gateway Role with RTSPS (Require TLS) DISABLED.`,
+            title: "Corsight AI Syfty Suite Requires H.264 Stream & Media Gateway (RTSPS Disabled)",
+            summary: `Corsight AI (${licRes.corsightAiBridges} Bridge / ${licRes.corsightAiSdkConnections} SDKs) is active while camera compression is set to H.265`,
+            details: `Per the Corsight Syfty Genetec User Guide 2026 (Page 11): (1) Camera streams analyzed by Corsight Fortify must be configured for H.264 (H.265 and MJPEG are unsupported), and (2) Genetec Media Gateway Role must be active with RTSPS 'Require TLS' unchecked.`,
+            actionLabel: "+ Switch Project Video Codec to H.264 for Corsight AI",
+            actionFn: "quickSetCodecH264ForCorsight()",
+            badgeText: "H.264 REQUIRED"
+          });
+        }
+      }
+
+      // 17G. Suprema Biometric Plugin v1.00 Door Reader License & Dedicated Synergis Cloud Link Rules
+      if (licRes.supremaDevices > 0) {
+        if (licRes.totalSynergisReaders < licRes.supremaDevices) {
+          const missingRdrs = licRes.supremaDevices - licRes.totalSynergisReaders;
+          issues.push({
+            id: "genetec_suprema_reader_license_deficit",
+            category: "scope",
+            severity: "critical",
+            priority: 1,
+            isConflict: true,
+            conflictBadge: "SUPREMA DOOR READER LICENSE DEFICIT",
+            standardsReference: "Suprema Genetec Security Center Integration Guide v1.00 Page 4",
+            conflictDetails: `${licRes.supremaDevices} Suprema biometric device(s) configured, but only ${licRes.totalSynergisReaders} Synergis Reader License(s) (GSC-Sy-X-1R/1RE) are configured. Every Suprema device used as a door reader requires 1x GSC-Sy-X-1R(E) in addition to 3x GSC-1SDK-SUPREMA-READ per server ($750/server).`,
+            title: `Missing Synergis Door Reader Licenses for Suprema Devices (${missingRdrs} Short)`,
+            summary: `${licRes.supremaDevices} Suprema biometric terminal(s) require at least ${licRes.supremaDevices} Synergis Reader Licenses (currently ${licRes.totalSynergisReaders})`,
+            details: `Per Suprema Plugin for Genetec v1.00 documentation (Page 4), each server requires 3x GSC-1SDK-SUPREMA-READ ($250 MSRP each = $750/server), AND each Suprema device acting as an access control door reader consumes 1x GSC-Sy-X-1R(E) Synergis reader license.`,
+            actionLabel: `+ Set Synergis Readers to ${licRes.supremaDevices} & Synchronize BOM`,
+            actionFn: `quickSyncSupremaReaderLicenses(${licRes.supremaDevices})`,
+            badgeText: `${missingRdrs} READER LICS SHORT`
+          });
+        }
+
+        const requiredCloudLinks = licRes.supremaCloudLinksNeeded || Math.ceil(licRes.supremaDevices / 50);
+        const quotedCloudLinks = projectBOM
+          .filter(i => !i.parentInstanceId && (i.id === "genetec-synergis-cloudlink" || i.sku === "SY-CLOUDLINK" || String(i.model || "").toLowerCase().includes("cloud link")))
+          .reduce((sum, i) => sum + (parseInt(i.qty, 10) || 1), 0);
+
+        if (quotedCloudLinks < requiredCloudLinks) {
+          const missingCl = requiredCloudLinks - quotedCloudLinks;
+          issues.push({
+            id: "genetec_suprema_dedicated_cloudlink_deficit",
+            category: "hardware",
+            severity: "warning",
+            priority: 2,
+            isConflict: true,
+            conflictBadge: "SUPREMA DEDICATED SYNERGIS CLOUD LINK & RIO RULE",
+            standardsReference: "Suprema Genetec Security Center Integration Guide v1.00 Pages 4 & 16",
+            conflictDetails: `Suprema biometric devices require a DEDICATED Synergis Cloud Link (3rd-party Mercury/HID controllers cannot share the same Cloud Link), RIO must be enabled on the Cloud Link, and each Cloud Link supports a maximum of 50 Suprema devices.`,
+            title: `Dedicated Synergis Cloud Link Required for Suprema Biometrics (${quotedCloudLinks}/${requiredCloudLinks} Quoted)`,
+            summary: `${licRes.supremaDevices} Suprema device(s) require ${requiredCloudLinks} dedicated Synergis Cloud Link appliance(s) (max 50 devices/Cloud Link, RIO enabled)`,
+            details: `Per Suprema Integration Guide (Pages 4 & 16): (1) Suprema devices cannot share a Synergis Cloud Link with other 3rd-party controllers, (2) RIO must be enabled via '/zig' on the Cloud Link, and (3) each Cloud Link is capped at 50 Suprema devices.`,
+            actionLabel: `+ Add ${missingCl}x Dedicated Synergis Cloud Link (SY-CLOUDLINK)`,
+            actionFn: `quickAddSynergisCloudLinks(${missingCl})`,
+            badgeText: `${missingCl} CLOUD LINK NEEDED`
+          });
+        }
+      }
+
+      // 17H. Allied Telesis StreamConnect v2.1 Virtual Chassis Stacking (VCS) Conflict
+      if (licRes.alliedStreamConnectInstances > 0) {
+        const stackedAlliedSwitches = projectBOM.filter(i =>
+          !i.parentInstanceId &&
+          i.vendor === "Allied Telesis" &&
+          (parseInt(i.stackedUnits, 10) || 0) >= 2
+        );
+        if (stackedAlliedSwitches.length > 0) {
+          issues.push({
+            id: "genetec_allied_streamconnect_vcs_conflict",
+            category: "hardware",
+            severity: "warning",
+            priority: 1,
+            isConflict: true,
+            conflictBadge: "ALLIED TELESIS STREAMCONNECT VCS STACKING CONFLICT",
+            standardsReference: "StreamConnect for Genetec v2.1 User Guide Page 6",
+            conflictDetails: `Allied Telesis StreamConnect v2.1 (GSC-1SDK-ALLIED-STREAMCONNECT) does NOT support switches configured in Virtual Chassis Stacking (VCS) mode.`,
+            title: `Allied Telesis StreamConnect v2.1 Incompatible with VCS Stacked Switches (${stackedAlliedSwitches.length} Stack${stackedAlliedSwitches.length === 1 ? '' : 's'})`,
+            summary: `StreamConnect v2.1 is enabled, but ${stackedAlliedSwitches.length} Allied Telesis switch(es) are configured in Virtual Chassis Stacking (VCS) mode`,
+            details: `Per the Allied Telesis StreamConnect for Genetec v2.1 User Guide (Page 6, Limitations), switches operating in Virtual Chassis Stacking (VCS) are not supported by the StreamConnect plugin. Configure switches as standalone units to monitor PoE and port telemetry in Security Center.`,
+            actionLabel: "+ Convert Allied Telesis Switches to Standalone (Unstack)",
+            actionFn: "quickUnstackAlliedSwitchesForStreamConnect()",
+            badgeText: "VCS UNSUPPORTED"
+          });
+        }
+      }
+    }
+  }
+
   const criticalCount = issues.filter(i => i.severity === "critical").length;
   const warningCount = issues.filter(i => i.severity === "warning").length;
   const conflictCount = issues.filter(i => i.isConflict).length;
   const codeCount = issues.filter(i => i.priority === 1).length;
   const orionCount = issues.filter(i => i.priority === 2).length;
-  const totalAudits = 16;
+  const totalAudits = 17;
   const passedCount = Math.max(0, totalAudits - Math.min(totalAudits, criticalCount + warningCount));
   const score = Math.max(0, Math.min(100, 100 - (criticalCount * 15) - (warningCount * 5)));
 
@@ -1616,8 +1977,15 @@ function quickAddPatchPanelToCloset(targetLoc) {
 
 function quickAddDefaultNvrServer() {
   if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
-  const targetLoc = "MDF • Rack-1";
 
+  if (typeof autoFitStreamvaultToBom === "function" && typeof GenetecLicensingSizer !== "undefined") {
+    autoFitStreamvaultToBom();
+    updateProjectHealthUI();
+    renderProjectHealthModal();
+    return;
+  }
+
+  const targetLoc = "MDF • Rack-1";
   projectBOM.push({
     instanceId: `nvr-${Date.now()}`,
     id: "SVR-2U-NVR-128CH",
@@ -1785,6 +2153,14 @@ function autoFixUnassignedGear() {
 
 function autoAddMissingLicenses() {
   if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+
+  if (typeof addGenetecLicensesToBom === "function" && typeof GenetecLicensingSizer !== "undefined") {
+    addGenetecLicensesToBom();
+    updateProjectHealthUI();
+    renderProjectHealthModal();
+    return;
+  }
+
   const cameraItems = projectBOM.filter(i =>
     !i.parentInstanceId &&
     (i.category === "cameras" || i.role === "Camera" || i.deviceType === "camera" || (i.model || '').toLowerCase().includes("camera"))
@@ -2067,8 +2443,51 @@ function autoFixAllProjectMisses() {
     });
   }
 
+  // Rule 17 Genetec Server Spec, Role Isolation & Licensing Auto-Remediations
+  if (audit.issues.some(i => i.id === "genetec_tier_compatibility_violation")) {
+    quickUpgradeGenetecToEnterpriseTier();
+  }
+  if (audit.issues.some(i => i.id === "genetec_sql_express_50gb_cap_exceeded")) {
+    quickEnableGenetecSqlStandard();
+  }
+  if (audit.issues.some(i => i.id === "genetec_suprema_reader_license_deficit")) {
+    const licRes = typeof GenetecLicensingSizer !== "undefined" ? GenetecLicensingSizer.calculate(projectBOM) : null;
+    if (licRes && licRes.supremaDevices > 0) {
+      quickSyncSupremaReaderLicenses(licRes.supremaDevices);
+    }
+  }
+  if (audit.issues.some(i => i.id === "genetec_suprema_dedicated_cloudlink_deficit")) {
+    const licRes = typeof GenetecLicensingSizer !== "undefined" ? GenetecLicensingSizer.calculate(projectBOM) : null;
+    const reqCl = licRes ? (licRes.supremaCloudLinksNeeded || Math.ceil((licRes.supremaDevices || 0) / 50)) : 1;
+    const quotedCl = projectBOM
+      .filter(i => !i.parentInstanceId && (i.id === "genetec-synergis-cloudlink" || i.sku === "SY-CLOUDLINK" || String(i.model || "").toLowerCase().includes("cloud link")))
+      .reduce((sum, i) => sum + (parseInt(i.qty, 10) || 1), 0);
+    if (reqCl > quotedCl) {
+      quickAddSynergisCloudLinks(reqCl - quotedCl);
+    }
+  }
+  if (audit.issues.some(i => i.id === "genetec_dedicated_directory_isolation")) {
+    quickAddDedicatedDirectoryServer();
+  }
+  if (audit.issues.some(i => i.id === "genetec_gpu_analytics_isolation")) {
+    quickAddDedicatedAnalyticsServer();
+  }
+  if (audit.issues.some(i => i.id === "genetec_server_ram_deficit" || i.id === "genetec_server_throughput_deficit" || i.id === "genetec_server_storage_deficit")) {
+    if (typeof autoFitStreamvaultToBom === "function") autoFitStreamvaultToBom();
+  }
+  if (audit.issues.some(i => i.id === "genetec_corsight_h264_rtsps_conflict")) {
+    quickSetCodecH264ForCorsight();
+  }
+  if (audit.issues.some(i => i.id === "genetec_allied_streamconnect_vcs_conflict")) {
+    quickUnstackAlliedSwitchesForStreamConnect();
+  }
+  if (audit.issues.some(i => i.id === "genetec_unsynced_bom_licenses")) {
+    if (typeof addGenetecLicensesToBom === "function") addGenetecLicensesToBom();
+  }
+
   updateBOMView();
   updateProjectHealthUI();
+  renderProjectHealthModal();
   if (typeof showToast === "function") {
     showToast("1-Click Remediation Complete: All National Code, Orion Standards, and Manufacturer Conflicts resolved!");
   }
@@ -2287,6 +2706,141 @@ function quickAddSecondaryPdu(closetName) {
   }
 }
 
+// =========================================================================
+// RULE 17 GENETEC SERVER SPEC, ROLE ISOLATION & LICENSING REMEDIATION HELPERS
+// =========================================================================
+function quickUpgradeGenetecToEnterpriseTier() {
+  if (typeof setGenetecLicParam === "function") {
+    setGenetecLicParam("tierMode", "enterprise");
+  } else if (typeof window.genetecLicensingConfig === "object" && window.genetecLicensingConfig) {
+    window.genetecLicensingConfig.tierMode = "enterprise";
+  }
+  if (typeof addGenetecLicensesToBom === "function") {
+    addGenetecLicensesToBom();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast("Upgraded Genetec Base Package Tier to Enterprise (GSC-BASE-E) & re-synchronized BOM licenses.");
+  }
+}
+
+function quickEnableGenetecSqlStandard() {
+  if (typeof setGenetecLicParam === "function") {
+    setGenetecLicParam("coreFailover", "full");
+  } else if (typeof window.genetecLicensingConfig === "object" && window.genetecLicensingConfig) {
+    window.genetecLicensingConfig.coreFailover = "full";
+  }
+  if (typeof addGenetecLicensesToBom === "function") {
+    addGenetecLicensesToBom();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast("Enabled Full Core + Database Failover & added Microsoft SQL Server Standard ($1,418) to BOM.");
+  }
+}
+
+function quickAddDedicatedDirectoryServer() {
+  if (typeof addToBOM === "function") {
+    addToBOM("genetec-sv-2012e-r2-1t-8", 1);
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast("Added Dedicated 1U Streamvault Directory Server (SV-2012E-R2-1T-8-110) to isolate Directory & SQL roles.");
+  }
+}
+
+function quickAddDedicatedAnalyticsServer() {
+  if (typeof addToBOM === "function") {
+    addToBOM("genetec-sva-1000e-r2-gpu", 1);
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast("Added Dedicated Streamvault SVA-1000E GPU Analytics Server to isolate BriefCam / Corsight AI workloads.");
+  }
+}
+
+function quickSetCodecH264ForCorsight() {
+  if (typeof VideoStorageSizer !== "undefined" && VideoStorageSizer.state) {
+    VideoStorageSizer.state.codec = "H.264";
+  }
+  if (Array.isArray(projectBOM)) {
+    projectBOM.forEach(item => {
+      if (!item.parentInstanceId && (item.role === "Camera" || item.category === "camera" || item.category === "cameras")) {
+        item.compression = "H.264";
+      }
+    });
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast("Switched camera video streams to H.264 for Corsight AI Syfty Suite v1.1 compatibility.");
+  }
+}
+
+function quickSyncSupremaReaderLicenses(targetReaders) {
+  const count = Math.max(1, parseInt(targetReaders, 10) || 1);
+  if (typeof setGenetecLicParam === "function") {
+    setGenetecLicParam("enableAccessControl", true);
+    setGenetecLicParam("synergisGenetecReaders", count);
+  } else if (typeof window.genetecLicensingConfig === "object" && window.genetecLicensingConfig) {
+    window.genetecLicensingConfig.enableAccessControl = true;
+    window.genetecLicensingConfig.synergisGenetecReaders = count;
+  }
+  if (typeof addGenetecLicensesToBom === "function") {
+    addGenetecLicensesToBom();
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast(`Set Synergis Reader Connections to ${count} (1 per Suprema door reader) & synchronized BOM.`);
+  }
+}
+
+function quickAddSynergisCloudLinks(qtyToAdd = 1) {
+  const count = Math.max(1, parseInt(qtyToAdd, 10) || 1);
+  if (typeof addToBOM === "function") {
+    addToBOM("genetec-synergis-cloudlink", count);
+  }
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast(`Added ${count}x Dedicated Synergis Cloud Link (SY-CLOUDLINK) for Suprema Biometric Integration (RIO Enabled, <=50 devices/Cloud Link).`);
+  }
+}
+
+function quickUnstackAlliedSwitchesForStreamConnect() {
+  if (!Array.isArray(projectBOM)) return;
+  let unstacked = 0;
+  projectBOM.forEach(item => {
+    if (!item.parentInstanceId && item.vendor === "Allied Telesis" && (parseInt(item.stackedUnits, 10) || 0) >= 2) {
+      if (typeof updateStackedCount === "function") {
+        updateStackedCount(item.instanceId, 0);
+      } else {
+        item.stackedUnits = 0;
+      }
+      unstacked++;
+    }
+  });
+  updateBOMView();
+  updateProjectHealthUI();
+  renderProjectHealthModal();
+  if (typeof showToast === "function") {
+    showToast(`Unstacked ${unstacked} Allied Telesis switch(es) for StreamConnect v2.1 compatibility (VCS unsupported).`);
+  }
+}
+
 // Window Compatibility Exports
 window.auditProjectHealth = auditProjectHealth;
 window.updateProjectHealthUI = updateProjectHealthUI;
@@ -2315,4 +2869,12 @@ window.quickAdd8023btSurgeProtector = quickAdd8023btSurgeProtector;
 window.quickUpgradeToCat6A = quickUpgradeToCat6A;
 window.quickAddBuildingEntranceTerminal = quickAddBuildingEntranceTerminal;
 window.quickAddSecondaryPdu = quickAddSecondaryPdu;
+window.quickUpgradeGenetecToEnterpriseTier = quickUpgradeGenetecToEnterpriseTier;
+window.quickEnableGenetecSqlStandard = quickEnableGenetecSqlStandard;
+window.quickAddDedicatedDirectoryServer = quickAddDedicatedDirectoryServer;
+window.quickAddDedicatedAnalyticsServer = quickAddDedicatedAnalyticsServer;
+window.quickSetCodecH264ForCorsight = quickSetCodecH264ForCorsight;
+window.quickSyncSupremaReaderLicenses = quickSyncSupremaReaderLicenses;
+window.quickAddSynergisCloudLinks = quickAddSynergisCloudLinks;
+window.quickUnstackAlliedSwitchesForStreamConnect = quickUnstackAlliedSwitchesForStreamConnect;
 
