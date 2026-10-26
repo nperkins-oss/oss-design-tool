@@ -419,10 +419,22 @@ let videoShowDetailsPanel = true;
 let videoLowFpsUntilMotion = false; // Record at low FPS (e.g. 2 FPS) during idle/non-motion and boost to target FPS on motion/event
 let videoIdleFps = 2;               // Default low frame rate (2 FPS) during idle periods
 let videoFailoverStructure = "none"; // "none" | "ring" | "dedicated"
-let videoRingNodeCount = 0;          // 0 = Auto (4-node ring A > B > C > D > A)
-let videoDedicatedFailoverCount = 1; // Number of dedicated hot-standby failover servers (N + M)
+let videoRingNodeCount = 0;          // 0 = Auto (dynamically uses actual server count N >= 2)
+let videoDedicatedPrimaryCount = 0;  // 0 = Auto (N main servers failing over into the dedicated pool)
+let videoDedicatedFailoverCount = 1; // Number of dedicated hot-standby failover servers (M in N+M)
+let videoMaxSimultaneousFailures = 1;// Number of main servers that can fail simultaneously onto the shared failover pool (1 = N+1 standard, or 2..N)
 let videoFailoverRetentionDays = 0;  // 0 = Full primary retention mirror on failover buffer
 let videoFailoverIncludeStorageBuffer = true;
+let videoSyncAllColumns = {
+  heads: false,
+  resolutionMp: false,
+  fps: false,
+  lowFpsUntilMotion: false,
+  codec: false,
+  sceneActivity: false,
+  motionDutyPct: false,
+  retentionDays: false
+};
 
 // 7. Access Control Filters & Door Package Builder State
 let selectedAcsVendors = [];
@@ -1849,7 +1861,9 @@ function buildCalculatorStrip() {
           softwareMotionDetection: videoSoftwareMotion,
           failoverStructure: videoFailoverStructure,
           ringNodeCount: videoRingNodeCount,
+          dedicatedPrimaryCount: videoDedicatedPrimaryCount,
           dedicatedFailoverCount: videoDedicatedFailoverCount,
+          maxSimultaneousFailures: videoMaxSimultaneousFailures,
           failoverRetentionDays: videoFailoverRetentionDays,
           failoverIncludeStorageBuffer: videoFailoverIncludeStorageBuffer
         })
@@ -1991,26 +2005,13 @@ function buildCalculatorStrip() {
               ` : ''}
             </div>
 
-            <!-- Global Low-FPS Until Motion/Event Boost, Storage RAID & Genetec Archiver Role Controls -->
+            <!-- Global Storage RAID & Genetec Archiver Role Controls -->
             <div class="flex flex-wrap items-center gap-2">
-              <!-- Low-FPS (2 FPS) Until Motion/Event Boost Checkbox -->
-              <div class="flex items-center gap-2 bg-slate-900 border ${vCalc.lowFpsUntilMotion ? 'border-emerald-500/70 bg-emerald-950/25' : 'border-slate-800'} rounded-lg px-2.5 py-1 transition-all" title="Record continuously at a low frame rate (e.g., 2 FPS) during idle/non-motion periods and boost to the target high frame rate during motion or events">
-                <label class="flex items-center gap-1.5 cursor-pointer select-none">
-                  <input type="checkbox" ${vCalc.lowFpsUntilMotion ? 'checked' : ''} onchange="setVideoSizerParam('lowFpsUntilMotion', this.checked)" class="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer" />
-                  <span class="text-[10px] font-bold uppercase tracking-wide ${vCalc.lowFpsUntilMotion ? 'text-emerald-300' : 'text-slate-300'}">Low-FPS Until Motion/Event</span>
-                </label>
-                <div class="flex items-center gap-1 pl-1 border-l border-slate-700/80">
-                  <span class="text-[9px] font-mono text-slate-400">Idle:</span>
-                  <select onchange="setVideoSizerParam('idleFps', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1 py-0.5 text-emerald-300 font-mono font-bold text-[10px] focus:outline-none cursor-pointer" title="Baseline recording frame rate when no motion/event is active (default 2 FPS)">
-                    ${[1, 2, 3, 4, 5].map(ifps => `<option value="${ifps}" class="bg-slate-900" ${(vCalc.idleFps || 2) === ifps ? 'selected' : ''}>${ifps} FPS</option>`).join('')}
-                  </select>
-                </div>
-                ${vCalc.lowFpsUntilMotion ? `
-                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-700/60 text-emerald-300" title="Continuous ${vCalc.idleFps || 2} FPS baseline adds ${vCalc.lowFpsAddedMbps || 0} Mbps average (+${vCalc.lowFpsAddedUsableTb || 0} TB usable storage) compared to motion-only recording">
-                    ${vCalc.idleIngressMbps || 0} Mbps Idle ➔ ${vCalc.peakIngressMbps} Mbps Boost (+${vCalc.lowFpsAddedUsableTb || 0} TB)
-                  </span>
-                ` : ''}
-              </div>
+              ${vCalc.anyLowFpsUntilMotion ? `
+                <span class="text-[10px] font-mono px-2 py-1 rounded-lg bg-emerald-950/90 border border-emerald-700/60 text-emerald-300" title="Low-FPS baseline active on ${vCalc.lowFpsGroupCount || 1} camera group(s), adding ${vCalc.lowFpsAddedMbps || 0} Mbps average (+${vCalc.lowFpsAddedUsableTb || 0} TB usable storage) compared to motion-only recording">
+                  Low-FPS Active (${vCalc.lowFpsGroupCount}/${(vCalc.cameraGroups || []).length} Grp): ${vCalc.idleIngressMbps || 0} Mbps Idle ➔ ${vCalc.peakIngressMbps} Mbps Boost (+${vCalc.lowFpsAddedUsableTb || 0} TB)
+                </span>
+              ` : ''}
 
               <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1">
                 <span class="text-[9px] font-bold uppercase text-slate-400">RAID Level:</span>
@@ -2034,20 +2035,90 @@ function buildCalculatorStrip() {
             </div>
           </div>
 
-          <!-- Camera Groups Table -->
+          <!-- Camera Groups Table (with Per-Column "All" Sync Checkboxes & Per-Group Low-FPS Until Motion) -->
           <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse text-xs">
               <thead>
-                <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400">
-                  <th class="py-1.5 px-2 min-w-[130px]">Group Name</th>
+                <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400 align-bottom">
+                  <th class="py-1.5 px-2 min-w-[125px]">Group Name</th>
                   <th class="py-1.5 px-1.5 w-20">Cameras</th>
-                  <th class="py-1.5 px-1.5 w-24">Sensors/Cam</th>
-                  <th class="py-1.5 px-1.5 min-w-[130px]">Resolution / Sensor</th>
-                  <th class="py-1.5 px-1.5 w-24">${vCalc.lowFpsUntilMotion ? 'Boost FPS (Idle→High)' : 'Frame Rate'}</th>
-                  <th class="py-1.5 px-1.5 min-w-[125px]">Format / Codec</th>
-                  <th class="py-1.5 px-1.5 min-w-[120px]">Scene Activity</th>
-                  <th class="py-1.5 px-1.5 min-w-[140px]">Rec Mode / Motion</th>
-                  <th class="py-1.5 px-1.5 w-28">Retention (Days)</th>
+                  <th class="py-1.5 px-1.5 w-24">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Sensors/Cam setting">
+                        <input type="checkbox" ${videoSyncAllColumns.heads ? 'checked' : ''} onchange="toggleVideoColumnSync('heads', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Sensors/Cam</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 min-w-[130px]">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Resolution">
+                        <input type="checkbox" ${videoSyncAllColumns.resolutionMp ? 'checked' : ''} onchange="toggleVideoColumnSync('resolutionMp', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Resolution / Sensor</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 w-24">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same target Frame Rate">
+                        <input type="checkbox" ${videoSyncAllColumns.fps ? 'checked' : ''} onchange="toggleVideoColumnSync('fps', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Frame Rate</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 min-w-[140px]">
+                    <div class="flex flex-col gap-0.5">
+                      <div class="flex items-center justify-between gap-1">
+                        <label class="inline-flex items-center gap-1 text-[8px] font-mono text-emerald-300 cursor-pointer select-none" title="Check/uncheck to enable or disable Low-FPS Until Motion for ALL camera groups at once">
+                          <input type="checkbox" ${vCalc.allLowFpsUntilMotion ? 'checked' : ''} onchange="toggleAllCameraGroupsLowFps(this.checked)" class="w-3 h-3 rounded accent-emerald-500 cursor-pointer" />
+                          <span>All Groups</span>
+                        </label>
+                        <select onchange="setAllCameraGroupsIdleFps(Number(this.value))" class="bg-slate-900 border border-slate-700 rounded px-1 py-0 text-[8px] font-mono text-emerald-300 cursor-pointer" title="Set Idle FPS for all camera groups">
+                          ${[1, 2, 3, 4, 5].map(ifps => `<option value="${ifps}" class="bg-slate-900" ${(vCalc.idleFps || 2) === ifps ? 'selected' : ''}>All ${ifps}FPS</option>`).join('')}
+                        </select>
+                      </div>
+                      <span class="text-emerald-300">Low-FPS Until Motion</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 min-w-[120px]">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Codec">
+                        <input type="checkbox" ${videoSyncAllColumns.codec ? 'checked' : ''} onchange="toggleVideoColumnSync('codec', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Format / Codec</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 min-w-[115px]">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Scene Activity">
+                        <input type="checkbox" ${videoSyncAllColumns.sceneActivity ? 'checked' : ''} onchange="toggleVideoColumnSync('sceneActivity', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Scene Activity</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 min-w-[140px]">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Recording Mode / Motion %">
+                        <input type="checkbox" ${videoSyncAllColumns.motionDutyPct ? 'checked' : ''} onchange="toggleVideoColumnSync('motionDutyPct', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Rec Mode / Motion</span>
+                    </div>
+                  </th>
+                  <th class="py-1.5 px-1.5 w-28">
+                    <div class="flex flex-col gap-0.5">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Retention (Days)">
+                        <input type="checkbox" ${videoSyncAllColumns.retentionDays ? 'checked' : ''} onchange="toggleVideoColumnSync('retentionDays', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
+                        <span>All Same</span>
+                      </label>
+                      <span>Retention (Days)</span>
+                    </div>
+                  </th>
                   <th class="py-1.5 px-2 text-right min-w-[115px]">Peak / Avg Mbps</th>
                   <th class="py-1.5 px-2 text-right min-w-[95px]">Group Usable</th>
                   <th class="py-1.5 px-1.5 text-center w-16">Actions</th>
@@ -2097,9 +2168,15 @@ function buildCalculatorStrip() {
                       <select onchange="updateVideoCameraGroup(${idx}, 'fps', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
                         ${[1, 5, 10, 12, 15, 20, 24, 30, 60].map(f => `<option value="${f}" class="bg-slate-900" ${grp.fps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
                       </select>
-                      ${grp.lowFpsUntilMotion ? `
-                        <div class="text-[9px] font-mono text-emerald-400 mt-0.5 text-center">${grp.idleFps || 2} FPS Idle ➔ ${grp.fps} FPS</div>
-                      ` : ''}
+                    </td>
+                    <!-- Per-Group Low-FPS Until Motion (e.g. 2 FPS Idle -> High FPS on Motion/Event) -->
+                    <td class="py-1.5 px-1.5">
+                      <div class="flex items-center gap-1.5 px-2 py-1 rounded border ${grp.lowFpsUntilMotion ? 'bg-emerald-950/30 border-emerald-600/60' : 'bg-slate-900 border-slate-700/80'}">
+                        <input type="checkbox" ${grp.lowFpsUntilMotion ? 'checked' : ''} onchange="updateVideoCameraGroup(${idx}, 'lowFpsUntilMotion', this.checked)" class="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer shrink-0" title="Enable low-FPS continuous recording for this camera group until motion/event boosts to ${grp.fps} FPS" />
+                        <select onchange="updateVideoCameraGroup(${idx}, 'idleFps', Number(this.value))" class="w-full bg-transparent ${grp.lowFpsUntilMotion ? 'text-emerald-300 font-bold' : 'text-slate-400'} font-mono text-[11px] focus:outline-none cursor-pointer" title="Idle frame rate for this camera group before motion/event occurs">
+                          ${[1, 2, 3, 4, 5].map(ifps => `<option value="${ifps}" class="bg-slate-900" ${(grp.idleFps || 2) === ifps ? 'selected' : ''}>${ifps} FPS ➔ ${grp.fps} FPS</option>`).join('')}
+                        </select>
+                      </div>
                     </td>
                     <!-- Format / Codec -->
                     <td class="py-1.5 px-1.5">
@@ -2170,14 +2247,19 @@ function buildCalculatorStrip() {
           </div>
         </div>
 
-        <!-- Row 2.5: Archiver / NVR Failover Calculator (Ring Failover A > B > C > D > A vs. Dedicated Failover Server(s) N + M) -->
+        <!-- Row 2.5: Archiver / NVR Failover Calculator (Dynamic N-Server Ring vs. Shared Dedicated Failover N ➔ M) -->
         ${(() => {
           const fo = vCalc.failover || {
             structure: 'none',
             ringNodes: 0,
+            dynamicAutoRingNodes: 2,
             ringChainText: 'None',
             ringNodeSchedule: [],
+            dedicatedPoolSchedule: [],
             dedicatedFailoverServers: 0,
+            simultaneousFailures: 1,
+            loadsPerFailoverServer: 1,
+            minFailoverServersForK: 1,
             primaryServerCount: g.recommendedArchiverServers || 1,
             totalServersRequired: g.recommendedArchiverServers || 1,
             normalCamsPerServer: vCalc.totalCameras,
@@ -2188,7 +2270,8 @@ function buildCalculatorStrip() {
             failoverBufferTbPerServer: 0,
             totalUsableTbPerRingServer: vCalc.basePrimaryUsableTb || vCalc.requiredUsableTB,
             failoverAddedUsableTb: 0,
-            isRingSurvivorVerified: true
+            isRingSurvivorVerified: true,
+            isDedicatedSurvivorVerified: true
           };
           const isRing = fo.structure === 'ring';
           const isDedicated = fo.structure === 'dedicated';
@@ -2208,13 +2291,13 @@ function buildCalculatorStrip() {
                     <button type="button" onclick="setVideoSizerParam('failoverStructure', 'none')" class="px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${fo.structure === 'none' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}">
                       None (Standalone)
                     </button>
-                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'ring')" class="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isRing ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Ring Failover Structure (A > B > C > D > A): Each server hosts a Primary Archiver + Standby Archiver for its upstream neighbor">
+                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'ring')" class="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isRing ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Dynamic N-Server Ring Failover (S1 ➔ S2 ➔ ... ➔ SN ➔ S1): Each server in the ring hosts a Primary Archiver + Standby Archiver for its upstream neighbor">
                       <i data-lucide="repeat" class="w-3 h-3"></i>
-                      <span>Ring Failover (A &gt; B &gt; C &gt; D &gt; A)</span>
+                      <span>Ring Failover (${isRing ? `${fo.ringNodes}-Server Ring: ${fo.ringChainText}` : 'Dynamic N-Server Ring'})</span>
                     </button>
-                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'dedicated')" class="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isDedicated ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Dedicated Hot-Standby Failover Server(s) (N + M): Separate standby server(s) monitor all primary Archivers">
+                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'dedicated')" class="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isDedicated ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Dedicated Failover Server(s) (N Main ➔ M Shared Failover): Multiple main servers can fail over to the same shared failover server(s)">
                       <i data-lucide="server-cog" class="w-3 h-3"></i>
-                      <span>Dedicated Failover Server(s) (N + M)</span>
+                      <span>Dedicated Failover (${isDedicated ? `${fo.primaryServerCount} Main ➔ ${fo.dedicatedFailoverServers} Failover` : 'N Main ➔ M Shared'})</span>
                     </button>
                   </div>
                 </div>
@@ -2222,23 +2305,35 @@ function buildCalculatorStrip() {
                 ${isActiveFailover ? `
                   <div class="flex flex-wrap items-center gap-2">
                     ${isRing ? `
-                      <div class="flex items-center gap-1.5 bg-slate-900 border border-cyan-500/40 rounded-lg px-2.5 py-1">
-                        <span class="text-[9px] font-bold uppercase text-cyan-300">Ring Nodes:</span>
-                        <select onchange="setVideoSizerParam('ringNodeCount', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-cyan-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
-                          <option value="0" class="bg-slate-900" ${videoRingNodeCount === 0 ? 'selected' : ''}>Auto (${fo.ringNodes}-Node Ring)</option>
-                          <option value="2" class="bg-slate-900" ${videoRingNodeCount === 2 ? 'selected' : ''}>2 Nodes (A &gt; B &gt; A)</option>
-                          <option value="3" class="bg-slate-900" ${videoRingNodeCount === 3 ? 'selected' : ''}>3 Nodes (A &gt; B &gt; C &gt; A)</option>
-                          <option value="4" class="bg-slate-900" ${videoRingNodeCount === 4 ? 'selected' : ''}>4 Nodes (A &gt; B &gt; C &gt; D &gt; A)</option>
-                          <option value="5" class="bg-slate-900" ${videoRingNodeCount === 5 ? 'selected' : ''}>5 Nodes (A &gt; B &gt; C &gt; D &gt; E &gt; A)</option>
-                          <option value="6" class="bg-slate-900" ${videoRingNodeCount === 6 ? 'selected' : ''}>6 Nodes (A..F &gt; A)</option>
-                          <option value="8" class="bg-slate-900" ${videoRingNodeCount === 8 ? 'selected' : ''}>8 Nodes (A..H &gt; A)</option>
-                        </select>
+                      <!-- Dynamic Ring Server Count Control (Auto or any N >= 2) -->
+                      <div class="flex items-center gap-1.5 bg-slate-900 border border-cyan-500/40 rounded-lg px-2.5 py-1" title="Number of servers in the failover ring (dynamically builds A➔B➔A for 2, A➔B➔C➔A for 3, A➔B➔C➔D➔A for 4, etc.)">
+                        <span class="text-[9px] font-bold uppercase text-cyan-300">Ring Servers (N):</span>
+                        <input type="number" min="2" max="64" value="${fo.ringNodes}" onchange="setVideoSizerParam('ringNodeCount', Math.max(2, parseInt(this.value, 10) || 2))" class="w-12 bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs font-mono font-bold text-cyan-300 focus:outline-none text-center" />
+                        <button type="button" onclick="setVideoSizerParam('ringNodeCount', 0)" class="text-[9px] font-mono px-1.5 py-0.5 rounded ${videoRingNodeCount === 0 ? 'bg-cyan-900/80 text-cyan-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Automatically size ring to match required servers (${fo.dynamicAutoRingNodes || 2} servers)">
+                          Auto (${fo.dynamicAutoRingNodes || 2})
+                        </button>
                       </div>
                     ` : `
-                      <div class="flex items-center gap-1.5 bg-slate-900 border border-indigo-500/40 rounded-lg px-2.5 py-1">
-                        <span class="text-[9px] font-bold uppercase text-indigo-300">Dedicated Failover Servers (M):</span>
-                        <select onchange="setVideoSizerParam('dedicatedFailoverCount', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-indigo-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
-                          ${[1, 2, 3, 4, 6, 8].map(m => `<option value="${m}" class="bg-slate-900" ${fo.dedicatedFailoverServers === m ? 'selected' : ''}>${m} Standby Server${m === 1 ? '' : 's'} (N + ${m})</option>`).join('')}
+                      <!-- Dedicated Many-to-One / Shared Pool Controls: N Main Servers, M Shared Failover Servers, K Simultaneous Failures -->
+                      <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1" title="Number of Main Primary Servers being protected by the shared Failover Server pool">
+                        <span class="text-[9px] font-bold uppercase text-slate-300">Main Servers (N):</span>
+                        <input type="number" min="1" max="64" value="${fo.primaryServerCount}" onchange="setVideoSizerParam('dedicatedPrimaryCount', Math.max(1, parseInt(this.value, 10) || 1))" class="w-11 bg-slate-950 border border-slate-700/80 rounded px-1 py-0.5 text-xs font-mono font-bold text-sky-300 focus:outline-none text-center" />
+                        <button type="button" onclick="setVideoSizerParam('dedicatedPrimaryCount', 0)" class="text-[9px] font-mono px-1.5 py-0.5 rounded ${videoDedicatedPrimaryCount === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Auto-calculate Main Primary Servers from camera/throughput load">
+                          Auto
+                        </button>
+                      </div>
+                      <div class="flex items-center gap-1.5 bg-slate-900 border border-indigo-500/40 rounded-lg px-2.5 py-1" title="Number of shared Dedicated Failover Servers (M) monitoring the N Main Servers">
+                        <span class="text-[9px] font-bold uppercase text-indigo-300">Failover Servers (M):</span>
+                        <input type="number" min="1" max="32" value="${fo.dedicatedFailoverServers}" onchange="setVideoSizerParam('dedicatedFailoverCount', Math.max(1, parseInt(this.value, 10) || 1))" class="w-11 bg-slate-950 border border-slate-700/80 rounded px-1 py-0.5 text-xs font-mono font-bold text-indigo-300 focus:outline-none text-center" />
+                      </div>
+                      <div class="flex items-center gap-1.5 bg-slate-900 border border-amber-500/30 rounded-lg px-2.5 py-1" title="How many Main Servers can fail at the exact same time onto the shared Failover pool? (1 = Standard N+1 where 1 Main Server fails at a time; 2+ = multi-server simultaneous outage)">
+                        <span class="text-[9px] font-bold uppercase text-amber-300">Sim. Failures (K):</span>
+                        <select onchange="setVideoSizerParam('maxSimultaneousFailures', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
+                          ${Array.from({ length: Math.max(1, fo.primaryServerCount) }, (_, kIdx) => kIdx + 1).map(k => `
+                            <option value="${k}" class="bg-slate-900" ${(fo.simultaneousFailures || 1) === k ? 'selected' : ''}>
+                              ${k} Main Srv at once${k === 1 ? ' (Standard N+1)' : k === fo.primaryServerCount ? ' (All Main Srv)' : ''}
+                            </option>
+                          `).join('')}
                         </select>
                       </div>
                     `}
@@ -2258,30 +2353,30 @@ function buildCalculatorStrip() {
                   </div>
                 ` : `
                   <span class="text-[10px] text-slate-400 font-mono">
-                    Select <strong class="text-cyan-300">Ring Failover (A &gt; B &gt; C &gt; D &gt; A)</strong> or <strong class="text-indigo-300">Dedicated Failover Server(s) (N + M)</strong> to size survivor throughput &amp; failover storage buffers.
+                    Select <strong class="text-cyan-300">Ring Failover (Dynamic N-Server Ring)</strong> or <strong class="text-indigo-300">Dedicated Failover (N Main ➔ M Shared)</strong> to size survivor throughput &amp; failover storage buffers.
                   </span>
                 `}
               </div>
 
               ${isRing ? `
-                <!-- Ring Failover Visual Chain & Survivor Load Telemetry -->
+                <!-- Dynamic N-Server Ring Failover Visual Chain & Survivor Load Telemetry -->
                 <div class="grid grid-cols-1 xl:grid-cols-12 gap-2.5 pt-1 border-t border-slate-800/80">
                   <div class="xl:col-span-5 bg-slate-900/90 border border-cyan-500/30 rounded-lg p-2.5 flex flex-col justify-between gap-2">
                     <div class="flex items-center justify-between gap-2">
                       <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1">
                         <i data-lucide="git-merge" class="w-3.5 h-3.5"></i>
-                        <span>Ring Failover Chain (${fo.ringNodes} Nodes)</span>
+                        <span>Dynamic ${fo.ringNodes}-Server Ring Chain</span>
                       </span>
                       <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${fo.isRingSurvivorVerified ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
-                        ${fo.isRingSurvivorVerified ? '✓ 2x Survivor Load Verified' : '⚠ Check Survivor Throughput'}
+                        ${fo.isRingSurvivorVerified ? '✓ 2x Survivor Load Verified' : `⚠ Min ${fo.minCompliantRingNodes} Ring Servers Needed`}
                       </span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800 font-mono text-xs font-bold text-cyan-300 text-center tracking-wide">
                       ${fo.ringChainText}
                     </div>
-                    <div class="flex flex-wrap gap-1.5">
+                    <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
                       ${(fo.ringNodeSchedule || []).map(node => `
-                        <div class="flex-1 min-w-[115px] p-1.5 rounded bg-slate-950/80 border border-slate-800/90 text-[10px] font-mono">
+                        <div class="flex-1 min-w-[125px] p-1.5 rounded bg-slate-950/80 border border-slate-800/90 text-[10px] font-mono">
                           <div class="font-bold text-white flex items-center justify-between">
                             <span>${node.nodeLabel}</span>
                             <span class="text-cyan-400">➔ ${node.failsOverTo}</span>
@@ -2297,7 +2392,7 @@ function buildCalculatorStrip() {
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-slate-400">Ring Fleet Size</div>
                       <div class="text-sm font-mono font-bold text-cyan-300">${fo.ringNodes} Servers</div>
-                      <div class="text-[9px] text-slate-500">1 Primary + 1 Standby Role/Srv</div>
+                      <div class="text-[9px] text-slate-500">1 Primary + 1 Neighbor Standby/Srv</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-slate-400">Normal Load / Node</div>
@@ -2319,27 +2414,53 @@ function buildCalculatorStrip() {
               ` : ''}
 
               ${isDedicated ? `
-                <!-- Dedicated Failover Server(s) (N + M) Telemetry -->
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-800/80">
-                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-indigo-500/30 flex flex-col justify-between">
-                    <div class="text-[9px] font-mono uppercase text-indigo-300">Total Server Fleet (N + M)</div>
-                    <div class="text-sm font-mono font-bold text-white">${fo.primaryServerCount} Primary + ${fo.dedicatedFailoverServers} Failover = <span class="text-indigo-300">${fo.totalServersRequired} Srv</span></div>
-                    <div class="text-[9px] text-slate-400">${fo.ringChainText}</div>
+                <!-- Dedicated Shared Failover Pool (N Main Servers ➔ M Shared Failover Server(s)) Telemetry -->
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-2.5 pt-1 border-t border-slate-800/80">
+                  <div class="xl:col-span-5 bg-slate-900/90 border border-indigo-500/30 rounded-lg p-2.5 flex flex-col justify-between gap-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300 flex items-center gap-1">
+                        <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+                        <span>Shared Failover Pool (${fo.primaryServerCount} Main ➔ ${fo.dedicatedFailoverServers} Failover)</span>
+                      </span>
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${fo.isDedicatedSurvivorVerified !== false ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
+                        ${fo.isDedicatedSurvivorVerified !== false ? `✓ Covers ${fo.simultaneousFailures || 1} Sim. Failure(s)` : `⚠ Need ≥${fo.minFailoverServersForK} Failover Srv`}
+                      </span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                      ${(fo.dedicatedPoolSchedule || []).map(pool => `
+                        <div class="flex-1 min-w-[160px] p-1.5 rounded bg-slate-950/80 border border-slate-800/90 text-[10px] font-mono">
+                          <div class="font-bold text-indigo-300 flex items-center justify-between">
+                            <span>${pool.failoverName}</span>
+                            <span class="text-amber-300">Absorbs ${pool.simultaneousAbsorbed}x Main Load</span>
+                          </div>
+                          <div class="text-[9px] text-slate-300 mt-0.5">Protects: <strong class="text-white">${pool.monitorsText}</strong></div>
+                          <div class="text-[9px] text-slate-400">Sized For: <strong class="text-amber-300">${pool.failoverCams} cam / ${pool.failoverMbps} Mbps / ${pool.failoverBufferTb} TB</strong></div>
+                        </div>
+                      `).join('')}
+                    </div>
                   </div>
-                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-                    <div class="text-[9px] font-mono uppercase text-slate-400">Primary Server Load (N=${fo.primaryServerCount})</div>
-                    <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps / Srv</div>
-                    <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cams • ${fo.primaryUsableTbPerServer} TB Usable/Srv</div>
-                  </div>
-                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
-                    <div class="text-[9px] font-mono uppercase text-indigo-300">Dedicated Failover Spec (M=${fo.dedicatedFailoverServers})</div>
-                    <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps Cap</div>
-                    <div class="text-[9px] text-slate-400">Takes over ${fo.failoverCamsOnSurvivor} Cams per failed Primary</div>
-                  </div>
-                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between">
-                    <div class="text-[9px] font-mono uppercase text-purple-300">Failover Storage Buffer</div>
-                    <div class="text-sm font-mono font-bold text-purple-300">${fo.failoverBufferTbPerServer} TB / Failover Srv</div>
-                    <div class="text-[9px] text-slate-400">Total Project: ${vCalc.requiredUsableTB} TB (+${fo.failoverAddedUsableTb} TB buffer)</div>
+
+                  <div class="xl:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border border-indigo-500/30 flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-indigo-300">Total Fleet (N + M)</div>
+                      <div class="text-sm font-mono font-bold text-white">${fo.primaryServerCount} Main + ${fo.dedicatedFailoverServers} Failover = <span class="text-indigo-300">${fo.totalServersRequired} Srv</span></div>
+                      <div class="text-[9px] text-slate-400">${fo.primaryServerCount} Main Srv share ${fo.dedicatedFailoverServers} Failover Srv</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-slate-400">Load / Main Server (N=${fo.primaryServerCount})</div>
+                      <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps / Srv</div>
+                      <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cams • ${fo.primaryUsableTbPerServer} TB Usable/Srv</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border ${fo.isDedicatedSurvivorVerified !== false ? 'border-slate-800' : 'border-amber-600/70'} flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-amber-300">Failover Srv Spec (${fo.loadsPerFailoverServer || 1}x Load)</div>
+                      <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps Cap</div>
+                      <div class="text-[9px] text-slate-400">Absorbs ${fo.failoverCamsOnSurvivor} Cams (${fo.simultaneousFailures || 1} Sim. Failure${(fo.simultaneousFailures || 1) === 1 ? '' : 's'})</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-purple-300">Failover Storage Buffer</div>
+                      <div class="text-sm font-mono font-bold text-purple-300">${fo.failoverBufferTbPerServer} TB / Failover Srv</div>
+                      <div class="text-[9px] text-slate-400">Total Project: ${vCalc.requiredUsableTB} TB (+${fo.failoverAddedUsableTb} TB buffer)</div>
+                    </div>
                   </div>
                 </div>
               ` : ''}
@@ -2786,10 +2907,18 @@ function setVideoSizerParam(key, val) {
     const cleanRing = Math.max(0, parseInt(val, 10) || 0);
     videoRingNodeCount = cleanRing; window.videoRingNodeCount = cleanRing;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.ringNodeCount = cleanRing;
+  } else if (key === "dedicatedPrimaryCount") {
+    const cleanPrim = Math.max(0, parseInt(val, 10) || 0);
+    videoDedicatedPrimaryCount = cleanPrim; window.videoDedicatedPrimaryCount = cleanPrim;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.dedicatedPrimaryCount = cleanPrim;
   } else if (key === "dedicatedFailoverCount") {
     const cleanDed = Math.max(1, parseInt(val, 10) || 1);
     videoDedicatedFailoverCount = cleanDed; window.videoDedicatedFailoverCount = cleanDed;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.dedicatedFailoverCount = cleanDed;
+  } else if (key === "maxSimultaneousFailures") {
+    const cleanSim = Math.max(1, parseInt(val, 10) || 1);
+    videoMaxSimultaneousFailures = cleanSim; window.videoMaxSimultaneousFailures = cleanSim;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.maxSimultaneousFailures = cleanSim;
   } else if (key === "failoverBufferMode") {
     const numMode = Number(val);
     if (numMode < 0) {
@@ -2851,9 +2980,11 @@ function addVideoCameraGroup() {
     id: `grp_${Date.now()}_${nextIdx}`,
     name: `Camera Group ${nextIdx}`,
     qty: 8,
-    heads: 1,
+    heads: last.heads || 1,
     resolutionMp: last.resolutionMp || 4,
     fps: last.fps || 15,
+    idleFps: last.idleFps || videoIdleFps || 2,
+    lowFpsUntilMotion: Boolean(last.lowFpsUntilMotion),
     codec: last.codec || "H.265",
     sceneActivity: last.sceneActivity || "medium",
     motionDutyPct: last.motionDutyPct ?? 50,
@@ -2891,10 +3022,78 @@ function updateVideoCameraGroup(index, field, val) {
   const groups = ensureEditableCameraGroups();
   if (!groups[index]) return;
   groups[index][field] = val;
+  if (field === "lowFpsUntilMotion" && Boolean(val) && (Number(groups[index].motionDutyPct) || 100) >= 100) {
+    groups[index].motionDutyPct = 50;
+  }
+  // If the column's "All Same" checkbox is active, propagate this setting to all camera groups
+  if (videoSyncAllColumns && videoSyncAllColumns[field]) {
+    groups.forEach(g => {
+      g[field] = val;
+      if (field === "lowFpsUntilMotion" && Boolean(val) && (Number(g.motionDutyPct) || 100) >= 100) {
+        g.motionDutyPct = 50;
+      }
+    });
+  }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 }
 window.updateVideoCameraGroup = updateVideoCameraGroup;
+
+function toggleVideoColumnSync(field, checked) {
+  const isChecked = Boolean(checked);
+  if (videoSyncAllColumns && field in videoSyncAllColumns) {
+    videoSyncAllColumns[field] = isChecked;
+  }
+  if (isChecked) {
+    const groups = ensureEditableCameraGroups();
+    if (groups.length > 0) {
+      const masterVal = groups[0][field];
+      groups.forEach(g => {
+        if (masterVal !== undefined) g[field] = masterVal;
+      });
+    }
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.toggleVideoColumnSync = toggleVideoColumnSync;
+
+function toggleAllCameraGroupsLowFps(checked) {
+  const isChecked = Boolean(checked);
+  videoLowFpsUntilMotion = isChecked;
+  window.videoLowFpsUntilMotion = isChecked;
+  if (videoSyncAllColumns) videoSyncAllColumns.lowFpsUntilMotion = isChecked;
+  if (typeof VideoStorageSizer !== "undefined") {
+    VideoStorageSizer.state.lowFpsUntilMotion = isChecked;
+  }
+  const groups = ensureEditableCameraGroups();
+  groups.forEach(g => {
+    g.lowFpsUntilMotion = isChecked;
+    if (g.idleFps === undefined) g.idleFps = videoIdleFps || 2;
+    if (isChecked && (Number(g.motionDutyPct) || 100) >= 100) {
+      g.motionDutyPct = 50;
+    }
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.toggleAllCameraGroupsLowFps = toggleAllCameraGroupsLowFps;
+
+function setAllCameraGroupsIdleFps(idleFpsVal) {
+  const cleanIdle = Math.max(1, Math.min(15, Number(idleFpsVal) || 2));
+  videoIdleFps = cleanIdle;
+  window.videoIdleFps = cleanIdle;
+  if (typeof VideoStorageSizer !== "undefined") {
+    VideoStorageSizer.state.idleFps = cleanIdle;
+  }
+  const groups = ensureEditableCameraGroups();
+  groups.forEach(g => {
+    g.idleFps = cleanIdle;
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.setAllCameraGroupsIdleFps = setAllCameraGroupsIdleFps;
 
 function importBomCamerasToGroups() {
   if (typeof VideoStorageSizer === "undefined") return;
@@ -2936,7 +3135,9 @@ function autoFitNvrToBom() {
     softwareMotionDetection: videoSoftwareMotion,
     failoverStructure: videoFailoverStructure,
     ringNodeCount: videoRingNodeCount,
+    dedicatedPrimaryCount: videoDedicatedPrimaryCount,
     dedicatedFailoverCount: videoDedicatedFailoverCount,
+    maxSimultaneousFailures: videoMaxSimultaneousFailures,
     failoverRetentionDays: videoFailoverRetentionDays,
     failoverIncludeStorageBuffer: videoFailoverIncludeStorageBuffer
   });
@@ -2970,12 +3171,12 @@ function autoFitNvrToBom() {
   } else if (fo.structure === "dedicated" && (fo.dedicatedFailoverServers || 0) >= 1 && typeof addToBOM === "function") {
     const totalCount = Math.max(2, fo.totalServersRequired || 2);
     const perNodeTb = Math.max(8, fo.primaryUsableTbPerServer || 16, fo.failoverBufferTbPerServer || 0);
-    const perNodeMbps = Math.max(50, fo.normalMbpsPerServer || targetMbps);
+    const perNodeMbps = Math.max(50, fo.normalMbpsPerServer || targetMbps, fo.failoverMbpsOnSurvivor || 0);
     const chosen = sorted.find(s => getCap(s) >= perNodeTb && getBw(s) >= perNodeMbps) || sorted[sorted.length - 1];
     if (chosen) {
       addToBOM(chosen.id || chosen.sku, totalCount);
       if (typeof showToast === "function") {
-        showToast(`Auto-Fitted Dedicated Failover (${fo.primaryServerCount} Primary + ${fo.dedicatedFailoverServers} Standby = ${totalCount} Servers): ${totalCount}x ${chosen.model}.`, "success");
+        showToast(`Auto-Fitted Dedicated Failover (${fo.primaryServerCount} Main + ${fo.dedicatedFailoverServers} Shared Standby = ${totalCount} Servers): ${totalCount}x ${chosen.model}.`, "success");
       }
     }
   } else {

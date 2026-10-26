@@ -1059,9 +1059,11 @@ const VideoStorageSizer = {
     customBitratePerCamMbps: 0, // Optional custom per-camera bitrate override (0 = use standard math)
     lowFpsUntilMotion: false,  // Continuous low frame rate (e.g. 2 FPS) during idle hours, jumping to target FPS on motion/event
     idleFps: 2,                // Low frame rate (default 2 FPS) recorded continuously when no motion/event is active
-    failoverStructure: "none", // "none" | "ring" (A > B > C > D > A) | "dedicated" (Dedicated Failover Server(s) N+M)
-    ringNodeCount: 0,          // 0 = Auto (4-node ring A > B > C > D > A by default, or higher if needed for throughput); >=2 = explicit ring nodes
+    failoverStructure: "none", // "none" | "ring" (Dynamic N-Server Ring) | "dedicated" (Dedicated Failover Server(s) N+M)
+    ringNodeCount: 0,          // 0 = Auto (dynamically uses actual server count N >= 2); >=2 = explicit number of ring servers
+    dedicatedPrimaryCount: 0,  // 0 = Auto (uses primary server count N); >=1 = explicit number of main primary servers failing over into the dedicated pool
     dedicatedFailoverCount: 1, // Number of dedicated hot-standby failover servers (M in N+M)
+    maxSimultaneousFailures: 1,// Number of main servers that can fail simultaneously onto the shared failover pool (default 1 = N+1 standard, or 2..N)
     failoverRetentionDays: 0,  // 0 = Full Retention Mirror (matches group retentionDays); >0 = specific failover buffer days (e.g. 7, 14, 30)
     failoverIncludeStorageBuffer: true // Provision RAID storage buffer for failover recording
   },
@@ -1392,13 +1394,15 @@ const VideoStorageSizer = {
     const preferredDriveSizeTb = Number(overrides.preferredDriveSizeTb ?? this.state.preferredDriveSizeTb ?? 16) || 16;
 
     // Dual-Rate Recording: Low-FPS Continuous (default 2 FPS) until motion/event jumps to target FPS
-    const lowFpsUntilMotion = Boolean(overrides.lowFpsUntilMotion ?? this.state.lowFpsUntilMotion);
+    const lowFpsUntilMotionDefault = Boolean(overrides.lowFpsUntilMotion ?? this.state.lowFpsUntilMotion);
     const idleFps = Math.max(1, Math.min(30, Number(overrides.idleFps ?? this.state.idleFps ?? 2) || 2));
 
     // Archiver / NVR Failover Calculator Parameters ("none" | "ring" | "dedicated")
     const failoverStructure = String(overrides.failoverStructure ?? this.state.failoverStructure ?? "none").toLowerCase();
     const ringNodeCountOverride = Math.max(0, parseInt(overrides.ringNodeCount ?? this.state.ringNodeCount ?? 0, 10) || 0);
+    const dedicatedPrimaryCountOverride = Math.max(0, parseInt(overrides.dedicatedPrimaryCount ?? this.state.dedicatedPrimaryCount ?? 0, 10) || 0);
     const dedicatedFailoverCount = Math.max(1, parseInt(overrides.dedicatedFailoverCount ?? this.state.dedicatedFailoverCount ?? 1, 10) || 1);
+    const maxSimultaneousFailuresOverride = Math.max(1, parseInt(overrides.maxSimultaneousFailures ?? this.state.maxSimultaneousFailures ?? 1, 10) || 1);
     const rawFailoverRetDays = parseInt(overrides.failoverRetentionDays ?? this.state.failoverRetentionDays ?? 0, 10) || 0;
     const effectiveFailoverRetentionDays = rawFailoverRetDays > 0 ? rawFailoverRetDays : retentionDays;
     const failoverIncludeStorageBuffer = (overrides.failoverIncludeStorageBuffer ?? this.state.failoverIncludeStorageBuffer) !== false;
@@ -1447,7 +1451,7 @@ const VideoStorageSizer = {
       resolutionMp,
       fps,
       idleFps,
-      lowFpsUntilMotion,
+      lowFpsUntilMotion: lowFpsUntilMotionDefault,
       codec,
       sceneActivity,
       motionDutyPct,
@@ -1473,7 +1477,7 @@ const VideoStorageSizer = {
         resolutionMp,
         fps,
         idleFps,
-        lowFpsUntilMotion,
+        lowFpsUntilMotion: lowFpsUntilMotionDefault,
         codec,
         sceneActivity,
         motionDutyPct,
@@ -1492,18 +1496,26 @@ const VideoStorageSizer = {
     let averageRecordingMbps = 0;
     let dailyStorageGb = 0;
     let baseRequiredUsableTb = 0;
+    let lowFpsGroupCount = 0;
 
     evaluatedGroups.forEach(eg => {
       cameraUnits += eg.qty;
       totalSensorHeads += eg.totalStreams;
       peakIngressMbps += eg.peakIngressMbps;
-      idleIngressMbps += (eg.idleIngressMbps || 0);
-      lowFpsAddedMbps += (eg.lowFpsAddedMbps || 0);
-      lowFpsAddedUsableTb += (eg.lowFpsAddedUsableTb || 0);
+      if (eg.lowFpsUntilMotion) {
+        lowFpsGroupCount += 1;
+        idleIngressMbps += (eg.idleIngressMbps || 0);
+        lowFpsAddedMbps += (eg.lowFpsAddedMbps || 0);
+        lowFpsAddedUsableTb += (eg.lowFpsAddedUsableTb || 0);
+      }
       averageRecordingMbps += eg.averageRecordingMbps;
       dailyStorageGb += eg.dailyStorageGb;
       baseRequiredUsableTb += eg.requiredUsableTb;
     });
+
+    const anyLowFpsUntilMotion = lowFpsGroupCount > 0;
+    const allLowFpsUntilMotion = evaluatedGroups.length > 0 && lowFpsGroupCount === evaluatedGroups.length;
+    const lowFpsUntilMotion = anyLowFpsUntilMotion;
 
     peakIngressMbps = Math.round(peakIngressMbps * 100) / 100;
     idleIngressMbps = Math.round(idleIngressMbps * 100) / 100;
@@ -1548,29 +1560,34 @@ const VideoStorageSizer = {
     const basePrimaryServers = userServerCount > 0 ? userServerCount : Math.min(activeArchiverRoles, minRequiredPrimaryServers);
 
     // =========================================================================
-    // 5B. ARCHIVER / NVR FAILOVER CALCULATOR (RING A>B>C>D>A vs DEDICATED N+M)
+    // 5B. ARCHIVER / NVR FAILOVER CALCULATOR (DYNAMIC N-SERVER RING vs DEDICATED N+M POOL)
     // =========================================================================
     const isRingFailover = failoverStructure === "ring";
     const isDedicatedFailover = failoverStructure === "dedicated";
     const failoverRetentionRatio = retentionDays > 0 ? (effectiveFailoverRetentionDays / retentionDays) : 1;
 
-    // For Ring Failover (A -> B -> C -> D -> A):
-    // When 1 node fails, its downstream neighbor must handle 2x single-node load (own cameras + failed neighbor's cameras).
+    // For Ring Failover (Dynamic N-Server Ring: S1 -> S2 -> ... -> SN -> S1):
+    // When 1 server fails, its downstream neighbor handles 2x single-server load (its own cameras + failed neighbor's cameras).
+    // The ring size dynamically matches the project's server count (minimum 2 servers to form a ring).
     const minRingNodesByThroughput = peakIngressMbps > 0 ? Math.ceil((2 * peakIngressMbps) / maxMbpsPerPhysicalServer) : 2;
     const minRingNodesByRoles = Math.ceil((2 * minRequiredArchiverRoles) / Math.max(2, maxRolesPerPhysicalServer));
     const minCompliantRingNodes = Math.max(2, minRequiredPrimaryServers, minRingNodesByThroughput, minRingNodesByRoles);
+    const dynamicAutoRingNodes = Math.max(2, basePrimaryServers, minCompliantRingNodes);
     const activeRingNodes = isRingFailover
-      ? (ringNodeCountOverride >= 2 ? ringNodeCountOverride : Math.max(4, minCompliantRingNodes))
+      ? (ringNodeCountOverride >= 2 ? ringNodeCountOverride : (userServerCount >= 2 ? userServerCount : dynamicAutoRingNodes))
       : 0;
 
-    // Build Ring Topology Chain (e.g., A ➔ B ➔ C ➔ D ➔ A)
+    // Build Ring Topology Chain (e.g., A ➔ B ➔ A for 2 servers, A ➔ B ➔ C ➔ A for 3, A ➔ B ➔ C ➔ D ➔ A for 4, etc.)
     const getNodeLetter = (idx) => {
       if (idx < 26) return String.fromCharCode(65 + idx);
-      return `N${idx + 1}`;
+      return `S${idx + 1}`;
     };
 
     let primaryServersCount = basePrimaryServers;
     let dedicatedFailoverServersCount = 0;
+    let simultaneousFailures = 1;
+    let loadsPerFailoverServer = 1;
+    let minFailoverServersForK = 1;
     let totalPhysicalServers = basePrimaryServers;
     let failoverAddedUsableTb = 0;
     let requiredUsableTb = baseRequiredUsableTb;
@@ -1580,10 +1597,13 @@ const VideoStorageSizer = {
     let failoverMbpsOnSurvivor = normalMbpsPerServer;
     let primaryUsableTbPerServer = cameraUnits > 0 ? Math.round((baseRequiredUsableTb / basePrimaryServers) * 100) / 100 : 0;
     let failoverBufferTbPerServer = 0;
+    let totalUsableTbPerRingServer = primaryUsableTbPerServer;
     let ringChainLabels = [];
     let ringChainText = "";
     let ringNodeSchedule = [];
+    let dedicatedPoolSchedule = [];
     let isRingSurvivorVerified = true;
+    let isDedicatedSurvivorVerified = true;
 
     if (isRingFailover) {
       primaryServersCount = activeRingNodes;
@@ -1603,6 +1623,7 @@ const VideoStorageSizer = {
       failoverBufferTbPerServer = (cameraUnits > 0 && failoverIncludeStorageBuffer)
         ? Math.round(primaryUsableTbPerServer * failoverRetentionRatio * 100) / 100
         : 0;
+      totalUsableTbPerRingServer = Math.round((primaryUsableTbPerServer + failoverBufferTbPerServer) * 100) / 100;
       failoverAddedUsableTb = Math.round(failoverBufferTbPerServer * activeRingNodes * 100) / 100;
       requiredUsableTb = Math.round((baseRequiredUsableTb + failoverAddedUsableTb) * 100) / 100;
 
@@ -1614,44 +1635,89 @@ const VideoStorageSizer = {
         ringNodeSchedule.push({
           index: i + 1,
           letter: currLetter,
+          nodeLabel: `Server ${currLetter}`,
           nodeName: `Server ${currLetter}`,
           protectsUpstream: `Server ${prevLetter}`,
+          failsOverTo: `Server ${nextLetter}`,
           failsOverToDownstream: `Server ${nextLetter}`,
+          normalCams: normalCamsPerServer,
           normalCameras: normalCamsPerServer,
           normalMbps: normalMbpsPerServer,
+          survivorCams: failoverCamsOnSurvivor,
           failoverCameras: failoverCamsOnSurvivor,
+          survivorMbps: failoverMbpsOnSurvivor,
           failoverMbps: failoverMbpsOnSurvivor,
           primaryUsableTb: primaryUsableTbPerServer,
           failoverBufferTb: failoverBufferTbPerServer,
-          totalNodeUsableTb: Math.round((primaryUsableTbPerServer + failoverBufferTbPerServer) * 100) / 100
+          totalNodeUsableTb: totalUsableTbPerRingServer
         });
       }
       ringChainLabels.push(getNodeLetter(0));
       ringChainText = ringChainLabels.join(" ➔ ");
     } else if (isDedicatedFailover) {
-      primaryServersCount = basePrimaryServers;
-      dedicatedFailoverServersCount = dedicatedFailoverCount;
+      // Dedicated Failover Pool (N Main Servers failing over into M Shared Failover Server(s), covering K simultaneous Main Server failures)
+      primaryServersCount = dedicatedPrimaryCountOverride >= 1
+        ? dedicatedPrimaryCountOverride
+        : (userServerCount >= 1 ? userServerCount : Math.max(1, basePrimaryServers));
+      dedicatedFailoverServersCount = Math.max(1, dedicatedFailoverCount);
+      simultaneousFailures = Math.max(1, Math.min(primaryServersCount, maxSimultaneousFailuresOverride));
+      loadsPerFailoverServer = Math.max(1, Math.ceil(simultaneousFailures / dedicatedFailoverServersCount));
       totalPhysicalServers = primaryServersCount + dedicatedFailoverServersCount;
+
+      if (userArchiverRoles === 0 && activeArchiverRoles < primaryServersCount) {
+        activeArchiverRoles = primaryServersCount;
+      }
 
       normalCamsPerServer = cameraUnits > 0 ? Math.ceil(totalSensorHeads / primaryServersCount) : 0;
       normalMbpsPerServer = cameraUnits > 0 ? Math.round((peakIngressMbps / primaryServersCount) * 10) / 10 : 0;
-      failoverCamsOnSurvivor = normalCamsPerServer;
-      failoverMbpsOnSurvivor = normalMbpsPerServer;
+
+      // Each shared Failover Server is dynamically sized to absorb `loadsPerFailoverServer` Main Server(s) failing simultaneously
+      failoverCamsOnSurvivor = cameraUnits > 0 ? Math.min(totalSensorHeads, normalCamsPerServer * loadsPerFailoverServer) : 0;
+      failoverMbpsOnSurvivor = cameraUnits > 0 ? Math.round(Math.min(peakIngressMbps, normalMbpsPerServer * loadsPerFailoverServer) * 10) / 10 : 0;
+      minFailoverServersForK = maxMbpsPerPhysicalServer > 0
+        ? Math.max(1, Math.ceil((normalMbpsPerServer * simultaneousFailures) / maxMbpsPerPhysicalServer))
+        : 1;
+      isDedicatedSurvivorVerified = failoverMbpsOnSurvivor <= maxMbpsPerPhysicalServer;
 
       primaryUsableTbPerServer = cameraUnits > 0 ? Math.round((baseRequiredUsableTb / primaryServersCount) * 100) / 100 : 0;
       failoverBufferTbPerServer = (cameraUnits > 0 && failoverIncludeStorageBuffer)
-        ? Math.round(primaryUsableTbPerServer * failoverRetentionRatio * 100) / 100
+        ? Math.round(primaryUsableTbPerServer * loadsPerFailoverServer * failoverRetentionRatio * 100) / 100
         : 0;
+      totalUsableTbPerRingServer = primaryUsableTbPerServer;
       failoverAddedUsableTb = Math.round(failoverBufferTbPerServer * dedicatedFailoverServersCount * 100) / 100;
       requiredUsableTb = Math.round((baseRequiredUsableTb + failoverAddedUsableTb) * 100) / 100;
+
+      // Build Many-to-One / Many-to-Many Shared Failover Pool Mapping
+      const mainServerLabels = [];
+      for (let p = 0; p < primaryServersCount; p++) {
+        mainServerLabels.push(`Server ${getNodeLetter(p)}`);
+      }
+      for (let m = 0; m < dedicatedFailoverServersCount; m++) {
+        const assignedPrimaries = mainServerLabels.filter((_, idx) => (idx % dedicatedFailoverServersCount) === m);
+        const monitoredList = assignedPrimaries.length > 0 ? assignedPrimaries : mainServerLabels;
+        dedicatedPoolSchedule.push({
+          index: m + 1,
+          failoverName: `Failover ${m + 1}`,
+          monitorsMainServers: monitoredList,
+          monitorsText: monitoredList.join(", "),
+          monitoredCount: monitoredList.length,
+          simultaneousAbsorbed: loadsPerFailoverServer,
+          failoverCams: failoverCamsOnSurvivor,
+          failoverMbps: failoverMbpsOnSurvivor,
+          failoverBufferTb: failoverBufferTbPerServer
+        });
+      }
+      ringChainText = `${primaryServersCount} Main (${mainServerLabels.slice(0, 4).join(", ")}${primaryServersCount > 4 ? "…" : ""}) ➔ ${dedicatedFailoverServersCount} Shared Failover (${simultaneousFailures} Sim. Failure${simultaneousFailures === 1 ? "" : "s"})`;
     }
 
     const theoreticalRawTb = Math.round(requiredUsableTb * raidDef.approxRawMultiplier * 100) / 100;
     const isArchiverCountVerified = activeArchiverRoles >= minRequiredArchiverRoles;
     const recommendedArchiverServers = totalPhysicalServers;
-    const minRequiredServers = isRingFailover ? minCompliantRingNodes : (isDedicatedFailover ? (minRequiredPrimaryServers + dedicatedFailoverServersCount) : minRequiredPrimaryServers);
+    const minRequiredServers = isRingFailover
+      ? minCompliantRingNodes
+      : (isDedicatedFailover ? (minRequiredPrimaryServers + Math.max(dedicatedFailoverServersCount, minFailoverServersForK)) : minRequiredPrimaryServers);
     const rolesPerServer = cameraUnits > 0 ? Math.ceil(activeArchiverRoles / primaryServersCount) : 1;
-    const isServerCountVerified = recommendedArchiverServers >= minRequiredServers && rolesPerServer <= maxRolesPerPhysicalServer && isRingSurvivorVerified;
+    const isServerCountVerified = recommendedArchiverServers >= minRequiredServers && rolesPerServer <= maxRolesPerPhysicalServer && isRingSurvivorVerified && isDedicatedSurvivorVerified;
 
     // Directory isolation rule (Page 15 Section 1.10: >300 cameras requires dedicated Directory server)
     const requiresDedicatedDirectoryServer = totalSensorHeads > GENETEC_514_REQUIREMENTS.directoryIsolationThresholdCameras;
@@ -1694,7 +1760,12 @@ const VideoStorageSizer = {
       if (isRingFailover && !isRingSurvivorVerified) {
         genetecFindings.push({
           severity: "critical",
-          text: `Ring Failover Survivor Overload: In a ${activeRingNodes}-node ring (${ringChainText}), a single node failure places ${failoverMbpsOnSurvivor} Mbps (${failoverCamsOnSurvivor} streams) on the neighbor server, exceeding the ${maxMbpsPerPhysicalServer} Mbps/server limit. Increase Ring Nodes to at least ${minCompliantRingNodes}.`
+          text: `Ring Failover Survivor Overload: In a ${activeRingNodes}-node ring (${ringChainText}), a single node failure places ${failoverMbpsOnSurvivor} Mbps (${failoverCamsOnSurvivor} streams) on the neighbor server, exceeding the ${maxMbpsPerPhysicalServer} Mbps/server limit. Increase Ring Servers to at least ${minCompliantRingNodes}.`
+        });
+      } else if (isDedicatedFailover && !isDedicatedSurvivorVerified) {
+        genetecFindings.push({
+          severity: "critical",
+          text: `Dedicated Failover Overload: ${simultaneousFailures} simultaneous Main Server failure(s) across ${dedicatedFailoverServersCount} Failover Server(s) places ${failoverMbpsOnSurvivor} Mbps (${failoverCamsOnSurvivor} streams) on a single Failover Server, exceeding the ${maxMbpsPerPhysicalServer} Mbps/server limit. Increase Failover Servers (M) to at least ${minFailoverServersForK}.`
         });
       } else if (!isServerCountVerified) {
         genetecFindings.push({
@@ -1716,12 +1787,12 @@ const VideoStorageSizer = {
       if (isRingFailover) {
         genetecFindings.push({
           severity: "info",
-          text: `Ring Failover (${ringChainText}): Each of the ${activeRingNodes} servers hosts 1 Primary Archiver (${normalCamsPerServer} cams / ${normalMbpsPerServer} Mbps / ${primaryUsableTbPerServer} TB) + 1 Standby Archiver for its upstream neighbor (${failoverMbpsOnSurvivor} Mbps survivor load / +${failoverBufferTbPerServer} TB buffer).`
+          text: `Dynamic Ring Failover (${ringChainText}): Each of the ${activeRingNodes} servers hosts 1 Primary Archiver (${normalCamsPerServer} cams / ${normalMbpsPerServer} Mbps / ${primaryUsableTbPerServer} TB) + 1 Standby Archiver for its upstream neighbor (${failoverMbpsOnSurvivor} Mbps survivor load / +${failoverBufferTbPerServer} TB buffer).`
         });
       } else if (isDedicatedFailover) {
         genetecFindings.push({
           severity: "info",
-          text: `Dedicated Failover (${primaryServersCount} Primary + ${dedicatedFailoverServersCount} Failover = ${totalPhysicalServers} Servers): Each dedicated failover server stands by for ${normalCamsPerServer} cams / ${normalMbpsPerServer} Mbps (${failoverBufferTbPerServer} TB usable storage per failover server).`
+          text: `Shared Dedicated Failover (${primaryServersCount} Main Servers ➔ ${dedicatedFailoverServersCount} Shared Failover Server(s) = ${totalPhysicalServers} Total Servers): Covers up to ${simultaneousFailures} simultaneous Main Server failure(s) (${failoverCamsOnSurvivor} cams / ${failoverMbpsOnSurvivor} Mbps / ${failoverBufferTbPerServer} TB per Failover Server).`
         });
       }
       if (totalLogicalVolumes > 1 || activeArchiverRoles > 1 || arrayUsableTb > maxVolTb) {
@@ -1750,6 +1821,9 @@ const VideoStorageSizer = {
       fps,
       idleFps,
       lowFpsUntilMotion,
+      anyLowFpsUntilMotion,
+      allLowFpsUntilMotion,
+      lowFpsGroupCount,
       idleIngressMbps,
       lowFpsAddedMbps,
       lowFpsAddedUsableTb,
@@ -1768,6 +1842,7 @@ const VideoStorageSizer = {
       averageRecordingMbps: Math.round(averageRecordingMbps * 10) / 10,
       totalBandwidthMbps: Math.round(peakIngressMbps * 10) / 10,
       dailyStorageGb,
+      basePrimaryUsableTb: baseRequiredUsableTb,
       baseRequiredUsableTb,
       failoverAddedUsableTb,
       requiredUsableTb,
@@ -1777,20 +1852,32 @@ const VideoStorageSizer = {
       arrayRawTb,
       arrayUsableTb,
 
-      // Failover Calculator Telemetry (Ring A>B>C>D>A vs Dedicated N+M)
+      // Failover Calculator Telemetry (Dynamic N-Server Ring vs Shared Dedicated N+M Pool)
       failover: {
         structure: failoverStructure,
         isRing: isRingFailover,
         isDedicated: isDedicatedFailover,
         ringNodeCountOverride,
+        ringNodes: activeRingNodes,
         activeRingNodes,
+        dynamicAutoRingNodes,
         minCompliantRingNodes,
         ringChainText,
         ringNodeSchedule,
+        dedicatedPoolSchedule,
         isRingSurvivorVerified,
+        isDedicatedSurvivorVerified,
+        dedicatedPrimaryCountOverride,
+        dedicatedFailoverServers: dedicatedFailoverServersCount,
         dedicatedFailoverCount: dedicatedFailoverServersCount,
+        simultaneousFailures,
+        loadsPerFailoverServer,
+        minFailoverServersForK,
+        primaryServerCount: primaryServersCount,
         primaryServersCount,
+        totalServersRequired: totalPhysicalServers,
         totalPhysicalServers,
+        standbyArchiverRolesRequired: isRingFailover ? activeRingNodes : (isDedicatedFailover ? dedicatedFailoverServersCount : 0),
         failoverRetentionDays: effectiveFailoverRetentionDays,
         rawFailoverRetentionDays: rawFailoverRetDays,
         failoverIncludeStorageBuffer,
@@ -1800,6 +1887,7 @@ const VideoStorageSizer = {
         failoverMbpsOnSurvivor,
         primaryUsableTbPerServer,
         failoverBufferTbPerServer,
+        totalUsableTbPerRingServer,
         failoverAddedUsableTb
       },
 
@@ -2068,8 +2156,8 @@ const GenetecLicensingSizer = {
         const dedicatedCount = Math.max(1, failoverInfo.dedicatedFailoverServers || 1);
         const totalCount = primaryCount + dedicatedCount;
         const perNodeReqTb = Math.max(failoverInfo.primaryUsableTbPerServer || 0, failoverInfo.failoverBufferTbPerServer || 0);
-        const perNodeReqMbps = failoverInfo.normalMbpsPerServer || reqMbps;
-        const perNodeReqCams = failoverInfo.normalCamsPerServer || cams;
+        const perNodeReqMbps = Math.max(failoverInfo.normalMbpsPerServer || reqMbps, failoverInfo.failoverMbpsOnSurvivor || 0);
+        const perNodeReqCams = Math.max(failoverInfo.normalCamsPerServer || cams, failoverInfo.failoverCamsOnSurvivor || 0);
         const dedFit = candidates.find(s =>
           (s.usableStorageTb || 0) >= perNodeReqTb &&
           (s.maxRecordMbps || s.maxThroughputMbps || 300) >= perNodeReqMbps &&
@@ -2078,7 +2166,7 @@ const GenetecLicensingSizer = {
         if (dedFit) {
           primaryAppliance = dedFit;
           primaryQty = totalCount;
-          archiverReason = `Dedicated Failover (${primaryCount} Primary + ${dedicatedCount} Failover = ${totalCount} Servers): ${totalCount}x ${dedFit.sku} (${perNodeReqTb} TB & ${perNodeReqMbps} Mbps per server).`;
+          archiverReason = `Dedicated Failover (${primaryCount} Main + ${dedicatedCount} Shared Failover = ${totalCount} Servers): ${totalCount}x ${dedFit.sku} (${perNodeReqTb} TB & ${perNodeReqMbps} Mbps per server, covering ${failoverInfo.simultaneousFailures || 1} simultaneous failure(s)).`;
         }
       } else {
         const singleFit = candidates.find(s =>
