@@ -91,9 +91,85 @@ const TabManager = (() => {
         closeAllToolModals();
         if (typeof switchDomain === "function") switchDomain("software", false);
         if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
+        if (typeof toggleCalculatorsExpand === "function") toggleCalculatorsExpand(false);
         if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
       },
       closeFn: null
+    },
+    sizer_poe: {
+      id: "sizer_poe",
+      title: "PoE & Switch Calculator",
+      icon: "zap",
+      color: "amber",
+      closable: true,
+      modalId: "calculatorsStudioModal",
+      openFn: () => {
+        if (typeof openCalculatorStudio === "function") openCalculatorStudio("poe");
+      },
+      closeFn: () => {
+        const m = document.getElementById("calculatorsStudioModal");
+        if (m) m.classList.add("hidden");
+      }
+    },
+    sizer_storage: {
+      id: "sizer_storage",
+      title: "Storage & Failover Sizer",
+      icon: "hard-drive",
+      color: "purple",
+      closable: true,
+      modalId: "calculatorsStudioModal",
+      openFn: () => {
+        if (typeof openCalculatorStudio === "function") openCalculatorStudio("storage");
+      },
+      closeFn: () => {
+        const m = document.getElementById("calculatorsStudioModal");
+        if (m) m.classList.add("hidden");
+      }
+    },
+    sizer_workstation: {
+      id: "sizer_workstation",
+      title: "Client Workstation Sizer",
+      icon: "monitor",
+      color: "indigo",
+      closable: true,
+      modalId: "calculatorsStudioModal",
+      openFn: () => {
+        if (typeof openCalculatorStudio === "function") openCalculatorStudio("workstation");
+      },
+      closeFn: () => {
+        const m = document.getElementById("calculatorsStudioModal");
+        if (m) m.classList.add("hidden");
+      }
+    },
+    sizer_doors: {
+      id: "sizer_doors",
+      title: "Doors & Access Builder",
+      icon: "door-closed",
+      color: "emerald",
+      closable: true,
+      modalId: "calculatorsStudioModal",
+      openFn: () => {
+        if (typeof openCalculatorStudio === "function") openCalculatorStudio("doors");
+      },
+      closeFn: () => {
+        const m = document.getElementById("calculatorsStudioModal");
+        if (m) m.classList.add("hidden");
+      }
+    },
+    sizer_licensing: {
+      id: "sizer_licensing",
+      title: "Genetec Licensing Sizer",
+      icon: "key",
+      color: "sky",
+      closable: true,
+      modalId: "calculatorsStudioModal",
+      openFn: () => {
+        if (typeof openCalculatorStudio === "function") openCalculatorStudio("licensing");
+      },
+      closeFn: () => {
+        const m = document.getElementById("calculatorsStudioModal");
+        if (m) m.classList.add("hidden");
+      }
     },
     physical_layout: {
       id: "physical_layout",
@@ -483,6 +559,7 @@ const TabManager = (() => {
 
   function closeAllToolModals() {
     const modalIds = [
+      "calculatorsStudioModal",
       "cableLayoutModal",
       "topologyModal",
       "facilityModal",
@@ -591,6 +668,7 @@ const TabManager = (() => {
 
     // Close any floating header dropdowns on tab switch
     if (typeof toggleCatalogExpand === "function") toggleCatalogExpand(false);
+    if (typeof toggleCalculatorsExpand === "function") toggleCalculatorsExpand(false);
     if (typeof toggleFacilityExpand === "function") toggleFacilityExpand(false);
 
     saveTabsState();
@@ -693,6 +771,10 @@ const TabManager = (() => {
       {
         title: "Catalogs",
         keys: ["catalog_networking", "catalog_physical_security", "catalog_compute_storage", "catalog_infrastructure", "catalog_software"]
+      },
+      {
+        title: "Calculators, Sizers & Builders",
+        keys: ["sizer_poe", "sizer_storage", "sizer_workstation", "sizer_doors", "sizer_licensing"]
       },
       {
         title: "Layout & Infrastructure",

@@ -1134,214 +1134,269 @@ function setOpticQuickFilter(preset) {
   runActiveFilter();
 }
 
+function renderPoeCalculatorStudioHtml() {
+  const p = calculatePoETarget();
+  const hasDemand = p.totalCameras > 0;
+  const isCameraTypesInput = poeCalcInputMode === "camera_types";
+  const genericTypes = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
+
+  // Resolve available closets/racks for newly added cameras from PoE Sizer
+  const allLocs = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(false) : ["IDF-1 • Rack-1", "MDF • Rack-1"];
+  if (!poeCalcTargetLocation && allLocs.length > 0) {
+    poeCalcTargetLocation = allLocs.find(l => l.includes("IDF")) || allLocs[0];
+  }
+
+  const shortLabels = {
+    "gen-cam-2mp-1080p": "Single 2MP (1080p)",
+    "gen-cam-4mp": "Single 4MP (2K)",
+    "gen-cam-5mp": "Single 5MP",
+    "gen-cam-8mp-4k": "Single 8MP (4K)",
+    "gen-cam-6mp-360": "6MP 360° Fisheye",
+    "gen-cam-12mp-360": "12MP 360° Fisheye",
+    "gen-cam-dual-1080p": "Dual-Sensor 1080P",
+    "gen-cam-quad-4mp": "Quad-Sensor 4MP",
+    "gen-cam-5sensor-ptz": "5-Sensor + PTZ",
+    "gen-cam-ptz": "PTZ Camera",
+    "gen-cam-lpr-60w": "LPR Camera (60W)"
+  };
+
+  const totalSyncedGenericCams = genericTypes.reduce((sum, g) => sum + getGenericCameraTypeCountInBom(g.id), 0);
+
+  return `
+    <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
+      <!-- Top Row: Title, Design Mode Switcher, Input Mode Switcher & Live PoE Budget Summary -->
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="zap" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+                PoE Power Budget &amp; Edge Capacity Calculator
+              </h4>
+
+              <!-- PoE Input Mode Toggle: By Generic Camera Types vs By PoE Class -->
+              <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800">
+                <button
+                  type="button"
+                  onclick="setPoeCalcInputMode('camera_types')"
+                  class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isCameraTypesInput ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
+                  title="Enter camera counts by Generic Type & Resolution (2MP, 4MP, 5MP, 8MP 4K, 360°, Dual/Quad/5-Sensor, PTZ, 60W LPR). Automatically syncs to BOM, PoE Classes, and Server Storage Calculator!"
+                >
+                  <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                  <span>By Camera Types (Syncs BOM &amp; Storage)</span>
+                </button>
+                <button
+                  type="button"
+                  onclick="setPoeCalcInputMode('poe_classes')"
+                  class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${!isCameraTypesInput ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
+                  title="Enter raw IEEE 802.3 PoE Class port counts directly (15W af, 30W at, 60W bt, 90W bt)"
+                >
+                  <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                  <span>By PoE Class (15W / 30W / 60W / 90W)</span>
+                </button>
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              ${isCameraTypesInput
+                ? 'Enter camera counts by type below to <strong class="text-emerald-300">auto-sync across Switch PoE sizing, Quote BOM, Physical Security, and Video Storage / Genetec Archiver calculations</strong>.'
+                : 'Spec connected PoE ports by IEEE 802.3 class to compute continuous PSE wattage, cable dissipation, and filter matching switches.'}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <!-- 15.4W af -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3af: 15.4W PSE / 12.95W PD">
+            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">15W (af):</span>
+            <input type="number" min="0" max="500" value="${demandCounts.af || 0}" onchange="updateDemandInput('af', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-white focus:outline-none" />
+          </div>
+
+          <!-- 30W at -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3at: 30W PSE / 25.5W PD (PoE+)">
+            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">30W (at):</span>
+            <input type="number" min="0" max="500" value="${demandCounts.at || 0}" onchange="updateDemandInput('at', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-sky-400 focus:outline-none" />
+          </div>
+
+          <!-- 60W bt Type 3 -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 3: 60W PSE / 51W PD (PoE++ / 4PPoE)">
+            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">60W (bt):</span>
+            <input type="number" min="0" max="500" value="${demandCounts.bt60 || 0}" onchange="updateDemandInput('bt60', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-rose-400 focus:outline-none" />
+          </div>
+
+          <!-- 90W bt Type 4 -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 4: 90W PSE / 71.3W PD (High-Power PoE++)">
+            <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">90W (bt):</span>
+            <input type="number" min="0" max="500" value="${demandCounts.bt90 || 0}" onchange="updateDemandInput('bt90', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-amber-400 focus:outline-none" />
+          </div>
+
+          <!-- Auto-Derive from BOM Button -->
+          <button onclick="deriveDemandFromBOM()" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl transition-all font-semibold text-[11px] cursor-pointer" title="Auto-detect PoE demands from devices in project BOM">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Derive from BOM</span>
+          </button>
+
+          <!-- Telemetry & Headroom Buffer Selection -->
+          <div class="flex items-center gap-3 border-l border-slate-800 pl-3">
+            <div class="text-right">
+              <span class="text-[10px] text-slate-400 uppercase font-mono block">
+                Required Budget (+${extraHeadroomPercent}%):
+              </span>
+              <div class="flex items-baseline justify-end gap-1.5">
+                <span class="text-sm font-mono font-black text-amber-400">${p.budgetWithHeadroom} W</span>
+                ${p.rawWattsPD ? `<span class="text-[10px] text-slate-500 font-mono" title="Estimated device draw: ${p.rawWattsPD}W, Cable loss: ${p.cableLossWatts || 0}W">(${p.rawWatts || 0}W PSE)</span>` : ''}
+              </div>
+            </div>
+
+            <select onchange="updateHeadroom(this.value)" class="bg-slate-950 border border-slate-800 text-[11px] font-semibold rounded-lg px-2 py-1.5 text-slate-300 focus:outline-none focus:border-amber-500">
+              <option value="10" ${extraHeadroomPercent === 10 ? 'selected' : ''}>+10% Buffer</option>
+              <option value="15" ${extraHeadroomPercent === 15 ? 'selected' : ''}>+15% Buffer</option>
+              <option value="20" ${extraHeadroomPercent === 20 ? 'selected' : ''}>+20% Buffer</option>
+              <option value="25" ${extraHeadroomPercent === 25 ? 'selected' : ''}>+25% Buffer</option>
+              <option value="30" ${extraHeadroomPercent === 30 ? 'selected' : ''}>+30% Buffer</option>
+            </select>
+
+            ${hasDemand ? `
+              <button onclick="resetDemandInputs()" class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors" title="Clear Demand Targets">
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+
+      ${isCameraTypesInput ? `
+        <!-- Interactive Generic Camera Types PoE & Storage Sync Matrix -->
+        <div class="bg-slate-950/90 border border-emerald-500/30 rounded-xl p-3 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-300 uppercase flex items-center gap-1">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i> Live BOM &amp; Storage Sync
+              </span>
+              <span class="text-xs font-bold text-white">Enter Camera Counts by Generic Type (${totalSyncedGenericCams} Camera${totalSyncedGenericCams === 1 ? '' : 's'} Synced)</span>
+              <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2 py-0.5 text-[11px]">
+                <span class="text-slate-400 font-mono text-[10px]">Assign Closet:</span>
+                <select onchange="setPoeCalcTargetLocation(this.value)" class="bg-transparent text-indigo-300 font-bold text-[11px] focus:outline-none cursor-pointer">
+                  ${allLocs.map(loc => `<option value="${escapeHTML(loc)}" class="bg-slate-900" ${poeCalcTargetLocation === loc ? 'selected' : ''}>${escapeHTML(loc)}</option>`).join('')}
+                </select>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-1.5">
+              <button type="button" onclick="switchDomain('physical_security')" class="px-2.5 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Physical Security Cameras tab to view camera cards or bulk-upgrade to actual SKUs">
+                <i data-lucide="camera" class="w-3 h-3"></i>
+                <span>Cameras / Upgrade SKUs &rarr;</span>
+              </button>
+              <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_storage');" class="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Video Storage, Archiver & Failover Calculator Studio">
+                <i data-lucide="hard-drive" class="w-3 h-3"></i>
+                <span>Storage &amp; Failover Sizer &rarr;</span>
+              </button>
+              <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_workstation');" class="px-2.5 py-1 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Client Workstation Decoding Sizer Studio">
+                <i data-lucide="monitor" class="w-3 h-3"></i>
+                <span>Workstation Sizer &rarr;</span>
+              </button>
+              ${totalSyncedGenericCams > 0 ? `
+                <button type="button" onclick="clearAllGenericCamerasFromSizer()" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/60 text-rose-300 text-[10px] font-mono font-bold transition-all cursor-pointer" title="Clear all generic camera counts">
+                  Clear Cameras
+                </button>
+              ` : ''}
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2">
+            ${genericTypes.map(g => {
+              const cnt = getGenericCameraTypeCountInBom(g.id);
+              const label = shortLabels[g.id] || g.model.replace("Generic ", "");
+              const tierColor = g.poeTierKey === "bt60"
+                ? "text-rose-300 border-rose-500/40 bg-rose-500/10"
+                : (g.poeTierKey === "at" ? "text-sky-300 border-sky-500/40 bg-sky-500/10" : "text-amber-300 border-amber-500/40 bg-amber-500/10");
+              const tierShort = g.poeTierKey === "bt60" ? "60W bt" : (g.poeTierKey === "at" ? "30W at" : "15W af");
+              return `
+                <div class="flex flex-col justify-between p-2 rounded-xl border transition-all ${cnt > 0 ? 'bg-emerald-950/30 border-emerald-500/50 shadow-sm' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'}">
+                  <div class="flex items-start justify-between gap-1 mb-1.5">
+                    <span class="text-[11px] font-bold ${cnt > 0 ? 'text-white' : 'text-slate-300'} leading-tight" title="${escapeHTML(g.model)} (${g.streamBitrateMbps} Mbps)">${escapeHTML(label)}</span>
+                    <span class="px-1.5 py-0.2 rounded border text-[9px] font-mono font-bold shrink-0 ${tierColor}">${tierShort}</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-slate-800/70">
+                    <span class="text-[9.5px] font-mono text-slate-400">${g.heads > 1 ? `${g.heads}x${g.mpPerHead}MP` : `${g.sensorMegapixels}MP`} &bull; ${g.streamBitrateMbps}M</span>
+                    <div class="flex items-center bg-slate-950 border ${cnt > 0 ? 'border-emerald-500/60' : 'border-slate-700'} rounded-lg overflow-hidden">
+                      <button type="button" onclick="adjustGenericCameraTypeCountFromSizer('${g.id}', -1)" class="px-1.5 py-0.5 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold cursor-pointer">-</button>
+                      <input
+                        type="number"
+                        min="0"
+                        max="500"
+                        value="${cnt}"
+                        onchange="setGenericCameraTypeCountFromSizer('${g.id}', this.value)"
+                        class="w-9 bg-transparent text-center font-mono text-xs font-bold ${cnt > 0 ? 'text-emerald-300' : 'text-slate-400'} focus:outline-none"
+                      />
+                      <button type="button" onclick="adjustGenericCameraTypeCountFromSizer('${g.id}', 1)" class="px-1.5 py-0.5 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold cursor-pointer">+</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      ` : ''}
+    </div>
+  `;
+}
+window.renderPoeCalculatorStudioHtml = renderPoeCalculatorStudioHtml;
+
 function buildCalculatorStrip() {
   renderGlobalDesignModeToggle();
+  if (typeof renderCalculatorStudioIfOpen === "function") {
+    renderCalculatorStudioIfOpen();
+  }
   const container = document.getElementById("calculatorStripContainer");
   if (!container) return;
 
   if (currentMode === "access") {
     container.classList.remove("hidden");
     const p = calculatePoETarget();
-    const hasDemand = p.totalCameras > 0;
-    const isGenericMode = isGenericCameraModeActive();
-    const isCameraTypesInput = poeCalcInputMode === "camera_types";
     const genericTypes = typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : [];
-
-    // Resolve available closets/racks for newly added cameras from PoE Sizer
-    const allLocs = typeof FacilityStore !== "undefined" ? FacilityStore.getLocationNames(false) : ["IDF-1 • Rack-1", "MDF • Rack-1"];
-    if (!poeCalcTargetLocation && allLocs.length > 0) {
-      poeCalcTargetLocation = allLocs.find(l => l.includes("IDF")) || allLocs[0];
-    }
-
-    const shortLabels = {
-      "gen-cam-2mp-1080p": "Single 2MP (1080p)",
-      "gen-cam-4mp": "Single 4MP (2K)",
-      "gen-cam-5mp": "Single 5MP",
-      "gen-cam-8mp-4k": "Single 8MP (4K)",
-      "gen-cam-6mp-360": "6MP 360° Fisheye",
-      "gen-cam-12mp-360": "12MP 360° Fisheye",
-      "gen-cam-dual-1080p": "Dual-Sensor 1080P",
-      "gen-cam-quad-4mp": "Quad-Sensor 4MP",
-      "gen-cam-5sensor-ptz": "5-Sensor + PTZ",
-      "gen-cam-ptz": "PTZ Camera",
-      "gen-cam-lpr-60w": "LPR Camera (60W)"
-    };
-
     const totalSyncedGenericCams = genericTypes.reduce((sum, g) => sum + getGenericCameraTypeCountInBom(g.id), 0);
+    const showInlinePoe = Boolean(window.catalogShowInlinePoeCalc);
 
     container.innerHTML = `
-      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col gap-3 shadow-lg">
-        <!-- Top Row: Title, Design Mode Switcher, Input Mode Switcher & Live PoE Budget Summary -->
-        <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          <div class="flex items-start sm:items-center gap-3">
-            <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
-              <i data-lucide="zap" class="w-5 h-5"></i>
+      <div class="space-y-3">
+        <div class="bg-slate-900/95 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
+              <i data-lucide="zap" class="w-4 h-4"></i>
             </div>
             <div>
               <div class="flex flex-wrap items-center gap-2">
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-                  PoE Power Budget &amp; Edge Capacity Calculator
-                </h4>
-
-                <!-- PoE Input Mode Toggle: By Generic Camera Types vs By PoE Class -->
-                <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800">
-                  <button
-                    type="button"
-                    onclick="setPoeCalcInputMode('camera_types')"
-                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isCameraTypesInput ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
-                    title="Enter camera counts by Generic Type & Resolution (2MP, 4MP, 5MP, 8MP 4K, 360°, Dual/Quad/5-Sensor, PTZ, 60W LPR). Automatically syncs to BOM, PoE Classes, and Server Storage Calculator!"
-                  >
-                    <i data-lucide="camera" class="w-3.5 h-3.5"></i>
-                    <span>By Camera Types (Syncs BOM &amp; Storage)</span>
-                  </button>
-                  <button
-                    type="button"
-                    onclick="setPoeCalcInputMode('poe_classes')"
-                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${!isCameraTypesInput ? 'bg-amber-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}"
-                    title="Enter raw IEEE 802.3 PoE Class port counts directly (15W af, 30W at, 60W bt, 90W bt)"
-                  >
-                    <i data-lucide="zap" class="w-3.5 h-3.5"></i>
-                    <span>By PoE Class (15W / 30W / 60W / 90W)</span>
-                  </button>
-                </div>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Access &amp; Edge Switch Catalog</h4>
+                <span class="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-700/50 text-amber-300 font-mono text-[10px] font-bold">
+                  PoE Target: ${p.budgetWithHeadroom}W (+${extraHeadroomPercent}% Buffer)
+                </span>
+                <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[10px]">
+                  ${demandCounts.af || 0} af &bull; ${demandCounts.at || 0} at &bull; ${demandCounts.bt60 || 0} bt60 &bull; ${demandCounts.bt90 || 0} bt90 (${totalSyncedGenericCams} Generic Cams)
+                </span>
               </div>
-              <p class="text-[11px] text-slate-400 mt-0.5">
-                ${isCameraTypesInput
-                  ? 'Enter camera counts by type below to <strong class="text-emerald-300">auto-sync across Switch PoE sizing, Quote BOM, Physical Security, and Video Storage / Genetec Archiver calculations</strong>.'
-                  : 'Spec connected PoE ports by IEEE 802.3 class to compute continuous PSE wattage, cable dissipation, and filter matching switches.'}
+              <p class="text-[11px] text-slate-400">
+                Use the dedicated <strong class="text-amber-300">PoE &amp; Switch Calculator Studio</strong> in the top navigation to size IEEE 802.3 PoE budgets and camera counts.
               </p>
             </div>
           </div>
-
-          <div class="flex flex-wrap items-center gap-2.5 text-xs">
-            <!-- 15.4W af -->
-            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3af: 15.4W PSE / 12.95W PD">
-              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">15W (af):</span>
-              <input type="number" min="0" max="500" value="${demandCounts.af || 0}" onchange="updateDemandInput('af', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-white focus:outline-none" />
-            </div>
-
-            <!-- 30W at -->
-            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3at: 30W PSE / 25.5W PD (PoE+)">
-              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">30W (at):</span>
-              <input type="number" min="0" max="500" value="${demandCounts.at || 0}" onchange="updateDemandInput('at', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-sky-400 focus:outline-none" />
-            </div>
-
-            <!-- 60W bt Type 3 -->
-            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 3: 60W PSE / 51W PD (PoE++ / 4PPoE)">
-              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">60W (bt):</span>
-              <input type="number" min="0" max="500" value="${demandCounts.bt60 || 0}" onchange="updateDemandInput('bt60', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-rose-400 focus:outline-none" />
-            </div>
-
-            <!-- 90W bt Type 4 -->
-            <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 hover:border-slate-700 transition-colors" title="IEEE 802.3bt Type 4: 90W PSE / 71.3W PD (High-Power PoE++)">
-              <span class="text-[10px] font-mono text-slate-400 font-semibold uppercase">90W (bt):</span>
-              <input type="number" min="0" max="500" value="${demandCounts.bt90 || 0}" onchange="updateDemandInput('bt90', this.value)" class="w-9 bg-transparent text-center font-mono font-bold text-amber-400 focus:outline-none" />
-            </div>
-
-            <!-- Auto-Derive from BOM Button -->
-            <button onclick="deriveDemandFromBOM()" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl transition-all font-semibold text-[11px] cursor-pointer" title="Auto-detect PoE demands from devices in project BOM">
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" onclick="deriveDemandFromBOM()" class="px-2.5 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Auto-detect PoE demands from devices in project BOM">
               <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
               <span>Derive from BOM</span>
             </button>
-
-            <!-- Telemetry & Headroom Buffer Selection -->
-            <div class="flex items-center gap-3 border-l border-slate-800 pl-3">
-              <div class="text-right">
-                <span class="text-[10px] text-slate-400 uppercase font-mono block">
-                  Required Budget (+${extraHeadroomPercent}%):
-                </span>
-                <div class="flex items-baseline justify-end gap-1.5">
-                  <span class="text-sm font-mono font-black text-amber-400">${p.budgetWithHeadroom} W</span>
-                  ${p.rawWattsPD ? `<span class="text-[10px] text-slate-500 font-mono" title="Estimated device draw: ${p.rawWattsPD}W, Cable loss: ${p.cableLossWatts || 0}W">(${p.rawWatts || 0}W PSE)</span>` : ''}
-                </div>
-              </div>
-
-              <select onchange="updateHeadroom(this.value)" class="bg-slate-950 border border-slate-800 text-[11px] font-semibold rounded-lg px-2 py-1.5 text-slate-300 focus:outline-none focus:border-amber-500">
-                <option value="10" ${extraHeadroomPercent === 10 ? 'selected' : ''}>+10% Buffer</option>
-                <option value="15" ${extraHeadroomPercent === 15 ? 'selected' : ''}>+15% Buffer</option>
-                <option value="20" ${extraHeadroomPercent === 20 ? 'selected' : ''}>+20% Buffer</option>
-                <option value="25" ${extraHeadroomPercent === 25 ? 'selected' : ''}>+25% Buffer</option>
-                <option value="30" ${extraHeadroomPercent === 30 ? 'selected' : ''}>+30% Buffer</option>
-              </select>
-
-              ${hasDemand ? `
-                <button onclick="resetDemandInputs()" class="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors" title="Clear Demand Targets">
-                  <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                </button>
-              ` : ''}
-            </div>
+            <button type="button" onclick="window.catalogShowInlinePoeCalc = !window.catalogShowInlinePoeCalc; buildCalculatorStrip();" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="${showInlinePoe ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>${showInlinePoe ? 'Hide Inline Sizer' : 'Quick Inline Sizer'}</span>
+            </button>
+            <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_poe');" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+              <span>Open PoE Calculator Studio &rarr;</span>
+            </button>
           </div>
         </div>
-
-        ${isCameraTypesInput ? `
-          <!-- Interactive Generic Camera Types PoE & Storage Sync Matrix -->
-          <div class="bg-slate-950/90 border border-emerald-500/30 rounded-xl p-3 space-y-2.5">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-mono font-bold text-emerald-300 uppercase flex items-center gap-1">
-                  <i data-lucide="refresh-cw" class="w-3 h-3"></i> Live BOM &amp; Storage Sync
-                </span>
-                <span class="text-xs font-bold text-white">Enter Camera Counts by Generic Type (${totalSyncedGenericCams} Camera${totalSyncedGenericCams === 1 ? '' : 's'} Synced)</span>
-                <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2 py-0.5 text-[11px]">
-                  <span class="text-slate-400 font-mono text-[10px]">Assign Closet:</span>
-                  <select onchange="setPoeCalcTargetLocation(this.value)" class="bg-transparent text-indigo-300 font-bold text-[11px] focus:outline-none cursor-pointer">
-                    ${allLocs.map(loc => `<option value="${escapeHTML(loc)}" class="bg-slate-900" ${poeCalcTargetLocation === loc ? 'selected' : ''}>${escapeHTML(loc)}</option>`).join('')}
-                  </select>
-                </div>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-1.5">
-                <button type="button" onclick="switchDomain('physical_security')" class="px-2.5 py-1 rounded-lg bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/40 text-sky-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Physical Security Cameras tab to view camera cards or bulk-upgrade to actual SKUs">
-                  <i data-lucide="camera" class="w-3 h-3"></i>
-                  <span>Cameras / Upgrade SKUs &rarr;</span>
-                </button>
-                <button type="button" onclick="switchDomain('compute_storage')" class="px-2.5 py-1 rounded-lg bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-300 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer" title="Open Compute & Storage tab to view synced Video Storage & Genetec 5.14 Archiver sizing">
-                  <i data-lucide="hard-drive" class="w-3 h-3"></i>
-                  <span>Storage &amp; Archiver Sizer &rarr;</span>
-                </button>
-                ${totalSyncedGenericCams > 0 ? `
-                  <button type="button" onclick="clearAllGenericCamerasFromSizer()" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 border border-rose-800/60 text-rose-300 text-[10px] font-mono font-bold transition-all cursor-pointer" title="Clear all generic camera counts">
-                    Clear Cameras
-                  </button>
-                ` : ''}
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-6 gap-2">
-              ${genericTypes.map(g => {
-                const cnt = getGenericCameraTypeCountInBom(g.id);
-                const label = shortLabels[g.id] || g.model.replace("Generic ", "");
-                const tierColor = g.poeTierKey === "bt60"
-                  ? "text-rose-300 border-rose-500/40 bg-rose-500/10"
-                  : (g.poeTierKey === "at" ? "text-sky-300 border-sky-500/40 bg-sky-500/10" : "text-amber-300 border-amber-500/40 bg-amber-500/10");
-                const tierShort = g.poeTierKey === "bt60" ? "60W bt" : (g.poeTierKey === "at" ? "30W at" : "15W af");
-                return `
-                  <div class="flex flex-col justify-between p-2 rounded-xl border transition-all ${cnt > 0 ? 'bg-emerald-950/30 border-emerald-500/50 shadow-sm' : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'}">
-                    <div class="flex items-start justify-between gap-1 mb-1.5">
-                      <span class="text-[11px] font-bold ${cnt > 0 ? 'text-white' : 'text-slate-300'} leading-tight" title="${escapeHTML(g.model)} (${g.streamBitrateMbps} Mbps)">${escapeHTML(label)}</span>
-                      <span class="px-1.5 py-0.2 rounded border text-[9px] font-mono font-bold shrink-0 ${tierColor}">${tierShort}</span>
-                    </div>
-                    <div class="flex items-center justify-between gap-1 mt-auto pt-1 border-t border-slate-800/70">
-                      <span class="text-[9.5px] font-mono text-slate-400">${g.heads > 1 ? `${g.heads}x${g.mpPerHead}MP` : `${g.sensorMegapixels}MP`} &bull; ${g.streamBitrateMbps}M</span>
-                      <div class="flex items-center bg-slate-950 border ${cnt > 0 ? 'border-emerald-500/60' : 'border-slate-700'} rounded-lg overflow-hidden">
-                        <button type="button" onclick="adjustGenericCameraTypeCountFromSizer('${g.id}', -1)" class="px-1.5 py-0.5 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold cursor-pointer">-</button>
-                        <input
-                          type="number"
-                          min="0"
-                          max="500"
-                          value="${cnt}"
-                          onchange="setGenericCameraTypeCountFromSizer('${g.id}', this.value)"
-                          class="w-9 bg-transparent text-center font-mono text-xs font-bold ${cnt > 0 ? 'text-emerald-300' : 'text-slate-400'} focus:outline-none"
-                        />
-                        <button type="button" onclick="adjustGenericCameraTypeCountFromSizer('${g.id}', 1)" class="px-1.5 py-0.5 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-bold cursor-pointer">+</button>
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        ` : ''}
+        ${showInlinePoe ? renderPoeCalculatorStudioHtml() : ''}
       </div>
     `;
     safeCreateIcons(container);
@@ -1838,8 +1893,238 @@ function buildCalculatorStrip() {
       </div>
     `;
   } else if (currentMode === "servers" || currentMode === "storage") {
-    // Interactive Video Storage, Bandwidth, RAID Drive Matrix & Genetec 5.14 Archiver Sizer
     container.classList.remove("hidden");
+    const vCalc = (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function")
+      ? VideoStorageSizer.calculateFromBOM(projectBOM, {
+          sourceMode: videoSourceMode,
+          manualCameraCount: videoManualCamCount,
+          resolutionMp: videoResolutionMp,
+          retentionDays: videoRetentionDays,
+          codec: videoCodec,
+          fps: videoFps,
+          lowFpsUntilMotion: videoLowFpsUntilMotion,
+          idleFps: videoIdleFps,
+          motionDutyCycle: videoMotionDuty,
+          sceneActivity: videoSceneActivity,
+          raidType: videoRaidType,
+          preferredDriveSizeTb: videoPreferredDriveTb,
+          genetecProfile: videoGenetecProfile,
+          archiverRolesCount: videoArchiverRoles,
+          serverCountOverride: videoServerCount,
+          encryptionCerts: videoEncryptionCerts,
+          softwareMotionDetection: videoSoftwareMotion,
+          failoverStructure: videoFailoverStructure,
+          ringNodeCount: videoRingNodeCount,
+          dedicatedPrimaryCount: videoDedicatedPrimaryCount,
+          dedicatedFailoverCount: videoDedicatedFailoverCount,
+          maxSimultaneousFailures: videoMaxSimultaneousFailures,
+          failoverRetentionDays: videoFailoverRetentionDays,
+          failoverIncludeStorageBuffer: videoFailoverIncludeStorageBuffer
+        })
+      : { totalCameras: 32, peakIngressMbps: 105.6, averageRecordingMbps: 52.8, requiredUsableTB: 18.8, raidLevel: "RAID 6", genetec: { activeArchiverRoles: 1, recommendedArchiverServers: 1, isFullyCompliant: true } };
+    const g = vCalc.genetec || {};
+    const showInlineStorage = Boolean(window.catalogShowInlineStorageCalc);
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="bg-slate-900/95 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400 shrink-0">
+              <i data-lucide="hard-drive" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Servers &amp; Storage Catalog</h4>
+                <span class="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-700/50 text-purple-300 font-mono text-[10px] font-bold">
+                  ${vCalc.totalCameras} Cams &bull; ${vCalc.requiredUsableTB} TB Usable (${vCalc.raidLevel})
+                </span>
+                <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300 font-mono text-[10px] font-bold">
+                  ${vCalc.peakIngressMbps} / ${vCalc.averageRecordingMbps} Mbps
+                </span>
+                <span class="px-2 py-0.5 rounded ${g.isFullyCompliant !== false ? 'bg-emerald-950/80 border-emerald-700/50 text-emerald-300' : 'bg-rose-950/80 border-rose-700/50 text-rose-300'} border font-mono text-[10px] font-bold">
+                  ${g.activeArchiverRoles || 1} Archiver Role(s) (${g.recommendedArchiverServers || 1} Srv)
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Use the dedicated <strong class="text-purple-300">Storage &amp; Failover Calculator Studio</strong> in the top navigation for multi-group camera schedules, Low-FPS Until Motion, and Ring/Dedicated failover sizing.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" onclick="autoFitNvrToBom()" class="px-2.5 py-1.5 bg-purple-500/15 hover:bg-purple-500/25 text-purple-300 border border-purple-500/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+              <span>Auto-Fit Server</span>
+            </button>
+            <button type="button" onclick="window.catalogShowInlineStorageCalc = !window.catalogShowInlineStorageCalc; buildCalculatorStrip();" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="${showInlineStorage ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>${showInlineStorage ? 'Hide Inline Sizer' : 'Quick Inline Sizer'}</span>
+            </button>
+            <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_storage');" class="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="hard-drive" class="w-3.5 h-3.5"></i>
+              <span>Open Storage &amp; Failover Studio &rarr;</span>
+            </button>
+          </div>
+        </div>
+        ${showInlineStorage ? renderStorageCalculatorStudioHtml(false) : ''}
+      </div>
+    `;
+  } else if (currentMode === "vms_software" || currentMode === "os_virtualization") {
+    container.classList.remove("hidden");
+    const licRes = (typeof GenetecLicensingSizer !== "undefined")
+      ? GenetecLicensingSizer.calculate(projectBOM)
+      : null;
+    const showInlineLic = Boolean(window.catalogShowInlineLicCalc);
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="bg-slate-900/95 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
+              <i data-lucide="key" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">VMS Software &amp; Licensing Catalog</h4>
+                ${licRes ? `
+                  <span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 font-mono text-[10px] font-bold">
+                    Tier: ${String(licRes.effectiveTier || 'Enterprise').toUpperCase()} &bull; ${licRes.cameraUnits} Cam Lic &bull; ${licRes.readerConnections} Doors
+                  </span>
+                  <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-mono text-[10px] font-bold">
+                    Total SW MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} (${licRes.advantageYears}Y Advantage)
+                  </span>
+                ` : ''}
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Use the dedicated <strong class="text-emerald-300">Genetec Licensing Sizer Studio</strong> in the top navigation to configure Security Center Base, Omnicast, Synergis, Sipelia, AutoVu, and Partner SDKs.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" onclick="addGenetecLicensesToBom()" class="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+              <span>+ Add Licenses to BOM</span>
+            </button>
+            <button type="button" onclick="window.catalogShowInlineLicCalc = !window.catalogShowInlineLicCalc; buildCalculatorStrip();" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="${showInlineLic ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>${showInlineLic ? 'Hide Inline Builder' : 'Quick Inline Builder'}</span>
+            </button>
+            <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_licensing');" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="key" class="w-3.5 h-3.5"></i>
+              <span>Open Licensing Studio &rarr;</span>
+            </button>
+          </div>
+        </div>
+        ${showInlineLic && licRes ? renderGenetecLicensingBuilderHtml(licRes, false) : ''}
+      </div>
+    `;
+  } else if (currentMode === "workstations") {
+    container.classList.remove("hidden");
+    const wsCalc = (typeof ClientWorkstationSizer !== "undefined" && typeof ClientWorkstationSizer.calculate === "function")
+      ? ClientWorkstationSizer.calculate(projectBOM)
+      : null;
+    const recEv = wsCalc?.recommendedProfileEvaluation || {};
+    const recCat = wsCalc?.recommendedCatalogWorkstation;
+    const showInlineWs = Boolean(window.catalogShowInlineWsCalc);
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="bg-slate-900/95 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 shrink-0">
+              <i data-lucide="monitor" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Client Workstations Catalog</h4>
+                ${wsCalc ? `
+                  <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300 font-mono text-[10px] font-bold">
+                    Viewing ${wsCalc.totalViewedStreams} Streams (${wsCalc.monitorCount} Mon) &bull; ${recEv.utilizationPct || 0}% Decode Load
+                  </span>
+                  <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-mono text-[10px] font-bold">
+                    Genetec 5.14 Spec: ${wsCalc.recommendedProfile?.shortLabel || 'Recommended'} ${recCat ? `(${recCat.sku})` : ''}
+                  </span>
+                ` : ''}
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Use the dedicated <strong class="text-sky-300">Client Workstation Sizer Studio</strong> in the top navigation to calculate CPU/GPU specs per Genetec 5.14.1.0 Section 1.2 &amp; 1.3 decoding benchmarks.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" onclick="autoFitWorkstationToBom()" class="px-2.5 py-1.5 bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+              <span>Auto-Fit Workstation</span>
+            </button>
+            <button type="button" onclick="window.catalogShowInlineWsCalc = !window.catalogShowInlineWsCalc; buildCalculatorStrip();" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="${showInlineWs ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span>${showInlineWs ? 'Hide Inline Sizer' : 'Quick Inline Sizer'}</span>
+            </button>
+            <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_workstation');" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="monitor" class="w-3.5 h-3.5"></i>
+              <span>Open Workstation Sizer Studio &rarr;</span>
+            </button>
+          </div>
+        </div>
+        ${showInlineWs ? renderWorkstationSizerStudioHtml(false) : ''}
+      </div>
+    `;
+  } else if (currentMode === "access_control") {
+    container.classList.remove("hidden");
+    const showInlineDoors = Boolean(window.catalogShowInlineDoorCalc);
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="bg-slate-900/95 border border-slate-800 rounded-2xl px-3.5 py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
+              <i data-lucide="door-open" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Access Control Hardware Catalog</h4>
+                <span class="px-2 py-0.5 rounded bg-amber-950/80 border border-amber-700/50 text-amber-300 font-mono text-[10px] font-bold">
+                  Turnkey Door Kit Builder &amp; Schedule
+                </span>
+              </div>
+              <p class="text-[11px] text-slate-400">
+                Use the dedicated <strong class="text-amber-300">Doors &amp; Access Builder Studio</strong> in the top navigation to build multi-group door schedules (Controller + OSDP Reader + Strike/Maglock + REX + DPS + Power).
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button type="button" onclick="window.catalogShowInlineDoorCalc = !window.catalogShowInlineDoorCalc; buildCalculatorStrip();" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+              <i data-lucide="${showInlineDoors ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>${showInlineDoors ? 'Hide Inline Builder' : 'Quick Door Builder'}</span>
+            </button>
+            <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_doors');" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="door-open" class="w-3.5 h-3.5"></i>
+              <span>Open Doors &amp; Access Studio &rarr;</span>
+            </button>
+          </div>
+        </div>
+        ${showInlineDoors ? renderDoorBuilderStudioHtml(false) : ''}
+      </div>
+    `;
+  } else {
+    container.classList.remove("hidden");
+    container.innerHTML = `
+      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-4 shadow-md">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-400 shrink-0">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+              ${DOMAIN_DEFINITIONS[activeDomain]?.label || "Active Domain"} &bull; ${currentMode.replace('_', ' ').toUpperCase()}
+            </h4>
+            <p class="text-[11px] text-slate-400">Interactive hardware sizing and cross-domain load fitting engine.</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const calcContainer = document.getElementById("calculatorStripContainer");
+  if (calcContainer) safeCreateIcons(calcContainer);
+}
+
+function renderStorageCalculatorStudioHtml(isFullStudio = true) {
     const vCalc = (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.calculateFromBOM === "function")
       ? VideoStorageSizer.calculateFromBOM(projectBOM, {
           sourceMode: videoSourceMode,
@@ -1915,13 +2200,13 @@ function buildCalculatorStrip() {
     const isStorageHealthy = vCalc.requiredUsableTB === 0 || quotedUsableTB >= vCalc.requiredUsableTB;
     const g = vCalc.genetec || {};
     const dp = vCalc.selectedDrivePlan || {};
-    const showMatrix = (currentMode === "servers" || currentMode === "storage") ? (videoShowDetailsPanel !== false) : Boolean(videoShowDetailsPanel);
+    const showMatrix = isFullStudio ? (videoShowDetailsPanel !== false) : Boolean(videoShowDetailsPanel);
 
     const profilesList = (typeof GENETEC_514_REQUIREMENTS !== "undefined" && GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES)
       ? Object.values(GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES)
       : [];
 
-    container.innerHTML = `
+    return `
       <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
         <!-- Row 1: Header, Source Toggle, Genetec Datasheet Link & Primary KPI Strip -->
         <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
@@ -2699,112 +2984,8 @@ function buildCalculatorStrip() {
         })()}
       </div>
     `;
-  } else if (currentMode === "vms_software" || currentMode === "os_virtualization") {
-    container.classList.remove("hidden");
-    const licRes = (typeof GenetecLicensingSizer !== "undefined")
-      ? GenetecLicensingSizer.calculate(projectBOM)
-      : null;
-    container.innerHTML = licRes ? renderGenetecLicensingBuilderHtml(licRes, false) : "";
-  } else if (currentMode === "workstations") {
-    container.classList.remove("hidden");
-    const licRes = (typeof GenetecLicensingSizer !== "undefined")
-      ? GenetecLicensingSizer.calculate(projectBOM)
-      : null;
-    const svw = licRes?.streamvaultPlan?.workstationAppliance;
-    const cams = licRes?.cameraUnits || 0;
-    container.innerHTML = `
-      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-md">
-        <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 shrink-0">
-            <i data-lucide="monitor" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Genetec Security Desk &amp; Streamvault SVW Workstation Sizer</h4>
-              <span class="px-2 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-[10px] font-bold">SVW-100E / 300E / 500E</span>
-            </div>
-            <p class="text-[11px] text-slate-400">
-              Project has <strong class="text-white">${cams} camera streams</strong>.
-              ${svw ? `Recommended operator station: <strong class="text-indigo-300">${svw.model}</strong> (up to ${svw.maxMonitors} monitors, ${svw.decodeStreams1080p} FHD / ${svw.decodeStreams720p || svw.decodeStreams1080p * 2} HD streams).` : ''}
-            </p>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2.5">
-          <div class="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Security Desk Clients:</span>
-            <input type="number" min="1" max="200" value="${licRes?.workstationClients || 5}" onchange="setGenetecLicParam('workstationClients', parseInt(this.value,10)||5)" class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center text-xs font-bold text-white focus:outline-none" />
-            <span class="text-[10px] text-slate-500">(5 free in Base, +${licRes?.extraClients || 0} GSC-1U)</span>
-          </div>
-          ${svw ? `
-          <button onclick="addToBOM('${svw.id}', 1); if(typeof showToast==='function') showToast('Added 1x ${svw.model} to BOM.', 'success');" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i>
-            <span>+ Add ${svw.sku} ($${(svw.msrp || 0).toLocaleString()})</span>
-          </button>
-          ` : ''}
-        </div>
-      </div>
-    `;
-  } else if (currentMode === "access_control") {
-    // Phase B.3: Interactive Access Control Door Package Builder Strip
-    container.classList.remove("hidden");
-    container.innerHTML = `
-      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-md">
-        <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">
-            <i data-lucide="door-closed" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h4 class="text-xs font-bold text-white uppercase tracking-wider">Access Control Door Package Builder</h4>
-            <p class="text-[11px] text-slate-400">1-Click complete door kit assembly (Controller + OSDP Reader + Lock + REX + Door Contact).</p>
-          </div>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-3">
-          <div class="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Door Type:</span>
-            <select onchange="window.doorPkgPreset = this.value; doorPkgPreset = this.value;" class="bg-transparent text-white font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="standard_strike" class="bg-slate-900" ${doorPkgPreset === 'standard_strike' ? 'selected' : ''}>Standard Interior/Mortise Door (Mercury LP1502 + HID Signo 40 + HES 1006 + DS160 REX + 180-12 DPS)</option>
-              <option value="rim_exit_strike" class="bg-slate-900" ${doorPkgPreset === 'rim_exit_strike' ? 'selected' : ''}>Crash-Bar Rim Exit Door (Mercury LP1502 + HID Signo 40 + HES 9600 Surface Strike + DS160 REX + 180-12 DPS)</option>
-              <option value="perimeter_maglock" class="bg-slate-900" ${doorPkgPreset === 'perimeter_maglock' ? 'selected' : ''}>Perimeter / Gate Maglock Door (Mercury LP1502 + HID Signo 40 + Securitron M62 + DS160 REX + 1078C Armored DPS)</option>
-              <option value="ip_edge_door" class="bg-slate-900" ${doorPkgPreset === 'ip_edge_door' ? 'selected' : ''}>Single-Door PoE+ Edge Kit (Axis A1001 PoE+ Controller + HID Signo 40 + HES 1006 + DS160 REX + 180-12 DPS)</option>
-            </select>
-          </div>
-
-          <div class="flex items-center gap-2 bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-bold uppercase text-slate-400">Door Qty:</span>
-            <input type="number" min="1" max="64" value="${doorPkgQty || 1}" onchange="window.doorPkgQty = Math.max(1, parseInt(this.value, 10) || 1); doorPkgQty = window.doorPkgQty;" class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center text-xs font-bold text-white focus:outline-none" />
-          </div>
-
-          <button onclick="addDoorPackageToBom()" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
-            <i data-lucide="package-plus" class="w-4 h-4"></i>
-            <span>+ Add Door Package to BOM</span>
-          </button>
-        </div>
-      </div>
-    `;
-  } else {
-    // Sizer placeholder for emerging domains
-    container.classList.remove("hidden");
-    container.innerHTML = `
-      <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 sm:p-4 flex items-center justify-between gap-4 shadow-md">
-        <div class="flex items-center gap-3">
-          <div class="p-2.5 rounded-xl bg-brand-500/10 border border-brand-500/30 text-brand-400 shrink-0">
-            <i data-lucide="sparkles" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-              ${DOMAIN_DEFINITIONS[activeDomain]?.label || "Active Domain"} &bull; ${currentMode.replace('_', ' ').toUpperCase()}
-            </h4>
-            <p class="text-[11px] text-slate-400">Interactive hardware sizing and cross-domain load fitting engine.</p>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  const calcContainer = document.getElementById("calculatorStripContainer");
-  if (calcContainer) safeCreateIcons(calcContainer);
 }
+window.renderStorageCalculatorStudioHtml = renderStorageCalculatorStudioHtml;
 
 function setVideoSizerParam(key, val) {
   if (key === "retentionDays") {
@@ -4478,9 +4659,1103 @@ function addDoorPackageToBom() {
   if (typeof showToast === "function") {
     showToast(`Added ${doors}-Door Access Control Package (${preset.replace(/_/g, " ")}) to BOM.`, "success");
   }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
 }
 window.addDoorPackageToBom = addDoorPackageToBom;
+
+// =========================================================================
+// CLIENT WORKSTATION DECODING SIZER (Genetec Security Center 5.14.1.0 Sec 1.2 & 1.3)
+// =========================================================================
+
+let workstationSyncAllColumns = {
+  heads: false,
+  resolutionMp: false,
+  fps: false,
+  codec: false
+};
+window.workstationSyncAllColumns = workstationSyncAllColumns;
+
+function ensureEditableWorkstationGroups() {
+  if (typeof ClientWorkstationSizer === "undefined") return [];
+  if (!Array.isArray(ClientWorkstationSizer.state.viewedGroups) || ClientWorkstationSizer.state.viewedGroups.length === 0) {
+    ClientWorkstationSizer.state.viewedGroups = [
+      { id: "ws_grp_1", name: "Primary Tile Grid (1080p)", qty: 16, heads: 1, resolutionMp: 2, fps: 15, codec: "H.265" }
+    ];
+  }
+  return ClientWorkstationSizer.state.viewedGroups;
+}
+
+function addWorkstationCameraGroup() {
+  const groups = ensureEditableWorkstationGroups();
+  const last = groups[groups.length - 1] || {};
+  const nextIdx = groups.length + 1;
+  groups.push({
+    id: `ws_grp_${Date.now()}_${nextIdx}`,
+    name: `Viewing Grid ${nextIdx}`,
+    qty: 8,
+    heads: last.heads || 1,
+    resolutionMp: last.resolutionMp || 4,
+    fps: last.fps || 15,
+    codec: last.codec || "H.265"
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.addWorkstationCameraGroup = addWorkstationCameraGroup;
+
+function duplicateWorkstationCameraGroup(index) {
+  const groups = ensureEditableWorkstationGroups();
+  const src = groups[index];
+  if (!src) return;
+  groups.splice(index + 1, 0, {
+    ...src,
+    id: `ws_grp_${Date.now()}_${index + 2}`,
+    name: `${src.name || "Grid"} (Copy)`
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.duplicateWorkstationCameraGroup = duplicateWorkstationCameraGroup;
+
+function removeWorkstationCameraGroup(index) {
+  const groups = ensureEditableWorkstationGroups();
+  if (groups.length <= 1) return;
+  groups.splice(index, 1);
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.removeWorkstationCameraGroup = removeWorkstationCameraGroup;
+
+function updateWorkstationCameraGroup(index, field, val) {
+  const groups = ensureEditableWorkstationGroups();
+  if (!groups[index]) return;
+  groups[index][field] = val;
+  if (workstationSyncAllColumns && workstationSyncAllColumns[field]) {
+    groups.forEach(g => {
+      g[field] = val;
+    });
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.updateWorkstationCameraGroup = updateWorkstationCameraGroup;
+
+function toggleWorkstationColumnSync(field, checked) {
+  const isChecked = Boolean(checked);
+  if (workstationSyncAllColumns && field in workstationSyncAllColumns) {
+    workstationSyncAllColumns[field] = isChecked;
+  }
+  if (isChecked) {
+    const groups = ensureEditableWorkstationGroups();
+    if (groups.length > 0) {
+      const masterVal = groups[0][field];
+      groups.forEach(g => {
+        if (masterVal !== undefined) g[field] = masterVal;
+      });
+    }
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.toggleWorkstationColumnSync = toggleWorkstationColumnSync;
+
+function setWorkstationSizerParam(key, val) {
+  if (typeof ClientWorkstationSizer === "undefined") return;
+  const st = ClientWorkstationSizer.state;
+  if (key === "monitorCount") {
+    st.monitorCount = Math.max(1, Math.min(16, parseInt(val, 10) || 2));
+  } else if (key === "workstationCount") {
+    st.workstationCount = Math.max(1, Math.min(200, parseInt(val, 10) || 1));
+    if (typeof setGenetecLicParam === "function") {
+      setGenetecLicParam("workstationClients", st.workstationCount);
+    }
+  } else if (key === "usageMode") {
+    st.usageMode = val === "video_wall" ? "video_wall" : "active_operator";
+  } else if (key === "watermarking") {
+    st.watermarking = Boolean(val);
+  } else if (key === "hwAccelDecode") {
+    st.hwAccelDecode = Boolean(val);
+  } else if (key === "encryptedStreams") {
+    st.encryptedStreams = Boolean(val);
+  } else if (key === "preferredFormFactor") {
+    st.preferredFormFactor = ["any", "tower", "rack"].includes(val) ? val : "any";
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.setWorkstationSizerParam = setWorkstationSizerParam;
+
+function syncWorkstationGroupsFromStorage() {
+  if (typeof ClientWorkstationSizer === "undefined") return;
+  let imported = [];
+  if (typeof VideoStorageSizer !== "undefined" && Array.isArray(VideoStorageSizer.state?.cameraGroups) && VideoStorageSizer.state.cameraGroups.length > 0) {
+    imported = VideoStorageSizer.state.cameraGroups.map((g, i) => ({
+      id: `ws_sync_${Date.now()}_${i}`,
+      name: g.name || `Camera Group ${i + 1}`,
+      qty: Math.max(1, parseInt(g.qty, 10) || 1),
+      heads: Math.max(1, parseInt(g.heads, 10) || 1),
+      resolutionMp: Number(g.resolutionMp) || 4,
+      fps: Number(g.fps) || 15,
+      codec: g.codec || "H.265"
+    }));
+  } else if (typeof VideoStorageSizer !== "undefined" && typeof VideoStorageSizer.buildCameraGroupsFromBom === "function") {
+    const bomGrps = VideoStorageSizer.buildCameraGroupsFromBom(projectBOM);
+    imported = bomGrps.map((g, i) => ({
+      id: `ws_bom_${Date.now()}_${i}`,
+      name: g.name || `BOM Cameras ${i + 1}`,
+      qty: Math.max(1, parseInt(g.qty, 10) || 1),
+      heads: Math.max(1, parseInt(g.heads, 10) || 1),
+      resolutionMp: Number(g.resolutionMp) || 4,
+      fps: Number(g.fps) || 15,
+      codec: g.codec || "H.265"
+    }));
+  }
+  if (imported.length > 0) {
+    ClientWorkstationSizer.state.viewedGroups = imported;
+    if (typeof showToast === "function") {
+      showToast(`Synced ${imported.length} camera group(s) into the Client Workstation Sizer.`, "info");
+    }
+    if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  } else if (typeof showToast === "function") {
+    showToast("No BOM or Storage camera groups found to sync yet.", "info");
+  }
+}
+window.syncWorkstationGroupsFromStorage = syncWorkstationGroupsFromStorage;
+
+function applyWorkstationPreset(presetKey) {
+  if (typeof ClientWorkstationSizer === "undefined") return;
+  const st = ClientWorkstationSizer.state;
+  if (presetKey === "operator_16_1080p") {
+    st.monitorCount = 2;
+    st.usageMode = "active_operator";
+    st.viewedGroups = [
+      { id: "ws_p1", name: "2x2 + 3x4 Operator Grids (1080p)", qty: 16, heads: 1, resolutionMp: 2, fps: 15, codec: "H.265" }
+    ];
+  } else if (presetKey === "operator_32_mixed") {
+    st.monitorCount = 3;
+    st.usageMode = "active_operator";
+    st.viewedGroups = [
+      { id: "ws_p2a", name: "Overview Grid (24x 1080p)", qty: 24, heads: 1, resolutionMp: 2, fps: 15, codec: "H.265" },
+      { id: "ws_p2b", name: "Call-Up Spot Monitors (8x 4K UHD)", qty: 8, heads: 1, resolutionMp: 8, fps: 30, codec: "H.265" }
+    ];
+  } else if (presetKey === "soc_wall_48") {
+    st.monitorCount = 4;
+    st.usageMode = "video_wall";
+    st.viewedGroups = [
+      { id: "ws_p3a", name: "4-Monitor Video Wall (36x 4MP)", qty: 36, heads: 1, resolutionMp: 4, fps: 15, codec: "H.265" },
+      { id: "ws_p3b", name: "High-Detail Perimeter (12x 4K UHD)", qty: 12, heads: 1, resolutionMp: 8, fps: 15, codec: "H.265" }
+    ];
+  } else if (presetKey === "panoramic_multisensor") {
+    st.monitorCount = 4;
+    st.usageMode = "active_operator";
+    st.viewedGroups = [
+      { id: "ws_p4a", name: "Multi-Sensor 4-Head Cameras", qty: 6, heads: 4, resolutionMp: 4, fps: 15, codec: "H.265" },
+      { id: "ws_p4b", name: "12MP 360° Fisheye De-Warping", qty: 8, heads: 1, resolutionMp: 12, fps: 15, codec: "H.265" }
+    ];
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.applyWorkstationPreset = applyWorkstationPreset;
+
+function autoFitWorkstationToBom() {
+  if (typeof ClientWorkstationSizer === "undefined" || typeof addToBOM !== "function") return;
+  const wsCalc = ClientWorkstationSizer.calculate(projectBOM);
+  const chosen = wsCalc.recommendedCatalogWorkstation;
+  if (!chosen) return;
+  const qty = Math.max(1, wsCalc.workstationCount * (wsCalc.workstationsNeededPerOperator || 1));
+  addToBOM(chosen.id || chosen.sku, qty);
+  if (typeof showToast === "function") {
+    showToast(`Auto-Fitted ${qty}x ${chosen.model} (${chosen.sku}) to BOM for ${wsCalc.totalViewedStreams} simultaneously decoded streams (${wsCalc.recommendedProfile.shortLabel} tier).`, "success");
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.autoFitWorkstationToBom = autoFitWorkstationToBom;
+
+function renderWorkstationSizerStudioHtml(isFullStudio = true) {
+  if (typeof ClientWorkstationSizer === "undefined") {
+    return `<div class="p-4 text-slate-400 text-xs">Client Workstation Sizer engine is loading...</div>`;
+  }
+  const wsCalc = ClientWorkstationSizer.calculate(projectBOM);
+  const recProf = wsCalc.recommendedProfile || {};
+  const recEv = wsCalc.recommendedProfileEvaluation || {};
+  const recHw = wsCalc.recommendedCatalogWorkstation;
+  const mods = wsCalc.modifiers || {};
+
+  return `
+    <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
+      <!-- Row 1: Header, Spec Reference Link, and Primary KPI Summary -->
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 shrink-0">
+            <i data-lucide="monitor" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+                Client Workstation Decoding Sizer (Genetec Security Center 5.14.1.0 Sec 1.2 &amp; 1.3)
+              </h4>
+              <span class="px-2 py-0.5 rounded-md bg-sky-950/80 border border-sky-700/50 text-[10px] font-mono font-bold text-sky-300">
+                ${wsCalc.totalViewedCameras} Cameras (${wsCalc.totalViewedStreams} Simultaneously Decoded Streams &bull; ${wsCalc.totalPixelRateMpPerSec} MP/s)
+              </span>
+              <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide (Pages 5-6)', 'GENETEC-SC-5.14-WS')" class="px-2 py-0.5 rounded-md bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-[10px] font-mono font-semibold text-indigo-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec 5.14.1.0 System Requirements PDF (Pages 5-6 Client Workstation Specifications & Decoding Performance)">
+                <i data-lucide="file-text" class="w-3 h-3"></i>
+                <span>Genetec 5.14 Spec Guide (p. 5–6)</span>
+              </button>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              Calculates exact CPU, GPU, RAM, Dual-GPU Monitor, and Hardware Decoding requirements for <strong class="text-white">Security Desk</strong> based on simultaneously viewed camera tiles, resolution, frame rate, codec (<code class="text-sky-300">H.264</code> / <code class="text-sky-300">H.265</code> / <code class="text-sky-300">AV1</code>), watermarking, and encryption.
+            </p>
+          </div>
+        </div>
+
+        <!-- Top Right KPI Strip & Auto-Fit Button -->
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${wsCalc.exceedsSingleHighPerfWorkstation ? 'border-amber-600/80' : 'border-slate-800'}">
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Required Spec Tier</div>
+              <div class="text-xs font-mono font-bold text-sky-400">${recProf.shortLabel || 'Recommended'}</div>
+            </div>
+            <div class="h-6 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Decode Utilization</div>
+              <div class="text-xs font-mono font-bold ${recEv.isCompliant ? 'text-emerald-400' : 'text-amber-400'}">
+                ${recEv.utilizationPct || 0}% <span class="text-slate-500">/ ${recEv.safeCapPct || 80}% Cap</span>
+              </div>
+            </div>
+            <div class="h-6 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Recommended Appliance</div>
+              <div class="text-xs font-mono font-bold text-indigo-300">${recHw ? `${recHw.sku} ($${(recHw.msrp || 0).toLocaleString()})` : 'High-Performance'}</div>
+            </div>
+          </div>
+
+          <button onclick="autoFitWorkstationToBom()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Add the recommended Client Workstation(s) to the Project BOM">
+            <i data-lucide="wand-2" class="w-4 h-4"></i>
+            <span>+ Auto-Fit ${wsCalc.workstationCount * (wsCalc.workstationsNeededPerOperator || 1)}x ${recHw ? recHw.sku : 'Workstation'}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Row 2: Global Workstation Environment & Genetec 5.14 Decoding Modifiers Bar -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2.5">
+          <!-- Operator Workstation Count -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5" title="Number of Security Desk operator workstations to quote (Base package includes 5 free client connections)">
+            <span class="text-[10px] font-bold uppercase text-slate-300">Operator Stations:</span>
+            <input type="number" min="1" max="100" value="${wsCalc.workstationCount}" onchange="setWorkstationSizerParam('workstationCount', this.value)" class="w-12 bg-slate-950 border border-slate-700 rounded px-1.5 py-0.5 text-center font-mono font-bold text-white text-xs focus:outline-none" />
+          </div>
+
+          <!-- Monitors per Workstation -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5" title="Displays connected per workstation (Genetec 5.14 Rule: Connecting >2 monitors requires High-Performance tier with Dual GPUs)">
+            <span class="text-[10px] font-bold uppercase text-slate-300">Monitors / Station:</span>
+            <select onchange="setWorkstationSizerParam('monitorCount', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-sky-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
+              ${[1, 2, 3, 4, 6, 8].map(m => `<option value="${m}" class="bg-slate-900" ${wsCalc.monitorCount === m ? 'selected' : ''}>${m} Monitor${m === 1 ? '' : 's'}${m > 2 ? ' (Requires Dual GPU)' : ''}</option>`).join('')}
+            </select>
+          </div>
+
+          <!-- Usage Mode (Active Operator 20% Headroom vs Static Video Wall 15% Headroom) -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5" title="Genetec 5.14 Page 6: Leave at least 20% headroom if the workstation is actively used by an operator (80% max decode load)">
+            <span class="text-[10px] font-bold uppercase text-slate-300">Station Role:</span>
+            <select onchange="setWorkstationSizerParam('usageMode', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="active_operator" class="bg-slate-900" ${wsCalc.usageMode === 'active_operator' ? 'selected' : ''}>Active Security Desk Operator (80% Cap / 20% Headroom)</option>
+              <option value="video_wall" class="bg-slate-900" ${wsCalc.usageMode === 'video_wall' ? 'selected' : ''}>Passive Video Wall Display Only (85% Cap / 15% Headroom)</option>
+            </select>
+          </div>
+
+          <!-- Form Factor Filter -->
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5">
+            <span class="text-[10px] font-bold uppercase text-slate-300">Chassis:</span>
+            <select onchange="setWorkstationSizerParam('preferredFormFactor', this.value)" class="bg-slate-950 border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="any" class="bg-slate-900" ${wsCalc.preferredFormFactor === 'any' ? 'selected' : ''}>Any (Tower / SFF / Rack)</option>
+              <option value="tower" class="bg-slate-900" ${wsCalc.preferredFormFactor === 'tower' ? 'selected' : ''}>Desktop / Tower / Mini</option>
+              <option value="rack" class="bg-slate-900" ${wsCalc.preferredFormFactor === 'rack' ? 'selected' : ''}>Rackmount Workstation</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Genetec 5.14 Page 6 Decoding Modifiers (Watermarking, HW Accel, Encrypted Streams) -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.hwAccelDecode ? 'bg-emerald-950/40 border-emerald-600/50 text-emerald-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Hardware-accelerated GPU decoding enabled in Security Desk options">
+            <input type="checkbox" ${wsCalc.hwAccelDecode ? 'checked' : ''} onchange="setWorkstationSizerParam('hwAccelDecode', this.checked)" class="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer" />
+            <span>GPU HW Acceleration</span>
+          </label>
+
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.watermarking ? 'bg-amber-950/40 border-amber-600/50 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Genetec 5.14 Page 6: Video Watermarking reduces max decoded streams by 10% with HW acceleration or 30% without HW acceleration">
+            <input type="checkbox" ${wsCalc.watermarking ? 'checked' : ''} onchange="setWorkstationSizerParam('watermarking', this.checked)" class="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer" />
+            <span>Video Watermarking (${wsCalc.hwAccelDecode ? '-10%' : '-30%'} Cap)</span>
+          </label>
+
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.encryptedStreams ? 'bg-rose-950/40 border-rose-600/50 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Genetec 5.14 Page 6: Viewing encrypted low-res streams increases CPU load by up to 40% (~28.6% stream capacity reduction)">
+            <input type="checkbox" ${wsCalc.encryptedStreams ? 'checked' : ''} onchange="setWorkstationSizerParam('encryptedStreams', this.checked)" class="w-3.5 h-3.5 rounded accent-rose-500 cursor-pointer" />
+            <span>Encrypted Streams (+40% CPU Load)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Row 3: Simultaneously Viewed Camera Tile Groups Table -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-col gap-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+              <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span>Simultaneously Viewed Camera Tile Groups (${wsCalc.viewedGroups.length} Group${wsCalc.viewedGroups.length === 1 ? '' : 's'})</span>
+            </span>
+            <button onclick="addWorkstationCameraGroup()" class="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Add Viewed Tile Group</span>
+            </button>
+            <button onclick="syncWorkstationGroupsFromStorage()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-[11px] font-semibold flex items-center gap-1 transition-all cursor-pointer" title="Import camera groups from the Storage Calculator or Project BOM">
+              <i data-lucide="refresh-cw" class="w-3 h-3 text-sky-400"></i>
+              <span>Sync from Storage / BOM</span>
+            </button>
+          </div>
+
+          <!-- Quick Operator Tile Layout Presets -->
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[10px] font-mono text-slate-400 uppercase mr-1">Quick Presets:</span>
+            <button onclick="applyWorkstationPreset('operator_16_1080p')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-slate-300 cursor-pointer">
+              16x 1080p @ 15fps (2 Mon)
+            </button>
+            <button onclick="applyWorkstationPreset('operator_32_mixed')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-sky-300 cursor-pointer">
+              24x 1080p + 8x 4K (3 Mon)
+            </button>
+            <button onclick="applyWorkstationPreset('soc_wall_48')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-indigo-300 cursor-pointer">
+              36x 4MP + 12x 4K Wall (4 Mon)
+            </button>
+            <button onclick="applyWorkstationPreset('panoramic_multisensor')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-purple-300 cursor-pointer">
+              Multi-Sensor + 12MP Fisheye
+            </button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400 align-bottom">
+                <th class="py-1.5 px-2 min-w-[160px]">Tile Group / Monitor Assignment</th>
+                <th class="py-1.5 px-1.5 w-24">Viewed Cams</th>
+                <th class="py-1.5 px-1.5 w-28">
+                  <div class="flex flex-col gap-0.5">
+                    <label class="inline-flex items-center gap-1 text-[8px] font-mono text-sky-300 cursor-pointer select-none">
+                      <input type="checkbox" ${workstationSyncAllColumns.heads ? 'checked' : ''} onchange="toggleWorkstationColumnSync('heads', this.checked)" class="w-3 h-3 rounded accent-sky-500 cursor-pointer" />
+                      <span>All Same</span>
+                    </label>
+                    <span>Streams / Cam</span>
+                  </div>
+                </th>
+                <th class="py-1.5 px-1.5 min-w-[140px]">
+                  <div class="flex flex-col gap-0.5">
+                    <label class="inline-flex items-center gap-1 text-[8px] font-mono text-sky-300 cursor-pointer select-none">
+                      <input type="checkbox" ${workstationSyncAllColumns.resolutionMp ? 'checked' : ''} onchange="toggleWorkstationColumnSync('resolutionMp', this.checked)" class="w-3 h-3 rounded accent-sky-500 cursor-pointer" />
+                      <span>All Same</span>
+                    </label>
+                    <span>Displayed Stream Res</span>
+                  </div>
+                </th>
+                <th class="py-1.5 px-1.5 w-28">
+                  <div class="flex flex-col gap-0.5">
+                    <label class="inline-flex items-center gap-1 text-[8px] font-mono text-sky-300 cursor-pointer select-none">
+                      <input type="checkbox" ${workstationSyncAllColumns.fps ? 'checked' : ''} onchange="toggleWorkstationColumnSync('fps', this.checked)" class="w-3 h-3 rounded accent-sky-500 cursor-pointer" />
+                      <span>All Same</span>
+                    </label>
+                    <span>Viewing FPS</span>
+                  </div>
+                </th>
+                <th class="py-1.5 px-1.5 w-32">
+                  <div class="flex flex-col gap-0.5">
+                    <label class="inline-flex items-center gap-1 text-[8px] font-mono text-sky-300 cursor-pointer select-none">
+                      <input type="checkbox" ${workstationSyncAllColumns.codec ? 'checked' : ''} onchange="toggleWorkstationColumnSync('codec', this.checked)" class="w-3 h-3 rounded accent-sky-500 cursor-pointer" />
+                      <span>All Same</span>
+                    </label>
+                    <span>Compression Codec</span>
+                  </div>
+                </th>
+                <th class="py-1.5 px-2 text-right">Decoded Streams</th>
+                <th class="py-1.5 px-2 text-right">Pixel Rate (MP/s)</th>
+                <th class="py-1.5 px-2 text-right">Est. Client Mbps</th>
+                <th class="py-1.5 px-2 text-right" title="Decode load on the Recommended Workstation profile">Load (${recProf.shortLabel || 'Rec'})</th>
+                <th class="py-1.5 px-1.5 text-center w-16">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              ${wsCalc.viewedGroups.map((grp, idx) => {
+                const recGroupDetail = (recEv.groupDetails || [])[idx] || {};
+                return `
+                  <tr class="hover:bg-slate-900/50 transition-colors">
+                    <td class="py-1.5 px-2">
+                      <input type="text" value="${String(grp.name || `Grid ${idx + 1}`).replace(/"/g, '&quot;')}" onchange="updateWorkstationCameraGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-sky-500" />
+                    </td>
+                    <td class="py-1.5 px-1.5">
+                      <input type="number" min="1" max="256" value="${grp.qty}" onchange="updateWorkstationCameraGroup(${idx}, 'qty', Math.max(1, parseInt(this.value, 10) || 1))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-sky-500" />
+                    </td>
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateWorkstationCameraGroup(${idx}, 'heads', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-slate-200 font-mono text-xs focus:outline-none cursor-pointer">
+                        <option value="1" class="bg-slate-900" ${(grp.heads || 1) === 1 ? 'selected' : ''}>1x Single</option>
+                        <option value="2" class="bg-slate-900" ${grp.heads === 2 ? 'selected' : ''}>2x Dual</option>
+                        <option value="3" class="bg-slate-900" ${grp.heads === 3 ? 'selected' : ''}>3x Triple</option>
+                        <option value="4" class="bg-slate-900" ${grp.heads === 4 ? 'selected' : ''}>4x Quad</option>
+                        <option value="5" class="bg-slate-900" ${grp.heads === 5 ? 'selected' : ''}>5x (4-Head+PTZ)</option>
+                      </select>
+                    </td>
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateWorkstationCameraGroup(${idx}, 'resolutionMp', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
+                        ${[
+                          { mp: 0.4, label: "0.4MP (CIF / Low-Res Tile)" },
+                          { mp: 1, label: "1MP (720p HD)" },
+                          { mp: 2, label: "2MP (1080p Full HD)" },
+                          { mp: 3, label: "3MP (2048x1536)" },
+                          { mp: 4, label: "4MP (1440p QHD)" },
+                          { mp: 5, label: "5MP (2592x1944)" },
+                          { mp: 6, label: "6MP (3072x2048)" },
+                          { mp: 8, label: "8MP (4K Ultra HD)" },
+                          { mp: 12, label: "12MP (360° Fisheye)" },
+                          { mp: 16, label: "16MP (Panoramic)" }
+                        ].map(r => `<option value="${r.mp}" class="bg-slate-900" ${Number(grp.resolutionMp) === r.mp ? 'selected' : ''}>${r.label}</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateWorkstationCameraGroup(${idx}, 'fps', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
+                        ${[1, 2, 5, 10, 12, 15, 20, 24, 30, 60].map(f => `<option value="${f}" class="bg-slate-900" ${Number(grp.fps) === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
+                      </select>
+                    </td>
+                    <td class="py-1.5 px-1.5">
+                      <select onchange="updateWorkstationCameraGroup(${idx}, 'codec', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
+                        <option value="H.264" class="bg-slate-900" ${grp.codec === 'H.264' ? 'selected' : ''}>H.264 (AVC)</option>
+                        <option value="H.265" class="bg-slate-900" ${grp.codec === 'H.265' ? 'selected' : ''}>H.265 (HEVC)</option>
+                        <option value="AV1" class="bg-slate-900" ${grp.codec === 'AV1' ? 'selected' : ''}>AV1 (Genetec 5.14)</option>
+                      </select>
+                    </td>
+                    <td class="py-1.5 px-2 text-right font-mono font-bold text-white">${recGroupDetail.streams || (grp.qty * (grp.heads || 1))} str</td>
+                    <td class="py-1.5 px-2 text-right font-mono text-sky-300">${recGroupDetail.pixelRateMpPerSec || 0} MP/s</td>
+                    <td class="py-1.5 px-2 text-right font-mono text-purple-300">${recGroupDetail.estimatedBandwidthMbps || 0} Mbps</td>
+                    <td class="py-1.5 px-2 text-right font-mono">
+                      <span class="font-bold ${(recGroupDetail.groupLoadPct || 0) <= 80 ? 'text-emerald-400' : 'text-amber-400'}">${recGroupDetail.groupLoadPct || 0}%</span>
+                      <span class="text-[9px] text-slate-500 block">of ${recGroupDetail.effectiveMaxStreams || 0} max</span>
+                    </td>
+                    <td class="py-1.5 px-1.5 text-center">
+                      <div class="flex items-center justify-center gap-1">
+                        <button onclick="duplicateWorkstationCameraGroup(${idx})" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-sky-300 transition-colors cursor-pointer" title="Duplicate tile group">
+                          <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                        </button>
+                        ${wsCalc.viewedGroups.length > 1 ? `
+                          <button onclick="removeWorkstationCameraGroup(${idx})" class="p-1 rounded hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title="Remove tile group">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                          </button>
+                        ` : ''}
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Row 4: Genetec 5.14.1.0 Section 1.2 & 1.3 Hardware Profile Comparison Cards (Minimum vs Recommended vs High-Performance) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        ${(wsCalc.profileEvaluations || []).map(ev => {
+          const prof = ev.profile || {};
+          const isRec = prof.id === wsCalc.recommendedProfileKey;
+          const barPct = Math.min(100, Math.round(ev.utilizationPct || 0));
+          const barColor = !ev.isDecodeCompliant
+            ? "bg-rose-500"
+            : !ev.isMonitorCompliant
+              ? "bg-amber-500"
+              : (barPct > 70 ? "bg-amber-400" : "bg-emerald-500");
+
+          return `
+            <div class="rounded-xl p-3.5 border flex flex-col justify-between gap-2.5 transition-all ${
+              isRec
+                ? 'bg-sky-950/25 border-sky-500/70 shadow-lg ring-1 ring-sky-500/30'
+                : (ev.isCompliant ? 'bg-slate-950/90 border-slate-800' : 'bg-slate-950/60 border-slate-800/70 opacity-85')
+            }">
+              <div class="space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xs font-black uppercase tracking-wider ${isRec ? 'text-sky-300' : 'text-white'}">${prof.shortLabel} Profile</span>
+                    ${isRec ? `<span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/50 text-sky-200 text-[9px] font-mono font-bold uppercase">★ Required Spec</span>` : ''}
+                  </div>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                    ev.isCompliant
+                      ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60'
+                      : 'bg-rose-950 text-rose-300 border border-rose-700/60'
+                  }">
+                    ${ev.isCompliant ? `✓ PASS (${ev.utilizationPct}%)` : (!ev.isMonitorCompliant ? `⚠ MAX ${prof.maxMonitors} MON` : `✗ OVERLOAD (${ev.utilizationPct}%)`)}
+                  </span>
+                </div>
+
+                <!-- Utilization Progress Bar with 80%/85% Operator Headroom Marker -->
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between text-[10px] font-mono">
+                    <span class="text-slate-400">Decoding Load vs Safe Cap (${ev.safeCapPct}%):</span>
+                    <span class="font-bold ${ev.isDecodeCompliant ? 'text-emerald-400' : 'text-rose-400'}">${ev.utilizationPct}% / ${ev.safeCapPct}%</span>
+                  </div>
+                  <div class="w-full h-2 rounded-full bg-slate-900 border border-slate-800 overflow-hidden relative">
+                    <div class="h-full ${barColor} transition-all" style="width: ${barPct}%"></div>
+                  </div>
+                </div>
+
+                <!-- Genetec 5.14.1.0 Section 1.2 Hardware Spec Breakdown -->
+                <div class="bg-slate-900/90 border border-slate-800/90 rounded-lg p-2.5 space-y-1 text-[10px] font-mono">
+                  <div class="flex justify-between gap-2"><span class="text-slate-400">CPU:</span><span class="text-white font-semibold text-right">${prof.cpuSpec}</span></div>
+                  <div class="flex justify-between gap-2"><span class="text-slate-400">GPU:</span><span class="text-sky-300 font-semibold text-right">${prof.gpuSpec}</span></div>
+                  <div class="flex justify-between gap-2"><span class="text-slate-400">Memory &amp; Disk:</span><span class="text-slate-200 text-right">${prof.ramGb} GB RAM &bull; ${prof.osDriveSpec}</span></div>
+                  <div class="flex justify-between gap-2"><span class="text-slate-400">Display Support:</span><span class="text-amber-300 text-right">${prof.monitorSpec}</span></div>
+                </div>
+
+                <!-- Genetec 5.14.1.0 Section 1.3 (Page 6) Benchmark Stream Capacities at 30 FPS -->
+                <div class="grid grid-cols-3 gap-1.5 text-center text-[9px] font-mono pt-0.5">
+                  <div class="p-1.5 rounded bg-slate-900/70 border border-slate-800">
+                    <div class="text-slate-400">H.264 @ 30fps</div>
+                    <div class="font-bold text-white">${ev.benchmarks30Fps.fhd1080p_h264}x 1080p</div>
+                    <div class="text-sky-300">${ev.benchmarks30Fps.uhd4k_h264}x 4K UHD</div>
+                  </div>
+                  <div class="p-1.5 rounded bg-slate-900/70 border border-slate-800">
+                    <div class="text-slate-400">H.265 @ 30fps</div>
+                    <div class="font-bold text-white">${ev.benchmarks30Fps.fhd1080p_h265}x 1080p</div>
+                    <div class="text-sky-300">${ev.benchmarks30Fps.uhd4k_h265}x 4K UHD</div>
+                  </div>
+                  <div class="p-1.5 rounded bg-slate-900/70 border border-slate-800">
+                    <div class="text-slate-400">AV1 @ 30fps</div>
+                    <div class="font-bold text-white">${ev.benchmarks30Fps.fhd1080p_av1}x 1080p</div>
+                    <div class="text-sky-300">${ev.benchmarks30Fps.uhd4k_av1}x 4K UHD</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 flex items-center justify-between">
+                <span>Streamvault Match: <strong class="text-indigo-300">${prof.recommendedStreamvaultSku}</strong></span>
+                <span>${prof.referencePage}</span>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+
+      <!-- Row 5: Genetec 5.14 Engineering Findings & Matched Catalog Workstations -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-3 pt-1">
+        <div class="xl:col-span-5 bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span>Genetec 5.14.1.0 Decoding Math &amp; Engineering Notes</span>
+          </div>
+          <div class="space-y-1.5">
+            ${(wsCalc.findings || []).map(f => `
+              <div class="px-2.5 py-1.5 rounded-lg text-[10px] font-medium flex items-start gap-1.5 ${
+                f.severity === 'warning'
+                  ? 'bg-amber-950/70 border border-amber-700/70 text-amber-200'
+                  : f.severity === 'success'
+                    ? 'bg-emerald-950/50 border border-emerald-700/60 text-emerald-200'
+                    : 'bg-sky-950/50 border border-sky-700/60 text-sky-200'
+              }">
+                <i data-lucide="${f.severity === 'warning' ? 'alert-triangle' : f.severity === 'success' ? 'check-circle-2' : 'info'}" class="w-3.5 h-3.5 shrink-0 mt-0.5"></i>
+                <span>${f.text}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="xl:col-span-7 bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+              <i data-lucide="package-check" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>Matched Client Workstations (Streamvault SVW / Dell Precision / BCDVideo)</span>
+            </span>
+            <span class="text-[10px] font-mono text-slate-400">Click + Add to quote into Project BOM</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-56 overflow-y-auto custom-scrollbar pr-1">
+            ${(wsCalc.matchedCatalogWorkstations || []).map(w => `
+              <div class="p-2.5 rounded-xl border flex flex-col justify-between gap-1.5 ${
+                recHw && recHw.id === w.id
+                  ? 'bg-indigo-950/40 border-indigo-500/60'
+                  : (w.meetsSpec ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-900/40 border-slate-800/50 opacity-60')
+              }">
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs font-bold text-white">${w.sku}</span>
+                      ${recHw && recHw.id === w.id ? `<span class="px-1.5 py-0.2 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-[9px] font-mono font-bold">BEST FIT</span>` : ''}
+                    </div>
+                    <div class="text-[10px] text-slate-300">${w.vendor} &bull; ${w.formFactor}</div>
+                  </div>
+                  <span class="text-xs font-mono font-bold text-emerald-400">$${(w.msrp || 0).toLocaleString()}</span>
+                </div>
+                <div class="text-[9.5px] font-mono text-slate-400 leading-snug">
+                  ${w.processor} &bull; ${w.ramGb}GB RAM &bull; ${w.gpu} &bull; Up to ${w.maxMonitors} Monitors
+                </div>
+                <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
+                  <span class="text-[9px] font-mono ${w.meetsSpec ? 'text-emerald-400' : 'text-rose-400'}">
+                    ${w.meetsSpec ? '✓ Meets Viewed Stream Spec' : 'Below Required Tier/Monitors'}
+                  </span>
+                  <button onclick="addToBOM('${w.id}', ${wsCalc.workstationCount}); if(typeof showToast==='function') showToast('Added ${wsCalc.workstationCount}x ${w.sku} to BOM.', 'success');" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold cursor-pointer">
+                    + Add ${wsCalc.workstationCount}x to BOM
+                  </button>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+window.renderWorkstationSizerStudioHtml = renderWorkstationSizerStudioHtml;
+
+// =========================================================================
+// DOORS & ACCESS CONTROL SCHEDULE BUILDER STUDIO
+// =========================================================================
+
+const DOOR_BUILDER_PRESETS = {
+  standard_strike: {
+    id: "standard_strike",
+    label: "Standard Interior / Mortise Strike Door",
+    controllerId: "mercury-lp1502",
+    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
+    doorsPerController: 2,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
+    lockId: "hes-1006-electric-strike",
+    lockLabel: "HES 1006 Series Heavy-Duty Electric Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: "altronix-trove2m2",
+    enclosureLabel: "Altronix Trove2M2 Enclosure (Up to 8 Doors / 4 Panels)",
+    lockMilliamps12v: 450
+  },
+  rim_exit_strike: {
+    id: "rim_exit_strike",
+    label: "Crash-Bar Rim Exit Device Door",
+    controllerId: "mercury-lp1502",
+    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
+    doorsPerController: 2,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
+    lockId: "hes-9600-surface-strike",
+    lockLabel: "HES 9600 Surface-Mount Rim Exit Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: "altronix-trove2m2",
+    enclosureLabel: "Altronix Trove2M2 Enclosure (Up to 8 Doors / 4 Panels)",
+    lockMilliamps12v: 450
+  },
+  perimeter_maglock: {
+    id: "perimeter_maglock",
+    label: "Perimeter / Double-Glass Maglock Door (1200 lb)",
+    controllerId: "mercury-lp1502",
+    controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
+    doorsPerController: 2,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
+    lockId: "securitron-m62-maglock",
+    lockLabel: "Securitron M62 1200lb Weatherproof Maglock",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "sentrol-1078c-dps",
+    dpsLabel: "Sentrol 1078C Armored Steel Door Contact",
+    enclosureId: "altronix-trove2m2",
+    enclosureLabel: "Altronix Trove2M2 Enclosure (Up to 8 Doors / 4 Panels)",
+    lockMilliamps12v: 250
+  },
+  ip_edge_door: {
+    id: "ip_edge_door",
+    label: "Single-Door PoE+ IP Edge Controller Kit",
+    controllerId: "axis-a1001",
+    controllerLabel: "Axis A1001 Network PoE+ Door Controller",
+    doorsPerController: 1,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
+    lockId: "hes-1006-electric-strike",
+    lockLabel: "HES 1006 Series Heavy-Duty Electric Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: null,
+    enclosureLabel: "Plenum Above-Door PoE+ Edge Mount",
+    lockMilliamps12v: 450
+  }
+};
+
+let doorScheduleGroups = [
+  { id: "door_grp_1", name: "Main Lobby & Perimeter Entrances", preset: "rim_exit_strike", doorQty: 4, readersPerDoor: 1 },
+  { id: "door_grp_2", name: "Interior Office & IDF/MDF Doors", preset: "standard_strike", doorQty: 8, readersPerDoor: 1 }
+];
+window.doorScheduleGroups = doorScheduleGroups;
+
+function addDoorScheduleGroup() {
+  const nextIdx = doorScheduleGroups.length + 1;
+  doorScheduleGroups.push({
+    id: `door_grp_${Date.now()}_${nextIdx}`,
+    name: `Door Group ${nextIdx}`,
+    preset: "standard_strike",
+    doorQty: 2,
+    readersPerDoor: 1
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.addDoorScheduleGroup = addDoorScheduleGroup;
+
+function duplicateDoorScheduleGroup(index) {
+  const src = doorScheduleGroups[index];
+  if (!src) return;
+  doorScheduleGroups.splice(index + 1, 0, {
+    ...src,
+    id: `door_grp_${Date.now()}_${index + 2}`,
+    name: `${src.name || "Door Group"} (Copy)`
+  });
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.duplicateDoorScheduleGroup = duplicateDoorScheduleGroup;
+
+function removeDoorScheduleGroup(index) {
+  if (doorScheduleGroups.length <= 1) return;
+  doorScheduleGroups.splice(index, 1);
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.removeDoorScheduleGroup = removeDoorScheduleGroup;
+
+function updateDoorScheduleGroup(index, field, val) {
+  if (!doorScheduleGroups[index]) return;
+  doorScheduleGroups[index][field] = val;
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+}
+window.updateDoorScheduleGroup = updateDoorScheduleGroup;
+
+function calculateDoorScheduleRollup() {
+  let totalDoors = 0;
+  let totalReaders = 0;
+  let mercuryDoors = 0;
+  let edgePoEDoors = 0;
+  let totalLockCurrentMa = 0;
+  const partTotals = {};
+
+  const addPart = (id, qty) => {
+    if (!id || !(qty > 0)) return;
+    partTotals[id] = (partTotals[id] || 0) + qty;
+  };
+
+  const rows = doorScheduleGroups.map(grp => {
+    const p = DOOR_BUILDER_PRESETS[grp.preset] || DOOR_BUILDER_PRESETS.standard_strike;
+    const doors = Math.max(1, parseInt(grp.doorQty, 10) || 1);
+    const rdrPerDoor = Math.max(1, Math.min(2, parseInt(grp.readersPerDoor, 10) || 1));
+    const readers = doors * rdrPerDoor;
+    const controllers = Math.ceil(doors / (p.doorsPerController || 2));
+    const lockMa = doors * (p.lockMilliamps12v || 450) + readers * 180;
+
+    totalDoors += doors;
+    totalReaders += readers;
+    totalLockCurrentMa += lockMa;
+    if (p.id === "ip_edge_door") {
+      edgePoEDoors += doors;
+      addPart("axis-a1001", doors);
+    } else {
+      mercuryDoors += doors;
+    }
+
+    addPart(p.readerId, readers);
+    addPart(p.lockId, doors);
+    addPart(p.rexId, doors);
+    addPart(p.dpsId, doors);
+
+    return {
+      ...grp,
+      presetObj: p,
+      doors,
+      readersPerDoor: rdrPerDoor,
+      readers,
+      controllers,
+      lockMa
+    };
+  });
+
+  const totalMercuryControllers = mercuryDoors > 0 ? Math.ceil(mercuryDoors / 2) : 0;
+  const totalTroveEnclosures = totalMercuryControllers > 0 ? Math.ceil(totalMercuryControllers / 4) : 0;
+  if (totalMercuryControllers > 0) addPart("mercury-lp1502", totalMercuryControllers);
+  if (totalTroveEnclosures > 0) addPart("altronix-trove2m2", totalTroveEnclosures);
+
+  return {
+    rows,
+    totalDoors,
+    totalReaders,
+    mercuryDoors,
+    edgePoEDoors,
+    totalMercuryControllers,
+    totalTroveEnclosures,
+    totalLockCurrentAmps: Math.round((totalLockCurrentMa / 1000) * 100) / 100,
+    partTotals
+  };
+}
+
+function addFullDoorScheduleToBom() {
+  if (typeof addToBOM !== "function") return;
+  const rollup = calculateDoorScheduleRollup();
+  Object.entries(rollup.partTotals).forEach(([partId, qty]) => {
+    addToBOM(partId, qty);
+  });
+  if (typeof setGenetecLicParam === "function") {
+    setGenetecLicParam("readerConnectionsOverride", rollup.totalReaders);
+  }
+  if (typeof showToast === "function") {
+    showToast(`Added ${rollup.totalDoors}-Door Schedule (${rollup.totalReaders} Readers, ${rollup.totalMercuryControllers} LP1502 Panels, ${rollup.totalTroveEnclosures} Enclosures) to Project BOM.`, "success");
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.addFullDoorScheduleToBom = addFullDoorScheduleToBom;
+
+function renderDoorBuilderStudioHtml(isFullStudio = true) {
+  const rollup = calculateDoorScheduleRollup();
+  return `
+    <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
+      <!-- Header & KPI Rollup -->
+      <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+        <div class="flex items-start sm:items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
+            <i data-lucide="door-open" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">
+                Access Control Door Schedule &amp; Turnkey Kit Builder
+              </h4>
+              <span class="px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-700/50 text-[10px] font-mono font-bold text-amber-300">
+                ${rollup.totalDoors} Doors &bull; ${rollup.totalReaders} OSDP Readers &bull; ${rollup.totalMercuryControllers} Mercury LP1502 &bull; ${rollup.totalTroveEnclosures} Trove2 Enclosures
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              Build multi-zone door schedules with automatic <strong class="text-white">Mercury LP1502 / Axis A1001</strong> controller packing, <strong class="text-white">Altronix Trove2M2</strong> enclosure sizing, 12V/24V lock current draw, and Synergis reader licensing sync.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 shrink-0">
+          <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Total Doors / Readers</div>
+              <div class="text-xs font-mono font-bold text-amber-300">${rollup.totalDoors} Doors / ${rollup.totalReaders} Rdrs</div>
+            </div>
+            <div class="h-6 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Controllers / Enclosures</div>
+              <div class="text-xs font-mono font-bold text-sky-400">${rollup.totalMercuryControllers} LP1502 / ${rollup.totalTroveEnclosures} Trove</div>
+            </div>
+            <div class="h-6 w-px bg-slate-800"></div>
+            <div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Est. 12VDC Load</div>
+              <div class="text-xs font-mono font-bold text-emerald-400">${rollup.totalLockCurrentAmps} A</div>
+            </div>
+          </div>
+
+          <button onclick="addFullDoorScheduleToBom()" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
+            <i data-lucide="package-plus" class="w-4 h-4"></i>
+            <span>+ Add Full ${rollup.totalDoors}-Door Schedule to BOM</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Multi-Group Door Schedule Table -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-xl p-3 flex flex-col gap-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+              <i data-lucide="list-checks" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Project Door Schedule Groups (${rollup.rows.length})</span>
+            </span>
+            <button onclick="addDoorScheduleGroup()" class="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-[11px] font-bold flex items-center gap-1 shadow-sm transition-all cursor-pointer">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              <span>Add Door Group</span>
+            </button>
+          </div>
+          <span class="text-[10px] font-mono text-slate-400">
+            Mercury LP1502 controllers pack at 2 doors/board &bull; Altronix Trove2M2 enclosures pack at 4 LP1502 boards (8 doors)/enclosure
+          </span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400">
+                <th class="py-1.5 px-2 min-w-[180px]">Door Zone / Group Name</th>
+                <th class="py-1.5 px-2 min-w-[240px]">Door Hardware Kit Preset</th>
+                <th class="py-1.5 px-1.5 w-24 text-center">Door Qty</th>
+                <th class="py-1.5 px-1.5 w-36">Readers / Door</th>
+                <th class="py-1.5 px-2">Included Lock &amp; Peripherals</th>
+                <th class="py-1.5 px-2 text-right">Controllers</th>
+                <th class="py-1.5 px-2 text-right">12V Load</th>
+                <th class="py-1.5 px-1.5 text-center w-16">Actions</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/60">
+              ${rollup.rows.map((row, idx) => `
+                <tr class="hover:bg-slate-900/50 transition-colors">
+                  <td class="py-1.5 px-2">
+                    <input type="text" value="${String(row.name || `Door Group ${idx + 1}`).replace(/"/g, '&quot;')}" onchange="updateDoorScheduleGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-amber-500" />
+                  </td>
+                  <td class="py-1.5 px-2">
+                    <select onchange="updateDoorScheduleGroup(${idx}, 'preset', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
+                      ${Object.values(DOOR_BUILDER_PRESETS).map(p => `<option value="${p.id}" class="bg-slate-900" ${row.preset === p.id ? 'selected' : ''}>${p.label}</option>`).join('')}
+                    </select>
+                  </td>
+                  <td class="py-1.5 px-1.5">
+                    <input type="number" min="1" max="128" value="${row.doors}" onchange="updateDoorScheduleGroup(${idx}, 'doorQty', Math.max(1, parseInt(this.value, 10) || 1))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-amber-500" />
+                  </td>
+                  <td class="py-1.5 px-1.5">
+                    <select onchange="updateDoorScheduleGroup(${idx}, 'readersPerDoor', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-slate-200 font-mono text-xs focus:outline-none cursor-pointer">
+                      <option value="1" class="bg-slate-900" ${row.readersPerDoor === 1 ? 'selected' : ''}>1x In + REX Out</option>
+                      <option value="2" class="bg-slate-900" ${row.readersPerDoor === 2 ? 'selected' : ''}>2x In/Out Readers</option>
+                    </select>
+                  </td>
+                  <td class="py-1.5 px-2 text-[10px] text-slate-300 font-mono">
+                    ${row.presetObj.lockLabel} + ${row.presetObj.rexLabel} + ${row.presetObj.dpsLabel}
+                  </td>
+                  <td class="py-1.5 px-2 text-right font-mono text-sky-300 font-bold">
+                    ${row.controllers}x ${row.presetObj.id === 'ip_edge_door' ? 'Axis A1001' : 'LP1502'}
+                  </td>
+                  <td class="py-1.5 px-2 text-right font-mono text-emerald-400">
+                    ${Math.round((row.lockMa / 1000) * 100) / 100} A
+                  </td>
+                  <td class="py-1.5 px-1.5 text-center">
+                    <div class="flex items-center justify-center gap-1">
+                      <button onclick="duplicateDoorScheduleGroup(${idx})" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 transition-colors cursor-pointer" title="Duplicate door group">
+                        <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                      </button>
+                      ${rollup.rows.length > 1 ? `
+                        <button onclick="removeDoorScheduleGroup(${idx})" class="p-1 rounded hover:bg-rose-950/80 text-slate-400 hover:text-rose-400 transition-colors cursor-pointer" title="Remove door group">
+                          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                      ` : ''}
+                    </div>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+}
+window.renderDoorBuilderStudioHtml = renderDoorBuilderStudioHtml;
+
+// =========================================================================
+// TOP-LEVEL CALCULATORS & SIZERS STUDIO MODAL CONTROLLER
+// =========================================================================
+
+let activeCalculatorStudioType = "poe";
+window.activeCalculatorStudioType = activeCalculatorStudioType;
+
+function openCalculatorStudio(calcType = "poe") {
+  activeCalculatorStudioType = calcType || "poe";
+  window.activeCalculatorStudioType = activeCalculatorStudioType;
+  const modal = document.getElementById("calculatorsStudioModal");
+  if (!modal) return;
+  modal.classList.remove("hidden");
+  renderCalculatorStudioIfOpen();
+}
+window.openCalculatorStudio = openCalculatorStudio;
+
+function renderCalculatorStudioIfOpen() {
+  const modal = document.getElementById("calculatorsStudioModal");
+  if (!modal || modal.classList.contains("hidden")) return;
+
+  // Preserve focused input element if user is actively typing inside the studio
+  const activeEl = document.activeElement;
+  const isTypingInModal = activeEl && modal.contains(activeEl) && (activeEl.tagName === "INPUT" || activeEl.tagName === "SELECT");
+
+  const t = activeCalculatorStudioType || "poe";
+  let bodyHtml = "";
+  let catalogJumpLabel = "Open Hardware Catalog";
+  let catalogJumpAction = "if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
+
+  if (t === "poe") {
+    bodyHtml = renderPoeCalculatorStudioHtml();
+    catalogJumpLabel = "Browse Matching PoE Switches in Catalog";
+    catalogJumpAction = "switchDomain('networking'); setMode('access'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
+  } else if (t === "storage") {
+    bodyHtml = renderStorageCalculatorStudioHtml(true);
+    catalogJumpLabel = "Browse Matching Servers & Storage in Catalog";
+    catalogJumpAction = "switchDomain('compute_storage'); setMode('servers'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
+  } else if (t === "workstation") {
+    bodyHtml = renderWorkstationSizerStudioHtml(true);
+    catalogJumpLabel = "Browse Client Workstations in Catalog";
+    catalogJumpAction = "switchDomain('compute_storage'); setMode('workstations'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
+  } else if (t === "doors") {
+    bodyHtml = renderDoorBuilderStudioHtml(true);
+    catalogJumpLabel = "Browse Access Control Hardware in Catalog";
+    catalogJumpAction = "switchDomain('physical_security'); setMode('access_control'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
+  } else if (t === "licensing") {
+    const licRes = (typeof GenetecLicensingSizer !== "undefined")
+      ? GenetecLicensingSizer.calculate(projectBOM)
+      : null;
+    bodyHtml = licRes ? renderGenetecLicensingBuilderHtml(licRes, false) : "";
+    catalogJumpLabel = "Browse VMS Software & Licenses in Catalog";
+    catalogJumpAction = "switchDomain('compute_storage'); setMode('vms_software'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
+  }
+
+  const navPills = [
+    { id: "sizer_poe", type: "poe", label: "PoE & Switch Calculator", icon: "zap", color: "amber" },
+    { id: "sizer_storage", type: "storage", label: "Storage & Failover Calculator", icon: "hard-drive", color: "purple" },
+    { id: "sizer_workstation", type: "workstation", label: "Client Workstation Sizer", icon: "monitor", color: "sky" },
+    { id: "sizer_doors", type: "doors", label: "Doors & Access Builder", icon: "door-open", color: "amber" },
+    { id: "sizer_licensing", type: "licensing", label: "Genetec Licensing Sizer", icon: "key", color: "emerald" }
+  ];
+
+  modal.innerHTML = `
+    <!-- Studio Sub-Header Bar -->
+    <div class="px-4 py-2.5 bg-slate-900/95 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <span class="text-[10px] font-mono uppercase tracking-wider text-slate-400 mr-1.5 flex items-center gap-1">
+          <i data-lucide="calculator" class="w-3.5 h-3.5 text-amber-400"></i>
+          <span>Calculators &amp; Sizers:</span>
+        </span>
+        ${navPills.map(np => {
+          const isActive = np.type === t;
+          return `
+            <button
+              type="button"
+              onclick="if(typeof TabManager !== 'undefined') { TabManager.openTab('${np.id}'); } else { openCalculatorStudio('${np.type}'); }"
+              class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border transition-all cursor-pointer ${
+                isActive
+                  ? 'bg-slate-800 text-white border-amber-500/60 shadow-sm'
+                  : 'bg-slate-950/70 text-slate-400 hover:text-white border-slate-800 hover:border-slate-700'
+              }"
+            >
+              <i data-lucide="${np.icon}" class="w-3.5 h-3.5 ${isActive ? 'text-amber-400' : 'text-slate-400'}"></i>
+              <span>${np.label}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick="${catalogJumpAction}"
+          class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+        >
+          <i data-lucide="layers" class="w-3.5 h-3.5 text-brand-400"></i>
+          <span>${catalogJumpLabel} &rarr;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Scrollable Full-Screen Calculator Studio Body -->
+    <div class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 custom-scrollbar">
+      <div class="max-w-[1650px] mx-auto space-y-4">
+        ${bodyHtml}
+      </div>
+    </div>
+  `;
+
+  safeCreateIcons(modal);
+}
+window.renderCalculatorStudioIfOpen = renderCalculatorStudioIfOpen;
 
 // -----------------------------------------------------------
 // Faceted Filter Interactions
@@ -5358,8 +6633,86 @@ function handleFacilityNavClick() {
   toggleFacilityExpand();
 }
 
+let isCalculatorsExpanded = false;
+let calculatorsHoverTimeout = null;
+
+function toggleCalculatorsExpand(forceState = null) {
+  const container = document.getElementById("calculatorsNavigationContainer");
+  const chevron = document.getElementById("calculatorsExpandChevron");
+  const btn = document.getElementById("calculatorsExpandBtn");
+  if (!container) return;
+
+  if (forceState !== null) {
+    isCalculatorsExpanded = forceState;
+  } else {
+    isCalculatorsExpanded = !isCalculatorsExpanded;
+  }
+
+  if (isCalculatorsExpanded) {
+    if (calculatorsHoverTimeout) {
+      clearTimeout(calculatorsHoverTimeout);
+      calculatorsHoverTimeout = null;
+    }
+    container.classList.remove("hidden");
+    if (chevron) chevron.style.transform = "rotate(180deg)";
+    if (btn) {
+      btn.classList.add("bg-amber-600/20", "border-amber-500/40", "text-amber-300");
+    }
+    updateCalculatorsSubNavUI();
+  } else {
+    if (calculatorsHoverTimeout) {
+      clearTimeout(calculatorsHoverTimeout);
+      calculatorsHoverTimeout = null;
+    }
+    container.classList.add("hidden");
+    if (chevron) chevron.style.transform = "";
+    if (btn) {
+      btn.classList.remove("bg-amber-600/20", "border-amber-500/40", "text-amber-300");
+    }
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
+  }
+}
+
+function updateCalculatorsSubNavUI() {
+  const activeTab = typeof TabManager !== "undefined" ? TabManager.getActiveTabId() : "";
+  const map = [
+    { id: "calc-nav-poe", tab: "sizer_poe" },
+    { id: "calc-nav-storage", tab: "sizer_storage" },
+    { id: "calc-nav-workstation", tab: "sizer_workstation" },
+    { id: "calc-nav-doors", tab: "sizer_doors" },
+    { id: "calc-nav-licensing", tab: "sizer_licensing" }
+  ];
+  const activeClasses = "bg-slate-800 text-white font-bold border-amber-500/50 shadow-sm";
+  const inactiveClasses = "border-transparent text-slate-300 hover:text-white hover:bg-slate-900/60";
+
+  map.forEach(item => {
+    const el = document.getElementById(item.id);
+    if (!el) return;
+    el.className = `px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer shrink-0 ${activeTab === item.tab ? activeClasses : inactiveClasses}`;
+  });
+}
+
+function handleCalculatorsNavClick() {
+  if (calculatorsHoverTimeout) {
+    clearTimeout(calculatorsHoverTimeout);
+    calculatorsHoverTimeout = null;
+  }
+  if (typeof TabManager !== "undefined") {
+    const cur = TabManager.getActiveTabId();
+    if (!cur.startsWith("sizer_")) {
+      TabManager.openTab("sizer_storage");
+      toggleCalculatorsExpand(false);
+      return;
+    }
+  }
+  toggleCalculatorsExpand();
+}
+
 /**
- * Attaches hover (mouseenter/mouseleave) listeners with debounce timeout to Catalog and Facility dropdown wrappers
+ * Attaches hover (mouseenter/mouseleave) listeners with debounce timeout to Catalog, Calculators & Sizers, and Facility dropdown wrappers
  */
 function setupNavDropdownHoverListeners() {
   const catWrapper = document.getElementById("catalogDomainWrapper");
@@ -5374,13 +6727,46 @@ function setupNavDropdownHoverListeners() {
         clearTimeout(facilityHoverTimeout);
         facilityHoverTimeout = null;
       }
+      if (calculatorsHoverTimeout) {
+        clearTimeout(calculatorsHoverTimeout);
+        calculatorsHoverTimeout = null;
+      }
       toggleFacilityExpand(false);
+      toggleCalculatorsExpand(false);
       toggleCatalogExpand(true);
     });
 
     catWrapper.addEventListener("mouseleave", () => {
       catalogHoverTimeout = setTimeout(() => {
         toggleCatalogExpand(false);
+      }, 250);
+    });
+  }
+
+  const calcWrapper = document.getElementById("calculatorsDomainWrapper");
+  if (calcWrapper && !calcWrapper._hoverInitialized) {
+    calcWrapper._hoverInitialized = true;
+    calcWrapper.addEventListener("mouseenter", () => {
+      if (calculatorsHoverTimeout) {
+        clearTimeout(calculatorsHoverTimeout);
+        calculatorsHoverTimeout = null;
+      }
+      if (catalogHoverTimeout) {
+        clearTimeout(catalogHoverTimeout);
+        catalogHoverTimeout = null;
+      }
+      if (facilityHoverTimeout) {
+        clearTimeout(facilityHoverTimeout);
+        facilityHoverTimeout = null;
+      }
+      toggleCatalogExpand(false);
+      toggleFacilityExpand(false);
+      toggleCalculatorsExpand(true);
+    });
+
+    calcWrapper.addEventListener("mouseleave", () => {
+      calculatorsHoverTimeout = setTimeout(() => {
+        toggleCalculatorsExpand(false);
       }, 250);
     });
   }
@@ -5397,7 +6783,12 @@ function setupNavDropdownHoverListeners() {
         clearTimeout(catalogHoverTimeout);
         catalogHoverTimeout = null;
       }
+      if (calculatorsHoverTimeout) {
+        clearTimeout(calculatorsHoverTimeout);
+        calculatorsHoverTimeout = null;
+      }
       toggleCatalogExpand(false);
+      toggleCalculatorsExpand(false);
       toggleFacilityExpand(true);
     });
 
@@ -5413,6 +6804,11 @@ window.handleCatalogNavClick = handleCatalogNavClick;
 window.toggleCatalogExpand = toggleCatalogExpand;
 window.isCatalogExpanded = isCatalogExpanded;
 
+window.handleCalculatorsNavClick = handleCalculatorsNavClick;
+window.toggleCalculatorsExpand = toggleCalculatorsExpand;
+window.updateCalculatorsSubNavUI = updateCalculatorsSubNavUI;
+window.isCalculatorsExpanded = isCalculatorsExpanded;
+
 window.handleFacilityNavClick = handleFacilityNavClick;
 window.toggleFacilityExpand = toggleFacilityExpand;
 window.updateFacilitySubNavUI = updateFacilitySubNavUI;
@@ -5426,11 +6822,15 @@ if (document.readyState === "complete" || document.readyState === "interactive")
   document.addEventListener("DOMContentLoaded", setupNavDropdownHoverListeners);
 }
 
-// Click-outside listener for Catalog and Facility popovers
+// Click-outside listener for Catalog, Calculators & Sizers, and Facility popovers
 document.addEventListener("click", (e) => {
   const catWrapper = document.getElementById("catalogDomainWrapper");
   if (catWrapper && isCatalogExpanded && !catWrapper.contains(e.target)) {
     toggleCatalogExpand(false);
+  }
+  const calcWrapper = document.getElementById("calculatorsDomainWrapper");
+  if (calcWrapper && isCalculatorsExpanded && !calcWrapper.contains(e.target)) {
+    toggleCalculatorsExpand(false);
   }
   const facWrapper = document.getElementById("facilityDomainWrapper");
   if (facWrapper && isFacilityExpanded && !facWrapper.contains(e.target)) {

@@ -331,7 +331,7 @@
         background-color: #ffffff !important;
         color: #0f172a !important;
       }
-      #mainTopHeader, #workspaceTabBar, #catalogFilterSidebar, #bomModal, #bomDrawer, #topologyModal, #facilityModal, #portMatrixStudioModal, #rackPowerMatrixModal, #cableLayoutModal, #licenseModal, #projectHealthModal, #toastNotification, .no-print {
+      #mainTopHeader, #workspaceTabBar, #catalogFilterSidebar, #calculatorsStudioModal, #bomModal, #bomDrawer, #topologyModal, #facilityModal, #portMatrixStudioModal, #rackPowerMatrixModal, #cableLayoutModal, #licenseModal, #projectHealthModal, #toastNotification, .no-print {
         display: none !important;
       }
       #submittalModal {
@@ -594,6 +594,40 @@
           </div>
         </div>
 
+        <!-- Calculators, Sizers & Door Builder Dropdown -->
+        <div class="relative shrink-0" id="calculatorsDomainWrapper">
+          <button id="calculatorsExpandBtn" onclick="handleCalculatorsNavClick()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Dedicated Engineering Calculators, Sizers &amp; Door Builder Studios">
+            <i data-lucide="calculator" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span class="font-bold hidden xl:inline">Calculators &amp; Sizers</span>
+            <span class="font-bold hidden sm:inline xl:hidden">Sizers</span>
+            <i data-lucide="chevron-down" id="calculatorsExpandChevron" class="w-3.5 h-3.5 text-slate-400 transition-transform"></i>
+          </button>
+
+          <!-- Floating Calculators & Sizers Sub-Views Container -->
+          <div id="calculatorsNavigationContainer" class="hidden absolute top-full mt-1.5 right-0 sm:right-auto sm:left-0 z-[75] bg-slate-900/95 border border-slate-700/90 rounded-2xl shadow-2xl p-1.5 flex items-center gap-1 backdrop-blur-xl whitespace-nowrap overflow-x-auto max-w-[92vw] before:content-[''] before:absolute before:-top-3 before:left-0 before:right-0 before:h-3">
+            <button onclick="TabManager.openTab('sizer_poe'); toggleCalculatorsExpand(false)" id="calc-nav-poe" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="PoE Power Budget, IEEE 802.3 Classes &amp; Camera Demand Calculator">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>PoE &amp; Switch Calculator</span>
+            </button>
+            <button onclick="TabManager.openTab('sizer_storage'); toggleCalculatorsExpand(false)" id="calc-nav-storage" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Video Storage, Bandwidth, RAID, Failover &amp; Genetec 5.14 Archiver Calculator">
+              <i data-lucide="hard-drive" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>Storage &amp; Failover Calculator</span>
+            </button>
+            <button onclick="TabManager.openTab('sizer_workstation'); toggleCalculatorsExpand(false)" id="calc-nav-workstation" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Genetec 5.14.1.0 Client Workstation Decoding &amp; Hardware Spec Sizer">
+              <i data-lucide="monitor" class="w-3.5 h-3.5 text-indigo-400"></i>
+              <span>Client Workstation Sizer</span>
+            </button>
+            <button onclick="TabManager.openTab('sizer_doors'); toggleCalculatorsExpand(false)" id="calc-nav-doors" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Access Control Door Schedule &amp; Turnkey Hardware Kit Builder">
+              <i data-lucide="door-closed" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Doors &amp; Access Builder</span>
+            </button>
+            <button onclick="TabManager.openTab('sizer_licensing'); toggleCalculatorsExpand(false)" id="calc-nav-licensing" class="px-2.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 border border-transparent text-slate-300 hover:text-white hover:bg-slate-800 transition-all cursor-pointer shrink-0" title="Genetec Security Center 5.13/5.14 Licensing, SDKs &amp; Streamvault Sizer">
+              <i data-lucide="key" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span>Genetec Licensing Sizer</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Facility & Enclosures Dropdown -->
         <div class="relative shrink-0" id="facilityDomainWrapper">
           <button id="facilityExpandBtn" onclick="handleFacilityNavClick()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0" title="Facility & Enclosures Studios">
@@ -772,6 +806,11 @@
       </div>
 
     </main>
+
+  <!-- Dedicated Engineering Calculators, Sizers & Door Builder Workspace Studio -->
+  <div id="calculatorsStudioModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col animate-fade-in">
+    <!-- Injected dynamically by openCalculatorStudio() in js/core/app.js -->
+  </div>
 
   <!-- Project Bill of Materials (BOM) & Procurement Studio Workspace Tab -->
   <div id="bomModal" class="hidden absolute inset-0 z-30 bg-slate-950 flex flex-col animate-fade-in">

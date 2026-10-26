@@ -1019,6 +1019,105 @@ const GENETEC_514_REQUIREMENTS = {
     if (certs === 0) return 1.0;
     // Matches Genetec Page 10 table: 0->300 (1.0), 1->210 (0.70), 5->178 (0.593), 10->145 (0.483), 20->96 (0.32)
     return Math.max(0.25, 0.70 * Math.pow(0.96, certs - 1));
+  },
+
+  // Section 1.2 & 1.3 (Pages 5 & 6): Client Workstation Requirements & Decoding Benchmarks
+  CLIENT_WORKSTATION_PROFILES: {
+    minimum: {
+      id: "minimum",
+      tierOrder: 1,
+      label: "Minimum Client Profile",
+      shortLabel: "Minimum",
+      badgeColor: "sky",
+      cpuSpec: "Intel® Core™ i3-8100 3.6 GHz (Intel® Quick Sync Video)",
+      ramGb: 8,
+      ramSpec: "8 GB DDR4",
+      osSpec: "64-bit Windows 11",
+      osDriveSpec: "128 GB SATA / NVMe SSD",
+      nicSpec: "Intel® I219-LM 1 GbE",
+      gpuSpec: "Integrated Intel® Quick Sync Video (Motherboard Display Output)",
+      gpuCount: 1,
+      maxMonitors: 2,
+      testedDisplaySpec: "1x–2x 1920 x 1200 (WUXGA / 1080p FHD)",
+      supports4kMonitors: false,
+      recommendedStreamvaultId: "genetec-svw-100e-micro",
+      recommendedStreamvaultSku: "SVW-100E-MFF-U7",
+      recommendedStreamvaultModel: "Genetec Streamvault SVW-100E Micro Workstation",
+      referencePage: "Page 5 & 6 (Sec 1.2 & 1.3)",
+      notes: "Monitor must be connected directly to the motherboard to enable Intel® Quick Sync Video hardware decoding."
+    },
+    recommended: {
+      id: "recommended",
+      tierOrder: 2,
+      label: "Recommended Client Profile",
+      shortLabel: "Recommended",
+      badgeColor: "indigo",
+      cpuSpec: "Intel® Core™ Ultra 7 Processor 265K",
+      ramGb: 32,
+      ramSpec: "32 GB DDR5",
+      osSpec: "64-bit Windows 11 Enterprise 25H2",
+      osDriveSpec: "1 TB NVMe SSD",
+      nicSpec: "Intel® I219-LM 1 GbE",
+      gpuSpec: "NVIDIA® GeForce RTX 5060 Ti (16 GB VRAM)",
+      gpuCount: 1,
+      maxMonitors: 4,
+      testedDisplaySpec: "2x 4K UHD (3840 x 2160) Monitors (Up to 4 Displays)",
+      supports4kMonitors: true,
+      recommendedStreamvaultId: "genetec-svw-300e-t3",
+      recommendedStreamvaultSku: "SVW-300E-T3-I7-2XT1000",
+      recommendedStreamvaultModel: "Genetec Streamvault SVW-300E-T3 Tower Workstation",
+      alternateCatalogId: "dell-precision-3680-soc-tower",
+      referencePage: "Page 5 & 6 (Sec 1.2 & 1.3)",
+      notes: "Tested on two 4K UHD monitors with CPU & GPU usage capped at 85%."
+    },
+    high_performance: {
+      id: "high_performance",
+      tierOrder: 3,
+      label: "High-Performance (Video-Intensive) Profile",
+      shortLabel: "High-Performance",
+      badgeColor: "purple",
+      cpuSpec: "Intel® Xeon® w5-2465X Processor 3.10 GHz (16C / 32T)",
+      ramGb: 64,
+      ramSpec: "64 GB DDR5 ECC",
+      osSpec: "64-bit Windows 11 Enterprise 25H2",
+      osDriveSpec: "240 GB+ SATA / NVMe SSD (512 GB NVMe Recommended)",
+      nicSpec: "1 GbE / 10 GbE NIC",
+      gpuSpec: "Dual NVIDIA® GeForce RTX 5070 Ti (2x 16 GB VRAM)",
+      gpuCount: 2,
+      maxMonitors: 8,
+      testedDisplaySpec: "2x–8x 4K UHD (3840 x 2160) Monitors (Min 1 Display per GPU)",
+      supports4kMonitors: true,
+      recommendedStreamvaultId: "genetec-svw-502e-soc-workstation",
+      recommendedStreamvaultSku: "SVW-500E-R-XEON-2XRTX4000",
+      recommendedStreamvaultModel: "Genetec Streamvault SVW-500E High-Performance Workstation",
+      alternateCatalogId: "bcd-aurora-rackmount-workstation-2u",
+      referencePage: "Page 5 & 6 (Sec 1.2 & 1.3)",
+      notes: "Dual GPU configuration: At least one monitor must be physically connected to each GPU card to utilize both hardware decoders."
+    }
+  },
+
+  // Section 1.3 (Page 6): Maximum Number of Cameras Viewed Simultaneously @ 30 FPS (85% CPU/GPU Cap on 2x 4K UHD Monitors)
+  CLIENT_DECODING_BENCHMARKS_30FPS: {
+    // Full HD (1920 x 1080 / 2.0 MP) @ 30 FPS
+    fhd_2mp: {
+      resolutionMp: 2.0,
+      label: "Full HD (1920 x 1080)",
+      "H.264": { bitrateMbps: 4.8, minimum: 5, recommended: 64, high_performance: 104 },
+      "H.265": { bitrateMbps: 3.2, minimum: 6, recommended: 64, high_performance: 102 },
+      "H.265+": { bitrateMbps: 2.4, minimum: 6, recommended: 64, high_performance: 102 },
+      "AV1":   { bitrateMbps: 3.1, minimum: 3, recommended: 56, high_performance: 100 },
+      "AVI":   { bitrateMbps: 12.0, minimum: 3, recommended: 32, high_performance: 52 }
+    },
+    // Ultra HD (3840 x 2160 / 8.0 MP 4K) @ 30 FPS
+    uhd_8mp: {
+      resolutionMp: 8.0,
+      label: "Ultra HD 4K (3840 x 2160)",
+      "H.264": { bitrateMbps: 19.0, minimum: 1, recommended: 19, high_performance: 36 },
+      "H.265": { bitrateMbps: 13.4, minimum: 1, recommended: 18, high_performance: 36 },
+      "H.265+": { bitrateMbps: 9.8, minimum: 1, recommended: 18, high_performance: 36 },
+      "AV1":   { bitrateMbps: 12.7, minimum: 0, recommended: 16, high_performance: 30 },
+      "AVI":   { bitrateMbps: 45.0, minimum: 0, recommended: 10, high_performance: 18 }
+    }
   }
 };
 
@@ -4019,6 +4118,398 @@ const GenetecLicensingSizer = {
   }
 };
 
+// =========================================================================
+// 8. GENETEC 5.14.1.0 CLIENT WORKSTATION DECODING & HARDWARE SIZER
+// (SystemRequirements.pdf — Section 1.2 Page 5 & Section 1.3 Page 6)
+// =========================================================================
+
+const ClientWorkstationSizer = {
+  state: {
+    viewedGroups: [
+      {
+        id: "ws_grp_1",
+        name: "Primary Camera Grid (1080p FHD)",
+        viewedCameras: 16,
+        heads: 1,
+        resolutionMp: 2,
+        fps: 15,
+        codec: "H.265",
+        dewarping: false
+      },
+      {
+        id: "ws_grp_2",
+        name: "Spot / Perimeter Tiles (4K UHD)",
+        viewedCameras: 4,
+        heads: 1,
+        resolutionMp: 8,
+        fps: 15,
+        codec: "H.265",
+        dewarping: false
+      }
+    ],
+    syncAllColumns: {
+      heads: false,
+      resolutionMp: false,
+      fps: false,
+      codec: false,
+      dewarping: false
+    },
+    scenarioMode: "active_operator", // "active_operator" (80% cap / 20% headroom for Visual Tracking, Guard Tours, Investigation) | "video_wall" (100% static wall @ 85% CPU/GPU)
+    hardwareAcceleration: true,      // Intel Quick Sync Video / NVIDIA NVDEC Hardware Decoding
+    watermarking: false,             // Page 6: -10% max tiles with HW acceleration, -30% without HW acceleration
+    encryptedStreams: false,         // Page 6: Up to +40% CPU usage on low-resolution streams (<=2MP)
+    monitorsPerWorkstation: 2,       // Tested baseline: 2x 4K UHD monitors (1..8 displays)
+    displayResolution: "4k",         // "fhd" (1920x1080 / 1920x1200) | "4k" (3840x2160 UHD)
+    operatorStationsCount: 1,        // Number of operator desks / workstations viewing this layout (or 0 = Auto)
+    layoutDistributionMode: "per_station" // "per_station" (each operator station views all tiles above) | "split_wall" (tiles above are split across the workstation pool)
+  },
+
+  /**
+   * Computes the benchmark maximum simultaneous streams at 30 FPS on a given Genetec 5.14.1.0 profile
+   * (Minimum, Recommended, High-Performance) for a given resolution (MP) and codec (H.264, H.265, AV1).
+   * Interpolates smoothly between the 2MP (1080p) and 8MP (4K UHD) Section 1.3 benchmark curves.
+   */
+  getBenchmarkMaxStreamsAt30Fps(profileKey, rawCodec, resolutionMp) {
+    const bench = GENETEC_514_REQUIREMENTS.CLIENT_DECODING_BENCHMARKS_30FPS;
+    const codec = VideoStorageSizer.normalizeCodec(rawCodec || "H.265");
+    const mp = Math.max(0.5, Number(resolutionMp) || 2.0);
+
+    const fhdRow = (bench.fhd_2mp && bench.fhd_2mp[codec]) || bench.fhd_2mp["H.265"];
+    const uhdRow = (bench.uhd_8mp && bench.uhd_8mp[codec]) || bench.uhd_8mp["H.265"];
+
+    const cap2Mp = Number(fhdRow[profileKey] ?? 0);
+    const cap8Mp = Number(uhdRow[profileKey] ?? 0);
+
+    // If 8MP is 0 (e.g., AV1 on Minimum profile), high-res >=4MP is unsupported on that profile
+    if (cap8Mp <= 0 && mp >= 4.0) {
+      return 0;
+    }
+    if (cap2Mp <= 0) {
+      return 0;
+    }
+
+    if (mp <= 2.0) {
+      // Scale inversely by pixel ratio below 2MP (e.g. 1MP / 720p has ~2x stream decode capacity of 2MP 1080p)
+      return cap2Mp * (2.0 / mp);
+    }
+    if (mp >= 8.0) {
+      if (cap8Mp <= 0) return 0;
+      return cap8Mp * (8.0 / mp);
+    }
+
+    // Between 2.0 MP and 8.0 MP: interpolate total decoded megapixels budget linearly
+    const t = (mp - 2.0) / (8.0 - 2.0);
+    const mpBudget2 = 2.0 * cap2Mp;
+    const mpBudget8 = 8.0 * (cap8Mp > 0 ? cap8Mp : (cap2Mp * 0.25));
+    const interpolatedMpBudget = ((1 - t) * mpBudget2) + (t * mpBudget8);
+    return interpolatedMpBudget / mp;
+  },
+
+  /**
+   * Computes global capacity multiplier from Genetec Section 1.3 modifiers:
+   * - Active Operator Scenario vs Static Video Wall (Page 6)
+   * - Video Watermarking with/without Hardware Acceleration (-10% vs -30%, Page 6)
+   * - Multi-monitor composition overhead above the 2-monitor benchmark baseline
+   */
+  getModifierFactors(config = {}) {
+    const scenarioMode = config.scenarioMode || this.state.scenarioMode || "active_operator";
+    const hwAccel = config.hardwareAcceleration !== undefined ? Boolean(config.hardwareAcceleration) : Boolean(this.state.hardwareAcceleration);
+    const watermarking = config.watermarking !== undefined ? Boolean(config.watermarking) : Boolean(this.state.watermarking);
+    const encrypted = config.encryptedStreams !== undefined ? Boolean(config.encryptedStreams) : Boolean(this.state.encryptedStreams);
+    const monitors = Math.max(1, Math.min(12, parseInt(config.monitorsPerWorkstation ?? this.state.monitorsPerWorkstation ?? 2, 10) || 2));
+
+    // 1. Scenario factor: Static Video Wall = 1.00x (uses full 85% CPU/GPU cap); Active Operator = 0.80x (leaves 20% headroom for Visual Tracking, Guard Tours, Investigation)
+    const scenarioFactor = scenarioMode === "video_wall" ? 1.0 : 0.80;
+
+    // 2. Watermarking & Hardware Acceleration factor (SystemRequirements.pdf Page 6):
+    // "Using video watermarking decreases the maximum number of tiles that can be viewed at the same time by 30% without hardware acceleration and 10% with hardware acceleration."
+    let watermarkHwFactor = 1.0;
+    if (watermarking && hwAccel) {
+      watermarkHwFactor = 0.90; // -10% with HW acceleration
+    } else if (watermarking && !hwAccel) {
+      watermarkHwFactor = 0.70; // -30% without HW acceleration
+    } else if (!watermarking && !hwAccel) {
+      watermarkHwFactor = 0.75; // Software decoding penalty without Quick Sync / NVDEC
+    }
+
+    // 3. Multi-monitor composition factor (Genetec benchmark is tested on 2x 4K UHD monitors)
+    const extraMonitors = Math.max(0, monitors - 2);
+    const monitorFactor = Math.max(0.75, 1.0 - (extraMonitors * 0.025));
+
+    const combinedCapacityFactor = Math.round(scenarioFactor * watermarkHwFactor * monitorFactor * 1000) / 1000;
+
+    return {
+      scenarioMode,
+      scenarioFactor,
+      hardwareAcceleration: hwAccel,
+      watermarking,
+      watermarkHwFactor,
+      encryptedStreams: encrypted,
+      monitorsPerWorkstation: monitors,
+      monitorFactor,
+      combinedCapacityFactor
+    };
+  },
+
+  /**
+   * Evaluates a single viewed camera tile group across Minimum, Recommended, and High-Performance profiles.
+   */
+  evaluateViewedGroup(group, modifiers) {
+    const viewedCameras = Math.max(0, parseInt(group.viewedCameras ?? group.qty ?? 1, 10) || 0);
+    const heads = Math.max(1, parseInt(group.heads ?? 1, 10) || 1);
+    const viewedStreams = viewedCameras * heads;
+    const resolutionMp = Math.max(0.5, Number(group.resolutionMp ?? 2) || 2);
+    const fps = Math.max(1, Math.min(60, Number(group.fps ?? 15) || 15));
+    const codec = VideoStorageSizer.normalizeCodec(group.codec || "H.265");
+    const dewarping = Boolean(group.dewarping);
+
+    // Dewarping 360° fisheye/panoramic streams adds ~25% GPU shader load per dewarped tile
+    const dewarpLoadMultiplier = dewarping ? 1.25 : 1.0;
+
+    // Page 6: "Viewing encrypted video streams increases CPU usage by up to 40% for low-resolution video streams."
+    const encryptionLoadMultiplier = modifiers.encryptedStreams
+      ? (resolutionMp <= 2.0 ? 1.40 : 1.15)
+      : 1.0;
+
+    // Frame rate scaling relative to Genetec's 30 FPS benchmark table
+    const fpsCapacityMultiplier = 30.0 / fps;
+
+    // Network receive bitrate for client NIC sizing
+    const singleStreamMbps = VideoStorageSizer.calculateSingleStreamBitrateMbps(resolutionMp, codec, fps, "medium", 0);
+    const groupClientBitrateMbps = Math.round(viewedStreams * singleStreamMbps * 100) / 100;
+    const totalPixelsPerSecMp = Math.round(viewedStreams * resolutionMp * fps * 10) / 10;
+
+    const profileLoads = {};
+    ["minimum", "recommended", "high_performance"].forEach(profKey => {
+      const base30FpsCap = this.getBenchmarkMaxStreamsAt30Fps(profKey, codec, resolutionMp);
+      const effectiveMaxStreams = base30FpsCap > 0
+        ? (base30FpsCap * fpsCapacityMultiplier * modifiers.combinedCapacityFactor) / (dewarpLoadMultiplier * encryptionLoadMultiplier)
+        : 0;
+
+      const loadFraction = viewedStreams === 0
+        ? 0
+        : (effectiveMaxStreams > 0 ? (viewedStreams / effectiveMaxStreams) : 99.9);
+
+      profileLoads[profKey] = {
+        base30FpsMaxStreams: Math.floor(base30FpsCap),
+        effectiveMaxStreams: Math.floor(effectiveMaxStreams),
+        loadFraction: Math.round(loadFraction * 1000) / 1000,
+        loadPct: Math.round(loadFraction * 1000) / 10
+      };
+    });
+
+    return {
+      id: group.id || `ws_grp_${Math.random().toString(36).slice(2, 7)}`,
+      name: group.name || "Viewed Camera Group",
+      viewedCameras,
+      heads,
+      viewedStreams,
+      resolutionMp,
+      fps,
+      codec,
+      dewarping,
+      singleStreamMbps,
+      groupClientBitrateMbps,
+      totalPixelsPerSecMp,
+      profileLoads
+    };
+  },
+
+  /**
+   * Main calculation entry point for Client Workstation Decoding & Spec Sizer.
+   */
+  calculate(bomList = [], overrides = {}) {
+    const cfg = Object.assign({}, this.state, overrides);
+    const modifiers = this.getModifierFactors(cfg);
+    const rawGroups = Array.isArray(cfg.viewedGroups) && cfg.viewedGroups.length > 0
+      ? cfg.viewedGroups
+      : this.state.viewedGroups;
+
+    const evaluatedGroups = rawGroups.map(g => this.evaluateViewedGroup(g, modifiers));
+
+    const totalViewedCameras = evaluatedGroups.reduce((s, g) => s + g.viewedCameras, 0);
+    const totalViewedStreams = evaluatedGroups.reduce((s, g) => s + g.viewedStreams, 0);
+    const totalClientBitrateMbps = Math.round(evaluatedGroups.reduce((s, g) => s + g.groupClientBitrateMbps, 0) * 10) / 10;
+    const totalDecodedMpPerSec = Math.round(evaluatedGroups.reduce((s, g) => s + g.totalPixelsPerSecMp, 0) * 10) / 10;
+
+    const operatorStationsCount = Math.max(1, parseInt(cfg.operatorStationsCount ?? this.state.operatorStationsCount ?? 1, 10) || 1);
+    const layoutDistributionMode = cfg.layoutDistributionMode || this.state.layoutDistributionMode || "per_station";
+    const displayResolution = cfg.displayResolution || this.state.displayResolution || "4k";
+    const monitorsPerWorkstation = modifiers.monitorsPerWorkstation;
+
+    // If "split_wall", divide the total decoding load across the operatorStationsCount workstations;
+    // If "per_station", each operator workstation views the entire configured camera grid.
+    const stationLoadDivisor = layoutDistributionMode === "split_wall" ? Math.max(1, operatorStationsCount) : 1;
+
+    const profiles = GENETEC_514_REQUIREMENTS.CLIENT_WORKSTATION_PROFILES;
+    const profileEvaluations = {};
+
+    ["minimum", "recommended", "high_performance"].forEach(profKey => {
+      const profDef = profiles[profKey];
+      const rawTotalLoadFraction = evaluatedGroups.reduce((s, g) => s + (g.profileLoads[profKey]?.loadFraction || 0), 0);
+      const perStationLoadFraction = rawTotalLoadFraction / stationLoadDivisor;
+      const loadPct = Math.round(perStationLoadFraction * 1000) / 10;
+
+      // Genetec Section 1.3 benchmarks are measured at an 85% CPU & GPU ceiling
+      const estimatedHardwareUtilPct = Math.min(100, Math.round(perStationLoadFraction * 85 * 10) / 10);
+
+      // Check hardware constraints (Monitor count, 4K monitor support, unsupported AV1 4K on Minimum, etc.)
+      const disallowReasons = [];
+      if (monitorsPerWorkstation > profDef.maxMonitors) {
+        disallowReasons.push(`Requires ${monitorsPerWorkstation} monitors (Max ${profDef.maxMonitors} on ${profDef.shortLabel})`);
+      }
+      if (profKey === "minimum" && displayResolution === "4k") {
+        disallowReasons.push("Minimum profile is only rated for 1920x1200 / 1080p displays (Not 4K UHD)");
+      }
+      const hasUnsupportedStream = evaluatedGroups.some(g => g.viewedStreams > 0 && g.profileLoads[profKey]?.effectiveMaxStreams <= 0);
+      if (hasUnsupportedStream) {
+        disallowReasons.push("Contains codec/resolution stream unsupported on this hardware profile (e.g. 4K AV1 on Minimum)");
+      }
+      if (perStationLoadFraction > 1.0) {
+        disallowReasons.push(`Decoding load is ${loadPct}% of ${profDef.shortLabel} capacity (Exceeds 85% CPU/GPU cap)`);
+      }
+
+      // Weighted single-equivalent stream ceiling for this profile based on the user's mix
+      const weightedMaxStreams = perStationLoadFraction > 0 && totalViewedStreams > 0
+        ? Math.floor((totalViewedStreams / stationLoadDivisor) / perStationLoadFraction)
+        : (profKey === "minimum" ? 6 : profKey === "recommended" ? 64 : 104);
+
+      const minWorkstationsAtThisTier = Math.max(
+        1,
+        perStationLoadFraction > 0 ? Math.ceil(rawTotalLoadFraction) : 1,
+        Math.ceil(monitorsPerWorkstation / profDef.maxMonitors)
+      );
+
+      profileEvaluations[profKey] = {
+        profileKey: profKey,
+        profile: profDef,
+        rawTotalLoadFraction: Math.round(rawTotalLoadFraction * 1000) / 1000,
+        perStationLoadFraction: Math.round(perStationLoadFraction * 1000) / 1000,
+        loadPct,
+        estimatedHardwareUtilPct,
+        weightedMaxStreams,
+        isCompliant: disallowReasons.length === 0,
+        disallowReasons,
+        minWorkstationsAtThisTier
+      };
+    });
+
+    // Determine Recommended Genetec 5.14.1.0 Profile Tier
+    let recommendedProfileKey = "high_performance";
+    let requiresMultipleWorkstations = false;
+    let minRequiredWorkstations = 1;
+
+    if (totalViewedStreams === 0) {
+      recommendedProfileKey = monitorsPerWorkstation > 4 ? "high_performance" : (monitorsPerWorkstation > 2 || displayResolution === "4k" ? "recommended" : "minimum");
+      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
+    } else if (profileEvaluations.minimum.isCompliant) {
+      recommendedProfileKey = "minimum";
+      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
+    } else if (profileEvaluations.recommended.isCompliant) {
+      recommendedProfileKey = "recommended";
+      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
+    } else if (profileEvaluations.high_performance.isCompliant) {
+      recommendedProfileKey = "high_performance";
+      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
+    } else {
+      recommendedProfileKey = "high_performance";
+      requiresMultipleWorkstations = true;
+      const wsForDecode = Math.ceil(profileEvaluations.high_performance.rawTotalLoadFraction);
+      const wsForMonitors = Math.ceil(monitorsPerWorkstation / profiles.high_performance.maxMonitors);
+      const perGridWs = Math.max(1, wsForDecode, wsForMonitors);
+      minRequiredWorkstations = layoutDistributionMode === "per_station"
+        ? (perGridWs * operatorStationsCount)
+        : perGridWs;
+    }
+
+    const activeEvaluation = profileEvaluations[recommendedProfileKey];
+    const recommendedProfile = profiles[recommendedProfileKey];
+
+    // Match Catalog Workstations (Streamvault SVW-100E, SVW-300E-T3, SVW-500E, Dell Precision, BCDVideo Aurora)
+    const workstationsDb = (typeof window !== "undefined" && Array.isArray(window.WORKSTATIONS_DATABASE))
+      ? window.WORKSTATIONS_DATABASE
+      : [];
+    const primaryCatalogWorkstation = workstationsDb.find(w => w.id === recommendedProfile.recommendedStreamvaultId) || workstationsDb[0] || null;
+    const alternateCatalogWorkstation = recommendedProfile.alternateCatalogId
+      ? workstationsDb.find(w => w.id === recommendedProfile.alternateCatalogId) || null
+      : null;
+
+    // Inspect Project BOM for currently quoted workstations
+    const quotedWorkstations = (Array.isArray(bomList) ? bomList : []).filter(item => {
+      if (!item || item.parentInstanceId) return false;
+      const cat = String(item.category || "").toLowerCase();
+      const role = String(item.role || "").toLowerCase();
+      return cat === "workstations" || role === "workstation" || String(item.serverType || "").includes("workstation") || String(item.serverType || "").includes("video_wall");
+    });
+    const quotedWorkstationCount = quotedWorkstations.reduce((sum, item) => sum + (parseInt(item.qty, 10) || 1), 0);
+
+    // Build Engineering Findings & Genetec 5.14.1.0 Advisory Notes
+    const findings = [];
+    if (recommendedProfileKey === "high_performance") {
+      findings.push({
+        severity: "info",
+        text: "Dual-GPU Monitor Rule (SystemRequirements.pdf Page 5): The High-Performance profile uses 2x NVIDIA RTX 5070 Ti (16 GB) GPUs. At least one physical monitor must be connected to each GPU card to activate both hardware decoding engines."
+      });
+    }
+    if (recommendedProfileKey === "minimum") {
+      findings.push({
+        severity: "info",
+        text: "Intel Quick Sync Video Rule (SystemRequirements.pdf Page 5): On the Minimum profile (Intel Core i3-8100), the monitor must be connected directly to the motherboard display output to enable Intel Quick Sync hardware decoding."
+      });
+    }
+    if (modifiers.watermarking) {
+      findings.push({
+        severity: "warning",
+        text: `Video Watermarking Active (Page 6): Decreases maximum simultaneous viewed tiles by ${modifiers.hardwareAcceleration ? '10% (with Hardware Acceleration)' : '30% (without Hardware Acceleration)'}.`
+      });
+    }
+    if (modifiers.encryptedStreams) {
+      findings.push({
+        severity: "warning",
+        text: "Encrypted Video Streams Active (Page 6): Viewing encrypted video streams increases client CPU usage by up to 40% on low-resolution (≤2MP) streams."
+      });
+    }
+    if (requiresMultipleWorkstations) {
+      findings.push({
+        severity: "critical",
+        text: `Single-Workstation Ceiling Exceeded: Viewing ${totalViewedStreams} streams (${totalDecodedMpPerSec} MP/s) requires ${minRequiredWorkstations}x High-Performance Workstations (${recommendedProfile.recommendedStreamvaultSku}) to stay within Genetec's 85% CPU/GPU stability limit.`
+      });
+    }
+    if (totalClientBitrateMbps > 700) {
+      findings.push({
+        severity: "warning",
+        text: `High Client Network Ingress (${totalClientBitrateMbps} Mbps): Recommend a 2.5 GbE or 10 GbE client network interface (such as on Streamvault SVW-500E or BCDVideo Aurora) instead of standard 1 GbE.`
+      });
+    }
+
+    return {
+      version: GENETEC_514_REQUIREMENTS.version,
+      datasheetPath: GENETEC_514_REQUIREMENTS.datasheetPath,
+      evaluatedGroups,
+      modifiers,
+      totalViewedCameras,
+      totalViewedStreams,
+      totalClientBitrateMbps,
+      totalDecodedMpPerSec,
+      monitorsPerWorkstation,
+      displayResolution,
+      operatorStationsCount,
+      layoutDistributionMode,
+      recommendedProfileKey,
+      recommendedProfile,
+      activeEvaluation,
+      profileEvaluations,
+      requiresMultipleWorkstations,
+      minRequiredWorkstations,
+      primaryCatalogWorkstation,
+      alternateCatalogWorkstation,
+      allCatalogWorkstations: workstationsDb,
+      quotedWorkstationCount,
+      findings
+    };
+  }
+};
+
 // Global Browser Exports
 window.IEEE_POE_STANDARDS = IEEE_POE_STANDARDS;
 window.ELECTRICAL_CONSTANTS = ELECTRICAL_CONSTANTS;
@@ -4027,5 +4518,6 @@ window.VIDEO_STORAGE_CONSTANTS = VIDEO_STORAGE_CONSTANTS;
 window.GENETEC_514_REQUIREMENTS = GENETEC_514_REQUIREMENTS;
 window.VideoStorageSizer = VideoStorageSizer;
 window.GenetecLicensingSizer = GenetecLicensingSizer;
+window.ClientWorkstationSizer = ClientWorkstationSizer;
 
 
