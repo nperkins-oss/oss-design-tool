@@ -9373,5 +9373,142 @@ const CATALOG_ASSETS = {
 };
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CATALOG_ASSETS };
+  module.exports = { CATALOG_ASSETS,
+    "GSC-Sipelia-Base": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
+    },
+    "GSC-Sipelia-1SIP-STD": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
+    },
+    "GSC-Sipelia-1SIP-ADV": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
+    },
+    "GSC-SIPELIA-1SIP": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
+    },
+    "GSC-Sipelia-1Trunk": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
+    },
+    "GSC-SIPELIA-1PA": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
+    },
+    "GSC-GAP-RSA-STA": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-PRO": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-ENT": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-1SRS": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Quanergy_Genetec_RSA_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Quanergy_Genetec_RSA_Integration.pdf"
+    },
+    "GSC-GAP-RSA-1RAD": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-1FEN": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-1KM": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-10KM": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-GAP-RSA-100KM": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-1PSWM-RPMII": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_RSA_Surveillance_Plugin_Datasheet.pdf"
+    },
+    "GSC-1PSINGLECARD": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-1PMORPHOBIOMETRICS": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-1PIDSCANNER": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-1PMEDECOBASE": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Medeco_Key_Asset_Management_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Medeco_Key_Asset_Management_Datasheet.pdf"
+    },
+    "GSC-1P-OFFLINELOCK-1L": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Medeco_Key_Asset_Management_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Medeco_Key_Asset_Management_Datasheet.pdf"
+    },
+    "CID-IDENTITY-1Y": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf"
+    },
+    "CID-IDENTITY-3Y": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf"
+    },
+    "CID-IDENTITY-5Y": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf"
+    },
+    "CID-KIOSK-LIC-1Y": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf"
+    },
+    "CID-KIOSK-LIC-3Y": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf"
+    },
+    "CID-KIOSK-LIC-5Y": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf"
+    },
+    "GSC-1SDK-PREFTECH-BIOS": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf"
+    },
+    "GSC-1SDK-CONTROLID-IDBRIDGE": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-1SDK-PRINCETONIDENTITY-ACS": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-1SDK-BAPS-SYFTYCORSIGHTAI": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf"
+    },
+    "GSC-1SDK-BRIEFCAM": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf"
+    },
+    "GSC-1SDK-TELAERIS-XPRESSENTRY": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Telaeris_XPressEntry_Genetec_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Telaeris_XPressEntry_Genetec_Integration.pdf"
+    },
+    "GSC-1SDK-ADVANCIS-WINGUARD": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Advancis_WinGuard_PSIM_Genetec_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Advancis_WinGuard_PSIM_Genetec_Integration.pdf"
+    }
+};
 }
