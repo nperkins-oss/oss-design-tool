@@ -416,6 +416,13 @@ let videoServerCount = 0;   // 0 = Auto (packs multiple Archiver roles per serve
 let videoEncryptionCerts = 0;
 let videoSoftwareMotion = false;
 let videoShowDetailsPanel = true;
+let videoLowFpsUntilMotion = false; // Record at low FPS (e.g. 2 FPS) during idle/non-motion and boost to target FPS on motion/event
+let videoIdleFps = 2;               // Default low frame rate (2 FPS) during idle periods
+let videoFailoverStructure = "none"; // "none" | "ring" | "dedicated"
+let videoRingNodeCount = 0;          // 0 = Auto (4-node ring A > B > C > D > A)
+let videoDedicatedFailoverCount = 1; // Number of dedicated hot-standby failover servers (N + M)
+let videoFailoverRetentionDays = 0;  // 0 = Full primary retention mirror on failover buffer
+let videoFailoverIncludeStorageBuffer = true;
 
 // 7. Access Control Filters & Door Package Builder State
 let selectedAcsVendors = [];
@@ -1829,6 +1836,8 @@ function buildCalculatorStrip() {
           retentionDays: videoRetentionDays,
           codec: videoCodec,
           fps: videoFps,
+          lowFpsUntilMotion: videoLowFpsUntilMotion,
+          idleFps: videoIdleFps,
           motionDutyCycle: videoMotionDuty,
           sceneActivity: videoSceneActivity,
           raidType: videoRaidType,
@@ -1837,7 +1846,12 @@ function buildCalculatorStrip() {
           archiverRolesCount: videoArchiverRoles,
           serverCountOverride: videoServerCount,
           encryptionCerts: videoEncryptionCerts,
-          softwareMotionDetection: videoSoftwareMotion
+          softwareMotionDetection: videoSoftwareMotion,
+          failoverStructure: videoFailoverStructure,
+          ringNodeCount: videoRingNodeCount,
+          dedicatedFailoverCount: videoDedicatedFailoverCount,
+          failoverRetentionDays: videoFailoverRetentionDays,
+          failoverIncludeStorageBuffer: videoFailoverIncludeStorageBuffer
         })
       : {
           sourceMode: "manual",
@@ -1977,8 +1991,27 @@ function buildCalculatorStrip() {
               ` : ''}
             </div>
 
-            <!-- Global Storage RAID & Genetec Archiver Role Controls -->
+            <!-- Global Low-FPS Until Motion/Event Boost, Storage RAID & Genetec Archiver Role Controls -->
             <div class="flex flex-wrap items-center gap-2">
+              <!-- Low-FPS (2 FPS) Until Motion/Event Boost Checkbox -->
+              <div class="flex items-center gap-2 bg-slate-900 border ${vCalc.lowFpsUntilMotion ? 'border-emerald-500/70 bg-emerald-950/25' : 'border-slate-800'} rounded-lg px-2.5 py-1 transition-all" title="Record continuously at a low frame rate (e.g., 2 FPS) during idle/non-motion periods and boost to the target high frame rate during motion or events">
+                <label class="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input type="checkbox" ${vCalc.lowFpsUntilMotion ? 'checked' : ''} onchange="setVideoSizerParam('lowFpsUntilMotion', this.checked)" class="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer" />
+                  <span class="text-[10px] font-bold uppercase tracking-wide ${vCalc.lowFpsUntilMotion ? 'text-emerald-300' : 'text-slate-300'}">Low-FPS Until Motion/Event</span>
+                </label>
+                <div class="flex items-center gap-1 pl-1 border-l border-slate-700/80">
+                  <span class="text-[9px] font-mono text-slate-400">Idle:</span>
+                  <select onchange="setVideoSizerParam('idleFps', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1 py-0.5 text-emerald-300 font-mono font-bold text-[10px] focus:outline-none cursor-pointer" title="Baseline recording frame rate when no motion/event is active (default 2 FPS)">
+                    ${[1, 2, 3, 4, 5].map(ifps => `<option value="${ifps}" class="bg-slate-900" ${(vCalc.idleFps || 2) === ifps ? 'selected' : ''}>${ifps} FPS</option>`).join('')}
+                  </select>
+                </div>
+                ${vCalc.lowFpsUntilMotion ? `
+                  <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/90 border border-emerald-700/60 text-emerald-300" title="Continuous ${vCalc.idleFps || 2} FPS baseline adds ${vCalc.lowFpsAddedMbps || 0} Mbps average (+${vCalc.lowFpsAddedUsableTb || 0} TB usable storage) compared to motion-only recording">
+                    ${vCalc.idleIngressMbps || 0} Mbps Idle ➔ ${vCalc.peakIngressMbps} Mbps Boost (+${vCalc.lowFpsAddedUsableTb || 0} TB)
+                  </span>
+                ` : ''}
+              </div>
+
               <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1">
                 <span class="text-[9px] font-bold uppercase text-slate-400">RAID Level:</span>
                 <select onchange="setVideoSizerParam('raidType', this.value)" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
@@ -2010,7 +2043,7 @@ function buildCalculatorStrip() {
                   <th class="py-1.5 px-1.5 w-20">Cameras</th>
                   <th class="py-1.5 px-1.5 w-24">Sensors/Cam</th>
                   <th class="py-1.5 px-1.5 min-w-[130px]">Resolution / Sensor</th>
-                  <th class="py-1.5 px-1.5 w-24">Frame Rate</th>
+                  <th class="py-1.5 px-1.5 w-24">${vCalc.lowFpsUntilMotion ? 'Boost FPS (Idle→High)' : 'Frame Rate'}</th>
                   <th class="py-1.5 px-1.5 min-w-[125px]">Format / Codec</th>
                   <th class="py-1.5 px-1.5 min-w-[120px]">Scene Activity</th>
                   <th class="py-1.5 px-1.5 min-w-[140px]">Rec Mode / Motion</th>
@@ -2064,6 +2097,9 @@ function buildCalculatorStrip() {
                       <select onchange="updateVideoCameraGroup(${idx}, 'fps', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
                         ${[1, 5, 10, 12, 15, 20, 24, 30, 60].map(f => `<option value="${f}" class="bg-slate-900" ${grp.fps === f ? 'selected' : ''}>${f} FPS</option>`).join('')}
                       </select>
+                      ${grp.lowFpsUntilMotion ? `
+                        <div class="text-[9px] font-mono text-emerald-400 mt-0.5 text-center">${grp.idleFps || 2} FPS Idle ➔ ${grp.fps} FPS</div>
+                      ` : ''}
                     </td>
                     <!-- Format / Codec -->
                     <td class="py-1.5 px-1.5">
@@ -2088,11 +2124,11 @@ function buildCalculatorStrip() {
                     <td class="py-1.5 px-1.5">
                       <select onchange="updateVideoCameraGroup(${idx}, 'motionDutyPct', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
                         <option value="100" class="bg-slate-900" ${grp.motionDutyPct >= 100 ? 'selected' : ''}>Continuous (100%)</option>
-                        <option value="75" class="bg-slate-900" ${grp.motionDutyPct === 75 ? 'selected' : ''}>Motion High (75%)</option>
-                        <option value="70" class="bg-slate-900" ${grp.motionDutyPct === 70 ? 'selected' : ''}>Motion Comm (70%)</option>
-                        <option value="50" class="bg-slate-900" ${grp.motionDutyPct === 50 ? 'selected' : ''}>Motion Med (50%)</option>
-                        <option value="25" class="bg-slate-900" ${grp.motionDutyPct === 25 ? 'selected' : ''}>Motion Low (25%)</option>
-                        <option value="10" class="bg-slate-900" ${grp.motionDutyPct === 10 ? 'selected' : ''}>Motion Min (10%)</option>
+                        <option value="75" class="bg-slate-900" ${grp.motionDutyPct === 75 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `75% Boost / 25% @ ${grp.idleFps || 2}FPS` : 'Motion High (75%)'}</option>
+                        <option value="70" class="bg-slate-900" ${grp.motionDutyPct === 70 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `70% Boost / 30% @ ${grp.idleFps || 2}FPS` : 'Motion Comm (70%)'}</option>
+                        <option value="50" class="bg-slate-900" ${grp.motionDutyPct === 50 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `50% Boost / 50% @ ${grp.idleFps || 2}FPS` : 'Motion Med (50%)'}</option>
+                        <option value="25" class="bg-slate-900" ${grp.motionDutyPct === 25 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `25% Boost / 75% @ ${grp.idleFps || 2}FPS` : 'Motion Low (25%)'}</option>
+                        <option value="10" class="bg-slate-900" ${grp.motionDutyPct === 10 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `10% Boost / 90% @ ${grp.idleFps || 2}FPS` : 'Motion Min (10%)'}</option>
                       </select>
                     </td>
                     <!-- Retention Days (Number input with quick step) -->
@@ -2105,7 +2141,9 @@ function buildCalculatorStrip() {
                     <!-- Group Peak / Avg Bitrate -->
                     <td class="py-1.5 px-2 text-right font-mono">
                       <div class="text-xs font-bold text-sky-400">${grp.peakIngressMbps} <span class="text-slate-500">/</span> ${grp.averageRecordingMbps}</div>
-                      <div class="text-[9px] text-slate-500">${grp.perCameraMbps} Mbps/cam (${grp.totalStreams} str)</div>
+                      <div class="text-[9px] ${grp.lowFpsUntilMotion ? 'text-emerald-400' : 'text-slate-500'}">
+                        ${grp.lowFpsUntilMotion ? `Idle: ${grp.idleIngressMbps} Mbps (@${grp.idleFps}fps)` : `${grp.perCameraMbps} Mbps/cam (${grp.totalStreams} str)`}
+                      </div>
                     </td>
                     <!-- Group Usable TB -->
                     <td class="py-1.5 px-2 text-right font-mono">
@@ -2131,6 +2169,183 @@ function buildCalculatorStrip() {
             </table>
           </div>
         </div>
+
+        <!-- Row 2.5: Archiver / NVR Failover Calculator (Ring Failover A > B > C > D > A vs. Dedicated Failover Server(s) N + M) -->
+        ${(() => {
+          const fo = vCalc.failover || {
+            structure: 'none',
+            ringNodes: 0,
+            ringChainText: 'None',
+            ringNodeSchedule: [],
+            dedicatedFailoverServers: 0,
+            primaryServerCount: g.recommendedArchiverServers || 1,
+            totalServersRequired: g.recommendedArchiverServers || 1,
+            normalCamsPerServer: vCalc.totalCameras,
+            normalMbpsPerServer: vCalc.peakIngressMbps,
+            failoverCamsOnSurvivor: vCalc.totalCameras,
+            failoverMbpsOnSurvivor: vCalc.peakIngressMbps,
+            primaryUsableTbPerServer: vCalc.basePrimaryUsableTb || vCalc.requiredUsableTB,
+            failoverBufferTbPerServer: 0,
+            totalUsableTbPerRingServer: vCalc.basePrimaryUsableTb || vCalc.requiredUsableTB,
+            failoverAddedUsableTb: 0,
+            isRingSurvivorVerified: true
+          };
+          const isRing = fo.structure === 'ring';
+          const isDedicated = fo.structure === 'dedicated';
+          const isActiveFailover = isRing || isDedicated;
+          const bufferSelectorValue = !videoFailoverIncludeStorageBuffer ? -1 : (videoFailoverRetentionDays || 0);
+
+          return `
+            <div class="bg-slate-950/90 border ${isActiveFailover ? 'border-cyan-500/40' : 'border-slate-800'} rounded-xl p-3 flex flex-col gap-2.5">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-white flex items-center gap-1.5">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5 ${isActiveFailover ? 'text-cyan-400' : 'text-slate-400'}"></i>
+                    <span>Archiver / NVR Failover Calculator</span>
+                  </span>
+                  <!-- Failover Structure Segmented Buttons -->
+                  <div class="inline-flex items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-[11px]">
+                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'none')" class="px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer ${fo.structure === 'none' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}">
+                      None (Standalone)
+                    </button>
+                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'ring')" class="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isRing ? 'bg-cyan-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Ring Failover Structure (A > B > C > D > A): Each server hosts a Primary Archiver + Standby Archiver for its upstream neighbor">
+                      <i data-lucide="repeat" class="w-3 h-3"></i>
+                      <span>Ring Failover (A &gt; B &gt; C &gt; D &gt; A)</span>
+                    </button>
+                    <button type="button" onclick="setVideoSizerParam('failoverStructure', 'dedicated')" class="px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isDedicated ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Dedicated Hot-Standby Failover Server(s) (N + M): Separate standby server(s) monitor all primary Archivers">
+                      <i data-lucide="server-cog" class="w-3 h-3"></i>
+                      <span>Dedicated Failover Server(s) (N + M)</span>
+                    </button>
+                  </div>
+                </div>
+
+                ${isActiveFailover ? `
+                  <div class="flex flex-wrap items-center gap-2">
+                    ${isRing ? `
+                      <div class="flex items-center gap-1.5 bg-slate-900 border border-cyan-500/40 rounded-lg px-2.5 py-1">
+                        <span class="text-[9px] font-bold uppercase text-cyan-300">Ring Nodes:</span>
+                        <select onchange="setVideoSizerParam('ringNodeCount', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-cyan-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
+                          <option value="0" class="bg-slate-900" ${videoRingNodeCount === 0 ? 'selected' : ''}>Auto (${fo.ringNodes}-Node Ring)</option>
+                          <option value="2" class="bg-slate-900" ${videoRingNodeCount === 2 ? 'selected' : ''}>2 Nodes (A &gt; B &gt; A)</option>
+                          <option value="3" class="bg-slate-900" ${videoRingNodeCount === 3 ? 'selected' : ''}>3 Nodes (A &gt; B &gt; C &gt; A)</option>
+                          <option value="4" class="bg-slate-900" ${videoRingNodeCount === 4 ? 'selected' : ''}>4 Nodes (A &gt; B &gt; C &gt; D &gt; A)</option>
+                          <option value="5" class="bg-slate-900" ${videoRingNodeCount === 5 ? 'selected' : ''}>5 Nodes (A &gt; B &gt; C &gt; D &gt; E &gt; A)</option>
+                          <option value="6" class="bg-slate-900" ${videoRingNodeCount === 6 ? 'selected' : ''}>6 Nodes (A..F &gt; A)</option>
+                          <option value="8" class="bg-slate-900" ${videoRingNodeCount === 8 ? 'selected' : ''}>8 Nodes (A..H &gt; A)</option>
+                        </select>
+                      </div>
+                    ` : `
+                      <div class="flex items-center gap-1.5 bg-slate-900 border border-indigo-500/40 rounded-lg px-2.5 py-1">
+                        <span class="text-[9px] font-bold uppercase text-indigo-300">Dedicated Failover Servers (M):</span>
+                        <select onchange="setVideoSizerParam('dedicatedFailoverCount', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-indigo-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
+                          ${[1, 2, 3, 4, 6, 8].map(m => `<option value="${m}" class="bg-slate-900" ${fo.dedicatedFailoverServers === m ? 'selected' : ''}>${m} Standby Server${m === 1 ? '' : 's'} (N + ${m})</option>`).join('')}
+                        </select>
+                      </div>
+                    `}
+
+                    <!-- Failover Storage Buffer Selector -->
+                    <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1" title="Storage buffer reserved for recording failover streams during an outage">
+                      <span class="text-[9px] font-bold uppercase text-slate-400">Failover Storage Buffer:</span>
+                      <select onchange="setVideoSizerParam('failoverBufferMode', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
+                        <option value="0" class="bg-slate-900" ${bufferSelectorValue === 0 ? 'selected' : ''}>Full Retention Mirror (100%)</option>
+                        <option value="30" class="bg-slate-900" ${bufferSelectorValue === 30 ? 'selected' : ''}>30-Day Failover Buffer</option>
+                        <option value="14" class="bg-slate-900" ${bufferSelectorValue === 14 ? 'selected' : ''}>14-Day Failover Buffer</option>
+                        <option value="7" class="bg-slate-900" ${bufferSelectorValue === 7 ? 'selected' : ''}>7-Day Failover Buffer</option>
+                        <option value="3" class="bg-slate-900" ${bufferSelectorValue === 3 ? 'selected' : ''}>3-Day Outage Buffer</option>
+                        <option value="-1" class="bg-slate-900" ${bufferSelectorValue === -1 ? 'selected' : ''}>Switchover Only (0 TB Extra)</option>
+                      </select>
+                    </div>
+                  </div>
+                ` : `
+                  <span class="text-[10px] text-slate-400 font-mono">
+                    Select <strong class="text-cyan-300">Ring Failover (A &gt; B &gt; C &gt; D &gt; A)</strong> or <strong class="text-indigo-300">Dedicated Failover Server(s) (N + M)</strong> to size survivor throughput &amp; failover storage buffers.
+                  </span>
+                `}
+              </div>
+
+              ${isRing ? `
+                <!-- Ring Failover Visual Chain & Survivor Load Telemetry -->
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-2.5 pt-1 border-t border-slate-800/80">
+                  <div class="xl:col-span-5 bg-slate-900/90 border border-cyan-500/30 rounded-lg p-2.5 flex flex-col justify-between gap-2">
+                    <div class="flex items-center justify-between gap-2">
+                      <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1">
+                        <i data-lucide="git-merge" class="w-3.5 h-3.5"></i>
+                        <span>Ring Failover Chain (${fo.ringNodes} Nodes)</span>
+                      </span>
+                      <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${fo.isRingSurvivorVerified ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
+                        ${fo.isRingSurvivorVerified ? '✓ 2x Survivor Load Verified' : '⚠ Check Survivor Throughput'}
+                      </span>
+                    </div>
+                    <div class="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800 font-mono text-xs font-bold text-cyan-300 text-center tracking-wide">
+                      ${fo.ringChainText}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                      ${(fo.ringNodeSchedule || []).map(node => `
+                        <div class="flex-1 min-w-[115px] p-1.5 rounded bg-slate-950/80 border border-slate-800/90 text-[10px] font-mono">
+                          <div class="font-bold text-white flex items-center justify-between">
+                            <span>${node.nodeLabel}</span>
+                            <span class="text-cyan-400">➔ ${node.failsOverTo}</span>
+                          </div>
+                          <div class="text-[9px] text-slate-400 mt-0.5">Normal: <strong class="text-sky-300">${node.normalCams} cam / ${node.normalMbps} Mbps</strong></div>
+                          <div class="text-[9px] text-slate-400">Failover: <strong class="text-amber-300">${node.survivorCams} cam / ${node.survivorMbps} Mbps</strong></div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <div class="xl:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-slate-400">Ring Fleet Size</div>
+                      <div class="text-sm font-mono font-bold text-cyan-300">${fo.ringNodes} Servers</div>
+                      <div class="text-[9px] text-slate-500">1 Primary + 1 Standby Role/Srv</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-slate-400">Normal Load / Node</div>
+                      <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps</div>
+                      <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cams • ${fo.primaryUsableTbPerServer} TB Primary</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border ${fo.isRingSurvivorVerified ? 'border-slate-800' : 'border-amber-600/70'} flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-amber-300">Survivor Load (2x)</div>
+                      <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps</div>
+                      <div class="text-[9px] text-slate-400">${fo.failoverCamsOnSurvivor} Cams when neighbor fails</div>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between">
+                      <div class="text-[9px] font-mono uppercase text-purple-300">Storage / Ring Node</div>
+                      <div class="text-sm font-mono font-bold text-purple-300">${fo.totalUsableTbPerRingServer} TB / Srv</div>
+                      <div class="text-[9px] text-slate-400">+${fo.failoverBufferTbPerServer} TB buffer (+${fo.failoverAddedUsableTb} TB total)</div>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+
+              ${isDedicated ? `
+                <!-- Dedicated Failover Server(s) (N + M) Telemetry -->
+                <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 pt-1 border-t border-slate-800/80">
+                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-indigo-500/30 flex flex-col justify-between">
+                    <div class="text-[9px] font-mono uppercase text-indigo-300">Total Server Fleet (N + M)</div>
+                    <div class="text-sm font-mono font-bold text-white">${fo.primaryServerCount} Primary + ${fo.dedicatedFailoverServers} Failover = <span class="text-indigo-300">${fo.totalServersRequired} Srv</span></div>
+                    <div class="text-[9px] text-slate-400">${fo.ringChainText}</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+                    <div class="text-[9px] font-mono uppercase text-slate-400">Primary Server Load (N=${fo.primaryServerCount})</div>
+                    <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps / Srv</div>
+                    <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cams • ${fo.primaryUsableTbPerServer} TB Usable/Srv</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+                    <div class="text-[9px] font-mono uppercase text-indigo-300">Dedicated Failover Spec (M=${fo.dedicatedFailoverServers})</div>
+                    <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps Cap</div>
+                    <div class="text-[9px] text-slate-400">Takes over ${fo.failoverCamsOnSurvivor} Cams per failed Primary</div>
+                  </div>
+                  <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between">
+                    <div class="text-[9px] font-mono uppercase text-purple-300">Failover Storage Buffer</div>
+                    <div class="text-sm font-mono font-bold text-purple-300">${fo.failoverBufferTbPerServer} TB / Failover Srv</div>
+                    <div class="text-[9px] text-slate-400">Total Project: ${vCalc.requiredUsableTB} TB (+${fo.failoverAddedUsableTb} TB buffer)</div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        })()}
 
         ${showMatrix ? `
         <!-- Row 3: Detailed Genetec 5.14 Verification & RAID Drive Options Matrix -->
@@ -2526,6 +2741,72 @@ function setVideoSizerParam(key, val) {
   } else if (key === "softwareMotion") {
     videoSoftwareMotion = Boolean(val); window.videoSoftwareMotion = Boolean(val);
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.softwareMotionDetection = Boolean(val);
+  } else if (key === "lowFpsUntilMotion") {
+    videoLowFpsUntilMotion = Boolean(val); window.videoLowFpsUntilMotion = Boolean(val);
+    if (typeof VideoStorageSizer !== "undefined") {
+      VideoStorageSizer.state.lowFpsUntilMotion = Boolean(val);
+      if (Boolean(val) && Array.isArray(VideoStorageSizer.state.cameraGroups)) {
+        VideoStorageSizer.state.cameraGroups.forEach(grp => {
+          if ((Number(grp.motionDutyPct) || 100) >= 100) {
+            grp.motionDutyPct = 50;
+          }
+          grp.lowFpsUntilMotion = true;
+        });
+      } else if (!Boolean(val) && Array.isArray(VideoStorageSizer.state.cameraGroups)) {
+        VideoStorageSizer.state.cameraGroups.forEach(grp => {
+          grp.lowFpsUntilMotion = false;
+        });
+      }
+    }
+  } else if (key === "idleFps") {
+    const cleanIdleFps = Math.max(1, Math.min(15, Number(val) || 2));
+    videoIdleFps = cleanIdleFps; window.videoIdleFps = cleanIdleFps;
+    if (typeof VideoStorageSizer !== "undefined") {
+      VideoStorageSizer.state.idleFps = cleanIdleFps;
+      if (Array.isArray(VideoStorageSizer.state.cameraGroups)) {
+        VideoStorageSizer.state.cameraGroups.forEach(grp => {
+          grp.idleFps = cleanIdleFps;
+        });
+      }
+    }
+  } else if (key === "failoverStructure") {
+    const normStruct = ["none", "ring", "dedicated"].includes(val) ? val : "none";
+    videoFailoverStructure = normStruct; window.videoFailoverStructure = normStruct;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.failoverStructure = normStruct;
+    if (typeof window !== "undefined") {
+      window.genetecLicensingConfig = window.genetecLicensingConfig || {};
+      if (normStruct !== "none") {
+        window.genetecLicensingConfig.enableVideoFailover = true;
+        if (!window.genetecLicensingConfig.failoverMode || window.genetecLicensingConfig.failoverMode === "none") {
+          window.genetecLicensingConfig.failoverMode = "all";
+        }
+      }
+    }
+  } else if (key === "ringNodeCount") {
+    const cleanRing = Math.max(0, parseInt(val, 10) || 0);
+    videoRingNodeCount = cleanRing; window.videoRingNodeCount = cleanRing;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.ringNodeCount = cleanRing;
+  } else if (key === "dedicatedFailoverCount") {
+    const cleanDed = Math.max(1, parseInt(val, 10) || 1);
+    videoDedicatedFailoverCount = cleanDed; window.videoDedicatedFailoverCount = cleanDed;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.dedicatedFailoverCount = cleanDed;
+  } else if (key === "failoverBufferMode") {
+    const numMode = Number(val);
+    if (numMode < 0) {
+      videoFailoverIncludeStorageBuffer = false; window.videoFailoverIncludeStorageBuffer = false;
+      videoFailoverRetentionDays = 0; window.videoFailoverRetentionDays = 0;
+      if (typeof VideoStorageSizer !== "undefined") {
+        VideoStorageSizer.state.failoverIncludeStorageBuffer = false;
+        VideoStorageSizer.state.failoverRetentionDays = 0;
+      }
+    } else {
+      videoFailoverIncludeStorageBuffer = true; window.videoFailoverIncludeStorageBuffer = true;
+      videoFailoverRetentionDays = Math.max(0, numMode || 0); window.videoFailoverRetentionDays = Math.max(0, numMode || 0);
+      if (typeof VideoStorageSizer !== "undefined") {
+        VideoStorageSizer.state.failoverIncludeStorageBuffer = true;
+        VideoStorageSizer.state.failoverRetentionDays = Math.max(0, numMode || 0);
+      }
+    }
   } else if (key === "toggleDetails") {
     videoShowDetailsPanel = Boolean(val); window.videoShowDetailsPanel = Boolean(val);
   }
@@ -2642,16 +2923,25 @@ function autoFitNvrToBom() {
     retentionDays: videoRetentionDays,
     codec: videoCodec,
     fps: videoFps,
+    lowFpsUntilMotion: videoLowFpsUntilMotion,
+    idleFps: videoIdleFps,
     motionDutyCycle: videoMotionDuty,
     sceneActivity: videoSceneActivity,
     raidType: videoRaidType,
     preferredDriveSizeTb: videoPreferredDriveTb,
     genetecProfile: videoGenetecProfile,
     archiverRolesCount: videoArchiverRoles,
+    serverCountOverride: videoServerCount,
     encryptionCerts: videoEncryptionCerts,
-    softwareMotionDetection: videoSoftwareMotion
+    softwareMotionDetection: videoSoftwareMotion,
+    failoverStructure: videoFailoverStructure,
+    ringNodeCount: videoRingNodeCount,
+    dedicatedFailoverCount: videoDedicatedFailoverCount,
+    failoverRetentionDays: videoFailoverRetentionDays,
+    failoverIncludeStorageBuffer: videoFailoverIncludeStorageBuffer
   });
 
+  const fo = vCalc.failover || { structure: "none" };
   const targetTB = Math.max(16, vCalc.requiredUsableTB || 16);
   const targetMbps = Math.max(50, vCalc.peakIngressMbps || 50);
   const minArchiverServers = (vCalc.genetec && vCalc.genetec.recommendedArchiverServers) ? vCalc.genetec.recommendedArchiverServers : 1;
@@ -2666,29 +2956,53 @@ function autoFitNvrToBom() {
   const getBw = s => Number(s.maxIngestBandwidthMbps ?? s.maxThroughputMbps ?? 450);
   const sorted = [...servers].sort((a, b) => getCap(a) - getCap(b));
 
-  // If 1 server is sufficient for Genetec roles, try to find a single appliance that fits both TB and Mbps
-  const singleFit = minArchiverServers === 1
-    ? sorted.find(s => getCap(s) >= targetTB && getBw(s) >= targetMbps)
-    : null;
-
-  if (singleFit && typeof addToBOM === "function") {
-    addToBOM(singleFit.id || singleFit.sku, 1);
-    if (typeof showToast === "function") {
-      showToast(`Auto-Fitted 1x ${singleFit.model} (${getCap(singleFit)} TB Usable, ${getBw(singleFit)} Mbps max) for ${vCalc.requiredUsableTB} TB / ${vCalc.peakIngressMbps} Mbps.`, "success");
+  if (fo.structure === "ring" && (fo.ringNodes || 0) >= 2 && typeof addToBOM === "function") {
+    const ringNodes = fo.ringNodes;
+    const perNodeTb = Math.max(8, fo.totalUsableTbPerRingServer || Math.ceil(targetTB / ringNodes));
+    const survivorMbps = Math.max(50, fo.failoverMbpsOnSurvivor || targetMbps);
+    const chosen = sorted.find(s => getCap(s) >= perNodeTb && getBw(s) >= survivorMbps) || sorted[sorted.length - 1];
+    if (chosen) {
+      addToBOM(chosen.id || chosen.sku, ringNodes);
+      if (typeof showToast === "function") {
+        showToast(`Auto-Fitted Ring Failover (${fo.ringChainText}): ${ringNodes}x ${chosen.model} (${getCap(chosen)} TB & ${getBw(chosen)} Mbps/node) for 2x survivor load.`, "success");
+      }
     }
-  } else if (sorted.length > 0 && typeof addToBOM === "function") {
-    // Choose the server tier whose per-server usable TB best matches targetTB / minArchiverServers
-    const perServerTargetTb = targetTB / minArchiverServers;
-    const chosen = sorted.find(s => getCap(s) >= perServerTargetTb) || sorted[sorted.length - 1];
-    const cap = getCap(chosen) || 32;
-    const bw = getBw(chosen) || 600;
-    const qtyByStorage = Math.ceil(targetTB / cap);
-    const qtyByBw = Math.ceil(targetMbps / bw);
-    const qtyNeeded = Math.max(1, minArchiverServers, qtyByStorage, qtyByBw);
+  } else if (fo.structure === "dedicated" && (fo.dedicatedFailoverServers || 0) >= 1 && typeof addToBOM === "function") {
+    const totalCount = Math.max(2, fo.totalServersRequired || 2);
+    const perNodeTb = Math.max(8, fo.primaryUsableTbPerServer || 16, fo.failoverBufferTbPerServer || 0);
+    const perNodeMbps = Math.max(50, fo.normalMbpsPerServer || targetMbps);
+    const chosen = sorted.find(s => getCap(s) >= perNodeTb && getBw(s) >= perNodeMbps) || sorted[sorted.length - 1];
+    if (chosen) {
+      addToBOM(chosen.id || chosen.sku, totalCount);
+      if (typeof showToast === "function") {
+        showToast(`Auto-Fitted Dedicated Failover (${fo.primaryServerCount} Primary + ${fo.dedicatedFailoverServers} Standby = ${totalCount} Servers): ${totalCount}x ${chosen.model}.`, "success");
+      }
+    }
+  } else {
+    // If 1 server is sufficient for Genetec roles, try to find a single appliance that fits both TB and Mbps
+    const singleFit = minArchiverServers === 1
+      ? sorted.find(s => getCap(s) >= targetTB && getBw(s) >= targetMbps)
+      : null;
 
-    addToBOM(chosen.id || chosen.sku, qtyNeeded);
-    if (typeof showToast === "function") {
-      showToast(`Auto-Fitted ${qtyNeeded}x ${chosen.model} (${cap * qtyNeeded} TB Usable, ${bw * qtyNeeded} Mbps max) for ${vCalc.genetec.activeArchiverRoles} Genetec Archiver role(s).`, "success");
+    if (singleFit && typeof addToBOM === "function") {
+      addToBOM(singleFit.id || singleFit.sku, 1);
+      if (typeof showToast === "function") {
+        showToast(`Auto-Fitted 1x ${singleFit.model} (${getCap(singleFit)} TB Usable, ${getBw(singleFit)} Mbps max) for ${vCalc.requiredUsableTB} TB / ${vCalc.peakIngressMbps} Mbps.`, "success");
+      }
+    } else if (sorted.length > 0 && typeof addToBOM === "function") {
+      // Choose the server tier whose per-server usable TB best matches targetTB / minArchiverServers
+      const perServerTargetTb = targetTB / minArchiverServers;
+      const chosen = sorted.find(s => getCap(s) >= perServerTargetTb) || sorted[sorted.length - 1];
+      const cap = getCap(chosen) || 32;
+      const bw = getBw(chosen) || 600;
+      const qtyByStorage = Math.ceil(targetTB / cap);
+      const qtyByBw = Math.ceil(targetMbps / bw);
+      const qtyNeeded = Math.max(1, minArchiverServers, qtyByStorage, qtyByBw);
+
+      addToBOM(chosen.id || chosen.sku, qtyNeeded);
+      if (typeof showToast === "function") {
+        showToast(`Auto-Fitted ${qtyNeeded}x ${chosen.model} (${cap * qtyNeeded} TB Usable, ${bw * qtyNeeded} Mbps max) for ${vCalc.genetec.activeArchiverRoles} Genetec Archiver role(s).`, "success");
+      }
     }
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
