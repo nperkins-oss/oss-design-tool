@@ -410,7 +410,10 @@ let videoManualCamCount = 32;
 let videoResolutionMp = 4;
 let videoSceneActivity = "medium"; // "low" | "medium" | "high" | "ultra"
 let videoPreferredDriveTb = 16;
+let videoVmsVendor = "genetec"; // "genetec" | "milestone" | "generic"
 let videoGenetecProfile = "dedicated_300";
+let videoMilestoneProfile = "husky_1000r";
+let activeVmsLicensingVendor = "genetec"; // "genetec" | "milestone"
 let videoArchiverRoles = 0; // 0 = Auto
 let videoServerCount = 0;   // 0 = Auto (packs multiple Archiver roles per server within Genetec limits)
 let videoEncryptionCerts = 0;
@@ -443,6 +446,8 @@ let selectedAcsPowerSource = "all";
 let requireAcsOsdp = false;
 let doorPkgPreset = "standard_strike";
 let doorPkgQty = 2;
+let doorBuilderControllerVendor = "mercury"; // "mercury" | "axis" | "hid_aero" | "assa_abloy"
+let doorBuilderAcsPlatform = "genetec_synergis"; // "genetec_synergis" | "milestone_xpaccess" | "milestone_axis_secure_entry" | "standalone"
 
 // 8. Compute, Servers & Storage Filters
 let selectedSrvVendors = [];
@@ -1908,7 +1913,9 @@ function buildCalculatorStrip() {
           sceneActivity: videoSceneActivity,
           raidType: videoRaidType,
           preferredDriveSizeTb: videoPreferredDriveTb,
+          vmsVendor: videoVmsVendor,
           genetecProfile: videoGenetecProfile,
+          milestoneProfile: videoMilestoneProfile,
           archiverRolesCount: videoArchiverRoles,
           serverCountOverride: videoServerCount,
           encryptionCerts: videoEncryptionCerts,
@@ -1921,8 +1928,9 @@ function buildCalculatorStrip() {
           failoverRetentionDays: videoFailoverRetentionDays,
           failoverIncludeStorageBuffer: videoFailoverIncludeStorageBuffer
         })
-      : { totalCameras: 32, peakIngressMbps: 105.6, averageRecordingMbps: 52.8, requiredUsableTB: 18.8, raidLevel: "RAID 6", genetec: { activeArchiverRoles: 1, recommendedArchiverServers: 1, isFullyCompliant: true } };
-    const g = vCalc.genetec || {};
+      : { totalCameras: 32, peakIngressMbps: 105.6, averageRecordingMbps: 52.8, requiredUsableTB: 18.8, raidLevel: "RAID 6", vmsVendor: "genetec", genetec: { activeArchiverRoles: 1, recommendedArchiverServers: 1, isFullyCompliant: true } };
+    const isMilestoneVms = vCalc.vmsVendor === "milestone";
+    const g = isMilestoneVms ? (vCalc.milestone || vCalc.genetec || {}) : (vCalc.genetec || {});
     const showInlineStorage = Boolean(window.catalogShowInlineStorageCalc);
     container.innerHTML = `
       <div class="space-y-3">
@@ -1941,11 +1949,11 @@ function buildCalculatorStrip() {
                   ${vCalc.peakIngressMbps} / ${vCalc.averageRecordingMbps} Mbps
                 </span>
                 <span class="px-2 py-0.5 rounded ${g.isFullyCompliant !== false ? 'bg-emerald-950/80 border-emerald-700/50 text-emerald-300' : 'bg-rose-950/80 border-rose-700/50 text-rose-300'} border font-mono text-[10px] font-bold">
-                  ${g.activeArchiverRoles || 1} Archiver Role(s) (${g.recommendedArchiverServers || 1} Srv)
+                  ${isMilestoneVms ? `Milestone Husky: ${g.recommendedArchiverServers || 1} Srv` : `Genetec: ${g.activeArchiverRoles || 1} Role(s) (${g.recommendedArchiverServers || 1} Srv)`}
                 </span>
               </div>
               <p class="text-[11px] text-slate-400">
-                Use the dedicated <strong class="text-purple-300">Storage &amp; Failover Calculator Studio</strong> in the top navigation for multi-group camera schedules, Low-FPS Until Motion, and Ring/Dedicated failover sizing.
+                Use the dedicated <strong class="text-purple-300">Storage &amp; Failover Calculator Studio</strong> in the top navigation for multi-manufacturer sizing (<strong class="text-indigo-300">Genetec Streamvault</strong> &amp; <strong class="text-sky-300">Milestone Husky IVO</strong>), Low-FPS Until Motion, and Ring/Dedicated failover.
               </p>
             </div>
           </div>
@@ -1969,9 +1977,10 @@ function buildCalculatorStrip() {
     `;
   } else if (currentMode === "vms_software" || currentMode === "os_virtualization") {
     container.classList.remove("hidden");
-    const licRes = (typeof GenetecLicensingSizer !== "undefined")
-      ? GenetecLicensingSizer.calculate(projectBOM)
-      : null;
+    const isMilestoneLic = activeVmsLicensingVendor === "milestone";
+    const licRes = isMilestoneLic
+      ? ((typeof MilestoneLicensingSizer !== "undefined") ? MilestoneLicensingSizer.calculate(projectBOM) : null)
+      : ((typeof GenetecLicensingSizer !== "undefined") ? GenetecLicensingSizer.calculate(projectBOM) : null);
     const showInlineLic = Boolean(window.catalogShowInlineLicCalc);
     container.innerHTML = `
       <div class="space-y-3">
@@ -1983,24 +1992,31 @@ function buildCalculatorStrip() {
             <div>
               <div class="flex flex-wrap items-center gap-2">
                 <h4 class="text-xs font-bold text-white uppercase tracking-wider">VMS Software &amp; Licensing Catalog</h4>
-                ${licRes ? `
+                ${licRes ? (isMilestoneLic ? `
+                  <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300 font-mono text-[10px] font-bold">
+                    Milestone ${licRes.editionInfo?.shortLabel || 'Corporate'} &bull; ${licRes.totalDeviceLicenses} Dev Lic &bull; ${licRes.careYears}Y Care Plus
+                  </span>
                   <span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 font-mono text-[10px] font-bold">
-                    Tier: ${String(licRes.effectiveTier || 'Enterprise').toUpperCase()} &bull; ${licRes.cameraUnits} Cam Lic &bull; ${licRes.readerConnections} Doors
+                    Total SW MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()}
+                  </span>
+                ` : `
+                  <span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 font-mono text-[10px] font-bold">
+                    Genetec ${String(licRes.effectiveTier || 'Enterprise').toUpperCase()} &bull; ${licRes.cameraUnits} Cam Lic &bull; ${licRes.readerConnections} Doors
                   </span>
                   <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-mono text-[10px] font-bold">
                     Total SW MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} (${licRes.advantageYears}Y Advantage)
                   </span>
-                ` : ''}
+                `) : ''}
               </div>
               <p class="text-[11px] text-slate-400">
-                Use the dedicated <strong class="text-emerald-300">Genetec Licensing Sizer Studio</strong> in the top navigation to configure Security Center Base, Omnicast, Synergis, Sipelia, AutoVu, and Partner SDKs.
+                Use the dedicated <strong class="text-emerald-300">VMS Licensing Sizer Studio</strong> in the top navigation to configure <strong class="text-indigo-300">Genetec Security Center 5.14</strong> or <strong class="text-sky-300">Milestone XProtect 2026 R2</strong> licensing &amp; appliances.
               </p>
             </div>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button type="button" onclick="addGenetecLicensesToBom()" class="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
+            <button type="button" onclick="${isMilestoneLic ? 'addMilestoneLicensesToBom()' : 'addGenetecLicensesToBom()'}" class="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
               <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-              <span>+ Add Licenses to BOM</span>
+              <span>+ Add ${isMilestoneLic ? 'Milestone' : 'Genetec'} Licenses</span>
             </button>
             <button type="button" onclick="window.catalogShowInlineLicCalc = !window.catalogShowInlineLicCalc; buildCalculatorStrip();" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer">
               <i data-lucide="${showInlineLic ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-emerald-400"></i>
@@ -2008,11 +2024,11 @@ function buildCalculatorStrip() {
             </button>
             <button type="button" onclick="if(typeof TabManager !== 'undefined') TabManager.openTab('sizer_licensing');" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
               <i data-lucide="key" class="w-3.5 h-3.5"></i>
-              <span>Open Licensing Studio &rarr;</span>
+              <span>Open VMS Licensing Studio &rarr;</span>
             </button>
           </div>
         </div>
-        ${showInlineLic && licRes ? renderGenetecLicensingBuilderHtml(licRes, false) : ''}
+        ${showInlineLic ? renderVmsLicensingStudioHtml(false) : ''}
       </div>
     `;
   } else if (currentMode === "workstations") {
@@ -2038,12 +2054,12 @@ function buildCalculatorStrip() {
                     Viewing ${wsCalc.totalViewedStreams} Streams (${wsCalc.monitorCount} Mon) &bull; ${recEv.utilizationPct || 0}% Decode Load
                   </span>
                   <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-mono text-[10px] font-bold">
-                    Genetec 5.14 Spec: ${wsCalc.recommendedProfile?.shortLabel || 'Recommended'} ${recCat ? `(${recCat.sku})` : ''}
+                    ${wsCalc.vmsPlatform === 'milestone' ? 'Milestone Smart Client' : 'Genetec 5.14'} Spec: ${wsCalc.recommendedProfile?.shortLabel || 'Recommended'} ${recCat ? `(${recCat.sku})` : ''}
                   </span>
                 ` : ''}
               </div>
               <p class="text-[11px] text-slate-400">
-                Use the dedicated <strong class="text-sky-300">Client Workstation Sizer Studio</strong> in the top navigation to calculate CPU/GPU specs per Genetec 5.14.1.0 Section 1.2 &amp; 1.3 decoding benchmarks.
+                Use the dedicated <strong class="text-sky-300">Client Workstation Sizer Studio</strong> in the top navigation to calculate CPU/GPU specs for <strong class="text-indigo-300">Genetec Security Desk 5.14</strong> or <strong class="text-sky-300">Milestone XProtect Smart Client 2026 / Husky IVO VS</strong>.
               </p>
             </div>
           </div>
@@ -2139,7 +2155,9 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
           sceneActivity: videoSceneActivity,
           raidType: videoRaidType,
           preferredDriveSizeTb: videoPreferredDriveTb,
+          vmsVendor: videoVmsVendor,
           genetecProfile: videoGenetecProfile,
+          milestoneProfile: videoMilestoneProfile,
           archiverRolesCount: videoArchiverRoles,
           serverCountOverride: videoServerCount,
           encryptionCerts: videoEncryptionCerts,
@@ -2168,6 +2186,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
           arrayUsableTb: 32,
           driveOptionsMatrix: [],
           selectedDrivePlan: { driveSizeTb: 16, totalDrives: 4, drivesPerServer: 4, rawStorageTb: 64, usableStorageTb: 32, efficiencyPct: 50, chassisFormFactor: "1U 4-Bay" },
+          vmsVendor: "genetec",
           genetec: {
             version: "5.14.1.0",
             datasheetPath: "Datasheets/Genetec/SystemRequirements.pdf",
@@ -2198,17 +2217,22 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
     });
     const quotedUsableTB = Math.round(quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.usableStorageTb ?? nvr.usableStorageTB ?? nvr.rawStorageTb ?? nvr.rawStorageTB ?? 0)) * (nvr.qty || 1)), 0) * 10) / 10;
     const isStorageHealthy = vCalc.requiredUsableTB === 0 || quotedUsableTB >= vCalc.requiredUsableTB;
-    const g = vCalc.genetec || {};
+    const isMilestoneVms = vCalc.vmsVendor === "milestone";
+    const isGenericVms = vCalc.vmsVendor === "generic";
+    const g = isMilestoneVms ? (vCalc.milestone || vCalc.genetec || {}) : (vCalc.genetec || {});
     const dp = vCalc.selectedDrivePlan || {};
     const showMatrix = isFullStudio ? (videoShowDetailsPanel !== false) : Boolean(videoShowDetailsPanel);
 
     const profilesList = (typeof GENETEC_514_REQUIREMENTS !== "undefined" && GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES)
       ? Object.values(GENETEC_514_REQUIREMENTS.ARCHIVER_PROFILES)
       : [];
+    const milestoneProfilesList = (typeof MILESTONE_2026_REQUIREMENTS !== "undefined" && MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES)
+      ? Object.values(MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES)
+      : [];
 
     return `
       <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
-        <!-- Row 1: Header, Source Toggle, Genetec Datasheet Link & Primary KPI Strip -->
+        <!-- Row 1: Header, Multi-Manufacturer VMS Switcher, Datasheet Links & Primary KPI Strip -->
         <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
           <div class="flex items-start sm:items-center gap-3">
             <div class="p-2.5 rounded-xl bg-purple-500/15 border border-purple-500/30 text-purple-400 shrink-0">
@@ -2216,24 +2240,52 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
             </div>
             <div>
               <div class="flex flex-wrap items-center gap-2">
-                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Storage, Bandwidth, RAID &amp; Genetec 5.14 Archiver Calculator</h4>
+                <h4 class="text-xs font-bold text-white uppercase tracking-wider">Storage, Bandwidth, RAID &amp; Multi-VMS Recorder Sizer</h4>
+                <!-- Multi-Manufacturer VMS / Appliance Ecosystem Switcher -->
+                <div class="inline-flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5 text-[11px]">
+                  <button type="button" onclick="setVideoSizerParam('vmsVendor', 'genetec')" class="px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${vCalc.vmsVendor === 'genetec' ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Genetec Security Center 5.14.1.0 Archiver Role & Streamvault Appliance Sizing">
+                    <i data-lucide="shield-check" class="w-3 h-3"></i>
+                    <span>Genetec 5.14 / Streamvault</span>
+                  </button>
+                  <button type="button" onclick="setVideoSizerParam('vmsVendor', 'milestone')" class="px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${isMilestoneVms ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Milestone XProtect 2026 R2 Recording Server & Husky IVO Appliance Sizing">
+                    <i data-lucide="server" class="w-3 h-3"></i>
+                    <span>Milestone XProtect / Husky IVO</span>
+                  </button>
+                  <button type="button" onclick="setVideoSizerParam('vmsVendor', 'generic')" class="px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${isGenericVms ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Open VMS / Generic Enterprise NVR Storage & RAID Sizing">
+                    <i data-lucide="hard-drive" class="w-3 h-3"></i>
+                    <span>Open VMS / Generic</span>
+                  </button>
+                </div>
                 <span class="px-2 py-0.5 rounded-md bg-purple-950/80 border border-purple-700/50 text-[10px] font-mono font-bold text-purple-300">
                   ${vCalc.totalCameras} Cameras (${vCalc.totalSensors} Streams @ ${vCalc.perCameraMbps} Mbps/cam)
                 </span>
-                <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide', 'GENETEC-SC-5.14')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec Security Center 5.14.1.0 System Requirements Guide PDF">
-                  <i data-lucide="file-text" class="w-3 h-3"></i>
-                  <span>Genetec 5.14 Spec Guide</span>
-                </button>
+                ${isMilestoneVms ? `
+                  <button onclick="openDatasheetModal('Datasheets/Milestone/Systems Comparison Chart.pdf', 'Milestone XProtect 2026 R2 Systems Comparison Chart', 'MILESTONE-XPROTECT-2026')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone XProtect 2026 R2 Systems Comparison Chart PDF">
+                    <i data-lucide="file-text" class="w-3 h-3"></i>
+                    <span>Milestone XProtect Chart</span>
+                  </button>
+                  <button onclick="openDatasheetModal('${g.profile?.datasheetPath || 'Datasheets/Milestone/Husky 1000R.pdf'}', 'Milestone Husky IVO Recording Server Datasheet', '${g.profile?.applianceSku || 'HIVO-1000R'}')" class="px-2 py-0.5 rounded-md bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-[10px] font-mono font-semibold text-indigo-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone Husky IVO Hardware Datasheet PDF">
+                    <i data-lucide="server" class="w-3 h-3"></i>
+                    <span>Husky IVO Datasheet</span>
+                  </button>
+                ` : `
+                  <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide', 'GENETEC-SC-5.14')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec Security Center 5.14.1.0 System Requirements Guide PDF">
+                    <i data-lucide="file-text" class="w-3 h-3"></i>
+                    <span>Genetec 5.14 Spec Guide</span>
+                  </button>
+                `}
               </div>
               <p class="text-[11px] text-slate-400 mt-0.5">
-                Industry-standard bitrate &amp; RAID array sizing with live <strong class="text-slate-200">Genetec Security Center 5.14</strong> Archiver role &amp; server throughput verification.
+                ${isMilestoneVms
+                  ? 'Industry-standard bitrate &amp; RAID array sizing with live <strong class="text-sky-300">Milestone XProtect 2026 R2</strong> Recording Server &amp; <strong class="text-white">Husky IVO (150D / 350T / 350R / 700R / 1000R / 1800R)</strong> throughput verification.'
+                  : 'Industry-standard bitrate &amp; RAID array sizing with live <strong class="text-indigo-300">Genetec Security Center 5.14</strong> Archiver role &amp; <strong class="text-white">Streamvault</strong> server throughput verification.'}
               </p>
             </div>
           </div>
 
           <!-- Top Right KPI Summary & Actions -->
           <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-            <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${g.isFullyCompliant ? 'border-slate-800' : 'border-rose-600/80'}">
+            <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${g.isFullyCompliant !== false ? 'border-slate-800' : 'border-rose-600/80'}">
               <div>
                 <div class="text-[9px] uppercase font-bold text-slate-400">Peak / Avg Bitrate</div>
                 <div class="text-xs font-mono font-bold text-sky-400">${vCalc.peakIngressMbps} <span class="text-slate-500">/</span> ${vCalc.averageRecordingMbps} Mbps</div>
@@ -2245,9 +2297,9 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
               </div>
               <div class="h-6 w-px bg-slate-800"></div>
               <div>
-                <div class="text-[9px] uppercase font-bold text-slate-400">Genetec Archivers</div>
-                <div class="text-xs font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'}">
-                  ${g.activeArchiverRoles} Role${g.activeArchiverRoles === 1 ? '' : 's'} (${g.recommendedArchiverServers} Srv)
+                <div class="text-[9px] uppercase font-bold text-slate-400">${isMilestoneVms ? 'Milestone Recorders' : 'Genetec Archivers'}</div>
+                <div class="text-xs font-mono font-bold ${g.isArchiverCountVerified !== false ? 'text-emerald-400' : 'text-rose-400'}">
+                  ${isMilestoneVms ? `${g.recommendedArchiverServers || 1} Husky Srv (${g.activeArchiverRoles || 1} Inst)` : `${g.activeArchiverRoles} Role${g.activeArchiverRoles === 1 ? '' : 's'} (${g.recommendedArchiverServers} Srv)`}
                 </div>
               </div>
               <div class="h-6 w-px bg-slate-800"></div>
@@ -2257,14 +2309,14 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
               </div>
             </div>
 
-            <button onclick="setVideoSizerParam('toggleDetails', !videoShowDetailsPanel)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Toggle RAID Drive Matrix & Genetec Archiver Mapping">
+            <button onclick="setVideoSizerParam('toggleDetails', !videoShowDetailsPanel)" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer" title="Toggle RAID Drive Matrix & VMS Recorder Mapping">
               <i data-lucide="${showMatrix ? 'chevron-up' : 'chevron-down'}" class="w-3.5 h-3.5 text-purple-400"></i>
-              <span>${showMatrix ? 'Hide Matrix' : 'RAID & Archiver Matrix'}</span>
+              <span>${showMatrix ? 'Hide Matrix' : 'RAID & Recorder Matrix'}</span>
             </button>
 
-            <button onclick="autoFitNvrToBom()" class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Auto-Fit Server/NVR to BOM based on required Usable TB and Genetec Archiver throughput">
+            <button onclick="autoFitNvrToBom()" class="px-3 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer" title="Auto-Fit Server/NVR to BOM based on required Usable TB and VMS throughput">
               <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
-              <span>Auto-Fit Server</span>
+              <span>Auto-Fit ${isMilestoneVms ? 'Husky IVO' : 'Server'}</span>
             </button>
           </div>
         </div>
@@ -2754,79 +2806,89 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
         })()}
 
         ${showMatrix ? `
-        <!-- Row 3: Detailed Genetec 5.14 Verification & RAID Drive Options Matrix -->
+        <!-- Row 3: Detailed VMS (Genetec 5.14 / Milestone XProtect 2026) Verification & RAID Drive Options Matrix -->
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-3 pt-1">
-          <!-- Left Panel (5 cols): Genetec Security Center 5.14.1.0 Archiver & Server Verification -->
-          <div class="xl:col-span-5 bg-slate-950/90 border ${g.isFullyCompliant ? 'border-slate-800' : 'border-amber-600/70'} rounded-xl p-3 flex flex-col justify-between gap-2.5">
+          <!-- Left Panel (5 cols): Multi-Manufacturer VMS Recorder & Server Verification -->
+          <div class="xl:col-span-5 bg-slate-950/90 border ${g.isFullyCompliant !== false ? 'border-slate-800' : 'border-amber-600/70'} rounded-xl p-3 flex flex-col justify-between gap-2.5">
             <div class="space-y-2">
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-1.5">
-                  <i data-lucide="shield-check" class="w-4 h-4 ${g.isFullyCompliant ? 'text-emerald-400' : 'text-amber-400'}"></i>
-                  <span class="text-[11px] font-bold uppercase tracking-wider text-white">Genetec 5.14 Archiver &amp; Server Verification</span>
+                  <i data-lucide="shield-check" class="w-4 h-4 ${g.isFullyCompliant !== false ? 'text-emerald-400' : 'text-amber-400'}"></i>
+                  <span class="text-[11px] font-bold uppercase tracking-wider text-white">
+                    ${isMilestoneVms ? 'Milestone XProtect 2026 &amp; Husky IVO Verification' : 'Genetec 5.14 Archiver &amp; Server Verification'}
+                  </span>
                 </div>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${g.isFullyCompliant ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-rose-950 text-rose-300 border border-rose-700/60'}">
-                  ${g.isFullyCompliant ? '✓ PASS: GENETEC 5.14 VERIFIED' : '⚠ CAPACITY / RULE ALERT'}
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${g.isFullyCompliant !== false ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-rose-950 text-rose-300 border border-rose-700/60'}">
+                  ${g.isFullyCompliant !== false ? `✓ PASS: ${isMilestoneVms ? 'MILESTONE 2026' : 'GENETEC 5.14'} VERIFIED` : '⚠ CAPACITY / RULE ALERT'}
                 </span>
               </div>
 
               <!-- Server Profile, Multi-Role Server Count & Encryption Modifiers -->
               <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
                 <div class="sm:col-span-6 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5">
-                  <div class="text-[9px] font-bold uppercase text-slate-400">Genetec 5.14 Server Profile (${g.profile?.referencePage || 'Sec 1.4'})</div>
-                  <select onchange="setVideoSizerParam('genetecProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
-                    ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps/Role • ≤${p.maxRolesPerServer || 4} Roles/Srv)</option>`).join('')}
-                  </select>
+                  <div class="text-[9px] font-bold uppercase text-slate-400">
+                    ${isMilestoneVms ? `Milestone Husky IVO Profile (${g.profile?.referencePage || 'Husky IVO'})` : `Genetec 5.14 Server Profile (${g.profile?.referencePage || 'Sec 1.4'})`}
+                  </div>
+                  ${isMilestoneVms ? `
+                    <select onchange="setVideoSizerParam('milestoneProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
+                      ${milestoneProfilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps • Up to ${p.maxRawStorageTb}TB Raw)</option>`).join('')}
+                    </select>
+                  ` : `
+                    <select onchange="setVideoSizerParam('genetecProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
+                      ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps/Role • ≤${p.maxRolesPerServer || 4} Roles/Srv)</option>`).join('')}
+                    </select>
+                  `}
                 </div>
                 <div class="sm:col-span-3 bg-slate-900/90 border ${g.isServerCountVerified !== false ? 'border-slate-800' : 'border-rose-600'} rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
                   <div class="flex items-center justify-between">
                     <span class="text-[9px] font-bold uppercase text-slate-400">Servers (#)</span>
-                    <button onclick="setVideoSizerParam('serverCount', 0)" class="text-[9px] font-mono px-1 rounded ${videoServerCount === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Auto-pack multiple Archiver roles onto servers within Genetec limits">
+                    <button onclick="setVideoSizerParam('serverCount', 0)" class="text-[9px] font-mono px-1 rounded ${videoServerCount === 0 ? 'bg-purple-900/80 text-purple-200' : 'bg-slate-800 text-slate-400 hover:text-white'} cursor-pointer" title="Auto-pack Recording/Archiver roles onto servers within manufacturer limits">
                       Auto (${g.minRequiredServers || 1})
                     </button>
                   </div>
                   <div class="flex items-center gap-1 mt-0.5">
-                    <input type="number" min="0" max="64" value="${videoServerCount === 0 ? g.recommendedArchiverServers : videoServerCount}" onchange="setVideoSizerParam('serverCount', Math.max(0, parseInt(this.value, 10) || 0))" class="w-full bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'} focus:outline-none" title="Number of physical servers (can run up to ${g.maxRolesPerPhysicalServer || 4} Archiver roles per server)" />
+                    <input type="number" min="0" max="64" value="${videoServerCount === 0 ? g.recommendedArchiverServers : videoServerCount}" onchange="setVideoSizerParam('serverCount', Math.max(0, parseInt(this.value, 10) || 0))" class="w-full bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'} focus:outline-none" title="Number of physical servers" />
                     <span class="text-[9px] text-slate-400 font-mono">Srv</span>
                   </div>
                 </div>
                 <div class="sm:col-span-3 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
-                  <div class="text-[9px] font-bold uppercase text-slate-400">Encryption (p.10)</div>
+                  <div class="text-[9px] font-bold uppercase text-slate-400">${isMilestoneVms ? 'DB Encryption' : 'Encryption (p.10)'}</div>
                   <select onchange="setVideoSizerParam('encryptionCerts', Number(this.value))" class="w-full bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
                     <option value="0" class="bg-slate-900" ${g.encryptionCerts === 0 ? 'selected' : ''}>0 Certs (100%)</option>
-                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>1 Cert (-30%)</option>
-                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>5 Certs (-41%)</option>
+                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>${isMilestoneVms ? 'Media DB Enc (-15%)' : '1 Cert (-30%)'}</option>
+                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>${isMilestoneVms ? 'Signed + Enc (-25%)' : '5 Certs (-41%)'}</option>
                     <option value="10" class="bg-slate-900" ${g.encryptionCerts === 10 ? 'selected' : ''}>10 Certs (-52%)</option>
                     <option value="20" class="bg-slate-900" ${g.encryptionCerts === 20 ? 'selected' : ''}>20 Certs (-68%)</option>
                   </select>
                 </div>
               </div>
 
-              <!-- Per-Archiver, Multi-Role Server & Isolated Windows Volume Mapping Grid -->
+              <!-- Per-Recorder/Archiver, Multi-Role Server & Storage Tier Mapping Grid -->
               <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center pt-1">
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Archiver Roles</div>
-                  <div class="text-sm font-mono font-bold ${g.isArchiverCountVerified ? 'text-emerald-400' : 'text-rose-400'}">${g.activeArchiverRoles} <span class="text-[10px] text-slate-400">/ ${g.minRequiredArchiverRoles} Min</span></div>
-                  <div class="text-[9px] text-slate-500">≤${g.effectiveMaxMbpsPerArchiver} Mbps/Role</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">${isMilestoneVms ? 'Rec. Instances' : 'Archiver Roles'}</div>
+                  <div class="text-sm font-mono font-bold ${g.isArchiverCountVerified !== false ? 'text-emerald-400' : 'text-rose-400'}">${g.activeArchiverRoles} <span class="text-[10px] text-slate-400">/ ${g.minRequiredArchiverRoles} Min</span></div>
+                  <div class="text-[9px] text-slate-500">≤${g.effectiveMaxMbpsPerArchiver} Mbps/${isMilestoneVms ? 'Inst' : 'Role'}</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Load / Role</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Load / ${isMilestoneVms ? 'Inst' : 'Role'}</div>
                   <div class="text-sm font-mono font-bold text-sky-400">${g.bitratePerArchiverRoleMbps} Mbps</div>
                   <div class="text-[9px] text-slate-500">${g.camerasPerArchiverRole} Cam • ${g.usableTbPerArchiverRole} TB</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Roles / Server</div>
-                  <div class="text-sm font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'}">${g.rolesPerServer || 1} Role${(g.rolesPerServer || 1) === 1 ? '' : 's'}/Srv</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">${isMilestoneVms ? 'Husky Fleet' : 'Roles / Server'}</div>
+                  <div class="text-sm font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'}">${isMilestoneVms ? `${g.recommendedArchiverServers} Husky Srv` : `${g.rolesPerServer || 1} Role${(g.rolesPerServer || 1) === 1 ? '' : 's'}/Srv`}</div>
                   <div class="text-[9px] text-slate-500">${g.recommendedArchiverServers} Srv (${g.bitratePerServerMbps} Mbps/Srv)</div>
                 </div>
-                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90 sm:col-span-2" title="Every Archiver role requires its own separate Windows volume(s), and each Windows volume is capped at ≤30 TB usable.">
-                  <div class="text-[9px] font-mono uppercase text-purple-300">Windows Volumes (≤${g.maxVolumeSizeTb || 30}TB Cap • Isolated/Role)</div>
-                  <div class="text-sm font-mono font-bold text-purple-300">${g.totalLogicalVolumes || 1} Win Vol${(g.totalLogicalVolumes || 1) === 1 ? '' : 's'} <span class="text-[10px] text-slate-400">(${g.volumesPerArchiverRole || 1} Vol/Role)</span></div>
+                <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90 sm:col-span-2" title="${isMilestoneVms ? 'Milestone XProtect supports Live Database + Multi-Stage Archive tiering on RAID 5/6/10 arrays.' : 'Every Archiver role requires its own separate Windows volume(s), and each Windows volume is capped at ≤30 TB usable.'}">
+                  <div class="text-[9px] font-mono uppercase text-purple-300">${isMilestoneVms ? `Live + Archive Tiering (${g.profile?.raidSupport || 'RAID 5/6/10'})` : `Windows Volumes (≤${g.maxVolumeSizeTb || 30}TB Cap • Isolated/Role)`}</div>
+                  <div class="text-sm font-mono font-bold text-purple-300">${g.totalLogicalVolumes || 1} Vol${(g.totalLogicalVolumes || 1) === 1 ? '' : 's'} <span class="text-[10px] text-slate-400">(${g.volumesPerArchiverRole || 1} Vol/${isMilestoneVms ? 'Inst' : 'Role'})</span></div>
                   <div class="text-[9px] text-slate-400">${g.volumesPerServer || 1} Vol/Srv • ~${g.sizePerVolumeTb || g.usableTbPerArchiverRole} TB/Vol</div>
                 </div>
               </div>
             </div>
 
-            <!-- Hardware Spec & Genetec Rule Alerts -->
+            <!-- Hardware Spec & VMS Rule Alerts -->
             <div class="space-y-1.5 border-t border-slate-800/80 pt-2 text-[11px]">
               <div class="flex items-center justify-between text-slate-300 font-mono text-[10px]">
                 <span>Min Spec: <strong class="text-white">${g.profile?.cpuSpec || ''} • ${g.profile?.ramGb || 16}GB RAM • ${g.profile?.nicSpec || '1 GbE'}</strong></span>
@@ -2840,7 +2902,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
               `).join('') : `
                 <div class="px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 text-[10px] flex items-center gap-1.5">
                   <i data-lucide="check-circle-2" class="w-3.5 h-3.5 shrink-0"></i>
-                  <span>All Genetec 5.14 throughput, multi-role server limits, directory isolation, and Windows volume rules satisfied.</span>
+                  <span>All ${isMilestoneVms ? 'Milestone XProtect 2026 R2 & Husky IVO throughput and storage' : 'Genetec 5.14 throughput, multi-role server limits, directory isolation, and Windows volume'} rules satisfied.</span>
                 </div>
               `}
             </div>
@@ -2889,7 +2951,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                         <td class="py-1.5 px-2 text-sky-300">${opt.drivesPerServer} / srv</td>
                         <td class="py-1.5 px-2 text-white">${opt.rawStorageTb} TB</td>
                         <td class="py-1.5 px-2 text-emerald-400">${opt.usableStorageTb} TB <span class="text-slate-500">(${opt.efficiencyPct}%)</span></td>
-                        <td class="py-1.5 px-2 text-purple-300" title="${opt.windowsVolumesPerRole} Windows Volume(s) per Archiver role × ${g.activeArchiverRoles} role(s) = ${opt.totalVolumes30Tb} separate Windows Volumes (~${opt.sizePerVolumeTb} TB each, ≤30 TB)">
+                        <td class="py-1.5 px-2 text-purple-300" title="${opt.windowsVolumesPerRole} Windows Volume(s) per role × ${g.activeArchiverRoles} role(s) = ${opt.totalVolumes30Tb} separate Volumes (~${opt.sizePerVolumeTb} TB each)">
                           ${opt.totalVolumes30Tb} Vol${opt.totalVolumes30Tb === 1 ? '' : 's'} <span class="text-slate-400 text-[10px]">(${opt.windowsVolumesPerRole}/role @ ${opt.sizePerVolumeTb}TB)</span>
                         </td>
                         <td class="py-1.5 px-2 text-[10px] text-slate-300">${opt.chassisFormFactor}</td>
@@ -2903,13 +2965,79 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
         </div>
         ` : ''}
 
-        <!-- Turnkey Streamvault Appliance & Genetec Security Center Licensing Integration Bar -->
+        <!-- Turnkey Appliance & VMS Licensing Integration Bar (Genetec Streamvault vs Milestone Husky IVO) -->
         ${(() => {
+          const showLicInline = Boolean(window.videoShowLicPanel);
+          if (isMilestoneVms && typeof MilestoneLicensingSizer !== "undefined") {
+            const mLicRes = MilestoneLicensingSizer.calculate(projectBOM);
+            const hPlan = mLicRes.huskyPlan || {};
+            const prim = hPlan.primaryAppliance;
+            return `
+              <div class="pt-2.5 border-t border-slate-800/90 flex flex-col gap-2.5">
+                <div class="bg-sky-950/30 border border-sky-500/30 rounded-xl p-3 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-2">
+                      <span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-500/40 text-sky-300 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                        <i data-lucide="server" class="w-3 h-3"></i>
+                        Husky IVO &amp; Milestone XProtect
+                      </span>
+                      <span class="text-xs font-bold text-white">
+                        ${prim ? `${hPlan.primaryQty}x ${prim.model.replace('Milestone ', '')}` : 'Add Cameras to Size Husky IVO Appliance'}
+                      </span>
+                    </div>
+                    ${prim ? `
+                      <span class="text-[11px] text-slate-300 font-mono bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-lg">
+                        ${(hPlan.primaryQty * (prim.usableStorageTb || 0)).toFixed(1)} TB Usable (${prim.raidSupport}) &bull; ${hPlan.primaryQty * (prim.maxThroughputMbps || 0)} Mbps &bull; $${(hPlan.primaryQty * (prim.msrp || 0)).toLocaleString()} HW
+                      </span>
+                    ` : ''}
+                    ${hPlan.analyticsAppliance ? `
+                      <span class="text-[11px] text-emerald-300 font-mono bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-lg">
+                        + ${hPlan.analyticsQty}x ${hPlan.analyticsAppliance.sku} BriefCam Analytics
+                      </span>
+                    ` : ''}
+                    <span class="text-[11px] text-sky-200 font-mono bg-sky-950/60 border border-sky-500/30 px-2.5 py-0.5 rounded-lg">
+                      Edition: <strong>${mLicRes.editionInfo?.label || 'XProtect Corporate'}</strong> &bull; ${mLicRes.totalDeviceLicenses} Dev Lic + ${mLicRes.careYears}Y Care Plus = <strong>$${mLicRes.totalSoftwareMsrp.toLocaleString()}</strong> SW
+                    </span>
+                  </div>
+
+                  <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onclick="autoFitHuskyToBom()"
+                      class="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      title="Auto-fit the recommended Milestone Husky IVO Appliance(s) (150D / 350T / 350R / 700R / 1000R / 1800R) to the BOM"
+                    >
+                      <i data-lucide="server" class="w-3.5 h-3.5"></i>
+                      <span>+ Auto-Fit Husky IVO</span>
+                    </button>
+                    <button
+                      type="button"
+                      onclick="addMilestoneLicensesToBom()"
+                      class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                      title="Add the calculated Milestone XProtect Base, Device Licenses, Care Plus, and Add-On licenses to the BOM"
+                    >
+                      <i data-lucide="key" class="w-3.5 h-3.5"></i>
+                      <span>+ Add Milestone Licenses ($${mLicRes.totalSoftwareMsrp.toLocaleString()})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onclick="window.videoShowLicPanel = !window.videoShowLicPanel; buildCalculatorStrip();"
+                      class="px-2.5 py-1.5 rounded-xl border text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${showLicInline ? 'bg-sky-500/20 border-sky-500/50 text-sky-200' : 'bg-slate-950 border-slate-700 text-slate-300 hover:text-white'}"
+                    >
+                      <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                      <span>${showLicInline ? 'Hide Milestone Builder' : 'Configure Milestone XProtect'}</span>
+                    </button>
+                  </div>
+                </div>
+                ${showLicInline ? renderMilestoneLicensingBuilderHtml(mLicRes, true) : ''}
+              </div>
+            `;
+          }
+
           if (typeof GenetecLicensingSizer === "undefined") return "";
           const licRes = GenetecLicensingSizer.calculate(projectBOM);
           const svPlan = licRes.streamvaultPlan || {};
           const prim = svPlan.primaryAppliance;
-          const showLicInline = Boolean(window.videoShowLicPanel);
           const tierLabels = {
             aio: "Streamvault AIO (≤32 Cams)",
             standard: "Omnicast Standard (≤50 Cams)",
@@ -2991,6 +3119,17 @@ function setVideoSizerParam(key, val) {
   if (key === "retentionDays") {
     videoRetentionDays = val; window.videoRetentionDays = val;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.retentionDays = val;
+  } else if (key === "vmsVendor") {
+    videoVmsVendor = ["genetec", "milestone", "generic"].includes(val) ? val : "genetec";
+    window.videoVmsVendor = videoVmsVendor;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.vmsVendor = videoVmsVendor;
+    if (videoVmsVendor === "milestone" || videoVmsVendor === "genetec") {
+      activeVmsLicensingVendor = videoVmsVendor;
+      window.activeVmsLicensingVendor = videoVmsVendor;
+    }
+  } else if (key === "milestoneProfile") {
+    videoMilestoneProfile = val; window.videoMilestoneProfile = val;
+    if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.milestoneProfile = val;
   } else if (key === "codec") {
     videoCodec = val; window.videoCodec = val;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.codec = val;
@@ -3309,7 +3448,9 @@ function autoFitNvrToBom() {
     sceneActivity: videoSceneActivity,
     raidType: videoRaidType,
     preferredDriveSizeTb: videoPreferredDriveTb,
+    vmsVendor: videoVmsVendor,
     genetecProfile: videoGenetecProfile,
+    milestoneProfile: videoMilestoneProfile,
     archiverRolesCount: videoArchiverRoles,
     serverCountOverride: videoServerCount,
     encryptionCerts: videoEncryptionCerts,
@@ -3326,12 +3467,20 @@ function autoFitNvrToBom() {
   const fo = vCalc.failover || { structure: "none" };
   const targetTB = Math.max(16, vCalc.requiredUsableTB || 16);
   const targetMbps = Math.max(50, vCalc.peakIngressMbps || 50);
-  const minArchiverServers = (vCalc.genetec && vCalc.genetec.recommendedArchiverServers) ? vCalc.genetec.recommendedArchiverServers : 1;
+  const isMilestone = vCalc.vmsVendor === "milestone";
+  const vmsVerify = isMilestone ? (vCalc.milestone || vCalc.genetec || {}) : (vCalc.genetec || {});
+  const minArchiverServers = vmsVerify.recommendedArchiverServers || 1;
 
-  const servers = (typeof SERVERS_DATABASE !== "undefined")
-    ? SERVERS_DATABASE.filter(s => s.serverType !== "access_security_host")
+  const allServers = (typeof SERVERS_DATABASE !== "undefined")
+    ? SERVERS_DATABASE.filter(s => s.serverType !== "access_security_host" && s.serverType !== "analytics_server" && s.serverType !== "cloud_gateway")
     : [];
-  if (servers.length === 0) return;
+  if (allServers.length === 0) return;
+
+  // Prefer Milestone Husky IVO when Milestone is selected, or non-Milestone when Genetec/Generic is selected
+  const vendorFiltered = isMilestone
+    ? allServers.filter(s => String(s.vendor || "").toLowerCase().includes("milestone"))
+    : allServers.filter(s => !String(s.vendor || "").toLowerCase().includes("milestone"));
+  const servers = vendorFiltered.length > 0 ? vendorFiltered : allServers;
 
   // Sort NVRs ascending by usableStorageTb
   const getCap = s => Number(s.usableStorageTb ?? s.usableStorageTB ?? s.rawStorageTb ?? s.rawStorageTB ?? 0);
@@ -4624,6 +4773,552 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
 }
 window.renderGenetecLicensingBuilderHtml = renderGenetecLicensingBuilderHtml;
 
+// =========================================================================
+// MILESTONE HUSKY IVO APPLIANCE & XPROTECT 2026 R2 LICENSING CONTROLLERS
+// =========================================================================
+
+function setVmsLicensingVendor(vendor) {
+  activeVmsLicensingVendor = vendor === "milestone" ? "milestone" : "genetec";
+  window.activeVmsLicensingVendor = activeVmsLicensingVendor;
+  videoVmsVendor = activeVmsLicensingVendor;
+  window.videoVmsVendor = activeVmsLicensingVendor;
+  if (typeof VideoStorageSizer !== "undefined") {
+    VideoStorageSizer.state.vmsVendor = activeVmsLicensingVendor;
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.setVmsLicensingVendor = setVmsLicensingVendor;
+
+function setMilestoneLicParam(key, val) {
+  if (typeof window.milestoneLicensingConfig !== "object" || !window.milestoneLicensingConfig) {
+    window.milestoneLicensingConfig = (typeof MilestoneLicensingSizer !== "undefined")
+      ? MilestoneLicensingSizer.getDefaultConfig()
+      : {};
+  }
+  window.milestoneLicensingConfig[key] = val;
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.setMilestoneLicParam = setMilestoneLicParam;
+
+function toggleMilestoneFeature(toggleKey, enabled) {
+  if (typeof window.milestoneLicensingConfig !== "object" || !window.milestoneLicensingConfig) {
+    window.milestoneLicensingConfig = (typeof MilestoneLicensingSizer !== "undefined")
+      ? MilestoneLicensingSizer.getDefaultConfig()
+      : {};
+  }
+  const cfg = window.milestoneLicensingConfig;
+  const isOn = Boolean(enabled);
+  cfg[toggleKey] = isOn;
+
+  if (isOn) {
+    if (toggleKey === "enableAccessControl" && !(cfg.accessReadersOverride > 0)) {
+      cfg.accessReadersOverride = 4;
+    } else if (toggleKey === "enableAxisSecureEntry" && !(cfg.axisSecureEntryDoorsOverride > 0)) {
+      cfg.axisSecureEntryDoorsOverride = 4;
+    } else if (toggleKey === "enableLpr" && !(cfg.lprLanesOverride > 0)) {
+      cfg.lprLanesOverride = 1;
+      cfg.lprCountryModules = Math.max(1, cfg.lprCountryModules || 1);
+    } else if (toggleKey === "enableTransact" && !(cfg.transactConnectors > 0)) {
+      cfg.transactConnectors = 2;
+    } else if (toggleKey === "enableInterconnect" && !(cfg.interconnectDevices > 0)) {
+      cfg.interconnectDevices = 8;
+    } else if (toggleKey === "enableRapidReview" && !(cfg.rapidReviewCameras > 0)) {
+      cfg.rapidReviewCameras = 5;
+    } else if (toggleKey === "enableBriefCam" && !(cfg.briefCamChannels > 0)) {
+      cfg.briefCamChannels = 10;
+    } else if (toggleKey === "enableArculesHybrid" && !(cfg.arculesGateways > 0)) {
+      cfg.arculesGateways = 1;
+    } else if (toggleKey === "enableHospitalAssist" && !(cfg.hospitalAssistDevices > 0)) {
+      cfg.hospitalAssistDevices = 4;
+    }
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.toggleMilestoneFeature = toggleMilestoneFeature;
+
+function autoFitHuskyToBom() {
+  if (typeof MilestoneLicensingSizer === "undefined" || typeof addToBOM !== "function") return;
+  const res = MilestoneLicensingSizer.calculate(projectBOM);
+  const hp = res.huskyPlan;
+  if (!hp || !hp.primaryAppliance) {
+    if (typeof showToast === "function") showToast("Add cameras or set manual storage parameters to size a Milestone Husky IVO appliance.", "info");
+    return;
+  }
+
+  let addedDesc = [];
+  addToBOM(hp.primaryAppliance.id, hp.primaryQty);
+  addedDesc.push(`${hp.primaryQty}x ${hp.primaryAppliance.model}`);
+
+  if (hp.analyticsAppliance && hp.analyticsQty > 0) {
+    addToBOM(hp.analyticsAppliance.id, hp.analyticsQty);
+    addedDesc.push(`${hp.analyticsQty}x ${hp.analyticsAppliance.model}`);
+  }
+  if (hp.gatewayAppliance && hp.gatewayQty > 0) {
+    addToBOM(hp.gatewayAppliance.id, hp.gatewayQty);
+    addedDesc.push(`${hp.gatewayQty}x ${hp.gatewayAppliance.model}`);
+  }
+
+  if (typeof showToast === "function") {
+    showToast(`Added Milestone Husky Hardware: ${addedDesc.join(" + ")}`, "success");
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.autoFitHuskyToBom = autoFitHuskyToBom;
+
+function addMilestoneLicensesToBom() {
+  if (typeof MilestoneLicensingSizer === "undefined" || typeof addToBOM !== "function") return;
+  const res = MilestoneLicensingSizer.calculate(projectBOM);
+  if (!res.lineItems || res.lineItems.length === 0) {
+    if (typeof showToast === "function") showToast("No Milestone XProtect licenses needed yet — add cameras or access readers first.", "info");
+    return;
+  }
+
+  // Remove any previously auto-added Milestone VMS software SKUs before re-adding updated quantities
+  const milestoneSkus = new Set(res.lineItems.map(li => li.sku));
+  if (Array.isArray(projectBOM)) {
+    for (let i = projectBOM.length - 1; i >= 0; i--) {
+      const item = projectBOM[i];
+      if (item && (milestoneSkus.has(item.sku) || String(item.id || "").startsWith("milestone-xp"))) {
+        projectBOM.splice(i, 1);
+      }
+    }
+  }
+
+  let count = 0;
+  res.lineItems.forEach(li => {
+    if (li.qty > 0 && !li.isIncludedZeroCost) {
+      addToBOM(li.id || li.sku, li.qty);
+      count++;
+    }
+  });
+
+  if (typeof showToast === "function") {
+    showToast(`Added ${count} Milestone XProtect 2026 R2 license SKU(s) ($${res.totalSoftwareMsrp.toLocaleString()} MSRP) to BOM.`, "success");
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.addMilestoneLicensesToBom = addMilestoneLicensesToBom;
+
+function addTurnkeyMilestonePackageToBom() {
+  autoFitHuskyToBom();
+  addMilestoneLicensesToBom();
+}
+window.addTurnkeyMilestonePackageToBom = addTurnkeyMilestonePackageToBom;
+
+function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
+  const cfg = licRes.config || {};
+  const hp = licRes.huskyPlan || {};
+  const prim = hp.primaryAppliance;
+  const ed = licRes.editionInfo || {};
+
+  return `
+    <div class="bg-slate-900/95 border border-sky-500/40 rounded-2xl p-3.5 sm:p-4 space-y-3.5 shadow-xl">
+      <!-- Top Header & Datasheets -->
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 pb-2.5 border-b border-slate-800">
+        <div class="flex items-start gap-2.5">
+          <div class="p-2 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 shrink-0">
+            <i data-lucide="key" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h5 class="text-xs font-bold text-white uppercase tracking-wider">
+                Milestone XProtect 2026 R2 &amp; Husky IVO Turnkey Sizer
+              </h5>
+              <span class="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-mono font-bold">
+                Edition: ${ed.label || 'XProtect Corporate'} &bull; ${licRes.totalDeviceLicenses} Device Lic &bull; ${licRes.careYears}Y Care Plus (${licRes.multiYearDiscountPct}% Multi-Year Disc)
+              </span>
+              <a href="Datasheets/Milestone/Systems Comparison Chart.pdf" target="_blank" class="text-[10px] text-sky-400 hover:text-sky-300 underline flex items-center gap-1">
+                <i data-lucide="file-text" class="w-3 h-3"></i>
+                <span>2026 R2 Comparison Chart</span>
+              </a>
+              <a href="Datasheets/Milestone/Milestone Price List Effective January 1 2027_USD.pdf" target="_blank" class="text-[10px] text-emerald-400 hover:text-emerald-300 underline flex items-center gap-1">
+                <i data-lucide="dollar-sign" class="w-3 h-3"></i>
+                <span>Official USD Price List</span>
+              </a>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-0.5">
+              Automatic edition selection (<strong class="text-white">Express+</strong> &bull; <strong class="text-white">Professional+</strong> &bull; <strong class="text-white">Expert</strong> &bull; <strong class="text-white">Corporate</strong>), Care Plus multi-year discounts (10%–25%), XProtect Access, LPR, Smart Wall, BriefCam XA/XE, and Husky IVO sizing.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 shrink-0">
+          <div class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-right">
+            <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Total Software + Husky IVO</div>
+            <div class="text-xs font-mono font-bold text-emerald-400">
+              $${licRes.totalSoftwareMsrp.toLocaleString()} SW <span class="text-slate-500">+</span> <span class="text-sky-300">$${licRes.totalHardwareMsrp.toLocaleString()} HW</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onclick="addTurnkeyMilestonePackageToBom()"
+            class="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-600 to-emerald-600 hover:from-sky-500 hover:to-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+          >
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>+ Quote Full Turnkey Milestone Package ($${licRes.totalTurnkeyMsrp.toLocaleString()})</span>
+          </button>
+        </div>
+      </div>
+
+      ${licRes.autoUpgradedReasons && licRes.autoUpgradedReasons.length > 0 ? `
+        <div class="p-2.5 rounded-xl bg-amber-950/40 border border-amber-500/40 flex items-start gap-2 text-[11px] text-amber-200">
+          <i data-lucide="info" class="w-4 h-4 text-amber-400 shrink-0 mt-0.5"></i>
+          <div>
+            <strong class="text-amber-300">Automatic Milestone XProtect Edition Promotion:</strong>
+            ${licRes.autoUpgradedReasons.join(" • ")}
+          </div>
+        </div>
+      ` : ''}
+
+      <!-- 6-Card Configuration Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 text-xs">
+        <!-- Card 1: XProtect Edition, Device Licenses & Care Plus Term -->
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2.5">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center justify-between">
+            <span>1. XProtect Edition &amp; Care Plus SMA</span>
+            <span class="font-mono text-slate-400">${ed.baseSku || 'XPCOBT'} / ${ed.deviceSku || 'XPCODL'}</span>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="col-span-2">
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Select Milestone XProtect VMS Edition (Auto promotes to Professional+ >100 cams, Expert for Failover/Smart Wall, or Corporate for Smart Wall Included / Multi-Stage Storage)">
+                XProtect Edition Tier:
+              </label>
+              <select onchange="setMilestoneLicParam('edition', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none">
+                <option value="auto" ${cfg.edition === 'auto' ? 'selected' : ''}>Auto-Select Edition (${ed.shortLabel || 'Corporate'})</option>
+                <option value="express_plus" ${cfg.edition === 'express_plus' ? 'selected' : ''}>XProtect Express+ (≤100 Cams, 1 Server • $0 Base + $115/dev)</option>
+                <option value="professional_plus" ${cfg.edition === 'professional_plus' ? 'selected' : ''}>XProtect Professional+ (Unlimited Cams • $0 Base + $209/dev)</option>
+                <option value="expert" ${cfg.edition === 'expert' ? 'selected' : ''}>XProtect Expert (Failover &amp; Encryption • $1,959 Base + $269/dev)</option>
+                <option value="corporate" ${cfg.edition === 'corporate' ? 'selected' : ''}>XProtect Corporate (Mission-Critical &amp; Smart Wall Included • $3,259 Base + $349/dev)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Care Plus Multi-Year Discount: 2Y (-10%), 3Y (-15%), 4Y (-20%), 5Y (-25%). Mandatory at purchase for Expert and Corporate.">
+                Care Plus Term:
+              </label>
+              <select onchange="setMilestoneLicParam('careYears', parseInt(this.value,10))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-emerald-300 focus:outline-none">
+                <option value="1" ${licRes.careYears === 1 ? 'selected' : ''}>1 Year Care Plus (0% Disc)</option>
+                <option value="2" ${licRes.careYears === 2 ? 'selected' : ''}>2 Years Care Plus (-10% Disc)</option>
+                <option value="3" ${licRes.careYears === 3 ? 'selected' : ''}>3 Years Care Plus (-15% Disc)</option>
+                <option value="4" ${licRes.careYears === 4 ? 'selected' : ''}>4 Years Care Plus (-20% Disc)</option>
+                <option value="5" ${licRes.careYears === 5 ? 'selected' : ''}>5 Years Care Plus (-25% Disc)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Milestone licences per Hardware Device IP/MAC address (multi-sensor cameras with 1 IP count as 1 Device License!)">
+                Extra Device Lic:
+              </label>
+              <input type="number" min="0" max="5000" value="${licRes.extraDeviceLicenses || 0}" onchange="setMilestoneLicParam('extraDeviceLicenses', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
+            </div>
+          </div>
+          <label class="flex items-center justify-between gap-2 pt-1 cursor-pointer select-none">
+            <span class="text-[11px] text-slate-300" title="Care Premium 24/7 direct Milestone technical support add-on ($1,969/yr Base + $11–$21/yr per device)">Include Care Premium 24/7 Direct Support</span>
+            <input type="checkbox" ${licRes.includeCarePremium ? 'checked' : ''} onchange="setMilestoneLicParam('includeCarePremium', this.checked)" class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
+          </label>
+        </div>
+
+        <!-- Card 2: High Availability, Smart Wall & Incident Manager -->
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 flex items-center justify-between">
+            <span>2. High Availability, Smart Wall &amp; SOC</span>
+            <span class="font-mono text-slate-400">XPMSFSL / XPSWBL</span>
+          </div>
+
+          <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.managementServerFailover ? 'border-cyan-500/40 bg-cyan-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
+            <div>
+              <div class="text-[11px] font-bold ${licRes.managementServerFailover ? 'text-cyan-300' : 'text-slate-300'}">Management Server Failover (<code class="text-cyan-400">XPMSFSL</code>)</div>
+              <div class="text-[9.5px] text-slate-400">Zero-downtime Management Server HA cluster ($1,499)</div>
+            </div>
+            <input type="checkbox" ${licRes.managementServerFailover ? 'checked' : ''} onchange="setMilestoneLicParam('managementServerFailover', this.checked)" class="rounded border-slate-700 bg-slate-900 text-cyan-500 focus:ring-0" />
+          </label>
+
+          <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.enableSmartWall || ed.includesSmartWall ? 'border-indigo-500/40 bg-indigo-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
+            <div>
+              <div class="text-[11px] font-bold ${licRes.enableSmartWall || ed.includesSmartWall ? 'text-indigo-300' : 'text-slate-300'}">XProtect Smart Wall Video Wall (<code class="text-indigo-400">XPSWBL</code>)</div>
+              <div class="text-[9.5px] text-slate-400">${ed.includesSmartWall ? 'Included FREE ($0) in XProtect Corporate!' : 'Add-On for XProtect Expert ($1,299)'}</div>
+            </div>
+            <input type="checkbox" ${licRes.enableSmartWall || ed.includesSmartWall ? 'checked' : ''} onchange="setMilestoneLicParam('enableSmartWall', this.checked)" class="rounded border-slate-700 bg-slate-900 text-indigo-500 focus:ring-0" />
+          </label>
+
+          <label class="flex items-center justify-between gap-2 p-2 rounded-lg border ${licRes.enableIncidentManager ? 'border-purple-500/40 bg-purple-950/20' : 'border-slate-800/90 bg-slate-900/50'} cursor-pointer select-none">
+            <div>
+              <div class="text-[11px] font-bold ${licRes.enableIncidentManager ? 'text-purple-300' : 'text-slate-300'}">XProtect Incident Manager (<code class="text-purple-400">XPIMBL</code>)</div>
+              <div class="text-[9.5px] text-slate-400">Case documentation &amp; video evidence packaging ($1,089)</div>
+            </div>
+            <input type="checkbox" ${licRes.enableIncidentManager ? 'checked' : ''} onchange="setMilestoneLicParam('enableIncidentManager', this.checked)" class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0" />
+          </label>
+        </div>
+
+        <!-- Card 3: Access Control (XProtect Access & AXIS Secure Entry) -->
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-amber-400 flex items-center justify-between">
+            <span>3. Access Control &amp; Door Integration</span>
+            <span class="font-mono text-slate-400">XPABL / XPSEADL</span>
+          </div>
+
+          <div class="rounded-lg border ${licRes.enableAccessControl ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${licRes.enableAccessControl ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAccessControl', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${licRes.enableAccessControl ? 'text-amber-300' : 'text-slate-300'}">XProtect Access (3rd-Party ACS Integration)</span>
+              </label>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableAccessControl ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableAccessControl ? `${licRes.accessReaders} Rdrs` : 'OFF'}</span>
+            </div>
+            ${licRes.enableAccessControl ? `
+              <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <span class="text-[10px] text-slate-300">Base ($129) + Access Door/Reader Licenses ($39/rdr):</span>
+                <input type="number" min="0" max="2000" value="${licRes.accessReaders || 0}" onchange="setMilestoneLicParam('accessReadersOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="rounded-lg border ${licRes.enableAxisSecureEntry ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${licRes.enableAxisSecureEntry ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAxisSecureEntry', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${licRes.enableAxisSecureEntry ? 'text-emerald-300' : 'text-slate-300'}">XProtect AXIS Secure Entry (A1001 / A1610)</span>
+              </label>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableAxisSecureEntry ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableAxisSecureEntry ? `${licRes.axisDoors} Doors` : 'OFF'}</span>
+            </div>
+            ${licRes.enableAxisSecureEntry ? `
+              <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <span class="text-[10px] text-slate-300">Base ($0) + Axis Controller Door Lic ($89/door):</span>
+                <input type="number" min="0" max="500" value="${licRes.axisDoors || 0}" onchange="setMilestoneLicParam('axisSecureEntryDoorsOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Card 4: LPR, Rapid REVIEW, BriefCam XA/XE & Hospital Assist -->
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-purple-400 flex items-center justify-between">
+            <span>4. LPR, Rapid REVIEW &amp; BriefCam Analytics</span>
+            <a href="Datasheets/Milestone/Husky XA20T XA20R.pdf" target="_blank" class="text-[9px] text-purple-300 hover:underline">Husky XA PDF</a>
+          </div>
+
+          <div class="rounded-lg border ${licRes.enableLpr ? 'border-purple-500/40 bg-purple-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${licRes.enableLpr ? 'checked' : ''} onchange="toggleMilestoneFeature('enableLpr', this.checked)" class="rounded border-slate-700 bg-slate-900 text-purple-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${licRes.enableLpr ? 'text-purple-300' : 'text-slate-300'}">XProtect LPR License Plate Recognition</span>
+              </label>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableLpr ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableLpr ? `${licRes.lprLanes} Lanes` : 'OFF'}</span>
+            </div>
+            ${licRes.enableLpr ? `
+              <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
+                <div>
+                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">LPR Lanes ($709):</label>
+                  <input type="number" min="1" max="200" value="${licRes.lprLanes || 1}" onchange="setMilestoneLicParam('lprLanesOverride', Math.max(1, parseInt(this.value,10)||1))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-purple-300" />
+                </div>
+                <div>
+                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">Country Packs ($709):</label>
+                  <input type="number" min="1" max="20" value="${licRes.lprCountries || 1}" onchange="setMilestoneLicParam('lprCountryModules', Math.max(1, parseInt(this.value,10)||1))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-white" />
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="rounded-lg border ${licRes.enableRapidReview ? 'border-sky-500/40 bg-sky-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${licRes.enableRapidReview ? 'checked' : ''} onchange="toggleMilestoneFeature('enableRapidReview', this.checked)" class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${licRes.enableRapidReview ? 'text-sky-300' : 'text-slate-300'}">XProtect Rapid REVIEW / BriefCam Forensics</span>
+              </label>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableRapidReview ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableRapidReview ? `${licRes.rapidReviewCameras} Cams` : 'OFF'}</span>
+            </div>
+            ${licRes.enableRapidReview ? `
+              <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <span class="text-[10px] text-slate-300">Rapid REVIEW Camera Licenses ($399/cam):</span>
+                <input type="number" min="1" max="500" value="${licRes.rapidReviewCameras || 5}" onchange="setMilestoneLicParam('rapidReviewCameras', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-sky-300" />
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Card 5: Transact POS, Interconnect & Arcules Hybrid Cloud -->
+        <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center justify-between">
+            <span>5. Interconnect, POS &amp; Arcules Cloud</span>
+            <a href="Datasheets/Milestone/Husky GW.pdf" target="_blank" class="text-[9px] text-emerald-300 hover:underline">Husky GW PDF</a>
+          </div>
+
+          <div class="rounded-lg border ${licRes.enableInterconnect ? 'border-emerald-500/40 bg-emerald-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${licRes.enableInterconnect ? 'checked' : ''} onchange="toggleMilestoneFeature('enableInterconnect', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${licRes.enableInterconnect ? 'text-emerald-300' : 'text-slate-300'}">Milestone Interconnect (<code class="text-emerald-400">XPCOMIDL</code> @ $79/cam)</span>
+              </label>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableInterconnect ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableInterconnect ? `${licRes.interconnectDevices} Dev` : 'OFF'}</span>
+            </div>
+            ${licRes.enableInterconnect ? `
+              <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <span class="text-[10px] text-slate-300">Remote Interconnected Cameras (Corporate Required):</span>
+                <input type="number" min="1" max="2000" value="${licRes.interconnectDevices || 8}" onchange="setMilestoneLicParam('interconnectDevices', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
+              </div>
+            ` : ''}
+          </div>
+
+          <div class="rounded-lg border ${licRes.enableTransact ? 'border-amber-500/40 bg-amber-950/20' : 'border-slate-800/90 bg-slate-900/50'} p-2 space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
+                <input type="checkbox" ${licRes.enableTransact ? 'checked' : ''} onchange="toggleMilestoneFeature('enableTransact', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
+                <span class="text-[11px] font-bold ${licRes.enableTransact ? 'text-amber-300' : 'text-slate-300'}">XProtect Transact POS / ATM (<code class="text-amber-400">XPTBS</code>)</span>
+              </label>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableTransact ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableTransact ? `${licRes.transactConnectors} POS` : 'OFF'}</span>
+            </div>
+            ${licRes.enableTransact ? `
+              <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
+                <span class="text-[10px] text-slate-300">POS / ATM Register Connectors ($159/reg):</span>
+                <input type="number" min="1" max="500" value="${licRes.transactConnectors || 2}" onchange="setMilestoneLicParam('transactConnectors', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
+              </div>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Card 6: Milestone Husky IVO Turnkey Appliance Recommendation -->
+        <div class="bg-slate-950/80 border border-sky-500/30 rounded-xl p-3 space-y-2">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center justify-between">
+            <span>6. Milestone Husky IVO Appliance Fit</span>
+            <select onchange="setMilestoneLicParam('applianceFormFactor', this.value)" class="bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[10px] font-bold text-slate-200 focus:outline-none">
+              <option value="rack" ${cfg.applianceFormFactor === 'rack' ? 'selected' : ''}>Rackmount (350R / 700R / 1000R / 1800R)</option>
+              <option value="tower" ${cfg.applianceFormFactor === 'tower' ? 'selected' : ''}>Tower / Desktop (150D / 350T)</option>
+              <option value="any" ${cfg.applianceFormFactor === 'any' ? 'selected' : ''}>Any Form Factor</option>
+            </select>
+          </div>
+          ${prim ? `
+            <div class="p-2 rounded-lg bg-sky-950/40 border border-sky-500/30 space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-white text-[11px]">${hp.primaryQty}x ${prim.model} (${prim.sku})</span>
+                <span class="font-mono font-bold text-sky-300 text-[11px]">$${(hp.primaryQty * (prim.msrp || 0)).toLocaleString()}</span>
+              </div>
+              <div class="text-[10px] text-slate-300 leading-snug">${hp.recorderReason}</div>
+              <div class="flex items-center justify-between pt-1">
+                <a href="${prim.datasheetPath}" target="_blank" class="text-[10px] text-sky-400 hover:underline flex items-center gap-1">
+                  <i data-lucide="external-link" class="w-3 h-3"></i>
+                  <span>Official Husky IVO Datasheet</span>
+                </a>
+                <button type="button" onclick="autoFitHuskyToBom()" class="px-2 py-0.5 rounded bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-bold cursor-pointer">
+                  + Add Husky IVO to BOM
+                </button>
+              </div>
+            </div>
+          ` : `
+            <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-800 text-[10px] text-slate-400">
+              Add cameras to the project or storage calculator to automatically size Milestone Husky IVO appliances.
+            </div>
+          `}
+          ${hp.analyticsAppliance ? `
+            <div class="p-1.5 rounded-lg bg-purple-950/30 border border-purple-500/30 flex items-center justify-between text-[10px]">
+              <span class="text-purple-300 font-bold">+ ${hp.analyticsQty}x ${hp.analyticsAppliance.model} BriefCam Analytics</span>
+              <span class="font-mono text-white">$${(hp.analyticsQty * (hp.analyticsAppliance.msrp || 0)).toLocaleString()}</span>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+
+      <!-- Itemized Milestone XProtect License & Care Plus Breakdown Table -->
+      <div class="bg-slate-950/90 border border-slate-800 rounded-xl overflow-hidden">
+        <div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300">
+            Calculated Milestone XProtect 2026 R2 License &amp; Care Plus Bill of Materials (${licRes.lineItems.length} Line Items)
+          </span>
+          <span class="text-[11px] font-mono font-bold text-emerald-400">
+            Total Software MSRP: $${licRes.totalSoftwareMsrp.toLocaleString()}
+          </span>
+        </div>
+        ${licRes.lineItems.length > 0 ? `
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-[11px] font-mono">
+              <thead>
+                <tr class="border-b border-slate-800/80 text-[9px] uppercase text-slate-400">
+                  <th class="py-1.5 px-3">Part Number (SKU)</th>
+                  <th class="py-1.5 px-3">Full License Description</th>
+                  <th class="py-1.5 px-3">Category</th>
+                  <th class="py-1.5 px-3 text-center">Quantity</th>
+                  <th class="py-1.5 px-3 text-right">Unit MSRP</th>
+                  <th class="py-1.5 px-3 text-right">Extended MSRP</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/50">
+                ${licRes.lineItems.map(li => `
+                  <tr class="${li.isIncludedZeroCost ? 'bg-emerald-950/20' : 'hover:bg-slate-900/60'}">
+                    <td class="py-1.5 px-3 font-bold ${li.isIncludedZeroCost ? 'text-emerald-300' : 'text-sky-300'} whitespace-nowrap">${li.sku}</td>
+                    <td class="py-1.5 px-3 font-sans text-slate-200">
+                      <div class="font-semibold">${li.model}</div>
+                      ${li.notes ? `<div class="text-[10px] ${li.isIncludedZeroCost ? 'text-emerald-300/90' : 'text-slate-400'}">${li.notes}</div>` : ''}
+                    </td>
+                    <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel}</td>
+                    <td class="py-1.5 px-3 text-center font-bold text-amber-300">${li.qty}</td>
+                    <td class="py-1.5 px-3 text-right text-slate-300">${li.isIncludedZeroCost ? '<span class="text-emerald-400 font-bold">INCLUDED ($0.00)</span>' : '$' + li.unitMsrp.toLocaleString()}</td>
+                    <td class="py-1.5 px-3 text-right font-bold text-emerald-400">$${li.extendedMsrp.toLocaleString()}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        ` : `
+          <div class="p-4 text-center text-xs text-slate-400">
+            No Milestone XProtect device licenses calculated yet. Add cameras in Initial Design, Power over Ethernet Calculator, or Physical Security, or enter Extra Device Licenses above.
+          </div>
+        `}
+      </div>
+    </div>
+  `;
+}
+window.renderMilestoneLicensingBuilderHtml = renderMilestoneLicensingBuilderHtml;
+
+function renderVmsLicensingStudioHtml(isCompactDrawer = false) {
+  const isMilestone = activeVmsLicensingVendor === "milestone";
+  const gRes = (typeof GenetecLicensingSizer !== "undefined") ? GenetecLicensingSizer.calculate(projectBOM) : null;
+  const mRes = (typeof MilestoneLicensingSizer !== "undefined") ? MilestoneLicensingSizer.calculate(projectBOM) : null;
+
+  return `
+    <div class="space-y-3">
+      <!-- Top Multi-Manufacturer VMS Licensing Switcher Bar -->
+      <div class="bg-slate-900/95 border border-slate-800 rounded-2xl px-4 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div class="flex items-center gap-2.5">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="layers" class="w-4 h-4 text-emerald-400"></i>
+            <span>VMS Manufacturer &amp; Appliance Ecosystem:</span>
+          </span>
+          <div class="inline-flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5 text-xs">
+            <button
+              type="button"
+              onclick="setVmsLicensingVendor('genetec')"
+              class="px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${!isMilestone ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
+            >
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              <span>Genetec Security Center 5.14 &amp; Streamvault</span>
+              ${gRes ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-mono ${!isMilestone ? 'bg-indigo-900/80 text-indigo-200' : 'bg-slate-900 text-slate-400'}">$${gRes.totalSoftwareMsrp.toLocaleString()}</span>` : ''}
+            </button>
+            <button
+              type="button"
+              onclick="setVmsLicensingVendor('milestone')"
+              class="px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isMilestone ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
+            >
+              <i data-lucide="server" class="w-3.5 h-3.5"></i>
+              <span>Milestone XProtect 2026 R2 &amp; Husky IVO</span>
+              ${mRes ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-mono ${isMilestone ? 'bg-sky-900/80 text-sky-200' : 'bg-slate-900 text-slate-400'}">$${mRes.totalSoftwareMsrp.toLocaleString()}</span>` : ''}
+            </button>
+          </div>
+        </div>
+        <div class="text-[11px] text-slate-400 font-mono">
+          Compare software licensing, multi-year SMA/Care Plus, and turnkey appliances across manufacturers.
+        </div>
+      </div>
+
+      ${isMilestone
+        ? (mRes ? renderMilestoneLicensingBuilderHtml(mRes, isCompactDrawer) : '')
+        : (gRes ? renderGenetecLicensingBuilderHtml(gRes, isCompactDrawer) : '')}
+    </div>
+  `;
+}
+window.renderVmsLicensingStudioHtml = renderVmsLicensingStudioHtml;
+
 
 function addDoorPackageToBom() {
   const doors = Math.max(1, parseInt(doorPkgQty, 10) || 1);
@@ -4763,7 +5458,11 @@ window.toggleWorkstationColumnSync = toggleWorkstationColumnSync;
 function setWorkstationSizerParam(key, val) {
   if (typeof ClientWorkstationSizer === "undefined") return;
   const st = ClientWorkstationSizer.state;
-  if (key === "monitorCount") {
+  if (key === "vmsPlatform") {
+    st.vmsPlatform = val === "milestone" ? "milestone" : "genetec";
+  } else if (key === "adaptiveStreaming") {
+    st.adaptiveStreaming = Boolean(val);
+  } else if (key === "monitorCount") {
     st.monitorCount = Math.max(1, Math.min(16, parseInt(val, 10) || 2));
   } else if (key === "workstationCount") {
     st.workstationCount = Math.max(1, Math.min(200, parseInt(val, 10) || 1));
@@ -4877,6 +5576,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
     return `<div class="p-4 text-slate-400 text-xs">Client Workstation Sizer engine is loading...</div>`;
   }
   const wsCalc = ClientWorkstationSizer.calculate(projectBOM);
+  const isMilestoneWs = wsCalc.vmsPlatform === "milestone";
   const recProf = wsCalc.recommendedProfile || {};
   const recEv = wsCalc.recommendedProfileEvaluation || {};
   const recHw = wsCalc.recommendedCatalogWorkstation;
@@ -4884,7 +5584,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
 
   return `
     <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
-      <!-- Row 1: Header, Spec Reference Link, and Primary KPI Summary -->
+      <!-- Row 1: Header, Multi-VMS Client Platform Switcher, Spec Reference Link, and Primary KPI Summary -->
       <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
         <div class="flex items-start sm:items-center gap-3">
           <div class="p-2.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 shrink-0">
@@ -4893,18 +5593,36 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
           <div>
             <div class="flex flex-wrap items-center gap-2">
               <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-                Client Workstation Decoding Sizer (Genetec Security Center 5.14.1.0 Sec 1.2 &amp; 1.3)
+                Client Workstation Decoding Sizer
               </h4>
+              <!-- Multi-Manufacturer VMS Client Platform Switcher -->
+              <div class="inline-flex items-center bg-slate-950 border border-slate-800 rounded-xl p-0.5 text-[11px]">
+                <button type="button" onclick="setWorkstationSizerParam('vmsPlatform', 'genetec')" class="px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${!isMilestoneWs ? 'bg-indigo-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Genetec Security Desk 5.14.1.0 Section 1.2 & 1.3 Decoding Benchmarks">
+                  <i data-lucide="shield-check" class="w-3 h-3"></i>
+                  <span>Genetec Security Desk 5.14</span>
+                </button>
+                <button type="button" onclick="setWorkstationSizerParam('vmsPlatform', 'milestone')" class="px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${isMilestoneWs ? 'bg-sky-600 text-white shadow' : 'text-slate-400 hover:text-white'}" title="Milestone XProtect Smart Client 2026 & Husky IVO Viewing Station (150D-VS / 350T-VS) Benchmarks">
+                  <i data-lucide="monitor" class="w-3 h-3"></i>
+                  <span>Milestone Smart Client / Husky IVO VS</span>
+                </button>
+              </div>
               <span class="px-2 py-0.5 rounded-md bg-sky-950/80 border border-sky-700/50 text-[10px] font-mono font-bold text-sky-300">
                 ${wsCalc.totalViewedCameras} Cameras (${wsCalc.totalViewedStreams} Simultaneously Decoded Streams &bull; ${wsCalc.totalPixelRateMpPerSec} MP/s)
               </span>
-              <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide (Pages 5-6)', 'GENETEC-SC-5.14-WS')" class="px-2 py-0.5 rounded-md bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-[10px] font-mono font-semibold text-indigo-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec 5.14.1.0 System Requirements PDF (Pages 5-6 Client Workstation Specifications & Decoding Performance)">
-                <i data-lucide="file-text" class="w-3 h-3"></i>
-                <span>Genetec 5.14 Spec Guide (p. 5–6)</span>
-              </button>
+              ${isMilestoneWs ? `
+                <button onclick="openDatasheetModal('Datasheets/Milestone/Husky 350T.pdf', 'Milestone Husky IVO 350T Viewing Station & Server Datasheet', 'HIVO-350T-VS')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone Husky IVO 150D/350T Viewing Station Datasheet PDF">
+                  <i data-lucide="file-text" class="w-3 h-3"></i>
+                  <span>Husky IVO VS Spec</span>
+                </button>
+              ` : `
+                <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide (Pages 5-6)', 'GENETEC-SC-5.14-WS')" class="px-2 py-0.5 rounded-md bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-[10px] font-mono font-semibold text-indigo-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec 5.14.1.0 System Requirements PDF (Pages 5-6 Client Workstation Specifications & Decoding Performance)">
+                  <i data-lucide="file-text" class="w-3 h-3"></i>
+                  <span>Genetec 5.14 Spec Guide (p. 5–6)</span>
+                </button>
+              `}
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              Calculates exact CPU, GPU, RAM, Dual-GPU Monitor, and Hardware Decoding requirements for <strong class="text-white">Security Desk</strong> based on simultaneously viewed camera tiles, resolution, frame rate, codec (<code class="text-sky-300">H.264</code> / <code class="text-sky-300">H.265</code> / <code class="text-sky-300">AV1</code>), watermarking, and encryption.
+              Calculates exact CPU, GPU, RAM, Dual-GPU Monitor, and Hardware Decoding requirements for <strong class="text-white">${isMilestoneWs ? 'Milestone XProtect Smart Client 2026 &amp; Husky IVO Viewing Stations' : 'Genetec Security Desk 5.14'}</strong> based on simultaneously viewed camera tiles, resolution, frame rate, codec (<code class="text-sky-300">H.264</code> / <code class="text-sky-300">H.265</code> / <code class="text-sky-300">AV1</code>), and GPU acceleration.
             </p>
           </div>
         </div>
@@ -4986,10 +5704,17 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
             <span>Video Watermarking (${wsCalc.hwAccelDecode ? '-10%' : '-30%'} Cap)</span>
           </label>
 
-          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.encryptedStreams ? 'bg-rose-950/40 border-rose-600/50 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Genetec 5.14 Page 6: Viewing encrypted low-res streams increases CPU load by up to 40% (~28.6% stream capacity reduction)">
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.encryptedStreams ? 'bg-rose-950/40 border-rose-600/50 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Viewing encrypted streams increases CPU load by up to 40% (~28.6% stream capacity reduction)">
             <input type="checkbox" ${wsCalc.encryptedStreams ? 'checked' : ''} onchange="setWorkstationSizerParam('encryptedStreams', this.checked)" class="w-3.5 h-3.5 rounded accent-rose-500 cursor-pointer" />
             <span>Encrypted Streams (+40% CPU Load)</span>
           </label>
+
+          ${isMilestoneWs ? `
+            <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.adaptiveStreaming ? 'bg-sky-950/40 border-sky-600/50 text-sky-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Milestone XProtect Adaptive Streaming dynamically requests lower-resolution secondary streams for small grid tiles, increasing multi-tile decoding capacity by ~35%">
+              <input type="checkbox" ${wsCalc.adaptiveStreaming ? 'checked' : ''} onchange="setWorkstationSizerParam('adaptiveStreaming', this.checked)" class="w-3.5 h-3.5 rounded accent-sky-500 cursor-pointer" />
+              <span>Adaptive Streaming (+35% Tile Cap)</span>
+            </label>
+          ` : ''}
         </div>
       </div>
 
@@ -5226,7 +5951,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
               </div>
 
               <div class="text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 flex items-center justify-between">
-                <span>Streamvault Match: <strong class="text-indigo-300">${prof.recommendedStreamvaultSku}</strong></span>
+                <span>${isMilestoneWs ? 'Husky IVO Match' : 'Streamvault Match'}: <strong class="${isMilestoneWs ? 'text-sky-300' : 'text-indigo-300'}">${prof.recommendedHuskySku || prof.recommendedStreamvaultSku || 'Custom'}</strong></span>
                 <span>${prof.referencePage}</span>
               </div>
             </div>
@@ -5234,12 +5959,12 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
         }).join('')}
       </div>
 
-      <!-- Row 5: Genetec 5.14 Engineering Findings & Matched Catalog Workstations -->
+      <!-- Row 5: Engineering Findings & Matched Catalog Workstations -->
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-3 pt-1">
         <div class="xl:col-span-5 bg-slate-950/90 border border-slate-800 rounded-xl p-3 space-y-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
             <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
-            <span>Genetec 5.14.1.0 Decoding Math &amp; Engineering Notes</span>
+            <span>${isMilestoneWs ? 'Milestone Smart Client 2026 &amp; Husky IVO VS Decoding Notes' : 'Genetec 5.14.1.0 Decoding Math &amp; Engineering Notes'}</span>
           </div>
           <div class="space-y-1.5">
             ${(wsCalc.findings || []).map(f => `
@@ -5261,7 +5986,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
           <div class="flex items-center justify-between gap-2">
             <span class="text-[10px] font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
               <i data-lucide="package-check" class="w-3.5 h-3.5 text-indigo-400"></i>
-              <span>Matched Client Workstations (Streamvault SVW / Dell Precision / BCDVideo)</span>
+              <span>Matched Client Workstations (Streamvault SVW / Milestone Husky IVO VS / Dell / BCDVideo)</span>
             </span>
             <span class="text-[10px] font-mono text-slate-400">Click + Add to quote into Project BOM</span>
           </div>
@@ -5310,7 +6035,8 @@ window.renderWorkstationSizerStudioHtml = renderWorkstationSizerStudioHtml;
 const DOOR_BUILDER_PRESETS = {
   standard_strike: {
     id: "standard_strike",
-    label: "Standard Interior / Mortise Strike Door",
+    vendor: "mercury",
+    label: "Mercury LP1502 • Standard Interior / Mortise Strike Door",
     controllerId: "mercury-lp1502",
     controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
     doorsPerController: 2,
@@ -5328,7 +6054,8 @@ const DOOR_BUILDER_PRESETS = {
   },
   rim_exit_strike: {
     id: "rim_exit_strike",
-    label: "Crash-Bar Rim Exit Device Door",
+    vendor: "mercury",
+    label: "Mercury LP1502 • Crash-Bar Rim Exit Device Door",
     controllerId: "mercury-lp1502",
     controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
     doorsPerController: 2,
@@ -5346,7 +6073,8 @@ const DOOR_BUILDER_PRESETS = {
   },
   perimeter_maglock: {
     id: "perimeter_maglock",
-    label: "Perimeter / Double-Glass Maglock Door (1200 lb)",
+    vendor: "mercury",
+    label: "Mercury LP1502 • Perimeter / Double-Glass Maglock Door (1200 lb)",
     controllerId: "mercury-lp1502",
     controllerLabel: "Mercury LP1502 (2-Door Intelligent Controller)",
     doorsPerController: 2,
@@ -5364,7 +6092,8 @@ const DOOR_BUILDER_PRESETS = {
   },
   ip_edge_door: {
     id: "ip_edge_door",
-    label: "Single-Door PoE+ IP Edge Controller Kit",
+    vendor: "axis",
+    label: "Axis A1001 • Single-Door PoE+ IP Edge Controller Kit",
     controllerId: "axis-a1001",
     controllerLabel: "Axis A1001 Network PoE+ Door Controller",
     doorsPerController: 1,
@@ -5379,8 +6108,48 @@ const DOOR_BUILDER_PRESETS = {
     enclosureId: null,
     enclosureLabel: "Plenum Above-Door PoE+ Edge Mount",
     lockMilliamps12v: 450
+  },
+  axis_rim_exit: {
+    id: "axis_rim_exit",
+    vendor: "axis",
+    label: "Axis A1001 • Crash-Bar Rim Exit PoE+ IP Edge Door Kit",
+    controllerId: "axis-a1001",
+    controllerLabel: "Axis A1001 Network PoE+ Door Controller",
+    doorsPerController: 1,
+    readerId: "hid-signo-40",
+    readerLabel: "HID Signo 40 OSDP/BLE Wall Reader",
+    lockId: "hes-9600-surface-strike",
+    lockLabel: "HES 9600 Surface-Mount Rim Exit Strike",
+    rexId: "bosch-ds160-rex",
+    rexLabel: "Bosch DS160 Request-to-Exit PIR Sensor",
+    dpsId: "gri-180-12-dps",
+    dpsLabel: "GRI 180-12 Recessed Door Position Switch",
+    enclosureId: null,
+    enclosureLabel: "Plenum Above-Door PoE+ Edge Mount",
+    lockMilliamps12v: 450
   }
 };
+
+function setDoorBuilderParam(key, val) {
+  if (key === "acsPlatform") {
+    doorBuilderAcsPlatform = val;
+    window.doorBuilderAcsPlatform = val;
+  } else if (key === "controllerVendor") {
+    doorBuilderControllerVendor = val;
+    window.doorBuilderControllerVendor = val;
+    const defaultPreset = val === "axis" ? "ip_edge_door" : "standard_strike";
+    doorScheduleGroups.forEach(g => {
+      if (val === "axis" && !String(g.preset).startsWith("axis") && g.preset !== "ip_edge_door") {
+        g.preset = defaultPreset;
+      } else if (val === "mercury" && (String(g.preset).startsWith("axis") || g.preset === "ip_edge_door")) {
+        g.preset = "standard_strike";
+      }
+    });
+  }
+  if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+}
+window.setDoorBuilderParam = setDoorBuilderParam;
 
 let doorScheduleGroups = [
   { id: "door_grp_1", name: "Main Lobby & Perimeter Entrances", preset: "rim_exit_strike", doorQty: 4, readersPerDoor: 1 },
@@ -5451,7 +6220,7 @@ function calculateDoorScheduleRollup() {
     totalDoors += doors;
     totalReaders += readers;
     totalLockCurrentMa += lockMa;
-    if (p.id === "ip_edge_door") {
+    if (p.vendor === "axis" || p.id === "ip_edge_door" || p.id === "axis_rim_exit") {
       edgePoEDoors += doors;
       addPart("axis-a1001", doors);
     } else {
@@ -5498,11 +6267,17 @@ function addFullDoorScheduleToBom() {
   Object.entries(rollup.partTotals).forEach(([partId, qty]) => {
     addToBOM(partId, qty);
   });
-  if (typeof setGenetecLicParam === "function") {
+  if (doorBuilderAcsPlatform === "milestone_xpaccess" && typeof setMilestoneLicParam === "function") {
+    setMilestoneLicParam("enableAccessControl", true);
+    setMilestoneLicParam("accessReadersOverride", rollup.totalReaders);
+  } else if (doorBuilderAcsPlatform === "milestone_axis_secure_entry" && typeof setMilestoneLicParam === "function") {
+    setMilestoneLicParam("enableAxisSecureEntry", true);
+    setMilestoneLicParam("axisSecureEntryDoorsOverride", rollup.totalDoors);
+  } else if (typeof setGenetecLicParam === "function") {
     setGenetecLicParam("readerConnectionsOverride", rollup.totalReaders);
   }
   if (typeof showToast === "function") {
-    showToast(`Added ${rollup.totalDoors}-Door Schedule (${rollup.totalReaders} Readers, ${rollup.totalMercuryControllers} LP1502 Panels, ${rollup.totalTroveEnclosures} Enclosures) to Project BOM.`, "success");
+    showToast(`Added ${rollup.totalDoors}-Door Schedule (${rollup.totalReaders} Readers, ${rollup.totalMercuryControllers} LP1502 Panels, ${rollup.edgePoEDoors} Axis PoE+ Controllers) to Project BOM.`, "success");
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
@@ -5513,7 +6288,7 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
   const rollup = calculateDoorScheduleRollup();
   return `
     <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
-      <!-- Header & KPI Rollup -->
+      <!-- Header, Multi-Vendor Controller & ACS Head-End Selector, and KPI Rollup -->
       <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
         <div class="flex items-start sm:items-center gap-3">
           <div class="p-2.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
@@ -5522,34 +6297,37 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
           <div>
             <div class="flex flex-wrap items-center gap-2">
               <h4 class="text-xs font-bold text-white uppercase tracking-wider">
-                Access Control Door Schedule &amp; Turnkey Kit Builder
+                Access Control Door Schedule &amp; Multi-Manufacturer Kit Builder
               </h4>
               <span class="px-2 py-0.5 rounded-md bg-amber-950/80 border border-amber-700/50 text-[10px] font-mono font-bold text-amber-300">
-                ${rollup.totalDoors} Doors &bull; ${rollup.totalReaders} OSDP Readers &bull; ${rollup.totalMercuryControllers} Mercury LP1502 &bull; ${rollup.totalTroveEnclosures} Trove2 Enclosures
+                ${rollup.totalDoors} Doors &bull; ${rollup.totalReaders} OSDP Readers &bull; ${rollup.totalMercuryControllers} Mercury LP1502 &bull; ${rollup.edgePoEDoors} Axis A1001
               </span>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              Build multi-zone door schedules with automatic <strong class="text-white">Mercury LP1502 / Axis A1001</strong> controller packing, <strong class="text-white">Altronix Trove2M2</strong> enclosure sizing, 12V/24V lock current draw, and Synergis reader licensing sync.
+              Build multi-zone door schedules across <strong class="text-white">Mercury Security (LP1502)</strong> and <strong class="text-white">Axis Network Door Controllers (A1001)</strong> with automatic <strong class="text-white">Altronix Trove2M2</strong> enclosure packing and live <strong class="text-indigo-300">Genetec Synergis</strong> / <strong class="text-sky-300">Milestone XProtect Access</strong> licensing sync.
             </p>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-          <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800">
-            <div>
-              <div class="text-[9px] uppercase font-bold text-slate-400">Total Doors / Readers</div>
-              <div class="text-xs font-mono font-bold text-amber-300">${rollup.totalDoors} Doors / ${rollup.totalReaders} Rdrs</div>
-            </div>
-            <div class="h-6 w-px bg-slate-800"></div>
-            <div>
-              <div class="text-[9px] uppercase font-bold text-slate-400">Controllers / Enclosures</div>
-              <div class="text-xs font-mono font-bold text-sky-400">${rollup.totalMercuryControllers} LP1502 / ${rollup.totalTroveEnclosures} Trove</div>
-            </div>
-            <div class="h-6 w-px bg-slate-800"></div>
-            <div>
-              <div class="text-[9px] uppercase font-bold text-slate-400">Est. 12VDC Load</div>
-              <div class="text-xs font-mono font-bold text-emerald-400">${rollup.totalLockCurrentAmps} A</div>
-            </div>
+          <!-- Controller Ecosystem Quick Switcher -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">Controller Brand:</span>
+            <select onchange="setDoorBuilderParam('controllerVendor', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="mercury" class="bg-slate-900" ${doorBuilderControllerVendor === 'mercury' ? 'selected' : ''}>Mercury Security (LP1502 + Trove2)</option>
+              <option value="axis" class="bg-slate-900" ${doorBuilderControllerVendor === 'axis' ? 'selected' : ''}>Axis Network Controllers (A1001 PoE+)</option>
+            </select>
+          </div>
+
+          <!-- ACS Head-End Software Platform Selector -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">ACS Platform:</span>
+            <select onchange="setDoorBuilderParam('acsPlatform', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
+              <option value="genetec_synergis" class="bg-slate-900" ${doorBuilderAcsPlatform === 'genetec_synergis' ? 'selected' : ''}>Genetec Synergis (Security Center 5.14)</option>
+              <option value="milestone_xpaccess" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_xpaccess' ? 'selected' : ''}>Milestone XProtect Access ($129 + $39/rdr)</option>
+              <option value="milestone_axis_secure_entry" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_axis_secure_entry' ? 'selected' : ''}>Milestone AXIS Secure Entry ($89/door)</option>
+              <option value="standalone" class="bg-slate-900" ${doorBuilderAcsPlatform === 'standalone' ? 'selected' : ''}>Standalone / Other ACS Head-End</option>
+            </select>
           </div>
 
           <button onclick="addFullDoorScheduleToBom()" class="px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer">
@@ -5690,10 +6468,7 @@ function renderCalculatorStudioIfOpen() {
     catalogJumpLabel = "Browse Access Control Hardware in Catalog";
     catalogJumpAction = "switchDomain('physical_security'); setMode('access_control'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
   } else if (t === "licensing") {
-    const licRes = (typeof GenetecLicensingSizer !== "undefined")
-      ? GenetecLicensingSizer.calculate(projectBOM)
-      : null;
-    bodyHtml = licRes ? renderGenetecLicensingBuilderHtml(licRes, false) : "";
+    bodyHtml = renderVmsLicensingStudioHtml(false);
     catalogJumpLabel = "Browse VMS Software & Licenses in Catalog";
     catalogJumpAction = "switchDomain('compute_storage'); setMode('vms_software'); if(typeof TabManager!=='undefined') TabManager.openTab('catalog');";
   }
@@ -5703,7 +6478,7 @@ function renderCalculatorStudioIfOpen() {
     { id: "sizer_storage", type: "storage", label: "Storage & Failover Calculator", icon: "hard-drive", color: "purple" },
     { id: "sizer_workstation", type: "workstation", label: "Client Workstation Sizer", icon: "monitor", color: "sky" },
     { id: "sizer_doors", type: "doors", label: "Doors & Access Builder", icon: "door-open", color: "amber" },
-    { id: "sizer_licensing", type: "licensing", label: "Genetec Licensing Sizer", icon: "key", color: "emerald" }
+    { id: "sizer_licensing", type: "licensing", label: "VMS Licensing Sizer", icon: "key", color: "emerald" }
   ];
 
   modal.innerHTML = `

@@ -1121,8 +1121,230 @@ const GENETEC_514_REQUIREMENTS = {
   }
 };
 
+// Milestone XProtect 2026 R1/R2 & Husky IVO Official System Requirements (Datasheets/Milestone/)
+const MILESTONE_2026_REQUIREMENTS = {
+  datasheetPath: "Datasheets/Milestone/XProtect VMS Product comparison chart.pdf",
+  huskyOverviewPath: "Datasheets/Milestone/Husky-IVO-Units-flyer.pdf",
+  viewingStationPath: "Datasheets/Milestone/Milestone-Husky-IVO-Viewing-Stations-flyer.pdf",
+  version: "XProtect 2026 R2 / Husky IVO",
+
+  // Recording Server & Husky IVO Hardware Appliance Profiles
+  RECORDING_SERVER_PROFILES: {
+    husky_150d: {
+      id: "husky_150d",
+      label: "Milestone Husky IVO 150D Desktop (150 Mbps / 20 Channels)",
+      shortLabel: "Husky IVO 150D",
+      cpuSpec: "Intel® Core™ i3 (12th/13th Gen)",
+      ramGb: 16,
+      nicSpec: "2x 1 GbE RJ45",
+      maxCamerasPerRole: 20,
+      maxBitrateMbpsPerRole: 150,
+      maxRolesPerServer: 1,
+      maxServerBitrateMbps: 150,
+      maxRawStorageTb: 16,
+      maxUsableStorageTb: 16,
+      supportedRaid: "JBOD (2x 3.5\" Bays)",
+      catalogId: "milestone-husky-ivo-150d",
+      catalogSku: "HIVO-150D-16TB",
+      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-150D-spec-sheet.pdf"
+    },
+    husky_350: {
+      id: "husky_350",
+      label: "Milestone Husky IVO 350T Tower / 350R 1U Rack (360 Mbps / 50 Channels)",
+      shortLabel: "Husky IVO 350T/350R",
+      cpuSpec: "Intel® Core™ i3 / i5 (12th/13th Gen)",
+      ramGb: 16,
+      nicSpec: "2x 1 GbE RJ45",
+      maxCamerasPerRole: 50,
+      maxBitrateMbpsPerRole: 360,
+      maxRolesPerServer: 1,
+      maxServerBitrateMbps: 360,
+      maxRawStorageTb: 32,
+      maxUsableStorageTb: 16,
+      supportedRaid: "JBOD, RAID 0, RAID 1 (2x 3.5\" Hot-Swap Bays)",
+      catalogId: "milestone-husky-ivo-350r",
+      catalogSku: "HIVO-350R-32TB",
+      towerCatalogId: "milestone-husky-ivo-350t",
+      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-350R-spec-sheet.pdf"
+    },
+    husky_700r: {
+      id: "husky_700r",
+      label: "Milestone Husky IVO 700R 1U Rack (720 Mbps / 100 Channels)",
+      shortLabel: "Husky IVO 700R",
+      cpuSpec: "Intel® Xeon® E-2324G",
+      ramGb: 16,
+      nicSpec: "2x 1 GbE RJ45 (Optional 4x 1GbE / 2x 10GbE)",
+      maxCamerasPerRole: 100,
+      maxBitrateMbpsPerRole: 720,
+      maxRolesPerServer: 1,
+      maxServerBitrateMbps: 720,
+      maxRawStorageTb: 64,
+      maxUsableStorageTb: 48,
+      supportedRaid: "RAID 0, 1, 5, 6, 10 (4x 3.5\" Hot-Swap Bays, Dual 600W PSU)",
+      catalogId: "milestone-husky-ivo-700r",
+      catalogSku: "HIVO-700R-64TB",
+      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-700R-spec-sheet.pdf"
+    },
+    husky_1000r: {
+      id: "husky_1000r",
+      label: "Milestone Husky IVO 1000R 2U Rack (1,080 Mbps / 150 Channels)",
+      shortLabel: "Husky IVO 1000R",
+      cpuSpec: "Intel® Xeon® Silver 4310 (12C/24T)",
+      ramGb: 16,
+      nicSpec: "4x 1 GbE RJ45 (Optional 2x 10GbE SFP+)",
+      maxCamerasPerRole: 150,
+      maxBitrateMbpsPerRole: 1080,
+      maxRolesPerServer: 1,
+      maxServerBitrateMbps: 1080,
+      maxRawStorageTb: 128,
+      maxUsableStorageTb: 112,
+      supportedRaid: "RAID 0, 1, 5, 6, 10 (8x 3.5\" Hot-Swap Bays, Dual 800W PSU)",
+      catalogId: "milestone-husky-ivo-1000r",
+      catalogSku: "HIVO-1000R-128TB",
+      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-1000R-spec-sheet.pdf"
+    },
+    husky_1800r: {
+      id: "husky_1800r",
+      label: "Milestone Husky IVO 1800R 2U Flagship (1,800 Mbps / 250 Channels)",
+      shortLabel: "Husky IVO 1800R",
+      cpuSpec: "Dual Intel® Xeon® Silver 4310 (24C/48T)",
+      ramGb: 32,
+      nicSpec: "2x 10 GbE SFP+/RJ45 + 4x 1 GbE",
+      maxCamerasPerRole: 250,
+      maxBitrateMbpsPerRole: 1800,
+      maxRolesPerServer: 2,
+      maxServerBitrateMbps: 1800,
+      maxRawStorageTb: 384,
+      maxUsableStorageTb: 352,
+      supportedRaid: "RAID 5, 6, 10, 50, 60 (16x/24x 3.5\" Hot-Swap Bays, Dual 1100W PSU)",
+      catalogId: "milestone-husky-ivo-1800r",
+      catalogSku: "HIVO-1800R-192TB",
+      highCapCatalogId: "milestone-husky-ivo-1800r-384tb",
+      datasheet: "Datasheets/Milestone/Milestone-Husky-IVO-1800R-spec-sheet.pdf"
+    },
+    custom_enterprise: {
+      id: "custom_enterprise",
+      label: "Custom Enterprise Recording Server w/ NVIDIA VMD (Up to 3,100 Mbps / 300 Ch)",
+      shortLabel: "Custom 3.1 Gbps Server",
+      cpuSpec: "Dual Intel® Xeon® Gold + NVIDIA® T1000/A2 GPU VMD Offload",
+      ramGb: 64,
+      nicSpec: "Dual 10 GbE / 25 GbE SFP28",
+      maxCamerasPerRole: 300,
+      maxBitrateMbpsPerRole: 3100,
+      maxRolesPerServer: 2,
+      maxServerBitrateMbps: 3100,
+      maxRawStorageTb: 480,
+      maxUsableStorageTb: 400,
+      supportedRaid: "Enterprise Hardware RAID 6 / RAID 60 (24-Bay 4U SAN)",
+      catalogId: "bcd-224-enterprise-nvr",
+      catalogSku: "BCD424-ESV-384T",
+      datasheet: "Datasheets/Milestone/XProtect Corporate datasheet.pdf"
+    }
+  },
+
+  // Milestone XProtect Smart Client & Husky IVO Viewing Station Profiles
+  CLIENT_WORKSTATION_PROFILES: {
+    minimum: {
+      id: "minimum",
+      tierOrder: 1,
+      label: "Husky IVO 150D Viewing Station (Entry 1–2 Monitor Profile)",
+      shortLabel: "Husky IVO 150D VS",
+      badgeColor: "sky",
+      cpuSpec: "Intel® Core™ i5 (12th/13th Gen) w/ Quick Sync Video",
+      ramGb: 16,
+      ramSpec: "16 GB DDR4",
+      osSpec: "Windows 10/11 IoT Enterprise SAC",
+      osDriveSpec: "256 GB M.2 NVMe SSD",
+      nicSpec: "2x 1 GbE RJ45",
+      gpuSpec: "NVIDIA® RTX™ A400 (4 GB GDDR6, 4x Mini-DP 1.4a) + Intel® Quick Sync",
+      gpuCount: 1,
+      maxMonitors: 2,
+      testedDisplaySpec: "1x–2x 4K UHD (3840x2160 @ 60Hz) Monitors",
+      supports4kMonitors: true,
+      recommendedStreamvaultId: "milestone-husky-ivo-150d-viewing-station",
+      recommendedStreamvaultSku: "HIVO-150D-VS",
+      recommendedStreamvaultModel: "Milestone Husky IVO 150D Viewing Station",
+      alternateCatalogId: "dell-optiplex-7020-mff-client",
+      referencePage: "Milestone Husky IVO Viewing Stations Flyer",
+      notes: "Official Milestone benchmark: 1x 4K display = up to 16x 1080p (H.264/H.265) or 9x 4K (H.264) / 4x 4K (H.265); 2x 4K displays = up to 8x 1080p total (2x2 per monitor)."
+    },
+    recommended: {
+      id: "recommended",
+      tierOrder: 2,
+      label: "Husky IVO 350T Viewing Station (Recommended 2–4 Monitor Profile)",
+      shortLabel: "Husky IVO 350T VS",
+      badgeColor: "indigo",
+      cpuSpec: "Intel® Core™ i7 (12th/13th Gen) w/ Quick Sync Video",
+      ramGb: 16,
+      ramSpec: "16 GB DDR4",
+      osSpec: "Windows 10/11 IoT Enterprise SAC",
+      osDriveSpec: "256 GB M.2 NVMe SSD",
+      nicSpec: "2x 1 GbE RJ45",
+      gpuSpec: "NVIDIA® RTX™ A1000 (8 GB GDDR6, 4x Mini-DP 1.4a) + Intel® Quick Sync",
+      gpuCount: 1,
+      maxMonitors: 4,
+      testedDisplaySpec: "Up to 4x 4K UHD (3840x2160 @ 60Hz) Monitors",
+      supports4kMonitors: true,
+      recommendedStreamvaultId: "milestone-husky-ivo-350t-viewing-station",
+      recommendedStreamvaultSku: "HIVO-350T-VS",
+      recommendedStreamvaultModel: "Milestone Husky IVO 350T Viewing Station",
+      alternateCatalogId: "dell-precision-3680-soc-tower",
+      referencePage: "Milestone Husky IVO Viewing Stations Flyer",
+      notes: "Official Milestone benchmark: 1x 4K display = up to 36x 1080p (H.264) or 25x 1080p (H.265) or 16x 4K (H.265); 2x 4K displays = up to 18x 1080p or 8x 4K; 3–4x 4K displays = 12–16x 1080p."
+    },
+    high_performance: {
+      id: "high_performance",
+      tierOrder: 3,
+      label: "XProtect Smart Wall Multi-GPU Workstation (Up to 8x 4K Displays)",
+      shortLabel: "Smart Wall Multi-GPU",
+      badgeColor: "purple",
+      cpuSpec: "Intel® Core™ i9-14900K / Xeon® W (24 Cores) + Multi-GPU NVDEC",
+      ramGb: 64,
+      ramSpec: "64 GB DDR5 ECC",
+      osSpec: "Windows 11 Pro for Workstations",
+      osDriveSpec: "1 TB NVMe PCIe Gen4 SSD",
+      nicSpec: "10 GbE + 2.5 GbE RJ45",
+      gpuSpec: "Dual NVIDIA® RTX™ 4000 Ada (2x 20 GB GDDR6, 8x DisplayPort 1.4a)",
+      gpuCount: 2,
+      maxMonitors: 8,
+      testedDisplaySpec: "2x–8x 4K UHD (3840x2160) Monitors (XProtect Smart Wall)",
+      supports4kMonitors: true,
+      recommendedStreamvaultId: "bcd-aurora-rackmount-workstation-2u",
+      recommendedStreamvaultSku: "BCD204-auw-r-8m",
+      recommendedStreamvaultModel: "BCDVideo Aurora 2U 8-Monitor Video Wall Workstation",
+      alternateCatalogId: "genetec-svw-502e-soc-workstation",
+      referencePage: "XProtect Smart Client & Smart Wall Hardware Guide",
+      notes: "Designed for high-density XProtect Smart Wall SOC deployments with Dual NVIDIA RTX 4000 Ada GPUs and Adaptive Streaming."
+    }
+  },
+
+  // Milestone XProtect Smart Client Tested Decoding Benchmarks @ 30 FPS (Calibrated to Husky IVO Viewing Station Flyer)
+  CLIENT_DECODING_BENCHMARKS_30FPS: {
+    fhd_2mp: {
+      resolutionMp: 2.0,
+      label: "Full HD (1920 x 1080)",
+      "H.264": { bitrateMbps: 4.5, minimum: 16, recommended: 36, high_performance: 100 },
+      "H.265": { bitrateMbps: 3.0, minimum: 16, recommended: 25, high_performance: 92 },
+      "H.265+": { bitrateMbps: 2.2, minimum: 16, recommended: 25, high_performance: 92 },
+      "AV1":   { bitrateMbps: 2.9, minimum: 8,  recommended: 20, high_performance: 76 },
+      "AVI":   { bitrateMbps: 12.0, minimum: 6, recommended: 16, high_performance: 48 }
+    },
+    uhd_8mp: {
+      resolutionMp: 8.0,
+      label: "Ultra HD 4K (3840 x 2160)",
+      "H.264": { bitrateMbps: 18.0, minimum: 9, recommended: 16, high_performance: 36 },
+      "H.265": { bitrateMbps: 12.0, minimum: 4, recommended: 16, high_performance: 36 },
+      "H.265+": { bitrateMbps: 9.0, minimum: 4, recommended: 16, high_performance: 36 },
+      "AV1":   { bitrateMbps: 11.5, minimum: 2, recommended: 12, high_performance: 28 },
+      "AVI":   { bitrateMbps: 45.0, minimum: 2, recommended: 8,  high_performance: 18 }
+    }
+  }
+};
+
 const VideoStorageSizer = {
   state: {
+    vmsVendor: "genetec",      // "genetec" (Genetec 5.14 / Streamvault) | "milestone" (Milestone XProtect 2026 R2 / Husky IVO) | "generic" (Open VMS)
+    milestoneProfile: "husky_1000r", // Key in MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES
     sourceMode: "auto",        // "auto" (uses BOM if >0 cams & !hasCustomGroups, else cameraGroups) | "manual" | "bom"
     hasCustomGroups: false,    // True once the user edits or adds rows in the multi-group calculator
     cameraGroups: [
@@ -1902,11 +2124,97 @@ const VideoStorageSizer = {
       }
     }
 
+    // =========================================================================
+    // 8. MILESTONE XPROTECT 2026 R2 & HUSKY IVO RECORDING SERVER VERIFICATION
+    // =========================================================================
+    const vmsVendor = String(overrides.vmsVendor || this.state.vmsVendor || "genetec").toLowerCase();
+    const milestoneProfileKey = overrides.milestoneProfile || this.state.milestoneProfile || "husky_1000r";
+    const msProfileDef = MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES[milestoneProfileKey] || MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES.husky_1000r;
+
+    const msMaxCamsPerServer = msProfileDef.maxCamerasPerRole || 150;
+    const msMaxMbpsPerServer = msProfileDef.maxServerBitrateMbps || 1080;
+    const msMaxUsableTbPerServer = msProfileDef.maxUsableStorageTb || 112;
+
+    const msMinServersByCameras = cameraUnits > 0 ? Math.ceil(totalSensorHeads / msMaxCamsPerServer) : 1;
+    const msMinServersByBitrate = peakIngressMbps > 0 ? Math.ceil(peakIngressMbps / msMaxMbpsPerServer) : 1;
+    const msMinServersByStorage = baseRequiredUsableTb > 0 ? Math.ceil(baseRequiredUsableTb / msMaxUsableTbPerServer) : 1;
+    const msMinPrimaryServers = cameraUnits > 0 ? Math.max(1, msMinServersByCameras, msMinServersByBitrate, msMinServersByStorage) : 1;
+
+    const msPrimaryServers = userServerCount > 0 ? userServerCount : msMinPrimaryServers;
+    const msFailoverServers = isDedicatedFailover ? dedicatedFailoverServersCount : (isRingFailover ? 1 : 0);
+    const msTotalServers = msPrimaryServers + (isDedicatedFailover ? dedicatedFailoverServersCount : 0);
+
+    const msCamsPerServer = cameraUnits > 0 ? Math.ceil(totalSensorHeads / msPrimaryServers) : 0;
+    const msMbpsPerServer = cameraUnits > 0 ? Math.round((peakIngressMbps / msPrimaryServers) * 10) / 10 : 0;
+    const msUsableTbPerServer = cameraUnits > 0 ? Math.round((baseRequiredUsableTb / msPrimaryServers) * 100) / 100 : 0;
+    const msIsServerVerified = msPrimaryServers >= msMinPrimaryServers;
+
+    // Auto-recommend the smallest Husky IVO model that satisfies single-appliance or multi-appliance fit
+    const huskyOrder = ["husky_150d", "husky_350", "husky_700r", "husky_1000r", "husky_1800r", "custom_enterprise"];
+    let recommendedHuskyProfileKey = "husky_1800r";
+    for (const hKey of huskyOrder) {
+      const hDef = MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES[hKey];
+      if (hDef && totalSensorHeads <= hDef.maxCamerasPerRole && peakIngressMbps <= hDef.maxServerBitrateMbps && baseRequiredUsableTb <= hDef.maxUsableStorageTb) {
+        recommendedHuskyProfileKey = hKey;
+        break;
+      }
+    }
+    const recommendedHuskyProfile = MILESTONE_2026_REQUIREMENTS.RECORDING_SERVER_PROFILES[recommendedHuskyProfileKey] || msProfileDef;
+
+    // Recommended XProtect License Tier based on camera count, Recording Server count, and Failover
+    let recommendedXProtectTier = "Professional+";
+    let recommendedXProtectTierReason = "Unlimited cameras & Recording Servers";
+    if (totalSensorHeads <= 100 && msPrimaryServers === 1 && failoverStructure === "none") {
+      recommendedXProtectTier = "Express+";
+      recommendedXProtectTierReason = "≤100 cameras on a single Recording Server without Failover";
+    } else if (failoverStructure !== "none" || totalSensorHeads > 250 || baseRequiredUsableTb > 100) {
+      recommendedXProtectTier = totalSensorHeads > 500 ? "Corporate" : "Expert";
+      recommendedXProtectTierReason = failoverStructure !== "none"
+        ? "Hot/Cold Failover Recording Servers require XProtect Expert or Corporate (included at $0 extra license cost)"
+        : "Multi-Stage Storage Grooming, AES-256 DB Encryption & GPU Server-Side VMD";
+    }
+
+    const milestoneFindings = [];
+    if (cameraUnits > 0) {
+      if (!msIsServerVerified) {
+        milestoneFindings.push({
+          severity: "critical",
+          text: `${msPrimaryServers}x ${msProfileDef.shortLabel} configured (${msCamsPerServer} ch / ${msMbpsPerServer} Mbps / ${msUsableTbPerServer} TB per unit), exceeding appliance limits (${msMaxCamsPerServer} ch / ${msMaxMbpsPerServer} Mbps / ${msMaxUsableTbPerServer} TB usable). Minimum ${msMinPrimaryServers}x ${msProfileDef.shortLabel} required.`
+        });
+      } else {
+        milestoneFindings.push({
+          severity: "info",
+          text: `${msPrimaryServers}x ${msProfileDef.shortLabel} Verified: ${msCamsPerServer}/${msMaxCamsPerServer} channels, ${msMbpsPerServer}/${msMaxMbpsPerServer} Mbps, and ${msUsableTbPerServer}/${msMaxUsableTbPerServer} TB usable per appliance.`
+        });
+      }
+      if (isDedicatedFailover) {
+        const foModeLabel = dedicatedFailoverServersCount >= msPrimaryServers
+          ? "Hot Standby 1:1 Failover Recording Server"
+          : `Cold Standby N:1 Failover Group (${msPrimaryServers} Primary ➔ ${dedicatedFailoverServersCount} Failover Server)`;
+        milestoneFindings.push({
+          severity: "info",
+          text: `Milestone ${foModeLabel}: Included at $0 additional software license cost in XProtect Expert and XProtect Corporate (not supported in Express+ or Professional+).`
+        });
+      } else if (isRingFailover) {
+        milestoneFindings.push({
+          severity: "warning",
+          text: `Milestone Failover Architecture Note: Milestone XProtect uses dedicated Hot Standby (1:1) or Cold Standby (N:1 Failover Group) Recording Server roles rather than peer-to-peer Ring co-hosting. Switch Failover Mode to "Dedicated Failover Pool (N+M)" for native XProtect Cold Standby Failover Group sizing.`
+        });
+      }
+      if (msPrimaryServers > 1 || totalSensorHeads > 100) {
+        milestoneFindings.push({
+          severity: "info",
+          text: `XProtect Tier Requirement: ${totalSensorHeads} streams across ${msPrimaryServers} Recording Server(s) exceeds XProtect Express+ limits (max 100 cameras / 1 Recording Server). Recommended edition: XProtect ${recommendedXProtectTier}.`
+        });
+      }
+    }
+
     const storageDeficitTb = Math.max(0, Math.round((requiredUsableTb - quotedUsableTb) * 10) / 10);
     const bandwidthExceeded = quotedServerCount > 0 && peakIngressMbps > quotedMaxIngestMbps;
 
     return {
       // Core counts & parameters
+      vmsVendor,
       sourceMode: useBomCameras ? "bom" : "manual",
       cameraGroups: evaluatedGroups,
       bomCameraUnits,
@@ -2034,6 +2342,35 @@ const VideoStorageSizer = {
         bitratePerServerMbps,
         findings: genetecFindings,
         isFullyCompliant: isArchiverCountVerified && isServerCountVerified && !directoryCoHostViolation
+      },
+
+      // Milestone XProtect 2026 R2 & Husky IVO Verification & Mapping
+      milestone: {
+        version: MILESTONE_2026_REQUIREMENTS.version,
+        datasheetPath: MILESTONE_2026_REQUIREMENTS.datasheetPath,
+        huskyOverviewPath: MILESTONE_2026_REQUIREMENTS.huskyOverviewPath,
+        profileKey: milestoneProfileKey,
+        profile: msProfileDef,
+        recommendedHuskyProfileKey,
+        recommendedHuskyProfile,
+        recommendedXProtectTier,
+        recommendedXProtectTierReason,
+        maxCamerasPerServer: msMaxCamsPerServer,
+        maxMbpsPerServer: msMaxMbpsPerServer,
+        maxUsableTbPerServer: msMaxUsableTbPerServer,
+        minServersByCameras: msMinServersByCameras,
+        minServersByBitrate: msMinServersByBitrate,
+        minServersByStorage: msMinServersByStorage,
+        minRequiredPrimaryServers: msMinPrimaryServers,
+        primaryServersCount: msPrimaryServers,
+        failoverServersCount: msFailoverServers,
+        totalServersCount: msTotalServers,
+        camerasPerServer: msCamsPerServer,
+        bitratePerServerMbps: msMbpsPerServer,
+        usableTbPerServer: msUsableTbPerServer,
+        isServerCountVerified: msIsServerVerified,
+        findings: milestoneFindings,
+        isFullyCompliant: msIsServerVerified
       },
 
       // Quoted BOM Server Comparison
@@ -4119,16 +4456,748 @@ const GenetecLicensingSizer = {
 };
 
 // =========================================================================
-// 8. GENETEC 5.14.1.0 CLIENT WORKSTATION DECODING & HARDWARE SIZER
-// (SystemRequirements.pdf — Section 1.2 Page 5 & Section 1.3 Page 6)
+// 7B. MILESTONE XPROTECT 2026 R2 & HUSKY IVO LICENSING & APPLIANCE SIZER
+// (XProtect_Price List_USD-US_January 1_2027.xlsx & 25 Milestone Datasheets)
+// =========================================================================
+
+const MilestoneLicensingSizer = {
+  TIERS: {
+    express_plus: {
+      key: "express_plus",
+      label: "XProtect Express+",
+      shortLabel: "Express+",
+      baseSku: "XPEXPLUSBL",
+      baseCatalogId: "milestone-xpexplusbl",
+      baseMsrp: 29,
+      deviceSku: "XPEXPLUSDL",
+      deviceCatalogId: "milestone-xpexplusdl",
+      deviceMsrp: 109,
+      carePlusSku: "MCPL-XPEXPLUSDL",
+      carePlusCatalogId: "milestone-mcpl-xpexplusdl",
+      carePlusMonthlyMsrp: 1.65,
+      carePlusAnnualMsrp: 19.80,
+      carePremSku: "MCPR-XPEXPLUSDL",
+      carePremCatalogId: "milestone-mcpr-xpexplusdl",
+      carePremMonthlyMsrp: 0.65,
+      carePremAnnualMsrp: 7.80,
+      maxCameras: 100,
+      maxRecordingServers: 1,
+      mandatoryCarePlus: false,
+      includesSmartWall: false,
+      includesIncidentManager: false,
+      supportsFailoverRecording: false,
+      supportsFederation: false,
+      supportsInterconnectCentral: false,
+      datasheet: "Datasheets/Milestone/XProtect Express+ datasheet.pdf",
+      summary: "Single-server BMS/alarm-capable VMS for up to 100 cameras (1 Recording Server max)."
+    },
+    professional_plus: {
+      key: "professional_plus",
+      label: "XProtect Professional+",
+      shortLabel: "Professional+",
+      baseSku: "XPPPLUSBL",
+      baseCatalogId: "milestone-xppplusbl",
+      baseMsrp: 566,
+      deviceSku: "XPPPLUSDL",
+      deviceCatalogId: "milestone-xppplusdl",
+      deviceMsrp: 192,
+      carePlusSku: "MCPL-XPPPLUSDL",
+      carePlusCatalogId: "milestone-mcpl-xppplusdl",
+      carePlusMonthlyMsrp: 2.97,
+      carePlusAnnualMsrp: 35.64,
+      carePremSku: "MCPR-XPPPLUSDL",
+      carePremCatalogId: "milestone-mcpr-xppplusdl",
+      carePremMonthlyMsrp: 1.14,
+      carePremAnnualMsrp: 13.68,
+      maxCameras: 999999,
+      maxRecordingServers: 9999,
+      mandatoryCarePlus: false,
+      includesSmartWall: false,
+      includesIncidentManager: false,
+      supportsFailoverRecording: false,
+      supportsFederation: false,
+      supportsInterconnectCentral: false,
+      datasheet: "Datasheets/Milestone/XProtect Professional+ datasheet.pdf",
+      summary: "Multi-site / multi-server VMS with unrestricted cameras, Smart Map, Access, LPR & Transact."
+    },
+    expert: {
+      key: "expert",
+      label: "XProtect Expert",
+      shortLabel: "Expert",
+      baseSku: "XPETBL",
+      baseCatalogId: "milestone-xpetbl",
+      baseMsrp: 2267,
+      deviceSku: "XPETDL",
+      deviceCatalogId: "milestone-xpetdl",
+      deviceMsrp: 305,
+      carePlusSku: "MCPL-XPETDL",
+      carePlusCatalogId: "milestone-mcpl-xpetdl",
+      carePlusMonthlyMsrp: 4.59,
+      carePlusAnnualMsrp: 55.08,
+      carePremSku: "MCPR-XPETDL",
+      carePremCatalogId: "milestone-mcpr-xpetdl",
+      carePremMonthlyMsrp: 1.79,
+      carePremAnnualMsrp: 21.48,
+      maxCameras: 999999,
+      maxRecordingServers: 9999,
+      mandatoryCarePlus: true,
+      includesSmartWall: false,
+      includesIncidentManager: false,
+      supportsFailoverRecording: true,
+      supportsFederation: false,
+      supportsInterconnectCentral: false,
+      datasheet: "Datasheets/Milestone/XProtect Expert datasheet.pdf",
+      summary: "Enterprise VMS with Hot/Cold Failover Recording Servers ($0), Multi-Stage Grooming, AES-256 DB Encryption & GPU Server VMD."
+    },
+    corporate: {
+      key: "corporate",
+      label: "XProtect Corporate",
+      shortLabel: "Corporate",
+      baseSku: "XPCOBT",
+      baseCatalogId: "milestone-xpcobt",
+      baseMsrp: 3610,
+      deviceSku: "XPCODL",
+      deviceCatalogId: "milestone-xpcodl",
+      deviceMsrp: 373,
+      carePlusSku: "MCPL-XPCODL",
+      carePlusCatalogId: "milestone-mcpl-xpcodl",
+      carePlusMonthlyMsrp: 5.67,
+      carePlusAnnualMsrp: 68.04,
+      carePremSku: "MCPR-XPCODL",
+      carePremCatalogId: "milestone-mcpr-xpcodl",
+      carePremMonthlyMsrp: 2.22,
+      carePremAnnualMsrp: 26.64,
+      maxCameras: 999999,
+      maxRecordingServers: 9999,
+      mandatoryCarePlus: true,
+      includesSmartWall: true,
+      includesIncidentManager: true,
+      supportsFailoverRecording: true,
+      supportsFederation: true,
+      supportsInterconnectCentral: true,
+      datasheet: "Datasheets/Milestone/XProtect Corporate datasheet.pdf",
+      summary: "Flagship mission-critical VMS: Includes Smart Wall ($15,799 value) & Incident Manager ($9,975 value) free, Federated Architecture, Interconnect, Evidence Lock & 2FA."
+    }
+  },
+
+  // Official Milestone Care Multi-Year Pre-Paid Discounts (XProtect_Price List_USD-US_January 1_2027.xlsx)
+  CARE_MULTI_YEAR_DISCOUNTS: {
+    1: 0.00, // 1-Year = 0% discount
+    2: 0.10, // 2-Year = 10% discount
+    3: 0.15, // 3-Year = 15% discount
+    4: 0.20, // 4-Year = 20% discount
+    5: 0.25  // 5-Year = 25% discount
+  },
+
+  getDefaultConfig() {
+    return {
+      tierMode: "auto",                  // "auto" | "express_plus" | "professional_plus" | "expert" | "corporate"
+      careYears: 3,                      // 1 | 2 | 3 | 4 | 5 (Multi-year Care Plus discount: 2Y=10%, 3Y=15%, 4Y=20%, 5Y=25%)
+      carePremium: false,                // Milestone Care Premium 24/7 Support add-on
+      failoverRecordingMode: "none",     // "none" | "cold_group" (N:1 Cold Standby Failover Group) | "hot_standby" (1:1 Hot Standby)
+      managementServerFailover: false,   // XPMSFSL ($7,650) — High-Availability Management Server Failover
+      enableSmartWall: false,            // XPSWBL ($15,799 on Expert; included $0 in Corporate)
+      enableIncidentManager: false,      // XPIMBL ($9,975 on Express+/Pro+/Expert; included $0 in Corporate)
+      enableAccessControl: false,        // Toggle: XProtect Access or AXIS Secure Entry
+      accessMode: "xprotect_access",     // "xprotect_access" (XPABL $129 + XPADL $39/reader) | "axis_secure_entry" (XPSEABL $0 + XPSEADL $89/door)
+      accessReadersOverride: null,       // null = auto-detect from BOM / Door Builder
+      enableLpr: false,                  // Toggle: XProtect LPR (XPLPRBL $300 + XPLPRCL $1,295/cam)
+      lprCamerasOverride: null,          // null = auto-detect from BOM
+      lprCountryLibs: 1,                 // 1 country/state module included in XPLPRBL; extras use XPLPRLL ($645)
+      enableTransact: false,             // Toggle: XProtect Transact POS/ATM (XPTBS $299 w/ 1 source + XPTC1 $269/extra)
+      transactSources: 2,
+      enableInterconnect: false,         // Toggle: Milestone Interconnect (XPCOMIDL $77.76/remote camera — Corporate central site)
+      interconnectCameras: 0,
+      enableFederated: false,            // Toggle: Milestone Federated Architecture (Included $0 in Corporate)
+      enableRapidReview: false,          // Toggle: XProtect Rapid REVIEW powered by BriefCam (XPRRDL $220/cam + Husky XA/XE Server)
+      rapidReviewCameras: 0,
+      enableHospitalAssist: false,       // Toggle: XProtect Hospital Assist fall detection (XPHADL $499/cam — Expert/Corporate)
+      hospitalAssistCameras: 0,
+      enableArculesCloud: false,         // Toggle: Arcules Hybrid Cloud Gateway (Husky GW HGWD/HGWDE/HGWR/HGWRE)
+      arculesChannels: 0,
+      workstationClients: 2,             // Smart Client is $0 unlimited licenses; used to size Husky IVO 150D / 350T Viewing Stations
+      applianceFormFactor: "rack"        // "rack" | "tower" | "desktop"
+    };
+  },
+
+  recommendHuskyAppliances(videoLoad, licConfig) {
+    const serversDb = (typeof window !== "undefined" && Array.isArray(window.SERVERS_DATABASE))
+      ? window.SERVERS_DATABASE
+      : [];
+    const workstationsDb = (typeof window !== "undefined" && Array.isArray(window.WORKSTATIONS_DATABASE))
+      ? window.WORKSTATIONS_DATABASE
+      : [];
+
+    const cams = videoLoad.totalSensorHeads || videoLoad.cameraUnits || 0;
+    const reqTb = videoLoad.baseRequiredUsableTb || videoLoad.requiredUsableTb || 0;
+    const reqMbps = videoLoad.peakIngressMbps || 0;
+    const formPref = licConfig.applianceFormFactor || "rack";
+
+    const huskyIvoList = serversDb.filter(s => s.isMilestoneHusky && s.applianceSeries && s.applianceSeries.includes("Husky IVO"));
+    let primaryAppliance = null;
+    let primaryQty = 1;
+    let recordingReason = "";
+
+    if (cams > 0) {
+      let pool = huskyIvoList.slice().sort((a, b) => (a.msrp || 0) - (b.msrp || 0));
+      if (formPref === "desktop") {
+        const d = pool.filter(s => String(s.formFactor || "").toLowerCase().includes("desktop"));
+        if (d.length > 0) pool = d;
+      } else if (formPref === "tower") {
+        const t = pool.filter(s => String(s.formFactor || "").toLowerCase().includes("tower"));
+        if (t.length > 0) pool = t;
+      } else {
+        const r = pool.filter(s => String(s.formFactor || "").toLowerCase().includes("rack"));
+        if (r.length > 0) pool = r;
+      }
+
+      const singleFit = pool.find(s =>
+        (s.maxCameraChannels || 150) >= cams &&
+        (s.maxIngestBandwidthMbps || 720) >= reqMbps &&
+        (s.usableStorageTb || 0) >= reqTb
+      );
+
+      if (singleFit) {
+        primaryAppliance = singleFit;
+        primaryQty = 1;
+        recordingReason = `1x ${singleFit.model} satisfies ${cams} streams (${Math.round(reqMbps)} Mbps / ${reqTb} TB usable).`;
+      } else {
+        const largest = huskyIvoList.find(s => s.id === "milestone-husky-ivo-1800r-384tb")
+          || huskyIvoList.find(s => s.id === "milestone-husky-ivo-1800r")
+          || huskyIvoList.find(s => s.id === "milestone-husky-ivo-1000r")
+          || pool[pool.length - 1];
+        if (largest) {
+          primaryAppliance = largest;
+          const byCams = Math.ceil(cams / (largest.maxCameraChannels || 250));
+          const byMbps = Math.ceil(reqMbps / (largest.maxIngestBandwidthMbps || 1800));
+          const byTb = Math.ceil(reqTb / (largest.usableStorageTb || 160));
+          primaryQty = Math.max(1, byCams, byMbps, byTb);
+          recordingReason = `${primaryQty}x ${largest.model} scaled across ${cams} streams (${Math.round(reqMbps)} Mbps / ${reqTb} TB usable).`;
+        }
+      }
+    }
+
+    // Failover Recording Server appliance
+    let failoverAppliance = null;
+    let failoverQty = 0;
+    if (licConfig.failoverRecordingMode === "cold_group" && primaryAppliance) {
+      failoverAppliance = primaryAppliance;
+      failoverQty = 1;
+    } else if (licConfig.failoverRecordingMode === "hot_standby" && primaryAppliance) {
+      failoverAppliance = primaryAppliance;
+      failoverQty = primaryQty;
+    }
+
+    // BriefCam / Rapid REVIEW Analytics Server (Husky XA / XE)
+    let analyticsAppliance = null;
+    let analyticsQty = 0;
+    if (licConfig.enableRapidReview && (licConfig.rapidReviewCameras || cams) > 0) {
+      const rrCams = licConfig.rapidReviewCameras > 0 ? licConfig.rapidReviewCameras : Math.min(cams || 10, 50);
+      if (rrCams <= 20) {
+        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xa20r") || serversDb.find(s => s.id === "milestone-husky-xa20t");
+        analyticsQty = 1;
+      } else if (rrCams <= 50) {
+        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xa50r");
+        analyticsQty = 1;
+      } else {
+        analyticsAppliance = serversDb.find(s => s.id === "milestone-husky-xe700r") || serversDb.find(s => s.id === "milestone-husky-xa50r");
+        analyticsQty = Math.max(1, Math.ceil(rrCams / 100));
+      }
+    }
+
+    // Arcules Cloud Gateway (Husky GW)
+    let cloudGatewayAppliance = null;
+    let cloudGatewayQty = 0;
+    if (licConfig.enableArculesCloud) {
+      const gwCh = licConfig.arculesChannels > 0 ? licConfig.arculesChannels : Math.max(16, cams);
+      if (gwCh <= 25) {
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwd-2tb");
+        cloudGatewayQty = 1;
+      } else if (gwCh <= 50) {
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwde-8tb");
+        cloudGatewayQty = 1;
+      } else if (gwCh <= 110) {
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwr-16tb");
+        cloudGatewayQty = 1;
+      } else {
+        cloudGatewayAppliance = serversDb.find(s => s.id === "milestone-husky-gwre-32tb");
+        cloudGatewayQty = Math.max(1, Math.ceil(gwCh / 150));
+      }
+    }
+
+    // Viewing Stations (Husky IVO 150D VS / 350T VS)
+    const wsCount = Math.max(0, parseInt(licConfig.workstationClients ?? 2, 10) || 0);
+    const viewingStation = (cams > 20 || licConfig.enableSmartWall)
+      ? (workstationsDb.find(w => w.id === "milestone-husky-ivo-350t-viewing-station") || workstationsDb[0])
+      : (workstationsDb.find(w => w.id === "milestone-husky-ivo-150d-viewing-station") || workstationsDb[0]);
+
+    return {
+      primaryAppliance,
+      primaryQty,
+      recordingReason,
+      failoverAppliance,
+      failoverQty,
+      analyticsAppliance,
+      analyticsQty,
+      cloudGatewayAppliance,
+      cloudGatewayQty,
+      viewingStation,
+      viewingStationQty: wsCount
+    };
+  },
+
+  calculateFromBOM(bomList = [], customConfig = {}) {
+    const baseConfig = Object.assign(this.getDefaultConfig(), customConfig);
+    const videoLoad = VideoStorageSizer.calculateFromBOM(bomList, { vmsVendor: "milestone" });
+    const cameraUnits = videoLoad.cameraUnits || 0;
+    const totalSensorHeads = videoLoad.totalSensorHeads || cameraUnits;
+
+    // Auto-detect LPR cameras & Access Control doors/readers from BOM & Door Builder
+    let bomLprCameras = 0;
+    let bomAccessReaders = 0;
+    (Array.isArray(bomList) ? bomList : []).forEach(item => {
+      if (!item || item.parentInstanceId) return;
+      const qty = parseInt(item.qty ?? item.quantity, 10) || 1;
+      const modelAndSub = `${item.model || ""} ${item.subcategory || ""} ${item.description || ""}`.toLowerCase();
+      if (modelAndSub.includes("lpr") || modelAndSub.includes("anpr") || modelAndSub.includes("license plate")) {
+        bomLprCameras += qty;
+      }
+      if (String(item.category || "").toLowerCase() === "access_control" && (modelAndSub.includes("reader") || modelAndSub.includes("door"))) {
+        bomAccessReaders += qty;
+      }
+    });
+
+    const careYears = Math.max(1, Math.min(5, parseInt(baseConfig.careYears, 10) || 3));
+    const careDiscountFactor = 1.0 - (this.CARE_MULTI_YEAR_DISCOUNTS[careYears] || 0);
+    const careDiscountPct = Math.round((this.CARE_MULTI_YEAR_DISCOUNTS[careYears] || 0) * 100);
+
+    const enableSmartWall = Boolean(baseConfig.enableSmartWall);
+    const enableIncidentManager = Boolean(baseConfig.enableIncidentManager);
+    const enableAccessControl = Boolean(baseConfig.enableAccessControl);
+    const accessMode = baseConfig.accessMode || "xprotect_access";
+    const effectiveAccessCount = enableAccessControl
+      ? (baseConfig.accessReadersOverride !== null && baseConfig.accessReadersOverride !== undefined
+          ? Math.max(0, parseInt(baseConfig.accessReadersOverride, 10) || 0)
+          : Math.max(2, bomAccessReaders))
+      : 0;
+
+    const enableLpr = Boolean(baseConfig.enableLpr) || bomLprCameras > 0;
+    const effectiveLprCameras = enableLpr
+      ? (baseConfig.lprCamerasOverride !== null && baseConfig.lprCamerasOverride !== undefined
+          ? Math.max(0, parseInt(baseConfig.lprCamerasOverride, 10) || 0)
+          : Math.max(1, bomLprCameras))
+      : 0;
+    const lprCountryLibs = Math.max(1, parseInt(baseConfig.lprCountryLibs, 10) || 1);
+
+    const enableTransact = Boolean(baseConfig.enableTransact);
+    const transactSources = enableTransact ? Math.max(1, parseInt(baseConfig.transactSources, 10) || 1) : 0;
+
+    const enableInterconnect = Boolean(baseConfig.enableInterconnect);
+    const interconnectCameras = enableInterconnect ? Math.max(1, parseInt(baseConfig.interconnectCameras, 10) || 1) : 0;
+
+    const enableFederated = Boolean(baseConfig.enableFederated);
+    const failoverRecordingMode = baseConfig.failoverRecordingMode || (videoLoad.failover?.structure === "dedicated" ? "cold_group" : "none");
+    const managementServerFailover = Boolean(baseConfig.managementServerFailover);
+
+    const enableRapidReview = Boolean(baseConfig.enableRapidReview);
+    const rapidReviewCameras = enableRapidReview ? Math.max(1, parseInt(baseConfig.rapidReviewCameras, 10) || Math.min(Math.max(1, cameraUnits), 25)) : 0;
+
+    const enableHospitalAssist = Boolean(baseConfig.enableHospitalAssist);
+    const hospitalAssistCameras = enableHospitalAssist ? Math.max(1, parseInt(baseConfig.hospitalAssistCameras, 10) || 10) : 0;
+
+    // Determine Effective XProtect Edition Tier ("express_plus" | "professional_plus" | "expert" | "corporate")
+    let effectiveTierKey = baseConfig.tierMode === "auto" ? "professional_plus" : baseConfig.tierMode;
+    const tierPromotionReasons = [];
+
+    if (baseConfig.tierMode === "auto") {
+      if (enableInterconnect || enableFederated) {
+        effectiveTierKey = "corporate";
+        tierPromotionReasons.push("Milestone Federated Architecture / Central Interconnect requires XProtect Corporate.");
+      } else if (enableSmartWall || (enableSmartWall && enableIncidentManager)) {
+        // Smart Wall add-on on Expert costs $15,799 (`XPSWBL`), whereas Corporate includes Smart Wall AND Incident Manager ($9,975) for free!
+        effectiveTierKey = "corporate";
+        tierPromotionReasons.push("XProtect Smart Wall ($15,799 add-on on Expert) is included free in XProtect Corporate — auto-selected Corporate for lower total cost.");
+      } else if (failoverRecordingMode !== "none" || managementServerFailover || enableHospitalAssist || cameraUnits > 250) {
+        effectiveTierKey = "expert";
+        tierPromotionReasons.push("Hot/Cold Failover Recording Servers, Management Failover, and Hospital Assist require XProtect Expert or Corporate.");
+      } else if (cameraUnits > 0 && cameraUnits <= 48 && (videoLoad.milestone?.primaryServersCount || 1) === 1 && !enableLpr && !enableTransact) {
+        effectiveTierKey = "express_plus";
+        tierPromotionReasons.push("Single Recording Server with ≤48 cameras qualifies for XProtect Express+.");
+      } else {
+        effectiveTierKey = "professional_plus";
+        tierPromotionReasons.push("Multi-server / unrestricted camera scalability with XProtect Professional+.");
+      }
+    }
+
+    const compatibilityWarnings = [];
+    if (effectiveTierKey === "express_plus") {
+      if (cameraUnits > 100) {
+        compatibilityWarnings.push(`XProtect Express+ supports a maximum of 100 cameras (${cameraUnits} configured). Upgrade to Professional+, Expert, or Corporate.`);
+      }
+      if ((videoLoad.milestone?.primaryServersCount || 1) > 1) {
+        compatibilityWarnings.push(`XProtect Express+ is restricted to 1 Recording Server (${videoLoad.milestone?.primaryServersCount} required). Upgrade to Professional+, Expert, or Corporate.`);
+      }
+      if (failoverRecordingMode !== "none") {
+        compatibilityWarnings.push("XProtect Express+ does not support Failover Recording Servers. Upgrade to XProtect Expert or Corporate.");
+      }
+    }
+    if (effectiveTierKey === "professional_plus" && failoverRecordingMode !== "none") {
+      compatibilityWarnings.push("XProtect Professional+ does not include native Hot/Cold Standby Failover Recording Servers. Upgrade to XProtect Expert or Corporate (where Failover Recording Servers are included free).");
+    }
+    if ((effectiveTierKey === "express_plus" || effectiveTierKey === "professional_plus") && enableSmartWall) {
+      compatibilityWarnings.push("XProtect Smart Wall is only supported on XProtect Expert ($15,799 add-on) or XProtect Corporate (included free).");
+    }
+    if (effectiveTierKey !== "corporate" && (enableInterconnect || enableFederated)) {
+      compatibilityWarnings.push("Milestone Federated Architecture & Central Interconnect require XProtect Corporate at the central site.");
+    }
+
+    const tierDef = this.TIERS[effectiveTierKey] || this.TIERS.professional_plus;
+    const deviceLicenseCount = Math.max(0, cameraUnits);
+
+    const lineItems = [];
+    const addLineItem = (sku, model, category, qty, unitMsrp, catalogId, notes) => {
+      if (qty <= 0) return;
+      const ext = Math.round(qty * unitMsrp * 100) / 100;
+      lineItems.push({
+        sku,
+        model,
+        category,
+        qty,
+        unitMsrp: Math.round(unitMsrp * 100) / 100,
+        extendedMsrp: ext,
+        catalogId,
+        notes
+      });
+    };
+
+    // 1. Base Server License
+    addLineItem(
+      tierDef.baseSku,
+      `Milestone ${tierDef.label} — Base Server License`,
+      "Milestone XProtect Base & Device Licenses",
+      1,
+      tierDef.baseMsrp,
+      tierDef.baseCatalogId,
+      tierDef.summary
+    );
+
+    // 2. Hardware Device Licenses (1 per multi-channel IP camera / encoder)
+    if (deviceLicenseCount > 0) {
+      addLineItem(
+        tierDef.deviceSku,
+        `Milestone ${tierDef.label} — Hardware Device License`,
+        "Milestone XProtect Base & Device Licenses",
+        deviceLicenseCount,
+        tierDef.deviceMsrp,
+        tierDef.deviceCatalogId,
+        `1 Device License per IP camera (${deviceLicenseCount} cameras). Multi-sensor cameras Sharing 1 IP/MAC generally consume 1 hardware device license.`
+      );
+
+      // 3. Milestone Care Plus Maintenance (with Multi-Year Pre-Paid Discount: 1Y=0%, 2Y=10%, 3Y=15%, 4Y=20%, 5Y=25%)
+      const discountedCarePlusUnit = tierDef.carePlusAnnualMsrp * careYears * careDiscountFactor;
+      addLineItem(
+        tierDef.carePlusSku,
+        `Milestone Care Plus for ${tierDef.label} — ${careYears}-Year Term${careDiscountPct > 0 ? ` (${careDiscountPct}% Multi-Year Discount Applied)` : ""}`,
+        "Milestone Care Plus & Care Premium",
+        deviceLicenseCount,
+        discountedCarePlusUnit,
+        tierDef.carePlusCatalogId,
+        `$${tierDef.carePlusMonthlyMsrp.toFixed(2)}/mo ($${tierDef.carePlusAnnualMsrp.toFixed(2)}/yr list) × ${careYears} yr${careYears > 1 ? "s" : ""}${careDiscountPct > 0 ? ` less ${careDiscountPct}% multi-year discount` : ""}. ${tierDef.mandatoryCarePlus ? "Mandatory minimum 1-Year Care Plus on Expert/Corporate." : "Includes 3x per year R1/R2/R3 software updates & Customer Dashboard."}`
+      );
+
+      if (baseConfig.carePremium) {
+        const discountedCarePremUnit = tierDef.carePremAnnualMsrp * careYears * careDiscountFactor;
+        addLineItem(
+          tierDef.carePremSku,
+          `Milestone Care Premium 24/7 Support for ${tierDef.label} — ${careYears}-Year Term${careDiscountPct > 0 ? ` (${careDiscountPct}% Discount)` : ""}`,
+          "Milestone Care Plus & Care Premium",
+          deviceLicenseCount,
+          discountedCarePremUnit,
+          tierDef.carePremCatalogId,
+          `24/7/365 direct Milestone technical support Engineers ($${tierDef.carePremMonthlyMsrp.toFixed(2)}/mo list).`
+        );
+      }
+    }
+
+    // 4. Smart Wall & Incident Manager
+    if (enableSmartWall) {
+      if (effectiveTierKey === "corporate") {
+        addLineItem(
+          "XPSWBL-INC",
+          "Milestone XProtect Smart Wall — Included Free with XProtect Corporate ($15,799 Value)",
+          "Milestone XProtect Add-On Products",
+          1,
+          0,
+          "milestone-xpswbl",
+          "Unlimited Smart Wall video wall monitors & presets included at $0 in XProtect Corporate."
+        );
+      } else {
+        addLineItem(
+          "XPSWBL",
+          "Milestone XProtect Smart Wall — Base License (For XProtect Expert)",
+          "Milestone XProtect Add-On Products",
+          1,
+          15799,
+          "milestone-xpswbl",
+          "Unlocks Smart Wall dynamic video wall control on XProtect Expert (Included free in XProtect Corporate)."
+        );
+      }
+    }
+
+    if (enableIncidentManager) {
+      if (effectiveTierKey === "corporate") {
+        addLineItem(
+          "XPIMBL-INC",
+          "Milestone XProtect Incident Manager — Included Free with XProtect Corporate ($9,975 Value)",
+          "Milestone XProtect Add-On Products",
+          1,
+          0,
+          "milestone-xpimbl",
+          "Incident documentation, sequence linking & case management included at $0 in XProtect Corporate."
+        );
+      } else {
+        addLineItem(
+          "XPIMBL",
+          "Milestone XProtect Incident Manager — Base License",
+          "Milestone XProtect Add-On Products",
+          1,
+          9975,
+          "milestone-xpimbl",
+          "Incident documentation & video evidence packaging (Included free in XProtect Corporate)."
+        );
+      }
+    }
+
+    if (managementServerFailover) {
+      addLineItem(
+        "XPMSFSL",
+        "Milestone XProtect Management Server Failover — License",
+        "Milestone XProtect Add-On Products",
+        1,
+        7650,
+        "milestone-xpmsfsl",
+        "Automated high-availability cluster failover for the XProtect Management Server role."
+      );
+    }
+
+    // 5. Access Control (XProtect Access vs AXIS Secure Entry)
+    if (enableAccessControl && effectiveAccessCount > 0) {
+      if (accessMode === "axis_secure_entry") {
+        addLineItem(
+          "XPSEABL",
+          "Milestone XProtect Access for AXIS Secure Entry — Base License ($0)",
+          "Milestone XProtect Access Control",
+          1,
+          0,
+          "milestone-xpseabl",
+          "Free base license for native Axis A1610 / A1210 / A1001 network door controller management."
+        );
+        addLineItem(
+          "XPSEADL",
+          "Milestone XProtect Access for AXIS Secure Entry — Door License",
+          "Milestone XProtect Access Control",
+          effectiveAccessCount,
+          89,
+          "milestone-xpseadl",
+          `1 Door License per controlled Axis door (${effectiveAccessCount} doors @ $89/door).`
+        );
+      } else {
+        addLineItem(
+          "XPABL",
+          "Milestone XProtect Access — Base License",
+          "Milestone XProtect Access Control",
+          1,
+          129,
+          "milestone-xpabl",
+          "Enables third-party access control integration (LenelS2, Genetec, Gallagher, Paxton, HID, ASSA ABLOY) in Smart Client."
+        );
+        addLineItem(
+          "XPADL",
+          "Milestone XProtect Access — Access Control Reader / Door License",
+          "Milestone XProtect Access Control",
+          effectiveAccessCount,
+          39,
+          "milestone-xpadl",
+          `1 License per integrated reader/door (${effectiveAccessCount} readers @ $39/reader).`
+        );
+      }
+    }
+
+    // 6. XProtect LPR
+    if (enableLpr && effectiveLprCameras > 0) {
+      addLineItem(
+        "XPLPRBL",
+        "Milestone XProtect LPR — Base License (Includes 1 Country/State Library)",
+        "Milestone XProtect LPR & Analytics",
+        1,
+        300,
+        "milestone-xplprbl",
+        "Base license for Milestone XProtect License Plate Recognition."
+      );
+      addLineItem(
+        "XPLPRCL",
+        "Milestone XProtect LPR — Camera License",
+        "Milestone XProtect LPR & Analytics",
+        effectiveLprCameras,
+        1295,
+        "milestone-xplprcl",
+        `1 LPR Camera License per LPR lane camera (${effectiveLprCameras} cameras @ $1,295/cam).`
+      );
+      if (lprCountryLibs > 1) {
+        addLineItem(
+          "XPLPRLL",
+          "Milestone XProtect LPR — Additional Country/Region Module License",
+          "Milestone XProtect LPR & Analytics",
+          lprCountryLibs - 1,
+          645,
+          "milestone-xplprll",
+          "Additional country/region LPR recognition library."
+        );
+      }
+    }
+
+    // 7. XProtect Transact (POS / ATM)
+    if (enableTransact && transactSources > 0) {
+      addLineItem(
+        "XPTBS",
+        "Milestone XProtect Transact — Base License (Includes 1 Transaction Source)",
+        "Milestone XProtect Add-On Products",
+        1,
+        299,
+        "milestone-xptbs",
+        "Links POS cash register / ATM / barcode receipts with video."
+      );
+      if (transactSources > 1) {
+        addLineItem(
+          "XPTC1",
+          "Milestone XProtect Transact — Additional Transaction Source License",
+          "Milestone XProtect Add-On Products",
+          transactSources - 1,
+          269,
+          "milestone-xptc1",
+          `${transactSources - 1} additional POS/ATM transaction source(s).`
+        );
+      }
+    }
+
+    // 8. Milestone Interconnect / Rapid REVIEW / Hospital Assist
+    if (enableInterconnect && interconnectCameras > 0) {
+      addLineItem(
+        "XPCOMIDL",
+        "Milestone Interconnect — Remote Site Camera License (Requires XProtect Corporate)",
+        "Milestone XProtect Add-On Products",
+        interconnectCameras,
+        77.76,
+        "milestone-xpcomidl",
+        `Connects ${interconnectCameras} remote Express+/Professional+/Expert/Husky cameras into central XProtect Corporate.`
+      );
+    }
+
+    if (enableRapidReview && rapidReviewCameras > 0) {
+      addLineItem(
+        "XPRRDL",
+        "Milestone XProtect Rapid REVIEW (Powered by BriefCam) — Camera License",
+        "Milestone XProtect LPR & Analytics",
+        rapidReviewCameras,
+        220,
+        "milestone-xprrdl",
+        `VIDEO SYNOPSIS® & cross-camera forensic search for ${rapidReviewCameras} cameras (Requires Husky XA / XE Analytics Server).`
+      );
+    }
+
+    if (enableHospitalAssist && hospitalAssistCameras > 0) {
+      addLineItem(
+        "XPHADL",
+        "Milestone XProtect Hospital Assist — Privacy & Fall Detection Camera License",
+        "Milestone XProtect LPR & Analytics",
+        hospitalAssistCameras,
+        499,
+        "milestone-xphadl",
+        `Patient room live privacy blur & automatic fall detection for ${hospitalAssistCameras} cameras.`
+      );
+    }
+
+    const totalSoftwareMsrp = Math.round(lineItems.reduce((sum, li) => sum + li.extendedMsrp, 0) * 100) / 100;
+    const huskyPlan = this.recommendHuskyAppliances(videoLoad, Object.assign({}, baseConfig, {
+      failoverRecordingMode,
+      enableRapidReview,
+      rapidReviewCameras,
+      enableSmartWall
+    }));
+
+    const totalHardwareMsrp =
+      ((huskyPlan.primaryAppliance?.msrp || 0) * (huskyPlan.primaryQty || 0)) +
+      ((huskyPlan.failoverAppliance?.msrp || 0) * (huskyPlan.failoverQty || 0)) +
+      ((huskyPlan.analyticsAppliance?.msrp || 0) * (huskyPlan.analyticsQty || 0)) +
+      ((huskyPlan.cloudGatewayAppliance?.msrp || 0) * (huskyPlan.cloudGatewayQty || 0)) +
+      ((huskyPlan.viewingStation?.msrp || 0) * (huskyPlan.viewingStationQty || 0));
+
+    return {
+      config: baseConfig,
+      videoLoad,
+      cameraUnits,
+      totalSensorHeads,
+      effectiveTierKey,
+      tierDef,
+      tierPromotionReasons,
+      careYears,
+      careDiscountPct,
+      carePremium: Boolean(baseConfig.carePremium),
+      failoverRecordingMode,
+      managementServerFailover,
+      enableSmartWall,
+      enableIncidentManager,
+      enableAccessControl,
+      accessMode,
+      effectiveAccessCount,
+      enableLpr,
+      effectiveLprCameras,
+      lprCountryLibs,
+      enableTransact,
+      transactSources,
+      enableInterconnect,
+      interconnectCameras,
+      enableFederated,
+      enableRapidReview,
+      rapidReviewCameras,
+      enableHospitalAssist,
+      hospitalAssistCameras,
+      enableArculesCloud: Boolean(baseConfig.enableArculesCloud),
+      arculesChannels: parseInt(baseConfig.arculesChannels, 10) || 0,
+      workstationClients: parseInt(baseConfig.workstationClients ?? 2, 10) || 0,
+      compatibilityWarnings,
+      lineItems,
+      totalSoftwareMsrp,
+      huskyPlan,
+      totalHardwareMsrp,
+      combinedTurnkeyMsrp: Math.round((totalSoftwareMsrp + totalHardwareMsrp) * 100) / 100
+    };
+  },
+
+  calculate(bomList = [], customConfig = {}) {
+    const activeCfg = Object.assign(
+      {},
+      (typeof window !== "undefined" && window.milestoneLicensingConfig) ? window.milestoneLicensingConfig : {},
+      customConfig
+    );
+    return this.calculateFromBOM(bomList, activeCfg);
+  }
+};
+
+// =========================================================================
+// 8. MULTI-MANUFACTURER CLIENT WORKSTATION DECODING & HARDWARE SIZER
+// Supports Genetec Security Desk 5.14.1.0 & Milestone XProtect Smart Client 2026
 // =========================================================================
 
 const ClientWorkstationSizer = {
   state: {
+    vmsPlatform: "genetec",          // "genetec" (Genetec Security Desk 5.14) | "milestone" (Milestone XProtect Smart Client 2026 / Husky IVO VS)
+    adaptiveStreaming: false,        // Milestone XProtect Smart Client Adaptive Streaming (reduces multi-tile decode load by ~35%)
     viewedGroups: [
       {
         id: "ws_grp_1",
         name: "Primary Camera Grid (1080p FHD)",
+        qty: 16,
         viewedCameras: 16,
         heads: 1,
         resolutionMp: 2,
@@ -4139,6 +5208,7 @@ const ClientWorkstationSizer = {
       {
         id: "ws_grp_2",
         name: "Spot / Perimeter Tiles (4K UHD)",
+        qty: 4,
         viewedCameras: 4,
         heads: 1,
         resolutionMp: 8,
@@ -4154,25 +5224,30 @@ const ClientWorkstationSizer = {
       codec: false,
       dewarping: false
     },
-    scenarioMode: "active_operator", // "active_operator" (80% cap / 20% headroom for Visual Tracking, Guard Tours, Investigation) | "video_wall" (100% static wall @ 85% CPU/GPU)
+    usageMode: "active_operator",    // "active_operator" (80% cap / 20% headroom) | "video_wall" (85% cap / 15% headroom)
+    scenarioMode: "active_operator",
+    hwAccelDecode: true,
     hardwareAcceleration: true,      // Intel Quick Sync Video / NVIDIA NVDEC Hardware Decoding
     watermarking: false,             // Page 6: -10% max tiles with HW acceleration, -30% without HW acceleration
     encryptedStreams: false,         // Page 6: Up to +40% CPU usage on low-resolution streams (<=2MP)
+    monitorCount: 2,
     monitorsPerWorkstation: 2,       // Tested baseline: 2x 4K UHD monitors (1..8 displays)
     displayResolution: "4k",         // "fhd" (1920x1080 / 1920x1200) | "4k" (3840x2160 UHD)
-    operatorStationsCount: 1,        // Number of operator desks / workstations viewing this layout (or 0 = Auto)
-    layoutDistributionMode: "per_station" // "per_station" (each operator station views all tiles above) | "split_wall" (tiles above are split across the workstation pool)
+    workstationCount: 1,
+    operatorStationsCount: 1,        // Number of operator desks / workstations viewing this layout
+    preferredFormFactor: "any",      // "any" | "tower" | "rack"
+    layoutDistributionMode: "per_station"
   },
 
   /**
-   * Computes the benchmark maximum simultaneous streams at 30 FPS on a given Genetec 5.14.1.0 profile
-   * (Minimum, Recommended, High-Performance) for a given resolution (MP) and codec (H.264, H.265, AV1).
-   * Interpolates smoothly between the 2MP (1080p) and 8MP (4K UHD) Section 1.3 benchmark curves.
+   * Computes the benchmark maximum simultaneous streams at 30 FPS on a given profile
+   * (Minimum, Recommended, High-Performance) for Genetec 5.14.1.0 or Milestone XProtect 2026.
    */
-  getBenchmarkMaxStreamsAt30Fps(profileKey, rawCodec, resolutionMp) {
-    const bench = GENETEC_514_REQUIREMENTS.CLIENT_DECODING_BENCHMARKS_30FPS;
+  getBenchmarkMaxStreamsAt30Fps(profileKey, rawCodec, resolutionMp, vmsPlatform = "genetec") {
+    const reqObj = vmsPlatform === "milestone" ? MILESTONE_2026_REQUIREMENTS : GENETEC_514_REQUIREMENTS;
+    const bench = reqObj.CLIENT_DECODING_BENCHMARKS_30FPS;
     const codec = VideoStorageSizer.normalizeCodec(rawCodec || "H.265");
-    const mp = Math.max(0.5, Number(resolutionMp) || 2.0);
+    const mp = Math.max(0.4, Number(resolutionMp) || 2.0);
 
     const fhdRow = (bench.fhd_2mp && bench.fhd_2mp[codec]) || bench.fhd_2mp["H.265"];
     const uhdRow = (bench.uhd_8mp && bench.uhd_8mp[codec]) || bench.uhd_8mp["H.265"];
@@ -4180,7 +5255,6 @@ const ClientWorkstationSizer = {
     const cap2Mp = Number(fhdRow[profileKey] ?? 0);
     const cap8Mp = Number(uhdRow[profileKey] ?? 0);
 
-    // If 8MP is 0 (e.g., AV1 on Minimum profile), high-res >=4MP is unsupported on that profile
     if (cap8Mp <= 0 && mp >= 4.0) {
       return 0;
     }
@@ -4189,7 +5263,6 @@ const ClientWorkstationSizer = {
     }
 
     if (mp <= 2.0) {
-      // Scale inversely by pixel ratio below 2MP (e.g. 1MP / 720p has ~2x stream decode capacity of 2MP 1080p)
       return cap2Mp * (2.0 / mp);
     }
     if (mp >= 8.0) {
@@ -4197,7 +5270,6 @@ const ClientWorkstationSizer = {
       return cap8Mp * (8.0 / mp);
     }
 
-    // Between 2.0 MP and 8.0 MP: interpolate total decoded megapixels budget linearly
     const t = (mp - 2.0) / (8.0 - 2.0);
     const mpBudget2 = 2.0 * cap2Mp;
     const mpBudget8 = 8.0 * (cap8Mp > 0 ? cap8Mp : (cap2Mp * 0.25));
@@ -4206,46 +5278,57 @@ const ClientWorkstationSizer = {
   },
 
   /**
-   * Computes global capacity multiplier from Genetec Section 1.3 modifiers:
-   * - Active Operator Scenario vs Static Video Wall (Page 6)
-   * - Video Watermarking with/without Hardware Acceleration (-10% vs -30%, Page 6)
-   * - Multi-monitor composition overhead above the 2-monitor benchmark baseline
+   * Computes global capacity multiplier from Genetec Section 1.3 or Milestone Smart Client modifiers.
    */
   getModifierFactors(config = {}) {
-    const scenarioMode = config.scenarioMode || this.state.scenarioMode || "active_operator";
-    const hwAccel = config.hardwareAcceleration !== undefined ? Boolean(config.hardwareAcceleration) : Boolean(this.state.hardwareAcceleration);
+    const vmsPlatform = String(config.vmsPlatform || this.state.vmsPlatform || "genetec").toLowerCase();
+    const adaptiveStreaming = config.adaptiveStreaming !== undefined ? Boolean(config.adaptiveStreaming) : Boolean(this.state.adaptiveStreaming);
+    const scenarioMode = config.usageMode || config.scenarioMode || this.state.usageMode || this.state.scenarioMode || "active_operator";
+    const hwAccel = config.hwAccelDecode !== undefined
+      ? Boolean(config.hwAccelDecode)
+      : (config.hardwareAcceleration !== undefined ? Boolean(config.hardwareAcceleration) : Boolean(this.state.hwAccelDecode ?? this.state.hardwareAcceleration));
     const watermarking = config.watermarking !== undefined ? Boolean(config.watermarking) : Boolean(this.state.watermarking);
     const encrypted = config.encryptedStreams !== undefined ? Boolean(config.encryptedStreams) : Boolean(this.state.encryptedStreams);
-    const monitors = Math.max(1, Math.min(12, parseInt(config.monitorsPerWorkstation ?? this.state.monitorsPerWorkstation ?? 2, 10) || 2));
+    const monitors = Math.max(1, Math.min(16, parseInt(config.monitorCount ?? config.monitorsPerWorkstation ?? this.state.monitorCount ?? this.state.monitorsPerWorkstation ?? 2, 10) || 2));
 
-    // 1. Scenario factor: Static Video Wall = 1.00x (uses full 85% CPU/GPU cap); Active Operator = 0.80x (leaves 20% headroom for Visual Tracking, Guard Tours, Investigation)
     const scenarioFactor = scenarioMode === "video_wall" ? 1.0 : 0.80;
 
-    // 2. Watermarking & Hardware Acceleration factor (SystemRequirements.pdf Page 6):
-    // "Using video watermarking decreases the maximum number of tiles that can be viewed at the same time by 30% without hardware acceleration and 10% with hardware acceleration."
     let watermarkHwFactor = 1.0;
     if (watermarking && hwAccel) {
-      watermarkHwFactor = 0.90; // -10% with HW acceleration
+      watermarkHwFactor = 0.90;
     } else if (watermarking && !hwAccel) {
-      watermarkHwFactor = 0.70; // -30% without HW acceleration
+      watermarkHwFactor = 0.70;
     } else if (!watermarking && !hwAccel) {
-      watermarkHwFactor = 0.75; // Software decoding penalty without Quick Sync / NVDEC
+      watermarkHwFactor = 0.75;
     }
 
-    // 3. Multi-monitor composition factor (Genetec benchmark is tested on 2x 4K UHD monitors)
-    const extraMonitors = Math.max(0, monitors - 2);
-    const monitorFactor = Math.max(0.75, 1.0 - (extraMonitors * 0.025));
+    let monitorFactor = 1.0;
+    if (vmsPlatform === "milestone") {
+      if (monitors === 1) monitorFactor = 1.0;
+      else if (monitors === 2) monitorFactor = 0.72;
+      else monitorFactor = Math.max(0.55, 0.72 - ((monitors - 2) * 0.06));
+    } else {
+      const extraMonitors = Math.max(0, monitors - 2);
+      monitorFactor = Math.max(0.75, 1.0 - (extraMonitors * 0.025));
+    }
 
-    const combinedCapacityFactor = Math.round(scenarioFactor * watermarkHwFactor * monitorFactor * 1000) / 1000;
+    const adaptiveFactor = adaptiveStreaming ? 1.35 : 1.0;
+    const combinedCapacityFactor = Math.round(scenarioFactor * watermarkHwFactor * monitorFactor * adaptiveFactor * 1000) / 1000;
 
     return {
+      vmsPlatform,
+      adaptiveStreaming,
+      adaptiveFactor,
       scenarioMode,
+      usageMode: scenarioMode,
       scenarioFactor,
       hardwareAcceleration: hwAccel,
+      hwAccelDecode: hwAccel,
       watermarking,
       watermarkHwFactor,
       encryptedStreams: encrypted,
       monitorsPerWorkstation: monitors,
+      monitorCount: monitors,
       monitorFactor,
       combinedCapacityFactor
     };
@@ -4255,33 +5338,28 @@ const ClientWorkstationSizer = {
    * Evaluates a single viewed camera tile group across Minimum, Recommended, and High-Performance profiles.
    */
   evaluateViewedGroup(group, modifiers) {
-    const viewedCameras = Math.max(0, parseInt(group.viewedCameras ?? group.qty ?? 1, 10) || 0);
+    const qty = Math.max(0, parseInt(group.qty ?? group.viewedCameras ?? 1, 10) || 0);
+    const viewedCameras = qty;
     const heads = Math.max(1, parseInt(group.heads ?? 1, 10) || 1);
     const viewedStreams = viewedCameras * heads;
-    const resolutionMp = Math.max(0.5, Number(group.resolutionMp ?? 2) || 2);
+    const resolutionMp = Math.max(0.4, Number(group.resolutionMp ?? 2) || 2);
     const fps = Math.max(1, Math.min(60, Number(group.fps ?? 15) || 15));
     const codec = VideoStorageSizer.normalizeCodec(group.codec || "H.265");
-    const dewarping = Boolean(group.dewarping);
+    const dewarping = Boolean(group.dewarping || resolutionMp >= 12);
 
-    // Dewarping 360° fisheye/panoramic streams adds ~25% GPU shader load per dewarped tile
     const dewarpLoadMultiplier = dewarping ? 1.25 : 1.0;
-
-    // Page 6: "Viewing encrypted video streams increases CPU usage by up to 40% for low-resolution video streams."
     const encryptionLoadMultiplier = modifiers.encryptedStreams
       ? (resolutionMp <= 2.0 ? 1.40 : 1.15)
       : 1.0;
 
-    // Frame rate scaling relative to Genetec's 30 FPS benchmark table
     const fpsCapacityMultiplier = 30.0 / fps;
-
-    // Network receive bitrate for client NIC sizing
     const singleStreamMbps = VideoStorageSizer.calculateSingleStreamBitrateMbps(resolutionMp, codec, fps, "medium", 0);
     const groupClientBitrateMbps = Math.round(viewedStreams * singleStreamMbps * 100) / 100;
     const totalPixelsPerSecMp = Math.round(viewedStreams * resolutionMp * fps * 10) / 10;
 
     const profileLoads = {};
     ["minimum", "recommended", "high_performance"].forEach(profKey => {
-      const base30FpsCap = this.getBenchmarkMaxStreamsAt30Fps(profKey, codec, resolutionMp);
+      const base30FpsCap = this.getBenchmarkMaxStreamsAt30Fps(profKey, codec, resolutionMp, modifiers.vmsPlatform);
       const effectiveMaxStreams = base30FpsCap > 0
         ? (base30FpsCap * fpsCapacityMultiplier * modifiers.combinedCapacityFactor) / (dewarpLoadMultiplier * encryptionLoadMultiplier)
         : 0;
@@ -4292,7 +5370,7 @@ const ClientWorkstationSizer = {
 
       profileLoads[profKey] = {
         base30FpsMaxStreams: Math.floor(base30FpsCap),
-        effectiveMaxStreams: Math.floor(effectiveMaxStreams),
+        effectiveMaxStreams: Math.max(1, Math.floor(effectiveMaxStreams)),
         loadFraction: Math.round(loadFraction * 1000) / 1000,
         loadPct: Math.round(loadFraction * 1000) / 10
       };
@@ -4301,6 +5379,7 @@ const ClientWorkstationSizer = {
     return {
       id: group.id || `ws_grp_${Math.random().toString(36).slice(2, 7)}`,
       name: group.name || "Viewed Camera Group",
+      qty,
       viewedCameras,
       heads,
       viewedStreams,
@@ -4320,6 +5399,9 @@ const ClientWorkstationSizer = {
    */
   calculate(bomList = [], overrides = {}) {
     const cfg = Object.assign({}, this.state, overrides);
+    const vmsPlatform = String(cfg.vmsPlatform || this.state.vmsPlatform || "genetec").toLowerCase();
+    const isMilestone = vmsPlatform === "milestone";
+    const reqObj = isMilestone ? MILESTONE_2026_REQUIREMENTS : GENETEC_514_REQUIREMENTS;
     const modifiers = this.getModifierFactors(cfg);
     const rawGroups = Array.isArray(cfg.viewedGroups) && cfg.viewedGroups.length > 0
       ? cfg.viewedGroups
@@ -4332,179 +5414,232 @@ const ClientWorkstationSizer = {
     const totalClientBitrateMbps = Math.round(evaluatedGroups.reduce((s, g) => s + g.groupClientBitrateMbps, 0) * 10) / 10;
     const totalDecodedMpPerSec = Math.round(evaluatedGroups.reduce((s, g) => s + g.totalPixelsPerSecMp, 0) * 10) / 10;
 
-    const operatorStationsCount = Math.max(1, parseInt(cfg.operatorStationsCount ?? this.state.operatorStationsCount ?? 1, 10) || 1);
+    const workstationCount = Math.max(1, parseInt(cfg.workstationCount ?? cfg.operatorStationsCount ?? this.state.workstationCount ?? this.state.operatorStationsCount ?? 1, 10) || 1);
     const layoutDistributionMode = cfg.layoutDistributionMode || this.state.layoutDistributionMode || "per_station";
     const displayResolution = cfg.displayResolution || this.state.displayResolution || "4k";
     const monitorsPerWorkstation = modifiers.monitorsPerWorkstation;
+    const preferredFormFactor = cfg.preferredFormFactor || this.state.preferredFormFactor || "any";
+    const safeCapPct = modifiers.scenarioMode === "video_wall" ? 85 : 80;
 
-    // If "split_wall", divide the total decoding load across the operatorStationsCount workstations;
-    // If "per_station", each operator workstation views the entire configured camera grid.
-    const stationLoadDivisor = layoutDistributionMode === "split_wall" ? Math.max(1, operatorStationsCount) : 1;
+    const stationLoadDivisor = layoutDistributionMode === "split_wall" ? Math.max(1, workstationCount) : 1;
 
-    const profiles = GENETEC_514_REQUIREMENTS.CLIENT_WORKSTATION_PROFILES;
-    const profileEvaluations = {};
+    const profiles = reqObj.CLIENT_WORKSTATION_PROFILES;
+    const benchTable = reqObj.CLIENT_DECODING_BENCHMARKS_30FPS;
+    const profileEvaluationsMap = {};
+    const profileEvaluationsArray = [];
 
     ["minimum", "recommended", "high_performance"].forEach(profKey => {
-      const profDef = profiles[profKey];
+      const profDef = Object.assign({}, profiles[profKey], {
+        monitorSpec: profiles[profKey].testedDisplaySpec || `Up to ${profiles[profKey].maxMonitors} Monitors`
+      });
       const rawTotalLoadFraction = evaluatedGroups.reduce((s, g) => s + (g.profileLoads[profKey]?.loadFraction || 0), 0);
       const perStationLoadFraction = rawTotalLoadFraction / stationLoadDivisor;
       const loadPct = Math.round(perStationLoadFraction * 1000) / 10;
+      const utilizationPct = Math.min(999, Math.round(perStationLoadFraction * safeCapPct * 10) / 10);
 
-      // Genetec Section 1.3 benchmarks are measured at an 85% CPU & GPU ceiling
-      const estimatedHardwareUtilPct = Math.min(100, Math.round(perStationLoadFraction * 85 * 10) / 10);
+      const isMonitorCompliant = monitorsPerWorkstation <= profDef.maxMonitors && !(!isMilestone && profKey === "minimum" && displayResolution === "4k");
+      const hasUnsupportedStream = evaluatedGroups.some(g => g.viewedStreams > 0 && g.profileLoads[profKey]?.base30FpsMaxStreams <= 0);
+      const isDecodeCompliant = !hasUnsupportedStream && perStationLoadFraction <= 1.0;
+      const isCompliant = isMonitorCompliant && isDecodeCompliant;
 
-      // Check hardware constraints (Monitor count, 4K monitor support, unsupported AV1 4K on Minimum, etc.)
-      const disallowReasons = [];
-      if (monitorsPerWorkstation > profDef.maxMonitors) {
-        disallowReasons.push(`Requires ${monitorsPerWorkstation} monitors (Max ${profDef.maxMonitors} on ${profDef.shortLabel})`);
-      }
-      if (profKey === "minimum" && displayResolution === "4k") {
-        disallowReasons.push("Minimum profile is only rated for 1920x1200 / 1080p displays (Not 4K UHD)");
-      }
-      const hasUnsupportedStream = evaluatedGroups.some(g => g.viewedStreams > 0 && g.profileLoads[profKey]?.effectiveMaxStreams <= 0);
-      if (hasUnsupportedStream) {
-        disallowReasons.push("Contains codec/resolution stream unsupported on this hardware profile (e.g. 4K AV1 on Minimum)");
-      }
-      if (perStationLoadFraction > 1.0) {
-        disallowReasons.push(`Decoding load is ${loadPct}% of ${profDef.shortLabel} capacity (Exceeds 85% CPU/GPU cap)`);
-      }
+      const groupDetails = evaluatedGroups.map(g => {
+        const pl = g.profileLoads[profKey] || {};
+        return {
+          streams: g.viewedStreams,
+          pixelRateMpPerSec: g.totalPixelsPerSecMp,
+          estimatedBandwidthMbps: g.groupClientBitrateMbps,
+          effectiveMaxStreams: pl.effectiveMaxStreams || 0,
+          groupLoadPct: Math.round((pl.loadFraction || 0) * safeCapPct * 10) / 10
+        };
+      });
 
-      // Weighted single-equivalent stream ceiling for this profile based on the user's mix
-      const weightedMaxStreams = perStationLoadFraction > 0 && totalViewedStreams > 0
-        ? Math.floor((totalViewedStreams / stationLoadDivisor) / perStationLoadFraction)
-        : (profKey === "minimum" ? 6 : profKey === "recommended" ? 64 : 104);
+      const benchmarks30Fps = {
+        fhd1080p_h264: benchTable.fhd_2mp?.["H.264"]?.[profKey] ?? 0,
+        uhd4k_h264: benchTable.uhd_8mp?.["H.264"]?.[profKey] ?? 0,
+        fhd1080p_h265: benchTable.fhd_2mp?.["H.265"]?.[profKey] ?? 0,
+        uhd4k_h265: benchTable.uhd_8mp?.["H.265"]?.[profKey] ?? 0,
+        fhd1080p_av1: benchTable.fhd_2mp?.["AV1"]?.[profKey] ?? 0,
+        uhd4k_av1: benchTable.uhd_8mp?.["AV1"]?.[profKey] ?? 0
+      };
 
-      const minWorkstationsAtThisTier = Math.max(
-        1,
-        perStationLoadFraction > 0 ? Math.ceil(rawTotalLoadFraction) : 1,
-        Math.ceil(monitorsPerWorkstation / profDef.maxMonitors)
-      );
-
-      profileEvaluations[profKey] = {
+      const evObj = {
         profileKey: profKey,
         profile: profDef,
         rawTotalLoadFraction: Math.round(rawTotalLoadFraction * 1000) / 1000,
         perStationLoadFraction: Math.round(perStationLoadFraction * 1000) / 1000,
         loadPct,
-        estimatedHardwareUtilPct,
-        weightedMaxStreams,
-        isCompliant: disallowReasons.length === 0,
-        disallowReasons,
-        minWorkstationsAtThisTier
+        utilizationPct,
+        safeCapPct,
+        isDecodeCompliant,
+        isMonitorCompliant,
+        isCompliant,
+        groupDetails,
+        benchmarks30Fps
       };
+      profileEvaluationsMap[profKey] = evObj;
+      profileEvaluationsArray.push(evObj);
     });
 
-    // Determine Recommended Genetec 5.14.1.0 Profile Tier
+    // Determine Recommended Profile Tier
     let recommendedProfileKey = "high_performance";
-    let requiresMultipleWorkstations = false;
-    let minRequiredWorkstations = 1;
+    let exceedsSingleHighPerfWorkstation = false;
+    let workstationsNeededPerOperator = 1;
 
     if (totalViewedStreams === 0) {
-      recommendedProfileKey = monitorsPerWorkstation > 4 ? "high_performance" : (monitorsPerWorkstation > 2 || displayResolution === "4k" ? "recommended" : "minimum");
-      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
-    } else if (profileEvaluations.minimum.isCompliant) {
+      recommendedProfileKey = monitorsPerWorkstation > 4 ? "high_performance" : (monitorsPerWorkstation > 2 || (!isMilestone && displayResolution === "4k") ? "recommended" : "minimum");
+    } else if (profileEvaluationsMap.minimum.isCompliant) {
       recommendedProfileKey = "minimum";
-      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
-    } else if (profileEvaluations.recommended.isCompliant) {
+    } else if (profileEvaluationsMap.recommended.isCompliant) {
       recommendedProfileKey = "recommended";
-      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
-    } else if (profileEvaluations.high_performance.isCompliant) {
+    } else if (profileEvaluationsMap.high_performance.isCompliant) {
       recommendedProfileKey = "high_performance";
-      minRequiredWorkstations = layoutDistributionMode === "per_station" ? operatorStationsCount : 1;
     } else {
       recommendedProfileKey = "high_performance";
-      requiresMultipleWorkstations = true;
-      const wsForDecode = Math.ceil(profileEvaluations.high_performance.rawTotalLoadFraction);
+      exceedsSingleHighPerfWorkstation = true;
+      const wsForDecode = Math.ceil(profileEvaluationsMap.high_performance.rawTotalLoadFraction);
       const wsForMonitors = Math.ceil(monitorsPerWorkstation / profiles.high_performance.maxMonitors);
-      const perGridWs = Math.max(1, wsForDecode, wsForMonitors);
-      minRequiredWorkstations = layoutDistributionMode === "per_station"
-        ? (perGridWs * operatorStationsCount)
-        : perGridWs;
+      workstationsNeededPerOperator = Math.max(1, wsForDecode, wsForMonitors);
     }
 
-    const activeEvaluation = profileEvaluations[recommendedProfileKey];
-    const recommendedProfile = profiles[recommendedProfileKey];
+    const activeEvaluation = profileEvaluationsMap[recommendedProfileKey];
+    const recommendedProfile = Object.assign({}, profiles[recommendedProfileKey], {
+      monitorSpec: profiles[recommendedProfileKey].testedDisplaySpec || `Up to ${profiles[recommendedProfileKey].maxMonitors} Monitors`
+    });
 
-    // Match Catalog Workstations (Streamvault SVW-100E, SVW-300E-T3, SVW-500E, Dell Precision, BCDVideo Aurora)
+    // Match Catalog Workstations (Streamvault SVW, Milestone Husky IVO Viewing Station, Dell Precision, BCDVideo Aurora)
     const workstationsDb = (typeof window !== "undefined" && Array.isArray(window.WORKSTATIONS_DATABASE))
       ? window.WORKSTATIONS_DATABASE
       : [];
-    const primaryCatalogWorkstation = workstationsDb.find(w => w.id === recommendedProfile.recommendedStreamvaultId) || workstationsDb[0] || null;
-    const alternateCatalogWorkstation = recommendedProfile.alternateCatalogId
-      ? workstationsDb.find(w => w.id === recommendedProfile.alternateCatalogId) || null
-      : null;
 
-    // Inspect Project BOM for currently quoted workstations
-    const quotedWorkstations = (Array.isArray(bomList) ? bomList : []).filter(item => {
-      if (!item || item.parentInstanceId) return false;
-      const cat = String(item.category || "").toLowerCase();
-      const role = String(item.role || "").toLowerCase();
-      return cat === "workstations" || role === "workstation" || String(item.serverType || "").includes("workstation") || String(item.serverType || "").includes("video_wall");
-    });
-    const quotedWorkstationCount = quotedWorkstations.reduce((sum, item) => sum + (parseInt(item.qty, 10) || 1), 0);
+    const matchedCatalogWorkstations = workstationsDb
+      .filter(w => {
+        if (preferredFormFactor === "rack") return (w.rackUnits || 0) >= 1 || String(w.formFactor || "").toLowerCase().includes("rack");
+        if (preferredFormFactor === "tower") return (w.rackUnits || 0) === 0 && !String(w.formFactor || "").toLowerCase().includes("rack");
+        return true;
+      })
+      .map(w => {
+        const wMaxMon = w.maxMonitors || 2;
+        const wMaxStreams = w.maxDecodedStreams1080p || 16;
+        const meetsSpec = wMaxMon >= monitorsPerWorkstation && wMaxStreams >= Math.min(64, totalViewedStreams);
+        return Object.assign({}, w, { meetsSpec });
+      })
+      .sort((a, b) => {
+        // Prioritize vendor match (Milestone Husky IVO VS when Milestone is active, Streamvault when Genetec is active)
+        const aVendorMatch = isMilestone ? Boolean(a.isMilestoneHusky) : Boolean(a.isStreamvault);
+        const bVendorMatch = isMilestone ? Boolean(b.isMilestoneHusky) : Boolean(b.isStreamvault);
+        if (aVendorMatch !== bVendorMatch) return aVendorMatch ? -1 : 1;
+        return (a.msrp || 0) - (b.msrp || 0);
+      });
 
-    // Build Engineering Findings & Genetec 5.14.1.0 Advisory Notes
+    const primaryCatalogWorkstation =
+      matchedCatalogWorkstations.find(w => w.id === recommendedProfile.recommendedStreamvaultId) ||
+      workstationsDb.find(w => w.id === recommendedProfile.recommendedStreamvaultId) ||
+      matchedCatalogWorkstations.find(w => w.meetsSpec) ||
+      matchedCatalogWorkstations[0] ||
+      workstationsDb[0] ||
+      null;
+
+    // Build Engineering Findings & Advisory Notes
     const findings = [];
-    if (recommendedProfileKey === "high_performance") {
-      findings.push({
-        severity: "info",
-        text: "Dual-GPU Monitor Rule (SystemRequirements.pdf Page 5): The High-Performance profile uses 2x NVIDIA RTX 5070 Ti (16 GB) GPUs. At least one physical monitor must be connected to each GPU card to activate both hardware decoding engines."
-      });
-    }
-    if (recommendedProfileKey === "minimum") {
-      findings.push({
-        severity: "info",
-        text: "Intel Quick Sync Video Rule (SystemRequirements.pdf Page 5): On the Minimum profile (Intel Core i3-8100), the monitor must be connected directly to the motherboard display output to enable Intel Quick Sync hardware decoding."
-      });
+    if (isMilestone) {
+      if (recommendedProfileKey === "minimum") {
+        findings.push({
+          severity: "info",
+          text: "Milestone Husky IVO 150D Viewing Station (NVIDIA RTX A400 4GB + Intel Quick Sync): Supports up to 2x 4K displays (16x 1080p on 1x 4K display or 8x 1080p across 2x 4K displays)."
+        });
+      } else if (recommendedProfileKey === "recommended") {
+        findings.push({
+          severity: "info",
+          text: "Milestone Husky IVO 350T Viewing Station (NVIDIA RTX A1000 8GB + Intel Quick Sync): Supports up to 4x 4K displays via 4x Mini-DP 1.4a (up to 36x 1080p H.264 / 25x 1080p H.265 on 1x 4K display or 18x 1080p across 2x 4K displays)."
+        });
+      } else {
+        findings.push({
+          severity: "info",
+          text: "XProtect Smart Wall Multi-GPU Profile: Uses Dual NVIDIA RTX 4000 Ada GPUs + Intel Quick Sync. Connect displays across both GPU cards and enable Adaptive Streaming in XProtect Smart Client."
+        });
+      }
+      if (modifiers.adaptiveStreaming) {
+        findings.push({
+          severity: "success",
+          text: "Milestone Adaptive Streaming Active (+35% Multi-Tile Capacity): XProtect Smart Client automatically requests lower-resolution secondary streams from Recording Servers based on tile pixel dimensions."
+        });
+      } else if (totalViewedStreams >= 9) {
+        findings.push({
+          severity: "info",
+          text: "Tip — Enable Milestone Adaptive Streaming: Configuring dual/multi-streams on cameras allows XProtect Smart Client to decode lower-resolution streams in multi-tile grids, reducing GPU/CPU load by ~30–35%."
+        });
+      }
+    } else {
+      if (recommendedProfileKey === "high_performance") {
+        findings.push({
+          severity: "info",
+          text: "Dual-GPU Monitor Rule (SystemRequirements.pdf Page 5): The High-Performance profile uses 2x NVIDIA RTX 5070 Ti (16 GB) GPUs. At least one physical monitor must be connected to each GPU card to activate both hardware decoding engines."
+        });
+      }
+      if (recommendedProfileKey === "minimum") {
+        findings.push({
+          severity: "info",
+          text: "Intel Quick Sync Video Rule (SystemRequirements.pdf Page 5): On the Minimum profile (Intel Core i3-8100), the monitor must be connected directly to the motherboard display output to enable Intel Quick Sync hardware decoding."
+        });
+      }
     }
     if (modifiers.watermarking) {
       findings.push({
         severity: "warning",
-        text: `Video Watermarking Active (Page 6): Decreases maximum simultaneous viewed tiles by ${modifiers.hardwareAcceleration ? '10% (with Hardware Acceleration)' : '30% (without Hardware Acceleration)'}.`
+        text: `Video Watermarking Active: Decreases maximum simultaneous viewed tiles by ${modifiers.hardwareAcceleration ? '10% (with Hardware Acceleration)' : '30% (without Hardware Acceleration)'}.`
       });
     }
     if (modifiers.encryptedStreams) {
       findings.push({
         severity: "warning",
-        text: "Encrypted Video Streams Active (Page 6): Viewing encrypted video streams increases client CPU usage by up to 40% on low-resolution (≤2MP) streams."
+        text: "Encrypted Video Streams Active: Viewing encrypted video streams increases client CPU usage by up to 40% on low-resolution (≤2MP) streams."
       });
     }
-    if (requiresMultipleWorkstations) {
-      findings.push({
-        severity: "critical",
-        text: `Single-Workstation Ceiling Exceeded: Viewing ${totalViewedStreams} streams (${totalDecodedMpPerSec} MP/s) requires ${minRequiredWorkstations}x High-Performance Workstations (${recommendedProfile.recommendedStreamvaultSku}) to stay within Genetec's 85% CPU/GPU stability limit.`
-      });
-    }
-    if (totalClientBitrateMbps > 700) {
+    if (exceedsSingleHighPerfWorkstation) {
       findings.push({
         severity: "warning",
-        text: `High Client Network Ingress (${totalClientBitrateMbps} Mbps): Recommend a 2.5 GbE or 10 GbE client network interface (such as on Streamvault SVW-500E or BCDVideo Aurora) instead of standard 1 GbE.`
+        text: `Single-Workstation Ceiling Exceeded: Viewing ${totalViewedStreams} streams (${totalDecodedMpPerSec} MP/s) requires ${workstationsNeededPerOperator}x High-Performance Workstations per operator position.`
       });
     }
 
     return {
-      version: GENETEC_514_REQUIREMENTS.version,
-      datasheetPath: GENETEC_514_REQUIREMENTS.datasheetPath,
+      vmsPlatform,
+      adaptiveStreaming: modifiers.adaptiveStreaming,
+      version: reqObj.version,
+      datasheetPath: isMilestone ? MILESTONE_2026_REQUIREMENTS.viewingStationPath : GENETEC_514_REQUIREMENTS.datasheetPath,
+      viewedGroups: evaluatedGroups,
       evaluatedGroups,
       modifiers,
       totalViewedCameras,
       totalViewedStreams,
       totalClientBitrateMbps,
       totalDecodedMpPerSec,
+      totalPixelRateMpPerSec: totalDecodedMpPerSec,
       monitorsPerWorkstation,
+      monitorCount: monitorsPerWorkstation,
       displayResolution,
-      operatorStationsCount,
+      operatorStationsCount: workstationCount,
+      workstationCount,
+      usageMode: modifiers.scenarioMode,
+      hwAccelDecode: modifiers.hardwareAcceleration,
+      watermarking: modifiers.watermarking,
+      encryptedStreams: modifiers.encryptedStreams,
+      preferredFormFactor,
       layoutDistributionMode,
       recommendedProfileKey,
       recommendedProfile,
       activeEvaluation,
-      profileEvaluations,
-      requiresMultipleWorkstations,
-      minRequiredWorkstations,
+      recommendedProfileEvaluation: activeEvaluation,
+      profileEvaluations: profileEvaluationsArray,
+      profileEvaluationsMap,
+      requiresMultipleWorkstations: exceedsSingleHighPerfWorkstation,
+      exceedsSingleHighPerfWorkstation,
+      workstationsNeededPerOperator,
+      minRequiredWorkstations: workstationCount * workstationsNeededPerOperator,
       primaryCatalogWorkstation,
-      alternateCatalogWorkstation,
+      recommendedCatalogWorkstation: primaryCatalogWorkstation,
+      matchedCatalogWorkstations,
       allCatalogWorkstations: workstationsDb,
-      quotedWorkstationCount,
       findings
     };
   }
@@ -4516,8 +5651,11 @@ window.ELECTRICAL_CONSTANTS = ELECTRICAL_CONSTANTS;
 window.NetworkSizer = NetworkSizer;
 window.VIDEO_STORAGE_CONSTANTS = VIDEO_STORAGE_CONSTANTS;
 window.GENETEC_514_REQUIREMENTS = GENETEC_514_REQUIREMENTS;
+window.MILESTONE_2026_REQUIREMENTS = MILESTONE_2026_REQUIREMENTS;
 window.VideoStorageSizer = VideoStorageSizer;
 window.GenetecLicensingSizer = GenetecLicensingSizer;
+window.MilestoneLicensingSizer = MilestoneLicensingSizer;
 window.ClientWorkstationSizer = ClientWorkstationSizer;
+
 
 

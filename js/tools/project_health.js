@@ -376,15 +376,18 @@ function auditProjectHealth() {
   const genetecCamLicSkus = new Set([
     "GSC-Om-E-1C", "GSC-Om-S-1C", "GSC-SV-AIO-1C",
     "GSC-Om-E-1PAC", "GSC-Om-S-1PAC", "GSC-SV-AIO-1PAC",
-    "GSC-Om-E-1DV", "GSC-Om-E-1BWC", "LIC-VMS-CAM-CORE"
+    "GSC-Om-E-1DV", "GSC-Om-E-1BWC", "LIC-VMS-CAM-CORE",
+    "XPCODL", "XPEXDL", "XPPPDL", "XPXPDL", "XPCOMIDL"
   ]);
+  const isMilestoneActiveDrc = (typeof window !== "undefined" && (window.activeVmsLicensingVendor === "milestone" || window.videoVmsVendor === "milestone")) ||
+    projectBOM.some(i => !i.parentInstanceId && String(i.vendor || "").toLowerCase().includes("milestone"));
   const licenseItems = projectBOM.filter(i => {
     const sku = String(i.sku || "");
     const id = String(i.id || "");
-    if (genetecCamLicSkus.has(sku) || sku.startsWith("LIC-") || id.includes("1c") || id.includes("1cam")) return true;
+    if (genetecCamLicSkus.has(sku) || sku.startsWith("LIC-") || id.includes("1c") || id.includes("1cam") || id.includes("-dl")) return true;
     const modelLower = String(i.model || "").toLowerCase();
     const isCamLic = (i.category === "vms_software" || String(i.role || "").includes("License")) &&
-      (modelLower.includes("camera connection") || modelLower.includes("camera channel"));
+      (modelLower.includes("camera connection") || modelLower.includes("camera channel") || modelLower.includes("device license"));
     return isCamLic;
   });
   const totalLicenses = licenseItems.reduce((acc, i) => acc + (i.qty || 1), 0);
@@ -396,14 +399,22 @@ function auditProjectHealth() {
       id: "missing_licenses",
       category: "scope",
       severity: "warning",
-      standardsReference: "Genetec Security Center 5.13/5.14 ProductCompatability.pdf • Omnicast Channel Licensing",
+      standardsReference: isMilestoneActiveDrc
+        ? "Milestone XProtect 2026 R2 Price List • Device License & Care Plus Rules"
+        : "Genetec Security Center 5.13/5.14 ProductCompatability.pdf • Omnicast Channel Licensing",
       title: "Missing VMS Camera Channel & Software Maintenance Licenses",
-      summary: `${missingLic} IP Camera${missingLic === 1 ? '' : 's'} without Genetec Omnicast Camera Connection Licenses (GSC-Om-X-1C + Mandatory Advantage)`,
-      details: `Project contains ${totalCameras} IP camera(s) but only ${totalLicenses} VMS camera channel license(s) have been added to the BOM. Every IP camera (including multi-sensor panoramic cameras at 1 connection per IP address) requires a matching Omnicast Camera Connection SKU plus mandatory Genetec Advantage software maintenance.`,
-      actionLabel: typeof addGenetecLicensesToBom === "function"
-        ? `+ Synchronize Genetec Licenses (${totalCameras} Cameras) to BOM`
-        : `+ Add ${missingLic} Missing VMS License${missingLic === 1 ? '' : 's'}`,
-      actionFn: "autoAddMissingLicenses()",
+      summary: isMilestoneActiveDrc
+        ? `${missingLic} IP Camera${missingLic === 1 ? '' : 's'} without Milestone XProtect Device Licenses (XPCODL/XPEXDL/XPPPDL + Care Plus)`
+        : `${missingLic} IP Camera${missingLic === 1 ? '' : 's'} without Genetec Omnicast Camera Connection Licenses (GSC-Om-X-1C + Mandatory Advantage)`,
+      details: `Project contains ${totalCameras} IP camera(s) but only ${totalLicenses} VMS camera channel/device license(s) have been added to the BOM. Every IP camera requires a matching VMS Device/Camera Connection SKU plus software maintenance.`,
+      actionLabel: isMilestoneActiveDrc && typeof addMilestoneLicensesToBom === "function"
+        ? `+ Synchronize Milestone XProtect Licenses (${totalCameras} Cameras) to BOM`
+        : (typeof addGenetecLicensesToBom === "function"
+            ? `+ Synchronize Genetec Licenses (${totalCameras} Cameras) to BOM`
+            : `+ Add ${missingLic} Missing VMS License${missingLic === 1 ? '' : 's'}`),
+      actionFn: isMilestoneActiveDrc && typeof addMilestoneLicensesToBom === "function"
+        ? "addMilestoneLicensesToBom(); updateProjectHealthUI(); renderProjectHealthModal();"
+        : "autoAddMissingLicenses()",
       badgeText: `${missingLic} LICENSES MISSING`
     });
   }
@@ -422,21 +433,29 @@ function auditProjectHealth() {
           !String(i.role || "").includes("License") &&
           !String(i.role || "").includes("Maintenance") &&
           !String(i.role || "").includes("Database") &&
-          (i.role === "Server" || i.role === "Compute & Storage" || i.role === "VMS Server" || (i.category || '') === "servers" || (i.model || '').toLowerCase().includes("nvr") || (i.model || '').toLowerCase().includes("streamvault"))
+          (i.role === "Server" || i.role === "Compute & Storage" || i.role === "VMS Server" || (i.category || '') === "servers" || (i.model || '').toLowerCase().includes("nvr") || (i.model || '').toLowerCase().includes("streamvault") || (i.model || '').toLowerCase().includes("husky"))
         );
         if (!hasVmsServer) {
           issues.push({
             id: "missing_vms_server",
             category: "scope",
             severity: "warning",
-            standardsReference: "Genetec Streamvault SV-2000E / SV-4000E Hardware Sizing Guide",
-            title: "Missing VMS Recording Server / Streamvault Appliance",
-            summary: `${totalCameras} Camera(s) in scope, but no Streamvault / VMS Recording Server has been quoted`,
-            details: `Video surveillance is in-scope with ${totalCameras} IP camera(s), but no physical Streamvault appliance or VMS recording server has been added to the BOM to host the Security Center Archiver role and RAID storage.`,
-            actionLabel: typeof autoFitStreamvaultToBom === "function"
-              ? "+ Auto-Fit Streamvault Appliance to BOM"
-              : "+ Add 2U NVR Recording Server",
-            actionFn: "quickAddDefaultNvrServer()",
+            standardsReference: isMilestoneActiveDrc
+              ? "Milestone Husky IVO (150D / 350T / 350R / 700R / 1000R / 1800R) Hardware Sizing Guide"
+              : "Genetec Streamvault SV-2000E / SV-4000E Hardware Sizing Guide",
+            title: isMilestoneActiveDrc
+              ? "Missing VMS Recording Server / Milestone Husky IVO Appliance"
+              : "Missing VMS Recording Server / Streamvault Appliance",
+            summary: `${totalCameras} Camera(s) in scope, but no ${isMilestoneActiveDrc ? 'Milestone Husky IVO' : 'Streamvault'} / VMS Recording Server has been quoted`,
+            details: `Video surveillance is in-scope with ${totalCameras} IP camera(s), but no physical recording server appliance has been added to the BOM to host the VMS recording role and RAID storage.`,
+            actionLabel: isMilestoneActiveDrc && typeof autoFitHuskyToBom === "function"
+              ? "+ Auto-Fit Milestone Husky IVO Appliance to BOM"
+              : (typeof autoFitStreamvaultToBom === "function"
+                  ? "+ Auto-Fit Streamvault Appliance to BOM"
+                  : "+ Add 2U NVR Recording Server"),
+            actionFn: isMilestoneActiveDrc && typeof autoFitHuskyToBom === "function"
+              ? "autoFitHuskyToBom(); updateProjectHealthUI(); renderProjectHealthModal();"
+              : "quickAddDefaultNvrServer()",
             badgeText: "NO SERVER"
           });
         }
@@ -1105,11 +1124,38 @@ function auditProjectHealth() {
   }
 
   // =========================================================================
-  // RULE 17: GENETEC SECURITY CENTER SERVER SPEC, ROLE ISOLATION & LICENSING AUDIT
-  // Enforces Genetec 5.13/5.14 ProductCompatability.pdf, SystemRequirements.pdf,
-  // Suprema Integration Guide, Corsight Syfty Guide, and StreamConnect v2.1 Rules
+  // RULE 17: MULTI-MANUFACTURER VMS SERVER SPEC, ROLE ISOLATION & LICENSING AUDIT
+  // Supports both Genetec Security Center 5.14 / Streamvault AND Milestone XProtect 2026 R2 / Husky IVO
   // =========================================================================
-  if (typeof GenetecLicensingSizer !== "undefined" && typeof GenetecLicensingSizer.calculate === "function") {
+  if (isMilestoneActiveDrc && typeof MilestoneLicensingSizer !== "undefined" && typeof MilestoneLicensingSizer.calculate === "function") {
+    const mRes = MilestoneLicensingSizer.calculate(projectBOM);
+    const requiredPaidLineItems = (mRes.lineItems || []).filter(li => li.qty > 0 && li.unitMsrp > 0 && !li.isIncludedZeroCost);
+    const missingMilestoneSkus = [];
+    requiredPaidLineItems.forEach(reqLi => {
+      const quotedQty = projectBOM
+        .filter(b => !b.parentInstanceId && (b.sku === reqLi.sku || b.id === reqLi.id))
+        .reduce((sum, b) => sum + (parseInt(b.qty, 10) || 1), 0);
+      if (quotedQty < reqLi.qty) {
+        missingMilestoneSkus.push(`${reqLi.qty - quotedQty}x ${reqLi.sku}`);
+      }
+    });
+
+    if (totalCameras > 0 && missingMilestoneSkus.length > 0) {
+      issues.push({
+        id: "milestone_unsynced_bom_licenses",
+        category: "scope",
+        severity: "warning",
+        priority: 2,
+        standardsReference: "Milestone XProtect 2026 R2 Systems Comparison Chart & Jan 2027 USD Price List",
+        title: `Unsynchronized Milestone XProtect Licenses & Care Plus (${missingMilestoneSkus.length} SKU${missingMilestoneSkus.length === 1 ? '' : 's'})`,
+        summary: `Milestone XProtect sizer (${mRes.editionInfo?.label || 'XProtect'}) requires ${missingMilestoneSkus.slice(0, 4).join(", ")}${missingMilestoneSkus.length > 4 ? ` (+${missingMilestoneSkus.length - 4} more)` : ''} not yet synchronized to the BOM`,
+        details: `Milestone XProtect ${mRes.editionInfo?.label || 'Corporate'} requires a Base Server License (${mRes.editionInfo?.baseSku || 'XPCOBT'}), ${mRes.totalDeviceLicenses} Device License(s) (${mRes.editionInfo?.deviceSku || 'XPCODL'}), and ${mRes.careYears}-Year Care Plus maintenance on the Bill of Materials.`,
+        actionLabel: `+ Synchronize Milestone XProtect Licenses ($${mRes.totalSoftwareMsrp.toLocaleString()}) to BOM`,
+        actionFn: "if(typeof addMilestoneLicensesToBom==='function'){addMilestoneLicensesToBom(); updateProjectHealthUI(); renderProjectHealthModal();}",
+        badgeText: `${missingMilestoneSkus.length} SKUS UNSYNCED`
+      });
+    }
+  } else if (typeof GenetecLicensingSizer !== "undefined" && typeof GenetecLicensingSizer.calculate === "function") {
     const licRes = GenetecLicensingSizer.calculate(projectBOM);
     const mrSpec = licRes.multiRoleServerSpec || {};
     const vLoad = licRes.videoLoad || {};
