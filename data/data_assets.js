@@ -9494,9 +9494,25 @@ if (typeof module !== 'undefined' && module.exports) {
         "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
         "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
     },
+    "GSC-1SDK-SUPREMA-READ": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf"
+    },
+    "GSC-Sy-E-1GCHM": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-SY-E-1GCHMSTU": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf"
+    },
+    "GSC-1SDK-ALLIEDTELESIS-STREAMC": {
+        "datasheetPath": "Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf"
+    },
     "GSC-1SDK-BAPS-SYFTYCORSIGHTAI": {
-        "datasheetPath": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf",
-        "datasheet": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf"
+        "datasheetPath": "Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf",
+        "datasheet": "Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf"
     },
     "GSC-1SDK-BRIEFCAM": {
         "datasheetPath": "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf",

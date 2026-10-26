@@ -2340,30 +2340,70 @@ const SOFTWARE_DATABASE = {
     {
       id: "genetec-sdk-allied-streamconnect",
       vendor: "Genetec",
-      model: "Genetec Software Development Kit Connection — Allied Telesis StreamConnect",
+      model: "Genetec Software Development Kit Connection — Allied Telesis StreamConnect v2.1",
       sku: "GSC-1SDK-ALLIEDTELESIS-STREAMC",
       role: "Software License",
       category: "vms_software",
       type: "license",
       licenseType: "Partner Software Development Kit Connection",
       msrp: 250,
-      description: "One (1) Genetec Software Development Kit (SDK) connection for Allied Telesis StreamConnect switch management.",
-      keyFeatures: ["Displays switch port status, PoE consumption, and remote port reset in Security Desk"],
-      datasheetPath: "Datasheets/Genetec/SupportedPlugins.pdf"
+      description: "One (1) Genetec Software Development Kit (SDK) connection instance for Allied Telesis StreamConnect v2.1 PoE switch management. Each unit adds 1 connection instance to the shared license pool (1 per Main/Expansion Archiver server + 1 per open ATI Switch Management task or Security Desk Monitoring tile widget; default 4 instances).",
+      keyFeatures: [
+        "Shared license pool: 1 instance per Main/Expansion Archiver server + 1 per open Config Tool/Security Desk Switch Management task or Monitoring tile widget",
+        "Requires Security Center 5.13.2.0+ and AlliedWare Plus 5.5.4+; supports Security Center Federation (v2.1+); not supported on VCS stacked switches"
+      ],
+      datasheetPath: "Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf"
     },
     {
       id: "genetec-sdk-suprema-biostar",
       vendor: "Genetec",
-      model: "Genetec Software Development Kit Connection — Suprema BioStar 2 Biometrics",
-      sku: "GSC-1SDK-PREFTECH-BIOS",
+      model: "Genetec Software Development Kit Connection — Suprema Plugin for Genetec (1 License = 2 Connections)",
+      sku: "GSC-1SDK-SUPREMA-READ",
       role: "Software License",
       category: "vms_software",
       type: "license",
       licenseType: "Partner Software Development Kit Connection",
       msrp: 250,
-      description: "One (1) Genetec Software Development Kit (SDK) connection for Suprema BioStar 2 biometric reader & credential synchronization (also covers GSC-1SDK-MAGNUM-BIOSTAR / GSC-1SDK-PTWIDE-SUPREMA / GSC-1SDK-SAN2-SUPREMA).",
-      keyFeatures: ["Requires 2 SDK licenses per client/server instance; synchronizes Suprema FaceStation, BioStation, and BioEntry readers via Synergis Cloud Link RIO"],
+      description: "One (1) Genetec SDK Connection license for Suprema Plugin for Genetec (GSC-1SDK-SUPREMA-READ, EN 102.00.SPG Page 16). One license supports 2 connections. Requires 3x GSC-1SDK-SUPREMA-READ per Server (2 Config Tool logins + 1 Security Desk login + 1 Suprema Extractor Plugin + 1 Suprema Device Plugin supporting up to 4 Cloud Links / 256 Suprema devices).",
+      keyFeatures: [
+        "1 GSC-1SDK-SUPREMA-READ license supports 2 SDK connections; 3 licenses required per Genetec Server",
+        "1 Suprema Device Plugin supports up to 4 dedicated Synergis Cloud Links (up to 256 Suprema devices; 50 recommended per Cloud Link)",
+        "Also requires Suprema INT_GEN_GSC plugin license and 1x GSC-Sy-X-1R(E) reader license per door"
+      ],
       datasheetPath: "Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf"
+    },
+    {
+      id: "genetec-sy-e-1gchm",
+      vendor: "Genetec",
+      model: "Genetec Synergis Enterprise — 1 Global Cardholder Synchronizer / Management Connection",
+      sku: "GSC-Sy-E-1GCHM",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Global Cardholder Synchronizer License",
+      msrp: 1950,
+      description: "One (1) Global Cardholder Management (Global Cardholder Synchronizer) connection per remote Security Center system connecting to the central Synergis Enterprise system.",
+      keyFeatures: [
+        "Synchronizes cardholders, credentials, and access groups across multiple independent Security Center systems",
+        "Central system must be Synergis Enterprise; 1 license required per remote system connecting"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
+    },
+    {
+      id: "genetec-sy-e-1gchmstu",
+      vendor: "Genetec",
+      model: "Genetec Synergis Enterprise — Global Cardholder Synchronizer Unlimited Site License",
+      sku: "GSC-SY-E-1GCHMSTU",
+      role: "Software License",
+      category: "vms_software",
+      type: "license",
+      licenseType: "Global Cardholder Synchronizer Site License",
+      msrp: 78000,
+      description: "Unlimited Site License for Security Center Global Cardholder Management (Global Cardholder Synchronizer) connections across 40+ remote systems.",
+      keyFeatures: [
+        "Unlimited remote Security Center system connections for global cardholder & credential synchronization"
+      ],
+      datasheetPath: "Datasheets/Genetec/ProductCompatability.pdf"
     },
     {
       id: "genetec-sdk-controlid-idbridge",
@@ -2396,16 +2436,19 @@ const SOFTWARE_DATABASE = {
     {
       id: "genetec-sdk-corsight-ai",
       vendor: "Genetec",
-      model: "Genetec Software Development Kit Connection — Corsight AI Facial Recognition",
+      model: "Genetec Software Development Kit Connection — Corsight AI Fortify (Syfty Suite v1.1)",
       sku: "GSC-1SDK-BAPS-SYFTYCORSIGHTAI",
       role: "Software License",
       category: "vms_software",
       type: "license",
       licenseType: "Partner Software Development Kit Connection",
       msrp: 250,
-      description: "One (1) Genetec Software Development Kit (SDK) connection for SYFTY / Corsight AI Fortify real-time facial recognition.",
-      keyFeatures: ["Streams Corsight AI watchlist alerts, bounding boxes, and face match events into Security Desk; requires dedicated GPU server"],
-      datasheetPath: "Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf"
+      description: "One (1) Genetec Software Development Kit (SDK) connection for Syfty Suite v1.1 / Corsight AI Fortify real-time facial recognition (Default: 2 connections per server for Syfty Event Processor ServiceHost + Syfty Overlay Service / Plugin Role).",
+      keyFeatures: [
+        "Syfty Suite v1.1: Web/Config Tool Dashboard (port 5200), Event Processor ServiceHost (SSE stream), Overlay Service, and Syfty AI Report task",
+        "Requires H.264 high-res stream codec (H.265/MJPEG not supported) and Genetec Media Gateway role with RTSPS (Require TLS) disabled"
+      ],
+      datasheetPath: "Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf"
     },
     {
       id: "genetec-sdk-briefcam",

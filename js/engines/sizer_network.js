@@ -1665,24 +1665,19 @@ const GenetecLicensingSizer = {
    * Supports multi-selection of any combination of Partner SDKs simultaneously.
    */
   PARTNER_SDK_OPTIONS: [
-    { key: 'suprema_biostar', sku: 'GSC-1SDK-PREFTECH-BIOS', label: 'Suprema BioStar 2 Biometrics Integration', ruleHint: '2 SDK connections per endpoint ($250/conn)', defaultQty: 2, catalogId: 'genetec-sdk-suprema-biostar', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf' },
-    { key: 'briefcam', sku: 'GSC-1SDK-BRIEFCAM', label: 'BriefCam Video Synopsis & Analytics', ruleHint: '1 VSServer + Fetch/GPU + Clients + 1 Spare ($250/conn)', defaultQty: 4, catalogId: 'genetec-sdk-briefcam', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf' },
-    { key: 'corsight_ai', sku: 'GSC-1SDK-BAPS-SYFTYCORSIGHTAI', label: 'Corsight AI Fortify Facial Recognition', ruleHint: '1 SDK connection per Fortify Server Bridge ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-corsight-ai', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf' },
-    { key: 'xpress_entry', sku: 'GSC-1SDK-TELAERIS-XPRESSENTRY', label: 'Telaeris XpressEntry Handheld Badge & Mustering', ruleHint: '1 SDK connection per XpressEntry Server ($250/svr)', defaultQty: 1, catalogId: 'genetec-sdk-xpressentry', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Telaeris_XPressEntry_Genetec_Integration.pdf' },
-    { key: 'advancis_winguard', sku: 'GSC-1SDK-ADVANCIS-WINGUARD', label: 'Advancis WinGuard PSIM Integration', ruleHint: '1 SDK connection per WinGuard Interface Node ($250/node)', defaultQty: 1, catalogId: 'genetec-sdk-advancis-winguard', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Advancis_WinGuard_PSIM_Genetec_Integration.pdf' },
-    { key: 'controlid_idbridge', sku: 'GSC-1SDK-CONTROLID-IDBRIDGE', label: 'Control iD iDBridge Access & Biometric Middleware', ruleHint: '1 SDK connection per iDBridge Server ($250/svr)', defaultQty: 1, catalogId: 'genetec-sdk-controlid-idbridge', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf' },
-    { key: 'princeton_identity', sku: 'GSC-1SDK-PRINCETONIDENTITY-ACS', label: 'Princeton Identity Iris & Face Access Control Suite', ruleHint: '1 SDK connection per Princeton Identity ACS Server ($250/svr)', defaultQty: 1, catalogId: 'genetec-sdk-princeton-identity', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf' },
-    { key: 'lsp_netlink', sku: 'GSC-1SDK-LSP-NETLINK', label: 'LifeSafety Power NetLink Power Monitoring', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-lsp-netlink', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'amg_ndm', sku: 'GSC-1SDK-AMG-NDM', label: 'AMG Systems Network Device Management', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-amg-ndm', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'allied_streamconnect', sku: 'GSC-1SDK-ALLIEDTELESIS-STREAMC', label: 'Allied Telesis StreamConnect Switch Integration', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-allied-streamconnect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'hid_is', sku: 'GSC-1SDK-HID-IS', label: 'HID Integration Services / Origo Mobile / FARGO Connect', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-hid-is', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'schlage_wifilock', sku: 'GSC-1SDK-SCHLAGE-WIFILOCK', label: 'Schlage NDE / LE Wi-Fi Lock Server', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-schlage-wifilock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'aa_accentra', sku: 'GSC-1SDK-AA-ACCENTRA', label: 'Assa Abloy Accentra Lock Integration', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-aa-accentra', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'alcatraz_rock', sku: 'GSC-1SDK-ALCATRAZ-ROCK', label: 'Alcatraz AI The Rock Facial Authentication', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-alcatraz-rock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'raptor_connect', sku: 'GSC-1SDK-RAPTOR-CONNECT', label: 'Raptor Connect / Envoy / iLobby Visitor Management', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-raptor-connect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'omnilert_gundetect', sku: 'GSC-1SDK-OMNILERT-GUNDETECT', label: 'Omnilert / Amberbox / EAGL Gunshot Detection', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-omnilert-gundetect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'senstar_nms', sku: 'GSC-1SDK-SENSTAR-NMS', label: 'Senstar Network Manager Perimeter Intrusion', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-senstar-nms', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'commend_duetto', sku: 'GSC-1SDK-COMMEND-DUETTO', label: 'Commend Duetto / Symphony Intercom Interface', ruleHint: '$250 / connection', defaultQty: 1, catalogId: 'genetec-sdk-commend-duetto', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' }
+    { key: 'corsight_ai', sku: 'GSC-1SDK-BAPS-SYFTYCORSIGHTAI', label: 'Corsight AI Fortify Facial Recognition (Syfty Suite v1.1)', ruleHint: 'Default 2 connections: 1 Syfty Event Processor + 1 Overlay Service / Plugin Role ($250/conn • Requires H.264 & Media Gateway RTSPS Off)', defaultQty: 2, catalogId: 'genetec-sdk-corsight-ai', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf' },
+    { key: 'briefcam', sku: 'GSC-1SDK-BRIEFCAM', label: 'BriefCam Video Synopsis & Analytics (REVIEW / RESPOND / RESEARCH)', ruleHint: 'Default 4 connections: 1 VSServer + Fetch/GPU + Embedded Clients + 1 Spare ($250/conn)', defaultQty: 4, catalogId: 'genetec-sdk-briefcam', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf' },
+    { key: 'allied_streamconnect', sku: 'GSC-1SDK-ALLIEDTELESIS-STREAMC', label: 'Allied Telesis StreamConnect v2.1 PoE Switch Integration', ruleHint: 'Default 4 instances: 1 per Main/Archiver Server + 1 per open Switch Mgmt task / Security Desk tile widget ($250/instance)', defaultQty: 4, catalogId: 'genetec-sdk-allied-streamconnect', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf' },
+    { key: 'lsp_netlink', sku: 'GSC-1SDK-LSP-NETLINK', label: 'LifeSafety Power NetLink Power Monitoring', ruleHint: '1 SDK connection per NetLink server instance ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-lsp-netlink', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'amg_ndm', sku: 'GSC-1SDK-AMG-NDM', label: 'AMG Systems Network Device Management', ruleHint: '1 SDK connection per AMG NDM instance ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-amg-ndm', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'hid_is', sku: 'GSC-1SDK-HID-IS', label: 'HID Integration Services / Origo Mobile / FARGO Connect', ruleHint: '1 SDK connection per HID Integration Service ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-hid-is', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'schlage_wifilock', sku: 'GSC-1SDK-SCHLAGE-WIFILOCK', label: 'Schlage NDE / LE Wi-Fi Lock Server', ruleHint: '1 SDK connection per Schlage Engage server ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-schlage-wifilock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'aa_accentra', sku: 'GSC-1SDK-AA-ACCENTRA', label: 'Assa Abloy Accentra Lock Integration', ruleHint: '1 SDK connection per Accentra sync service ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-aa-accentra', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'alcatraz_rock', sku: 'GSC-1SDK-ALCATRAZ-ROCK', label: 'Alcatraz AI The Rock Facial Authentication', ruleHint: '1 SDK connection per Alcatraz AI Cloud/On-Prem bridge ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-alcatraz-rock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'raptor_connect', sku: 'GSC-1SDK-RAPTOR-CONNECT', label: 'Raptor Connect / Envoy / iLobby Visitor Management', ruleHint: '1 SDK connection per visitor management gateway ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-raptor-connect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'omnilert_gundetect', sku: 'GSC-1SDK-OMNILERT-GUNDETECT', label: 'Omnilert / Amberbox / EAGL Gunshot Detection', ruleHint: '1 SDK connection per gunshot detection server ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-omnilert-gundetect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'senstar_nms', sku: 'GSC-1SDK-SENSTAR-NMS', label: 'Senstar Network Manager Perimeter Intrusion', ruleHint: '1 SDK connection per Senstar NMS gateway ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-senstar-nms', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'commend_duetto', sku: 'GSC-1SDK-COMMEND-DUETTO', label: 'Commend Duetto / Symphony Intercom Interface', ruleHint: '1 SDK connection per Commend interface ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-commend-duetto', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' }
   ],
 
   /**
@@ -1711,22 +1706,28 @@ const GenetecLicensingSizer = {
       mobileClients: 0,                        // GSC-1MobileU ($250/user) or GSC-1MobileSTU ($10,000 site license at 40+ users)
       webClients: 0,                           // GSC-1WU ($200/user; included free in GSC-BASE-E Site Login)
       // Feature Toggles (hide extra licenses for each feature until turned ON)
-      enableEncodersDvr: false,                // Toggle: Analog Video Encoders & Third-Party DVR/NVR Channels
-      enableSipelia: false,                    // Toggle: Sipelia Intercom Communications (Standard / Advanced / Unified)
-      enableLpr: false,                        // Toggle: AutoVu Fixed License Plate Recognition (LPR)
-      enableVideoFailover: false,              // Toggle: Standby Archiver Failover & 3rd-Party Standby Clustering
-      enableIntrusionPanels: false,            // Toggle: Intrusion Alarm Panels (Bosch, DMP, DSC, Honeywell, Vanderbilt)
-      enableBiometricsIdentity: false,         // Toggle: Biometrics, Card Sync, ID Scanners & Handheld Mustering
-      enableClearId: false,                    // Toggle: Genetec ClearID Self-Service Access & Visitor Management
-      enableKeyManagement: false,              // Toggle: Medeco XT Intelligent Keys & Key Management Cabinets
-      enablePartnerSdks: false,                // Toggle: Multi-Select Partner SDKs & Generic Custom SDK Connections
-      enableVideoAnalytics: false,             // Toggle: BriefCam Video Synopsis & Corsight AI Facial Recognition
-      enableBuildingPsim: false,               // Toggle: WinGuard PSIM, Elevator Dispatch, OPC Server & Mission Control
-      enableRsa: false,                        // Toggle: Restricted Security Area (RSA) — Quanergy, SpotterRF, Southwest Microwave
-      enableFederation: false,                 // Toggle: Multi-Site Security Center & Stratocast Federation
-      enableIiot: false,                       // Toggle: Industrial Internet of Things (BACnet, Modbus, SNMP, MQTT)
-      enableCloudServices: false,              // Toggle: Omnicast Cloud Archive & Genetec Clearance
-      // Omnicast Video, Sipelia Intercom (Standard vs Advanced vs Unified 5.13) & AutoVu License Plate Recognition
+      enableFederation: false,                 // Toggle (Card 1): Multi-Site Security Center Federation
+      enableCardholderSync: false,             // Toggle (Card 1): Global Cardholder Synchronizer & Card Sync Plugin
+      enableEncodersDvr: false,                // Toggle (Card 2): Analog Video Encoders & Third-Party DVR/NVR Channels
+      enableSipelia: false,                    // Toggle (Card 2): Sipelia Intercom Communications (Standard / Advanced / Unified)
+      enableLpr: false,                        // Toggle (Card 2): AutoVu Fixed License Plate Recognition (LPR)
+      enableCloudServices: false,              // Toggle (Card 2): Omnicast Cloud Archives & Genetec Clearance
+      enableVideoFailover: false,              // Toggle (Card 2): Standby Archiver Failover & 3rd-Party Standby Clustering
+      enableBiometricsIdentity: false,         // Toggle (Card 3): Biometrics (Suprema, IDEMIA, iDBridge, Princeton), ID Scanners & Mustering
+      enableClearId: false,                    // Toggle (Card 3): Genetec ClearID Self-Service Access & Visitor Management
+      enableKeyManagement: false,              // Toggle (Card 3): Medeco XT Intelligent Keys & Key Management Cabinets
+      enablePartnerSdks: false,                // Toggle (Card 4): Multi-Select Partner SDKs (Corsight AI, BriefCam, StreamConnect, etc.)
+      enableBuildingPsim: false,               // Toggle (Card 4): WinGuard PSIM, Elevator Dispatch, OPC Server & Mission Control
+      enableIiot: false,                       // Toggle (Card 4): Industrial Internet of Things (BACnet, Modbus, SNMP, MQTT)
+      enableIntrusionPanels: false,            // Toggle (Card 5): Intrusion Alarm Panels (Bosch, DMP, DSC, Honeywell, Vanderbilt)
+      enableRsa: false,                        // Toggle (Card 5): Restricted Security Area (RSA) — Quanergy, SpotterRF, Southwest Microwave
+      // Main System Multi-Site Federation, Global Cardholder Synchronizer & Card Sync Plugin
+      federationSites: 0,                      // GSC-1SCFED ($1,000/site >20 entities)
+      federationSmallSites: 0,                 // GSC-1SCFED-20 ($600/site <=20 entities)
+      stratocastFedSites: 0,                   // GSC-Om-E-1CCFED ($125/site)
+      globalCardholderSystems: 0,              // GSC-Sy-E-1GCHM ($1,950/remote system) or GSC-SY-E-1GCHMSTU ($78,000 Site License at 40+ systems)
+      cardSyncDataSources: 0,                  // Card Synchronization Plugin external HR/SQL/LDAP sources (GSC-1PSINGLECARD @ $4,000 per 2 sources)
+      // Omnicast Video, Sipelia Intercom (Standard vs Advanced vs Unified 5.13), AutoVu LPR & Cloud Archives
       analogEncoderChannels: 0,                // GSC-OM-S-1PAC ($60) / GSC-OM-E-1PAC ($100) / GSC-SV-AIO-1PAC ($36)
       dvrNvrChannels: 0,                       // GSC-Om-E-1DV ($130)
       sipeliaMode: 'unified_513',              // 'unified_513' ($295/station) | 'standard' ($1,500 Base + $160/station) | 'advanced' ($1,500 Base + $160 STD + $100 ADV/station)
@@ -1734,53 +1735,50 @@ const GenetecLicensingSizer = {
       sipTrunks: 0,                            // GSC-Sipelia-1Trunk ($550)
       sipPublicAddress: 0,                     // GSC-SIPELIA-1PA ($550)
       lprCamerasOverride: null,                // null = auto-detect from BOM (GSC-Av-S-1SHP $500 + ADV-LPR-F)
+      cloudArchiveTb: 0,
+      cloudArchiveTier: 'performance',         // 'performance' ($257/TB/yr) | 'long_term' ($122/TB/yr)
+      clearanceCameras: 0,                     // CLR-1CCST1-US-1Y ($24/cam/yr)
       failoverMode: 'none',                    // 'none' | 'all' | 'custom' (Included $0 in GSC-BASE-E)
       customFailoverCameras: 0,
       standbyServerCount: 0,                   // GSC-StandbyServer ($1,500/server for 3rd-party Windows/NEC clustering)
-      // Synergis Access Control Readers & Intrusion Alarm Panels
+      // Synergis Access Control Readers
       synergisGenetecReaders: 0,               // GSC-SY-S-1RE ($65) / GSC-SY-E-1RE ($125) / GSC-SV-AIO-1R ($175) + ADV-RDR
       synergisExternalReaders: 0,              // GSC-Sy-S-1R ($175) / GSC-Sy-E-1R ($260) / GSC-SV-AIO-1R ($175) + ADV-RDR
-      intrusionPanels: 0,                      // GSC-1AP-* ($350/panel + ADV-1AP)
-      intrusionPanelManufacturer: 'bosch',     // 'bosch' | 'dmp' | 'dsc' | 'honeywell' | 'bosch_map5000' | 'vanderbilt_spc'
-      // Biometrics, Identity, Card Synchronization, ClearID, Medeco XT & Analytics Plugins
-      supremaEndpoints: 0,                     // Suprema BioStar 2 endpoints (2x GSC-1SDK-PREFTECH-BIOS @ $250 = $500/endpoint)
+      // Biometrics (Suprema Plugin for Genetec v1.00 EN 102.00.SPG), Identity, ClearID & Medeco XT
+      supremaDevices: 0,                       // Suprema Biometric Readers/Devices (Up to 256 per Suprema Device Plugin; up to 50 per Dedicated Cloud Link)
+      supremaPluginServers: 0,                 // Suprema Plugin Servers (Requires 3x GSC-1SDK-SUPREMA-READ @ $250 = $750 per Server per Page 16)
+      supremaEndpoints: 0,                     // Legacy compatibility alias
       idemiaMorphoEnabled: false,              // IDEMIA MorphoManager Biometrics Integration (GSC-1PMORPHOBIOMETRICS @ $2,500/system)
       controlIdBridgeServers: 0,               // Control iD iDBridge Servers (GSC-1SDK-CONTROLID-IDBRIDGE @ $250/server)
       princetonIdentityServers: 0,             // Princeton Identity Access Control Suite Servers (GSC-1SDK-PRINCETONIDENTITY-ACS @ $250/server)
-      cardSyncDataSources: 0,                  // Card Synchronization Plugin external HR/SQL/LDAP sources (GSC-1PSINGLECARD @ $4,000 per 2 sources)
       clearIdIdentities: 0,                    // Genetec ClearID Active Identities (CID-IDENTITY-1Y/3Y/5Y tiered pricing)
       clearIdKiosks: 0,                        // Genetec ClearID Visitor Self-Check-In Kiosks (CID-KIOSK-LIC-1Y/3Y/5Y)
       idScannerClients: 0,                     // Document/Passport/Driver's License ID Scanner Workstations (GSC-1PIDSCANNER @ $500/workstation)
       xpressEntryServers: 0,                   // Telaeris XpressEntry Handheld Badge & Mustering Servers (GSC-1SDK-TELAERIS-XPRESSENTRY @ $250/server)
       medecoXtLocks: 0,                        // Medeco XT Intelligent Keys & Offline Locks (GSC-1PMEDECOBASE $1,000 + GSC-1P-OFFLINELOCK-1L $40/lock)
-      briefCamConnections: 0,                  // BriefCam Video Synopsis & Analytics SDK Connections (GSC-1SDK-BRIEFCAM @ $250/connection)
-      corsightAiBridges: 0,                    // Corsight AI Facial Recognition Server Bridges (GSC-1SDK-BAPS-SYFTYCORSIGHTAI @ $250/bridge)
-      winGuardNodes: 0,                        // Advancis WinGuard PSIM Interface Nodes (GSC-1SDK-ADVANCIS-WINGUARD @ $250/node)
-      // Multi-Select Software Development Kit (SDK) Connections & Core Enterprise Plugins
+      keyCabinetCount: 0,                      // GSC-1P-KEYCABINETBASE ($1,500) + GSC-1PKEYWATCHER ($500/cabinet)
+      // Multi-Select Software Development Kit (SDK) Connections, PSIM & IIoT
       genericSdkConnections: 0,                // GSC-1SDK ($250/connection)
       selectedPartnerSdks: {},                 // Multi-select map: { [sdkKey]: connectionQty }
       partnerSdkKey: 'none',                   // Legacy single-select compatibility
       partnerSdkConnections: 0,                // Legacy single-select compatibility
+      briefCamConnections: 0,                  // Legacy compatibility (mapped into selectedPartnerSdks.briefcam)
+      corsightAiBridges: 0,                    // Legacy compatibility (mapped into selectedPartnerSdks.corsight_ai)
+      winGuardNodes: 0,                        // Advancis WinGuard PSIM Interface Nodes (GSC-1SDK-ADVANCIS-WINGUARD @ $250/node)
       elevatorDispatchSystems: 0,              // GSC-1POTIS-COMPASS / KONE / TKE / MCE ($8,000)
       opcServerSystems: 0,                     // GSC-1POPC-S ($8,000)
-      keyCabinetCount: 0,                      // GSC-1P-KEYCABINETBASE ($1,500) + GSC-1PKEYWATCHER ($500/cabinet)
       missionControlOperators: 0,              // GSC-MC-1Opp ($0) + ADV-MC-1OPP-1Y/3Y/5Y ($3,000 / $7,200 / $10,500)
-      // Restricted Security Area (RSA) Surveillance — Quanergy LiDAR, SpotterRF Radar, Southwest Microwave INTREPID
+      iiotMode: 'none',                        // 'none' | 'devices' ($149/device) | 'site' ($6,000 Unlimited Site)
+      iiotDevices: 0,
+      // Dedicated Intrusion Alarm Panels & Restricted Security Area (RSA) Surveillance
+      intrusionPanels: 0,                      // GSC-1AP-* ($350/panel + ADV-1AP)
+      intrusionPanelManufacturer: 'bosch',     // 'bosch' | 'dmp' | 'dsc' | 'honeywell' | 'bosch_map5000' | 'vanderbilt_spc'
       rsaTier: 'none',                         // 'none' | 'standard' ($1,000) | 'pro' ($7,000) | 'enterprise' ($14,000)
       rsaShortRangeSensors: 0,                 // GSC-GAP-RSA-1SRS ($175/sensor — Quanergy M8 LiDAR, Optex PIE-1, Axis, Magos SR)
       rsaRadars: 0,                            // GSC-GAP-RSA-1RAD ($1,000/radar — SpotterRF, FLIR Ranger, Echodyne, Navtech)
       rsaFenceControllers: 0,                  // GSC-GAP-RSA-1FEN ($2,000/PIDS — Southwest Microwave INTREPID, Senstar, FFT)
       rsaFenceKm: 0,                           // GSC-GAP-RSA-1KM ($2,000) / 10KM ($5,000) / 100KM ($15,000)
       swmRpmUnits: 0,                          // Southwest Microwave INTREPID RPM II Standalone Plugin (GSC-1PSWM-RPMII @ $6,500 per 5 units)
-      // Enterprise Federation, Industrial IoT, Cloud Archive & Clearance
-      federationSites: 0,                      // GSC-1SCFED ($1,000/site >20 entities)
-      federationSmallSites: 0,                 // GSC-1SCFED-20 ($600/site <=20 entities)
-      stratocastFedSites: 0,                   // GSC-Om-E-1CCFED ($125/site)
-      iiotMode: 'none',                        // 'none' | 'devices' ($149/device) | 'site' ($6,000 Unlimited Site)
-      iiotDevices: 0,
-      cloudArchiveTb: 0,
-      cloudArchiveTier: 'performance',         // 'performance' ($257/TB/yr) | 'long_term' ($122/TB/yr)
-      clearanceCameras: 0,                     // CLR-1CCST1-US-1Y ($24/cam/yr)
       applianceFormFactor: 'rack'              // 'rack' | 'tower' | 'any'
     };
   },
@@ -1934,7 +1932,15 @@ const GenetecLicensingSizer = {
       });
     }
 
-    // Feature Toggle States (auto-enable if BOM has matching devices or if user already set non-zero values before toggles)
+    // Feature Toggle States (auto-enable if BOM has matching devices or if user already set non-zero values)
+    const enableFederation = baseConfig.enableFederation !== undefined
+      ? Boolean(baseConfig.enableFederation)
+      : ((Number(baseConfig.federationSites) || 0) > 0 || (Number(baseConfig.federationSmallSites) || 0) > 0 || (Number(baseConfig.stratocastFedSites) || 0) > 0);
+
+    const enableCardholderSync = baseConfig.enableCardholderSync !== undefined
+      ? Boolean(baseConfig.enableCardholderSync)
+      : ((Number(baseConfig.globalCardholderSystems) || 0) > 0 || (Number(baseConfig.cardSyncDataSources) || 0) > 0);
+
     const enableEncodersDvr = baseConfig.enableEncodersDvr !== undefined
       ? Boolean(baseConfig.enableEncodersDvr)
       : ((Number(baseConfig.analogEncoderChannels) || 0) > 0 || (Number(baseConfig.dvrNvrChannels) || 0) > 0);
@@ -1947,22 +1953,23 @@ const GenetecLicensingSizer = {
       ? Boolean(baseConfig.enableLpr)
       : (bomLprCameras > 0 || (Number(baseConfig.lprCamerasOverride) || 0) > 0);
 
+    const enableCloudServices = baseConfig.enableCloudServices !== undefined
+      ? Boolean(baseConfig.enableCloudServices)
+      : ((Number(baseConfig.cloudArchiveTb) || 0) > 0 || (Number(baseConfig.clearanceCameras) || 0) > 0);
+
     const enableVideoFailover = baseConfig.enableVideoFailover !== undefined
       ? Boolean(baseConfig.enableVideoFailover)
       : ((baseConfig.failoverMode && baseConfig.failoverMode !== 'none') || (Number(baseConfig.standbyServerCount) || 0) > 0);
 
-    const enableIntrusionPanels = baseConfig.enableIntrusionPanels !== undefined
-      ? Boolean(baseConfig.enableIntrusionPanels)
-      : ((Number(baseConfig.intrusionPanels) || 0) > 0);
-
     const enableBiometricsIdentity = baseConfig.enableBiometricsIdentity !== undefined
       ? Boolean(baseConfig.enableBiometricsIdentity)
       : (
+          (Number(baseConfig.supremaDevices) || 0) > 0 ||
+          (Number(baseConfig.supremaPluginServers) || 0) > 0 ||
           (Number(baseConfig.supremaEndpoints) || 0) > 0 ||
           Boolean(baseConfig.idemiaMorphoEnabled) ||
           (Number(baseConfig.controlIdBridgeServers) || 0) > 0 ||
           (Number(baseConfig.princetonIdentityServers) || 0) > 0 ||
-          (Number(baseConfig.cardSyncDataSources) || 0) > 0 ||
           (Number(baseConfig.idScannerClients) || 0) > 0 ||
           (Number(baseConfig.xpressEntryServers) || 0) > 0
         );
@@ -1974,10 +1981,6 @@ const GenetecLicensingSizer = {
     const enableKeyManagement = baseConfig.enableKeyManagement !== undefined
       ? Boolean(baseConfig.enableKeyManagement)
       : ((Number(baseConfig.medecoXtLocks) || 0) > 0 || (Number(baseConfig.keyCabinetCount) || 0) > 0);
-
-    const enableVideoAnalytics = baseConfig.enableVideoAnalytics !== undefined
-      ? Boolean(baseConfig.enableVideoAnalytics)
-      : ((Number(baseConfig.briefCamConnections) || 0) > 0 || (Number(baseConfig.corsightAiBridges) || 0) > 0);
 
     const enableBuildingPsim = baseConfig.enableBuildingPsim !== undefined
       ? Boolean(baseConfig.enableBuildingPsim)
@@ -1996,10 +1999,24 @@ const GenetecLicensingSizer = {
         rawPartnerSdkMap[baseConfig.partnerSdkKey] = Math.max(1, Number(baseConfig.partnerSdkConnections) || 1);
       }
     }
+    if ((Number(baseConfig.briefCamConnections) || 0) > 0 && !rawPartnerSdkMap.briefcam) {
+      rawPartnerSdkMap.briefcam = Number(baseConfig.briefCamConnections);
+    }
+    if ((Number(baseConfig.corsightAiBridges) || 0) > 0 && !rawPartnerSdkMap.corsight_ai) {
+      rawPartnerSdkMap.corsight_ai = Number(baseConfig.corsightAiBridges);
+    }
     const hasAnyPartnerSdkSelected = Object.values(rawPartnerSdkMap).some(v => (Number(v) || 0) > 0) || (Number(baseConfig.genericSdkConnections) || 0) > 0;
     const enablePartnerSdks = baseConfig.enablePartnerSdks !== undefined
       ? Boolean(baseConfig.enablePartnerSdks)
       : hasAnyPartnerSdkSelected;
+
+    const enableIiot = baseConfig.enableIiot !== undefined
+      ? Boolean(baseConfig.enableIiot)
+      : (Boolean(baseConfig.iiotMode && baseConfig.iiotMode !== 'none'));
+
+    const enableIntrusionPanels = baseConfig.enableIntrusionPanels !== undefined
+      ? Boolean(baseConfig.enableIntrusionPanels)
+      : ((Number(baseConfig.intrusionPanels) || 0) > 0);
 
     const enableRsa = baseConfig.enableRsa !== undefined
       ? Boolean(baseConfig.enableRsa)
@@ -2011,18 +2028,6 @@ const GenetecLicensingSizer = {
           (Number(baseConfig.rsaFenceKm) || 0) > 0 ||
           (Number(baseConfig.swmRpmUnits) || 0) > 0
         );
-
-    const enableFederation = baseConfig.enableFederation !== undefined
-      ? Boolean(baseConfig.enableFederation)
-      : ((Number(baseConfig.federationSites) || 0) > 0 || (Number(baseConfig.federationSmallSites) || 0) > 0 || (Number(baseConfig.stratocastFedSites) || 0) > 0);
-
-    const enableIiot = baseConfig.enableIiot !== undefined
-      ? Boolean(baseConfig.enableIiot)
-      : (Boolean(baseConfig.iiotMode && baseConfig.iiotMode !== 'none'));
-
-    const enableCloudServices = baseConfig.enableCloudServices !== undefined
-      ? Boolean(baseConfig.enableCloudServices)
-      : ((Number(baseConfig.cloudArchiveTb) || 0) > 0 || (Number(baseConfig.clearanceCameras) || 0) > 0);
 
     // Gated effective quantities based on Feature Toggles
     const effectiveLprCameras = enableLpr
@@ -2073,50 +2078,54 @@ const GenetecLicensingSizer = {
         : 0;
     const standbyServerCount = enableVideoFailover ? Math.max(0, Number(baseConfig.standbyServerCount) || 0) : 0;
 
+    // Card 1: Federation, Global Cardholder Synchronizer (GSC-Sy-E-1GCHM) & Card Synchronization Plugin (GSC-1PSINGLECARD)
     const federationSites = enableFederation ? Math.max(0, Number(baseConfig.federationSites) || 0) : 0;
     const federationSmallSites = enableFederation ? Math.max(0, Number(baseConfig.federationSmallSites) || 0) : 0;
     const stratocastFedSites = enableFederation ? Math.max(0, Number(baseConfig.stratocastFedSites) || 0) : 0;
+    const globalCardholderSystems = enableCardholderSync ? Math.max(0, Number(baseConfig.globalCardholderSystems) || 0) : 0;
+    const cardSyncDataSources = enableCardholderSync ? Math.max(0, Number(baseConfig.cardSyncDataSources) || 0) : 0;
+    const cardSyncLicenseBlocks = cardSyncDataSources > 0 ? Math.ceil(cardSyncDataSources / 2) : 0;
+
     const intrusionPanels = enableIntrusionPanels ? Math.max(0, Number(baseConfig.intrusionPanels) || 0) : 0;
     const intrusionPanelManufacturer = this.INTRUSION_PANEL_BRANDS[baseConfig.intrusionPanelManufacturer]
       ? baseConfig.intrusionPanelManufacturer
       : 'bosch';
 
-    // Biometrics, Identity, Card Synchronization, ClearID, Medeco XT & Video Analytics Plugins (gated by toggles + synced with Multi-Select SDKs)
+    // Biometrics (Suprema Plugin for Genetec v1.00 EN 102.00.SPG Page 16: 3x GSC-1SDK-SUPREMA-READ per Server)
     const activePartnerSdks = enablePartnerSdks ? rawPartnerSdkMap : {};
-    const supremaEndpoints = enableBiometricsIdentity ? Math.max(0, Number(baseConfig.supremaEndpoints) || 0) : 0;
-    const supremaSdkConnections = Math.max(supremaEndpoints * 2, Number(activePartnerSdks.suprema_biostar) || 0);
+    const supremaDevices = enableBiometricsIdentity
+      ? Math.max(0, Number(baseConfig.supremaDevices ?? baseConfig.supremaEndpoints) || 0)
+      : 0;
+    // Per Suprema User Guide Page 4 & 16:
+    // - 1 Suprema Device Plugin supports up to 4 Cloud Links (256 Suprema devices)
+    // - Recommended additional plugin server when >100 devices
+    // - Needs total 3 GSC-1SDK-SUPREMA-READ per Server (1 license supports 2 connections)
+    const autoSupremaServers = supremaDevices > 100
+      ? Math.max(2, Math.ceil(supremaDevices / 256))
+      : supremaDevices > 0
+        ? 1
+        : 0;
+    const supremaPluginServers = enableBiometricsIdentity
+      ? Math.max(autoSupremaServers, Number(baseConfig.supremaPluginServers) || 0)
+      : 0;
+    const supremaSdkConnections = supremaPluginServers * 3; // 3x GSC-1SDK-SUPREMA-READ per Server (Page 16)
+    const supremaCloudLinksNeeded = supremaDevices > 0 ? Math.ceil(supremaDevices / 50) : 0; // Up to 50 Suprema devices per dedicated Cloud Link (Page 4)
+
     const idemiaMorphoEnabled = enableBiometricsIdentity ? Boolean(baseConfig.idemiaMorphoEnabled) : false;
-    const controlIdBridgeServers = Math.max(
-      enableBiometricsIdentity ? Math.max(0, Number(baseConfig.controlIdBridgeServers) || 0) : 0,
-      Number(activePartnerSdks.controlid_idbridge) || 0
-    );
-    const princetonIdentityServers = Math.max(
-      enableBiometricsIdentity ? Math.max(0, Number(baseConfig.princetonIdentityServers) || 0) : 0,
-      Number(activePartnerSdks.princeton_identity) || 0
-    );
-    const cardSyncDataSources = enableBiometricsIdentity ? Math.max(0, Number(baseConfig.cardSyncDataSources) || 0) : 0;
-    const cardSyncLicenseBlocks = cardSyncDataSources > 0 ? Math.ceil(cardSyncDataSources / 2) : 0;
+    const controlIdBridgeServers = enableBiometricsIdentity ? Math.max(0, Number(baseConfig.controlIdBridgeServers) || 0) : 0;
+    const princetonIdentityServers = enableBiometricsIdentity ? Math.max(0, Number(baseConfig.princetonIdentityServers) || 0) : 0;
     const clearIdIdentities = enableClearId ? Math.max(0, Number(baseConfig.clearIdIdentities) || 0) : 0;
     const clearIdKiosks = enableClearId ? Math.max(0, Number(baseConfig.clearIdKiosks) || 0) : 0;
     const idScannerClients = enableBiometricsIdentity ? Math.max(0, Number(baseConfig.idScannerClients) || 0) : 0;
-    const xpressEntryServers = Math.max(
-      enableBiometricsIdentity ? Math.max(0, Number(baseConfig.xpressEntryServers) || 0) : 0,
-      Number(activePartnerSdks.xpress_entry) || 0
-    );
+    const xpressEntryServers = enableBiometricsIdentity ? Math.max(0, Number(baseConfig.xpressEntryServers) || 0) : 0;
     const medecoXtLocks = enableKeyManagement ? Math.max(0, Number(baseConfig.medecoXtLocks) || 0) : 0;
     const keyCabinetCount = enableKeyManagement ? Math.max(0, Number(baseConfig.keyCabinetCount) || 0) : 0;
-    const briefCamConnections = Math.max(
-      enableVideoAnalytics ? Math.max(0, Number(baseConfig.briefCamConnections) || 0) : 0,
-      Number(activePartnerSdks.briefcam) || 0
-    );
-    const corsightAiBridges = Math.max(
-      enableVideoAnalytics ? Math.max(0, Number(baseConfig.corsightAiBridges) || 0) : 0,
-      Number(activePartnerSdks.corsight_ai) || 0
-    );
-    const winGuardNodes = Math.max(
-      enableBuildingPsim ? Math.max(0, Number(baseConfig.winGuardNodes) || 0) : 0,
-      Number(activePartnerSdks.advancis_winguard) || 0
-    );
+
+    // BriefCam & Corsight AI (from Multi-Select Partner SDKs in Card 4)
+    const briefCamConnections = Math.max(0, Number(activePartnerSdks.briefcam) || 0);
+    const corsightAiBridges = Math.max(0, Number(activePartnerSdks.corsight_ai) || 0);
+    const alliedStreamConnectInstances = Math.max(0, Number(activePartnerSdks.allied_streamconnect) || 0);
+    const winGuardNodes = enableBuildingPsim ? Math.max(0, Number(baseConfig.winGuardNodes) || 0) : 0;
 
     // Restricted Security Area (RSA) Surveillance — Quanergy LiDAR, SpotterRF Radar, Southwest Microwave INTREPID
     const rsaTier = enableRsa && ['none', 'standard', 'pro', 'enterprise'].includes(baseConfig.rsaTier) ? baseConfig.rsaTier : 'none';
@@ -2157,6 +2166,7 @@ const GenetecLicensingSizer = {
       federationSites > 0 ||
       federationSmallSites > 0 ||
       stratocastFedSites > 0 ||
+      globalCardholderSystems > 0 ||
       dvrNvrChannels > 0 ||
       elevatorDispatchSystems > 0 ||
       opcServerSystems > 0 ||
@@ -2223,11 +2233,14 @@ const GenetecLicensingSizer = {
     // SQL Server 2025 Express (50 GB Cap, Included Default, Not on BOM) vs SQL Server Standard (Triggered ONLY when Core Failover = Full)
     const sqlExpressMaxGb = 50;
     const estimatedSqlDbGb = Math.round(
-      (0.5 + (totalVideoConnections * 0.03) + (totalSynergisReaders * 0.06) + (effectiveLprCameras * 0.45) + (clearIdIdentities * 0.0005)) * 10
+      (0.5 + (totalVideoConnections * 0.03) + (totalSynergisReaders * 0.06) + (effectiveLprCameras * 0.45) + (clearIdIdentities * 0.0005) + (supremaDevices * 0.02)) * 10
     ) / 10;
     const needsSqlStandard = coreFailover === 'full';
     if (!needsSqlStandard && estimatedSqlDbGb > sqlExpressMaxGb) {
       compatibilityWarnings.push(`Estimated Microsoft SQL Server database footprint (~${estimatedSqlDbGb} GB) approaches or exceeds the 50 GB SQL Server 2025 Express cap. Consider setting Core Failover to Full (Microsoft SQL Server Standard) or reducing event retention.`);
+    }
+    if (supremaDevices > 0 && totalSynergisReaders < supremaDevices) {
+      compatibilityWarnings.push(`Suprema Integration Rule (Page 16): Each Suprema device assigned to a door as a reader requires 1 Synergis Reader License (GSC-Sy-X-1R or GSC-Sy-X-1RE). You have ${supremaDevices} Suprema device(s) configured alongside ${totalSynergisReaders} total Synergis reader license(s).`);
     }
 
     // Bundled Features Included at $0.00 in Security Center 5.13 / 5.14 Unified Base Package
@@ -2279,6 +2292,10 @@ const GenetecLicensingSizer = {
       controlIdBridgeServers > 0 ||
       princetonIdentityServers > 0 ||
       cardSyncLicenseBlocks > 0 ||
+      globalCardholderSystems > 0 ||
+      federationSites > 0 ||
+      federationSmallSites > 0 ||
+      stratocastFedSites > 0 ||
       clearIdIdentities > 0 ||
       clearIdKiosks > 0 ||
       idScannerClients > 0 ||
@@ -2292,13 +2309,13 @@ const GenetecLicensingSizer = {
       genericSdkConnections > 0 ||
       Object.values(activePartnerSdks).some(v => (Number(v) || 0) > 0);
 
-    // 1. Unified Base Package (GSC-BASE-S or GSC-BASE-E at $0.00) & Client Connections
+    // 1. Unified Base Package (GSC-BASE-S or GSC-BASE-E at $0.00), Core Failover, Clients, Federation & Cardholder Sync
     if (hasAnySystemEntities) {
       if (effectiveTier === 'standard') {
         addLineItem(
           'GSC-BASE-S',
           'Genetec Security Center Unified Base Standard Package (Version 5.13 / 5.14)',
-          'Base Package & Client Connections',
+          'Base Package, Federation & Cardholder Sync',
           1,
           0,
           'genetec-gsc-base-s-513',
@@ -2309,7 +2326,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-BASE-E',
           'Genetec Security Center Unified Base Enterprise Package (Version 5.13 / 5.14)',
-          'Base Package & Client Connections',
+          'Base Package, Federation & Cardholder Sync',
           1,
           0,
           'genetec-gsc-base-e-513',
@@ -2365,7 +2382,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-1STU',
           'Genetec Security Center — Unlimited Security Desk & Web Client Site Login License',
-          'Base Package & Client Connections',
+          'Base Package, Federation & Cardholder Sync',
           1,
           12000,
           'genetec-gsc-1stu-site',
@@ -2375,7 +2392,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-1U',
           'Genetec Security Desk Workstation — 1 Additional Concurrent User Connection',
-          'Base Package & Client Connections',
+          'Base Package, Federation & Cardholder Sync',
           extraClients,
           300,
           'genetec-gsc-1u-client',
@@ -2388,7 +2405,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1WU',
         'Genetec Security Center Web Client — 1 Concurrent User Connection',
-        'Base Package & Client Connections',
+        'Base Package, Federation & Cardholder Sync',
         webClients,
         200,
         'genetec-gsc-1wu',
@@ -2401,7 +2418,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-1MobileSTU',
           'Genetec Security Center — Unlimited Mobile Application Site License',
-          'Base Package & Client Connections',
+          'Base Package, Federation & Cardholder Sync',
           1,
           10000,
           'genetec-gsc-1mobilestu',
@@ -2411,7 +2428,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-1MobileU',
           'Genetec Mobile Application — 1 Concurrent User Connection',
-          'Base Package & Client Connections',
+          'Base Package, Federation & Cardholder Sync',
           mobileClients,
           250,
           'genetec-gsc-1mobileu',
@@ -2420,13 +2437,82 @@ const GenetecLicensingSizer = {
       }
     }
 
-    // 2. Omnicast Video, Sipelia Intercom (Standard vs Advanced vs Unified 5.13) & AutoVu License Plate Recognition
+    // Multi-Site Federation & Global Cardholder Synchronizer / Card Synchronization Plugin (Main System & Core)
+    if (federationSites > 0) {
+      addLineItem(
+        'GSC-1SCFED',
+        'Genetec Security Center Federation Remote Site Connection (Over 20 Entities)',
+        'Base Package, Federation & Cardholder Sync',
+        federationSites,
+        1000,
+        'genetec-federation',
+        'Federated remote Security Center Directory connection with more than 20 cameras or readers'
+      );
+    }
+    if (federationSmallSites > 0) {
+      addLineItem(
+        'GSC-1SCFED-20',
+        'Genetec Security Center Federation Remote Site Connection (20 Entities or Fewer)',
+        'Base Package, Federation & Cardholder Sync',
+        federationSmallSites,
+        600,
+        'genetec-federation-20',
+        'Federated remote Security Center Directory connection with 20 or fewer cameras or readers'
+      );
+    }
+    if (stratocastFedSites > 0) {
+      addLineItem(
+        'GSC-Om-E-1CCFED',
+        'Genetec Omnicast Stratocast Hybrid Cloud Site Federation Connection',
+        'Base Package, Federation & Cardholder Sync',
+        stratocastFedSites,
+        125,
+        'genetec-stratocast-fed',
+        'Federation connection for a remote site using Stratocast cloud-connected cameras'
+      );
+    }
+    if (globalCardholderSystems > 0) {
+      if (globalCardholderSystems >= 40) {
+        addLineItem(
+          'GSC-SY-E-1GCHMSTU',
+          'Genetec Synergis Enterprise — Global Cardholder Synchronizer Unlimited Site License',
+          'Base Package, Federation & Cardholder Sync',
+          1,
+          78000,
+          'genetec-sy-e-1gchmstu',
+          `Unlimited Global Cardholder Management site license (${globalCardholderSystems} remote systems requested; caps cost at $78,000)`
+        );
+      } else {
+        addLineItem(
+          'GSC-Sy-E-1GCHM',
+          'Genetec Synergis Enterprise — Global Cardholder Synchronizer (1 Remote Security Center System)',
+          'Base Package, Federation & Cardholder Sync',
+          globalCardholderSystems,
+          1950,
+          'genetec-sy-e-1gchm',
+          'Synchronizes cardholders, credentials, and access groups across independent Security Center systems ($1,950.00 per remote system)'
+        );
+      }
+    }
+    if (cardSyncLicenseBlocks > 0) {
+      addLineItem(
+        'GSC-1PSINGLECARD',
+        'Genetec Security Center — Card Synchronization Plugin (Per 2 External Data Sources)',
+        'Base Package, Federation & Cardholder Sync',
+        cardSyncLicenseBlocks,
+        4000,
+        'genetec-plugin-card-sync',
+        `Synchronizes cardholders, credentials, and access rules from ${cardSyncDataSources} external SQL/CSV/Oracle/Active Directory/HR data source(s) (1 license per 2 data sources)`
+      );
+    }
+
+    // 2. Omnicast Video, Sipelia Intercom, AutoVu LPR & Cloud Archives
     if (cameraUnits > 0) {
       if (effectiveTier === 'aio') {
         addLineItem(
           'GSC-SV-AIO-1C',
           'Genetec Streamvault All-in-One — 1 IP Camera Connection License',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           cameraUnits,
           120,
           'genetec-gsc-sv-aio-1c',
@@ -2436,7 +2522,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-Om-S-1C',
           'Genetec Omnicast Standard — 1 IP Camera Connection License',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           cameraUnits,
           200,
           'genetec-gsc-om-s-1c',
@@ -2446,7 +2532,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-Om-E-1C',
           'Genetec Omnicast Enterprise — 1 IP Camera Connection License',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           cameraUnits,
           325,
           'genetec-gsc-1cam-lic',
@@ -2460,7 +2546,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-SV-AIO-1PAC',
           'Genetec Streamvault All-in-One — 1 Analog Video Encoder Channel Connection',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           analogEncoderChannels,
           36,
           'genetec-gsc-sv-aio-1pac',
@@ -2470,7 +2556,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-OM-S-1PAC',
           'Genetec Omnicast Standard — 1 Analog Video Encoder Channel Connection',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           analogEncoderChannels,
           60,
           'genetec-gsc-om-s-1pac',
@@ -2480,7 +2566,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-OM-E-1PAC',
           'Genetec Omnicast Enterprise — 1 Analog Video Encoder Channel Connection',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           analogEncoderChannels,
           100,
           'genetec-gsc-om-e-1pac',
@@ -2493,7 +2579,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-Om-E-1DV',
         'Genetec Omnicast Enterprise — 1 Digital Video Recorder / Network Video Recorder Input Channel',
-        'Video, Intercom & License Plate Recognition',
+        'Video, Intercom, LPR & Cloud Archives',
         dvrNvrChannels,
         130,
         'genetec-gsc-om-e-1dv',
@@ -2505,7 +2591,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-Om-E-1FC',
         'Genetec Omnicast Enterprise — Standby Archiver Failover Camera Connections',
-        'Video, Intercom & License Plate Recognition',
+        'Video, Intercom, LPR & Cloud Archives',
         failoverCameraQty,
         0,
         'genetec-gsc-failover-1cam',
@@ -2518,7 +2604,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-StandbyServer',
         'Genetec Security Center — Standby Server License (Third-Party High-Availability Clustering)',
-        'Video, Intercom & License Plate Recognition',
+        'Video, Intercom, LPR & Cloud Archives',
         standbyServerCount,
         1500,
         'genetec-gsc-standby-svr',
@@ -2532,7 +2618,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-Sipelia-Base',
           'Genetec Sipelia Communications Management — Base Package',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           1,
           1500,
           'genetec-sipelia-base',
@@ -2542,7 +2628,7 @@ const GenetecLicensingSizer = {
           addLineItem(
             'GSC-Sipelia-1SIP-STD',
             'Genetec Sipelia Standard — 1 Session Initiation Protocol (SIP) Intercom Station Connection',
-            'Video, Intercom & License Plate Recognition',
+            'Video, Intercom, LPR & Cloud Archives',
             effectiveSipIntercoms,
             160,
             'genetec-sipelia-1sip-std',
@@ -2553,7 +2639,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-Sipelia-Base',
           'Genetec Sipelia Communications Management — Base Package',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           1,
           1500,
           'genetec-sipelia-base',
@@ -2563,7 +2649,7 @@ const GenetecLicensingSizer = {
           addLineItem(
             'GSC-Sipelia-1SIP-STD',
             'Genetec Sipelia Standard — 1 Session Initiation Protocol (SIP) Intercom Station Connection',
-            'Video, Intercom & License Plate Recognition',
+            'Video, Intercom, LPR & Cloud Archives',
             effectiveSipIntercoms,
             160,
             'genetec-sipelia-1sip-std',
@@ -2572,7 +2658,7 @@ const GenetecLicensingSizer = {
           addLineItem(
             'GSC-Sipelia-1SIP-ADV',
             'Genetec Sipelia Advanced — 1 Intercom Station Add-On (Failover & Call Recording)',
-            'Video, Intercom & License Plate Recognition',
+            'Video, Intercom, LPR & Cloud Archives',
             effectiveSipIntercoms,
             100,
             'genetec-sipelia-1sip-adv',
@@ -2583,7 +2669,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-SIPELIA-1SIP',
           'Genetec Sipelia Communications Management — 1 Unified 5.13 SIP Intercom Station Connection',
-          'Video, Intercom & License Plate Recognition',
+          'Video, Intercom, LPR & Cloud Archives',
           effectiveSipIntercoms,
           295,
           'genetec-sipelia-1sip',
@@ -2596,7 +2682,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-Sipelia-1Trunk',
         'Genetec Sipelia Communications Management — 1 Session Initiation Protocol (SIP) Trunk Connection',
-        'Video, Intercom & License Plate Recognition',
+        'Video, Intercom, LPR & Cloud Archives',
         sipTrunks,
         550,
         'genetec-sipelia-1trunk',
@@ -2608,7 +2694,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-SIPELIA-1PA',
         'Genetec Sipelia Communications Management — 1 Public Address (PA) System Connection',
-        'Video, Intercom & License Plate Recognition',
+        'Video, Intercom, LPR & Cloud Archives',
         sipPublicAddress,
         550,
         'genetec-sipelia-1pa',
@@ -2620,7 +2706,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-Av-S-1SHP',
         'Genetec AutoVu Fixed Sharp License Plate Recognition — 1 Camera Connection License',
-        'Video, Intercom & License Plate Recognition',
+        'Video, Intercom, LPR & Cloud Archives',
         effectiveLprCameras,
         500,
         'genetec-autovu-1shp',
@@ -2628,13 +2714,28 @@ const GenetecLicensingSizer = {
       );
     }
 
-    // 3. Synergis Access Control Readers & Intrusion Alarm Panels
+    if (enableCloudServices) {
+      if (Number(baseConfig.cloudArchiveTb) > 0) {
+        const caTb = Number(baseConfig.cloudArchiveTb);
+        if (baseConfig.cloudArchiveTier === 'long_term' || baseConfig.cloudArchiveTier === 'longterm') {
+          addLineItem('SCS-CSA-USA-1TB-1Y', 'Genetec Omnicast Cloud Archive Storage — 1 TB Long-Term Tier (1-Year Subscription)', 'Video, Intercom, LPR & Cloud Archives', caTb, 122, 'genetec-cloud-lt-1tb', 'Long-term cloud video archive storage (minimum 180 days retention)');
+        } else {
+          addLineItem('SCS-CSP-USA-1TB-1Y', 'Genetec Omnicast Cloud Archive Storage — 1 TB Performance Tier (1-Year Subscription)', 'Video, Intercom, LPR & Cloud Archives', caTb, 257, 'genetec-cloud-perf-1tb', 'Performance tier cloud video archive storage (minimum 30 days retention)');
+        }
+      }
+      const clearanceQty = Number(baseConfig.clearanceCameras) || (baseConfig.clearanceEnabled ? cameraUnits : 0);
+      if (clearanceQty > 0) {
+        addLineItem('CLR-1CCST1-US-1Y', 'Genetec Clearance Digital Evidence Management — 1 Camera Subscription (1-Year)', 'Video, Intercom, LPR & Cloud Archives', clearanceQty, 24, 'genetec-clearance-1cam-1y', 'Includes unlimited user accounts, unlimited cases, and 1 GB cloud storage per camera');
+      }
+    }
+
+    // 3. Synergis Access Control Readers, Biometrics, ClearID & Key Management
     if (synergisGenetecReaders > 0) {
       if (effectiveTier === 'aio') {
         addLineItem(
           'GSC-SV-AIO-1R',
           'Genetec Streamvault All-in-One — 1 Synergis Access Control Reader Connection',
-          'Access Control Readers & Intrusion Panels',
+          'Synergis Access Control, Biometrics & Identity',
           synergisGenetecReaders,
           175,
           'genetec-gsc-sv-aio-1r',
@@ -2644,7 +2745,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-SY-S-1RE',
           'Genetec Synergis Standard — 1 Reader Connection (Hardware Purchased from Genetec)',
-          'Access Control Readers & Intrusion Panels',
+          'Synergis Access Control, Biometrics & Identity',
           synergisGenetecReaders,
           65,
           'genetec-gsc-sy-s-1re',
@@ -2654,7 +2755,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-SY-E-1RE',
           'Genetec Synergis Enterprise — 1 Reader Connection (Hardware Purchased from Genetec)',
-          'Access Control Readers & Intrusion Panels',
+          'Synergis Access Control, Biometrics & Identity',
           synergisGenetecReaders,
           125,
           'genetec-gsc-sy-e-1re',
@@ -2668,7 +2769,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-SV-AIO-1R',
           'Genetec Streamvault All-in-One — 1 Synergis Access Control Reader Connection (Third-Party Hardware)',
-          'Access Control Readers & Intrusion Panels',
+          'Synergis Access Control, Biometrics & Identity',
           synergisExternalReaders,
           175,
           'genetec-gsc-sv-aio-1r',
@@ -2678,7 +2779,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-Sy-S-1R',
           'Genetec Synergis Standard — 1 External Reader Connection (Third-Party Hardware)',
-          'Access Control Readers & Intrusion Panels',
+          'Synergis Access Control, Biometrics & Identity',
           synergisExternalReaders,
           175,
           'genetec-gsc-sy-s-1r',
@@ -2688,7 +2789,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           'GSC-Sy-E-1R',
           'Genetec Synergis Enterprise — 1 External Reader Connection (Third-Party Hardware)',
-          'Access Control Readers & Intrusion Panels',
+          'Synergis Access Control, Biometrics & Identity',
           synergisExternalReaders,
           260,
           'genetec-gsc-sy-e-1r',
@@ -2697,29 +2798,15 @@ const GenetecLicensingSizer = {
       }
     }
 
-    if (intrusionPanels > 0) {
-      const panelBrand = this.INTRUSION_PANEL_BRANDS[intrusionPanelManufacturer] || this.INTRUSION_PANEL_BRANDS.bosch;
-      addLineItem(
-        panelBrand.sku,
-        panelBrand.model,
-        'Access Control Readers & Intrusion Panels',
-        intrusionPanels,
-        350,
-        panelBrand.catalogId,
-        '1 connection per intrusion alarm panel (no separate Intrusion Base license required in Security Center 5.13+)'
-      );
-    }
-
-    // 4. Biometrics, Identity, Card Synchronization, ClearID, Medeco XT, Video Analytics & SDK Plugins
     if (supremaSdkConnections > 0) {
       addLineItem(
-        'GSC-1SDK-PREFTECH-BIOS',
-        'Genetec Software Development Kit Connection — Suprema BioStar 2 Biometrics Integration',
-        'Biometrics, Identity & Analytics Plugins',
+        'GSC-1SDK-SUPREMA-READ',
+        'Genetec Software Development Kit Connection — Suprema Plugin for Genetec (Biometric Reader & Device Integration)',
+        'Synergis Access Control, Biometrics & Identity',
         supremaSdkConnections,
         250,
         'genetec-sdk-suprema-biostar',
-        `Requires 2 SDK connections per BioStar 2 Server / Security Desk biometric client (${supremaEndpoints} endpoint(s) × 2 = ${supremaSdkConnections} connections per Suprema Integration Guide Page 6)`
+        `Requires 3x GSC-1SDK-SUPREMA-READ per Server (${supremaPluginServers} server(s) × 3 = ${supremaSdkConnections} licenses; 1 license = 2 connections covering 2 Config Tool + 1 Security Desk + 1 Suprema Extractor Plugin + 1 Suprema Device Plugin supporting up to 4 Cloud Links / 256 devices per Suprema Guide Page 16). Also requires Suprema INT_GEN_GSC plugin license, 1x GSC-Sy-X-1R(E) per door reader (${supremaDevices} Suprema devices), and ${supremaCloudLinksNeeded} dedicated Synergis Cloud Link(s) (<=50 Suprema devices per Cloud Link with RIO enabled).`
       );
     }
 
@@ -2727,7 +2814,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1PMORPHOBIOMETRICS',
         'Genetec Security Center — IDEMIA MorphoManager Biometrics Integration Plugin',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         1,
         2500,
         'genetec-plugin-morpho-biometrics',
@@ -2739,7 +2826,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1SDK-CONTROLID-IDBRIDGE',
         'Genetec Software Development Kit Connection — Control iD iDBridge Access & Biometric Integration',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         controlIdBridgeServers,
         250,
         'genetec-sdk-controlid-idbridge',
@@ -2751,23 +2838,11 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1SDK-PRINCETONIDENTITY-ACS',
         'Genetec Software Development Kit Connection — Princeton Identity Access Control Suite (Iris & Face)',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         princetonIdentityServers,
         250,
         'genetec-sdk-princeton-identity',
         '1 SDK connection per Princeton Identity Access Control Suite server managing IOM Access200 iris/face readers'
-      );
-    }
-
-    if (cardSyncLicenseBlocks > 0) {
-      addLineItem(
-        'GSC-1PSINGLECARD',
-        'Genetec Security Center — Card Synchronization Plugin (Per 2 External Data Sources)',
-        'Biometrics, Identity & Analytics Plugins',
-        cardSyncLicenseBlocks,
-        4000,
-        'genetec-plugin-card-sync',
-        `Synchronizes cardholders, credentials, and access rules from ${cardSyncDataSources} external SQL/CSV/Oracle/HR data source(s) (1 license per 2 data sources)`
       );
     }
 
@@ -2803,7 +2878,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         cidTable.sku,
         `Genetec ClearID Physical Identity & Access Management — 1 Identity Subscription (${advantageYears}-Year • ${cidTable.range})`,
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         clearIdIdentities,
         cidTable.msrp,
         cidTable.id,
@@ -2820,7 +2895,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         kioskTable.sku,
         `Genetec ClearID Visitor Self-Check-In Kiosk License (${advantageYears}-Year Subscription)`,
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         clearIdKiosks,
         kioskTable.msrp,
         kioskTable.id,
@@ -2832,7 +2907,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1PIDSCANNER',
         'Genetec Security Center — 1 Document / Passport / Driver\'s License ID Scanner Workstation Connection',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         idScannerClients,
         500,
         'genetec-plugin-idscanner',
@@ -2844,7 +2919,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1SDK-TELAERIS-XPRESSENTRY',
         'Genetec Software Development Kit Connection — Telaeris XpressEntry Handheld Badge & Mustering',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         xpressEntryServers,
         250,
         'genetec-sdk-xpressentry',
@@ -2856,7 +2931,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1PMEDECOBASE',
         'Genetec Security Center — Medeco XT Intelligent Key System Base Plugin',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         1,
         1000,
         'genetec-plugin-medeco-base',
@@ -2865,7 +2940,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1P-OFFLINELOCK-1L',
         'Genetec Security Center — 1 Offline Lock / Medeco XT Intelligent Cylinder Connection',
-        'Biometrics, Identity & Analytics Plugins',
+        'Synergis Access Control, Biometrics & Identity',
         medecoXtLocks,
         40,
         'genetec-plugin-offlinelock-1l',
@@ -2873,39 +2948,49 @@ const GenetecLicensingSizer = {
       );
     }
 
+    if (keyCabinetCount > 0) {
+      addLineItem(
+        'GSC-1P-KEYCABINETBASE',
+        'Genetec Security Center — Key and Asset Management Base Plugin',
+        'Synergis Access Control, Biometrics & Identity',
+        1,
+        1500,
+        'genetec-plugin-keycabinet-base',
+        'Required 1 per Security Center system when integrating Morse Watchmans, Traka, Deister, or SAM key cabinets'
+      );
+      addLineItem(
+        'GSC-1PKEYWATCHER',
+        'Genetec Security Center — Key Cabinet Connection (Morse Watchmans / Traka / Deister / SAM)',
+        'Synergis Access Control, Biometrics & Identity',
+        keyCabinetCount,
+        500,
+        'genetec-plugin-keycabinet-1cab',
+        '1 license per intelligent key cabinet'
+      );
+    }
+
+    // 4. Multi-Select Certified Partner SDKs, Video Analytics, Building/PSIM & Industrial IoT
     if (briefCamConnections > 0) {
       addLineItem(
         'GSC-1SDK-BRIEFCAM',
         'Genetec Software Development Kit Connection — BriefCam Video Synopsis & Analytics (REVIEW / RESPOND / RESEARCH)',
-        'Biometrics, Identity & Analytics Plugins',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
         briefCamConnections,
         250,
         'genetec-sdk-briefcam',
-        'Per-connection BriefCam SDK license (Sizing formula: 1 VSServer + 1 per Fetching/GPU node + 1 per concurrent Security Desk Embedded Client + 1 Spare)'
+        'Per-connection BriefCam SDK license (Default: 4 connections = 1 VSServer + 1 per Fetching/GPU node + 1 per concurrent Security Desk Embedded Client + 1 Spare)'
       );
     }
 
     if (corsightAiBridges > 0) {
       addLineItem(
         'GSC-1SDK-BAPS-SYFTYCORSIGHTAI',
-        'Genetec Software Development Kit Connection — Corsight AI Fortify Facial Recognition Integration',
-        'Biometrics, Identity & Analytics Plugins',
+        'Genetec Software Development Kit Connection — Corsight AI Syfty Suite (Event Processor & Overlay Service)',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
         corsightAiBridges,
         250,
         'genetec-sdk-corsight-ai',
-        '1 SDK connection per Corsight AI Fortify server bridge for real-time watchlist alerting and forensic face search'
-      );
-    }
-
-    if (winGuardNodes > 0) {
-      addLineItem(
-        'GSC-1SDK-ADVANCIS-WINGUARD',
-        'Genetec Software Development Kit Connection — Advancis WinGuard PSIM Integration',
-        'Biometrics, Identity & Analytics Plugins',
-        winGuardNodes,
-        250,
-        'genetec-sdk-advancis-winguard',
-        '1 SDK connection per Advancis WinGuard interface server or redundancy node'
+        'Requires 2 SDK connections by default (1 for Syfty Event Processor Windows service + 1 for Syfty Overlay Service / Syfty AI Plugin role in Config Tool per Corsight Syfty Guide 2026). Camera stream MUST be H.264 and requires Media Gateway with RTSPS disabled.'
       );
     }
 
@@ -2913,7 +2998,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1SDK',
         'Genetec Security Center — 1 Generic Software Development Kit (SDK) Connection',
-        'Biometrics, Identity & Analytics Plugins',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
         genericSdkConnections,
         250,
         'genetec-gsc-1sdk',
@@ -2921,15 +3006,10 @@ const GenetecLicensingSizer = {
       );
     }
 
-    // Add all remaining Multi-Select Partner SDKs (excluding those already added via dedicated biometric/analytics/PSIM counters above)
+    // Add all remaining Multi-Select Partner SDKs (excluding briefcam and corsight_ai which were emitted above)
     const handledSdkKeys = new Set([
-      'suprema_biostar',
       'briefcam',
-      'corsight_ai',
-      'xpress_entry',
-      'advancis_winguard',
-      'controlid_idbridge',
-      'princeton_identity'
+      'corsight_ai'
     ]);
     this.PARTNER_SDK_OPTIONS.forEach(pOpt => {
       if (!pOpt || !pOpt.sku || handledSdkKeys.has(pOpt.key)) return;
@@ -2938,7 +3018,7 @@ const GenetecLicensingSizer = {
         addLineItem(
           pOpt.sku,
           `Genetec Software Development Kit Connection — ${pOpt.label}`,
-          'Biometrics, Identity & Analytics Plugins',
+          'Partner SDKs, Video Analytics, PSIM & IIoT',
           sdkQty,
           pOpt.msrp || 250,
           pOpt.catalogId,
@@ -2947,11 +3027,23 @@ const GenetecLicensingSizer = {
       }
     });
 
+    if (winGuardNodes > 0) {
+      addLineItem(
+        'GSC-1SDK-ADVANCIS-WINGUARD',
+        'Genetec Software Development Kit Connection — Advancis WinGuard PSIM Integration',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
+        winGuardNodes,
+        250,
+        'genetec-sdk-advancis-winguard',
+        '1 SDK connection per Advancis WinGuard interface server or redundancy node'
+      );
+    }
+
     if (elevatorDispatchSystems > 0) {
       addLineItem(
         'GSC-1POTIS-COMPASS',
         'Genetec Security Center — Elevator Destination Dispatch Plugin (Otis Compass / KONE / ThyssenKrupp / MCE Sentry)',
-        'Biometrics, Identity & Analytics Plugins',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
         elevatorDispatchSystems,
         8000,
         'genetec-plugin-elevator-dispatch',
@@ -2963,32 +3055,11 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1POPC-S',
         'Genetec Security Center — Open Platform Communications (OPC) Server Plugin',
-        'Biometrics, Identity & Analytics Plugins',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
         opcServerSystems,
         8000,
         'genetec-plugin-opc-server',
         'Exposes Security Center entities and alarm states to Building Management and SCADA systems'
-      );
-    }
-
-    if (keyCabinetCount > 0) {
-      addLineItem(
-        'GSC-1P-KEYCABINETBASE',
-        'Genetec Security Center — Key and Asset Management Base Plugin',
-        'Biometrics, Identity & Analytics Plugins',
-        1,
-        1500,
-        'genetec-plugin-keycabinet-base',
-        'Required 1 per Security Center system when integrating Morse Watchmans, Traka, Deister, or SAM key cabinets'
-      );
-      addLineItem(
-        'GSC-1PKEYWATCHER',
-        'Genetec Security Center — Key Cabinet Connection (Morse Watchmans / Traka / Deister / SAM)',
-        'Biometrics, Identity & Analytics Plugins',
-        keyCabinetCount,
-        500,
-        'genetec-plugin-keycabinet-1cab',
-        '1 license per intelligent key cabinet'
       );
     }
 
@@ -3001,7 +3072,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         mcTable.sku,
         `Genetec Mission Control Collaborative Decision Management — Concurrent Operator (${advantageYears}-Year)`,
-        'Biometrics, Identity & Analytics Plugins',
+        'Partner SDKs, Video Analytics, PSIM & IIoT',
         missionControlOperators,
         mcTable.msrp,
         mcTable.id,
@@ -3009,20 +3080,41 @@ const GenetecLicensingSizer = {
       );
     }
 
-    // 5. Restricted Security Area (RSA) Surveillance, Federation, Industrial IoT, Cloud Archive & Clearance
+    if (enableIiot) {
+      if (baseConfig.iiotMode === 'site') {
+        addLineItem('GSC-IIOT', 'Genetec Industrial Internet of Things (IIoT) Plugin — Unlimited Site License', 'Partner SDKs, Video Analytics, PSIM & IIoT', 1, 6000, 'genetec-iiot-site', 'Unlimited BACnet, Modbus, OPC, SNMP, MQTT, and HTTP device and data-point connections');
+      } else if (baseConfig.iiotMode === 'devices' && Number(baseConfig.iiotDevices) > 0) {
+        addLineItem('GSC-IIOT-1D', 'Genetec Industrial Internet of Things (IIoT) Plugin — 1 Device Connection', 'Partner SDKs, Video Analytics, PSIM & IIoT', Number(baseConfig.iiotDevices), 149, 'genetec-iiot-1d', 'Individual BACnet, Modbus, SNMP, or MQTT device connection');
+      }
+    }
+
+    // 5. Restricted Security Area (RSA) Perimeter Surveillance & Intrusion Alarm Panels
+    if (intrusionPanels > 0) {
+      const panelBrand = this.INTRUSION_PANEL_BRANDS[intrusionPanelManufacturer] || this.INTRUSION_PANEL_BRANDS.bosch;
+      addLineItem(
+        panelBrand.sku,
+        panelBrand.model,
+        'Restricted Security Area (RSA) & Intrusion Panels',
+        intrusionPanels,
+        350,
+        panelBrand.catalogId,
+        '1 connection per intrusion alarm panel (no separate Intrusion Base license required in Security Center 5.13+)'
+      );
+    }
+
     if (effectiveRsaTier === 'standard') {
-      addLineItem('GSC-GAP-RSA-STA', 'Genetec Restricted Security Area (RSA) Perimeter Surveillance — Standard Package', 'Restricted Security Area, Federation & Cloud', 1, 1000, 'genetec-rsa-standard', 'Perimeter radar, LiDAR, and fence intrusion event integration');
+      addLineItem('GSC-GAP-RSA-STA', 'Genetec Restricted Security Area (RSA) Perimeter Surveillance — Standard Package', 'Restricted Security Area (RSA) & Intrusion Panels', 1, 1000, 'genetec-rsa-standard', 'Perimeter radar, LiDAR, and fence intrusion event integration');
     } else if (effectiveRsaTier === 'pro') {
-      addLineItem('GSC-GAP-RSA-PRO', 'Genetec Restricted Security Area (RSA) Perimeter Surveillance — Professional Package', 'Restricted Security Area, Federation & Cloud', 1, 7000, 'genetec-rsa-pro', 'Supports up to 20 short-range sensors (Quanergy LiDAR), 5 radars (SpotterRF), 1 fence controller (Southwest Microwave), and 10 km perimeter fence');
+      addLineItem('GSC-GAP-RSA-PRO', 'Genetec Restricted Security Area (RSA) Perimeter Surveillance — Professional Package', 'Restricted Security Area (RSA) & Intrusion Panels', 1, 7000, 'genetec-rsa-pro', 'Supports up to 20 short-range sensors (Quanergy LiDAR), 5 radars (SpotterRF), 1 fence controller (Southwest Microwave), and 10 km perimeter fence');
     } else if (effectiveRsaTier === 'enterprise') {
-      addLineItem('GSC-GAP-RSA-ENT', 'Genetec Restricted Security Area (RSA) Perimeter Surveillance — Enterprise Package', 'Restricted Security Area, Federation & Cloud', 1, 14000, 'genetec-rsa-ent', 'Unrestricted enterprise perimeter radar (SpotterRF), 3D LiDAR (Quanergy), and multi-zone fence target tracking (Southwest Microwave)');
+      addLineItem('GSC-GAP-RSA-ENT', 'Genetec Restricted Security Area (RSA) Perimeter Surveillance — Enterprise Package', 'Restricted Security Area (RSA) & Intrusion Panels', 1, 14000, 'genetec-rsa-ent', 'Unrestricted enterprise perimeter radar (SpotterRF), 3D LiDAR (Quanergy), and multi-zone fence target tracking (Southwest Microwave)');
     }
 
     if (rsaShortRangeSensors > 0) {
       addLineItem(
         'GSC-GAP-RSA-1SRS',
         'Genetec Restricted Security Area (RSA) — 1 Short-Range Tracking Sensor (Quanergy M8 LiDAR / Optex / Axis / Magos SR)',
-        'Restricted Security Area, Federation & Cloud',
+        'Restricted Security Area (RSA) & Intrusion Panels',
         rsaShortRangeSensors,
         175,
         'genetec-rsa-1srs',
@@ -3034,7 +3126,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-GAP-RSA-1RAD',
         'Genetec Restricted Security Area (RSA) — 1 Radar Tracking Unit (SpotterRF / FLIR Ranger / Echodyne / Navtech)',
-        'Restricted Security Area, Federation & Cloud',
+        'Restricted Security Area (RSA) & Intrusion Panels',
         rsaRadars,
         1000,
         'genetec-rsa-1rad',
@@ -3046,7 +3138,7 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-GAP-RSA-1FEN',
         'Genetec Restricted Security Area (RSA) — 1 Perimeter Fence Intrusion Detection System (Southwest Microwave INTREPID / Senstar / FFT)',
-        'Restricted Security Area, Federation & Cloud',
+        'Restricted Security Area (RSA) & Intrusion Panels',
         rsaFenceControllers,
         2000,
         'genetec-rsa-1fen',
@@ -3069,13 +3161,13 @@ const GenetecLicensingSizer = {
         finalKm1 = 0;
       }
       if (km100 > 0) {
-        addLineItem('GSC-GAP-RSA-100KM', 'Genetec Restricted Security Area (RSA) — 100 km Perimeter Fence Tracking License', 'Restricted Security Area, Federation & Cloud', km100, 15000, 'genetec-rsa-100km', 'Covers up to 100 km of monitored perimeter fence intrusion zones');
+        addLineItem('GSC-GAP-RSA-100KM', 'Genetec Restricted Security Area (RSA) — 100 km Perimeter Fence Tracking License', 'Restricted Security Area (RSA) & Intrusion Panels', km100, 15000, 'genetec-rsa-100km', 'Covers up to 100 km of monitored perimeter fence intrusion zones');
       }
       if (finalKm10 > 0) {
-        addLineItem('GSC-GAP-RSA-10KM', 'Genetec Restricted Security Area (RSA) — 10 km Perimeter Fence Tracking License', 'Restricted Security Area, Federation & Cloud', finalKm10, 5000, 'genetec-rsa-10km', 'Covers up to 10 km of monitored perimeter fence intrusion zones');
+        addLineItem('GSC-GAP-RSA-10KM', 'Genetec Restricted Security Area (RSA) — 10 km Perimeter Fence Tracking License', 'Restricted Security Area (RSA) & Intrusion Panels', finalKm10, 5000, 'genetec-rsa-10km', 'Covers up to 10 km of monitored perimeter fence intrusion zones');
       }
       if (finalKm1 > 0) {
-        addLineItem('GSC-GAP-RSA-1KM', 'Genetec Restricted Security Area (RSA) — 1 km Perimeter Fence Tracking License', 'Restricted Security Area, Federation & Cloud', finalKm1, 2000, 'genetec-rsa-1km', 'Covers up to 1 km of monitored perimeter fence intrusion zones');
+        addLineItem('GSC-GAP-RSA-1KM', 'Genetec Restricted Security Area (RSA) — 1 km Perimeter Fence Tracking License', 'Restricted Security Area (RSA) & Intrusion Panels', finalKm1, 2000, 'genetec-rsa-1km', 'Covers up to 1 km of monitored perimeter fence intrusion zones');
       }
     }
 
@@ -3083,67 +3175,12 @@ const GenetecLicensingSizer = {
       addLineItem(
         'GSC-1PSWM-RPMII',
         'Genetec Security Center — Southwest Microwave INTREPID RPM II Standalone Plugin (Per 5 RPM Units)',
-        'Restricted Security Area, Federation & Cloud',
+        'Restricted Security Area (RSA) & Intrusion Panels',
         swmRpmBlocks,
         6500,
         'genetec-plugin-swm-rpmii',
         `Dedicated Southwest Microwave INTREPID Remote Polling Module II (RPM II) integration (${swmRpmUnits} RPM unit(s) across ${swmRpmBlocks} block(s) of 5 units)`
       );
-    }
-
-    if (federationSites > 0) {
-      addLineItem(
-        'GSC-1SCFED',
-        'Genetec Security Center Federation Remote Site Connection (Over 20 Entities)',
-        'Restricted Security Area, Federation & Cloud',
-        federationSites,
-        1000,
-        'genetec-federation',
-        'Federated remote Security Center Directory connection with more than 20 cameras or readers'
-      );
-    }
-    if (federationSmallSites > 0) {
-      addLineItem(
-        'GSC-1SCFED-20',
-        'Genetec Security Center Federation Remote Site Connection (20 Entities or Fewer)',
-        'Restricted Security Area, Federation & Cloud',
-        federationSmallSites,
-        600,
-        'genetec-federation-20',
-        'Federated remote Security Center Directory connection with 20 or fewer cameras or readers'
-      );
-    }
-    if (stratocastFedSites > 0) {
-      addLineItem(
-        'GSC-Om-E-1CCFED',
-        'Genetec Omnicast Stratocast Hybrid Cloud Site Federation Connection',
-        'Restricted Security Area, Federation & Cloud',
-        stratocastFedSites,
-        125,
-        'genetec-stratocast-fed',
-        'Federation connection for a remote site using Stratocast cloud-connected cameras'
-      );
-    }
-    if (enableIiot) {
-      if (baseConfig.iiotMode === 'site') {
-        addLineItem('GSC-IIOT', 'Genetec Industrial Internet of Things (IIoT) Plugin — Unlimited Site License', 'Restricted Security Area, Federation & Cloud', 1, 6000, 'genetec-iiot-site', 'Unlimited BACnet, Modbus, OPC, SNMP, MQTT, and HTTP device and data-point connections');
-      } else if (baseConfig.iiotMode === 'devices' && Number(baseConfig.iiotDevices) > 0) {
-        addLineItem('GSC-IIOT-1D', 'Genetec Industrial Internet of Things (IIoT) Plugin — 1 Device Connection', 'Restricted Security Area, Federation & Cloud', Number(baseConfig.iiotDevices), 149, 'genetec-iiot-1d', 'Individual BACnet, Modbus, SNMP, or MQTT device connection');
-      }
-    }
-    if (enableCloudServices) {
-      if (Number(baseConfig.cloudArchiveTb) > 0) {
-        const caTb = Number(baseConfig.cloudArchiveTb);
-        if (baseConfig.cloudArchiveTier === 'long_term' || baseConfig.cloudArchiveTier === 'longterm') {
-          addLineItem('SCS-CSA-USA-1TB-1Y', 'Genetec Omnicast Cloud Archive Storage — 1 TB Long-Term Tier (1-Year Subscription)', 'Restricted Security Area, Federation & Cloud', caTb, 122, 'genetec-cloud-lt-1tb', 'Long-term cloud video archive storage (minimum 180 days retention)');
-        } else {
-          addLineItem('SCS-CSP-USA-1TB-1Y', 'Genetec Omnicast Cloud Archive Storage — 1 TB Performance Tier (1-Year Subscription)', 'Restricted Security Area, Federation & Cloud', caTb, 257, 'genetec-cloud-perf-1tb', 'Performance tier cloud video archive storage (minimum 30 days retention)');
-        }
-      }
-      const clearanceQty = Number(baseConfig.clearanceCameras) || (baseConfig.clearanceEnabled ? cameraUnits : 0);
-      if (clearanceQty > 0) {
-        addLineItem('CLR-1CCST1-US-1Y', 'Genetec Clearance Digital Evidence Management — 1 Camera Subscription (1-Year)', 'Restricted Security Area, Federation & Cloud', clearanceQty, 24, 'genetec-clearance-1cam-1y', 'Includes unlimited user accounts, unlimited cases, and 1 GB cloud storage per camera');
-      }
     }
 
     // 6. Mandatory Genetec Advantage Software Maintenance Agreement (1-Year / 3-Year / 5-Year)
@@ -3379,35 +3416,71 @@ const GenetecLicensingSizer = {
       });
     }
 
-    if (supremaSdkConnections > 0 || idemiaMorphoEnabled || controlIdBridgeServers > 0 || princetonIdentityServers > 0) {
-      const bioCount = (supremaSdkConnections > 0 ? 1 : 0) + (idemiaMorphoEnabled ? 1 : 0) + (controlIdBridgeServers > 0 ? 1 : 0) + (princetonIdentityServers > 0 ? 1 : 0);
+    if (supremaSdkConnections > 0) {
+      // Suprema Plugin for Genetec User Guide v1.00 (Pages 3-4):
+      // <=50 devices: 8 Core CPU / 32 GB RAM; 51-100 devices: 16 Core CPU / 64 GB RAM; >100 devices: additional plugin server
+      const supremaRam = supremaDevices > 50 ? 64 : 32;
+      const supremaCores = supremaDevices > 50 ? 16 : 8;
+      if (supremaDevices <= 20) {
+        requiredServerRamGb = Math.max(requiredServerRamGb, 32);
+        requiredServerCores = Math.max(requiredServerCores, 8);
+      } else {
+        requiredServerRamGb = Math.max(requiredServerRamGb, supremaRam);
+        requiredServerCores = Math.max(requiredServerCores, supremaCores);
+      }
+      activeRolesAndPlugins.push({
+        name: `Suprema Plugin for Genetec (${supremaDevices} Readers, ${supremaPluginServers} Server(s), ${supremaSdkConnections}x GSC-1SDK-SUPREMA-READ)`,
+        ramGb: supremaRam,
+        cores: supremaCores,
+        rule: `Requires 3x GSC-1SDK-SUPREMA-READ per Server (1 license = 2 connections) + Suprema INT_GEN_GSC plugin license + ${supremaCloudLinksNeeded} dedicated Synergis Cloud Link(s) (<=50 Suprema devices/Cloud Link with RIO enabled). Server spec: ${supremaDevices <= 20 ? '0-20 devices can share existing server (8C / 32 GB RAM)' : supremaDevices <= 50 ? 'Dedicated Plugin Server recommended (8C / 32 GB RAM)' : 'Dedicated Plugin Server required (16C / 64 GB RAM; >100 devices requires additional Plugin Server)'}. SQL DB reserves ~400 KB per face template.`,
+        datasheet: 'Datasheets/Genetec/Plugins/Suprema_Genetec_Security_Center_Integration.pdf'
+      });
+    }
+
+    if (idemiaMorphoEnabled || controlIdBridgeServers > 0 || princetonIdentityServers > 0) {
+      const bioCount = (idemiaMorphoEnabled ? 1 : 0) + (controlIdBridgeServers > 0 ? 1 : 0) + (princetonIdentityServers > 0 ? 1 : 0);
       const bioRam = bioCount * 6;
       const bioCores = bioCount * 2;
       requiredServerRamGb += bioRam;
       requiredServerCores += bioCores;
       activeRolesAndPlugins.push({
         name: `Biometric Server Integration (${[
-          supremaSdkConnections > 0 ? `Suprema BioStar 2 (${supremaSdkConnections} SDK)` : '',
           idemiaMorphoEnabled ? 'IDEMIA MorphoManager' : '',
           controlIdBridgeServers > 0 ? `Control iD iDBridge (${controlIdBridgeServers})` : '',
           princetonIdentityServers > 0 ? `Princeton Identity (${princetonIdentityServers})` : ''
         ].filter(Boolean).join(', ')})`,
         ramGb: bioRam,
         cores: bioCores,
-        rule: 'Co-hosting BioStar 2 / MorphoManager / iDBridge middleware requires +6 GB RAM & +2 cores per biometric service; isolate on dedicated VM when >10,000 biometric templates.',
+        rule: 'Co-hosting MorphoManager / iDBridge / Princeton Identity middleware requires +6 GB RAM & +2 cores per biometric service; isolate on dedicated VM when >10,000 biometric templates.',
         datasheet: 'Datasheets/Genetec/Plugins/Genetec_Identity_Biometrics_Plugins_Datasheet.pdf'
       });
     }
 
-    if (cardSyncLicenseBlocks > 0 || clearIdIdentities > 0 || clearIdKiosks > 0) {
+    if (globalCardholderSystems > 0 || cardSyncLicenseBlocks > 0 || clearIdIdentities > 0 || clearIdKiosks > 0) {
       requiredServerRamGb += 4;
       requiredServerCores += 2;
       activeRolesAndPlugins.push({
-        name: `Identity & Card Sync (${cardSyncDataSources > 0 ? `${cardSyncDataSources} HR/SQL Sources` : ''}${cardSyncDataSources > 0 && clearIdIdentities > 0 ? ' + ' : ''}${clearIdIdentities > 0 ? `${clearIdIdentities.toLocaleString()} ClearID Identities` : ''})`,
+        name: `Global Cardholder Sync, Card Sync & ClearID (${[
+          globalCardholderSystems > 0 ? `${globalCardholderSystems} GCHM System(s)` : '',
+          cardSyncDataSources > 0 ? `${cardSyncDataSources} HR/SQL Source(s)` : '',
+          clearIdIdentities > 0 ? `${clearIdIdentities.toLocaleString()} ClearID Identities` : ''
+        ].filter(Boolean).join(' + ')})`,
         ramGb: 4,
         cores: 2,
-        rule: 'Card Synchronization & ClearID Bridge Role: Co-host on Directory server (+4 GB RAM, +2 CPU cores).',
+        rule: 'Global Cardholder Synchronizer, Card Synchronization & ClearID Bridge Role: Co-host on Directory server (+4 GB RAM, +2 CPU cores).',
         datasheet: 'Datasheets/Genetec/Plugins/Genetec_ClearID_Plugin_Datasheet.pdf'
+      });
+    }
+
+    if (alliedStreamConnectInstances > 0) {
+      requiredServerRamGb += 2;
+      requiredServerCores += 1;
+      activeRolesAndPlugins.push({
+        name: `Allied Telesis StreamConnect v2.1 (${alliedStreamConnectInstances} SDK Instance Pool)`,
+        ramGb: 2,
+        cores: 1,
+        rule: 'Shared SDK pool (Default: 4 instances): 1 per Main Server + 1 per Expansion Archiver connected to ATI PoE switch + 1 per open ATI Switch Mgmt task + 1 per open StreamConnect tile widget. Requires GSC 5.13.2+ & AW+ 5.5.4+; switches in VCS stacking unsupported.',
+        datasheet: 'Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf'
       });
     }
 
@@ -3453,7 +3526,7 @@ const GenetecLicensingSizer = {
     }
 
     // Media Gateway & GPU Analytics Isolation Check (SystemRequirements.pdf Page 12 & BriefCam/Corsight Guide)
-    const mediaGatewayStreams = (webClients * 4) + (mobileClients * 2) + (briefCamConnections > 0 ? Math.min(cameraUnits || 16, 32) : 0) + (corsightAiBridges * 15) + (effectiveSipIntercoms > 0 ? Math.min(effectiveSipIntercoms, 10) : 0);
+    const mediaGatewayStreams = (webClients * 4) + (mobileClients * 2) + (briefCamConnections > 0 ? Math.min(cameraUnits || 16, 32) : 0) + (corsightAiBridges > 0 ? Math.max(1, Math.ceil(corsightAiBridges / 2)) * 15 : 0) + (effectiveSipIntercoms > 0 ? Math.min(effectiveSipIntercoms, 10) : 0);
     const needsDedicatedMediaGateway = mediaGatewayStreams > 0 && totalVideoConnections > 32;
     const needsDedicatedGpuAnalyticsServer = briefCamConnections > 0 || corsightAiBridges > 0;
 
@@ -3462,13 +3535,15 @@ const GenetecLicensingSizer = {
     }
     if (needsDedicatedGpuAnalyticsServer) {
       activeRolesAndPlugins.push({
-        name: `GPU Video Analytics (${briefCamConnections > 0 ? `BriefCam: ${briefCamConnections} SDK` : ''}${briefCamConnections > 0 && corsightAiBridges > 0 ? ' + ' : ''}${corsightAiBridges > 0 ? `Corsight AI: ${corsightAiBridges} Bridge(s)` : ''})`,
+        name: `GPU Video Analytics (${briefCamConnections > 0 ? `BriefCam: ${briefCamConnections} SDK` : ''}${briefCamConnections > 0 && corsightAiBridges > 0 ? ' + ' : ''}${corsightAiBridges > 0 ? `Corsight AI Syfty Suite: ${corsightAiBridges} SDK` : ''})`,
         ramGb: 64,
         cores: 16,
-        rule: 'MANDATORY ISOLATION: BriefCam & Corsight AI require a dedicated NVIDIA GPU server (e.g., Streamvault SVA-1000E, 64 GB RAM). Never co-host on a Security Center Archiver.',
-        datasheet: 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf'
+        rule: 'MANDATORY ISOLATION: BriefCam & Corsight AI require a dedicated NVIDIA GPU server (e.g., Streamvault SVA-1000E, 64 GB RAM). Corsight Syfty Suite v1.1 requires H.264 camera streams and Media Gateway role with RTSPS (Require TLS) DISABLED.',
+        datasheet: corsightAiBridges > 0
+          ? 'Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf'
+          : 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf'
       });
-      roleSharingRules.push('GPU Analytics Isolation Rule: BriefCam Video Synopsis and Corsight AI Facial Recognition must run on a dedicated GPU appliance (Streamvault SVA-1000E) and pull streams via Media Gateway RTSP.');
+      roleSharingRules.push('GPU Analytics Isolation Rule: BriefCam Video Synopsis and Corsight AI Facial Recognition must run on a dedicated GPU appliance (Streamvault SVA-1000E) and pull H.264 streams via Media Gateway RTSP (with RTSPS disabled for Corsight Fortify).');
     }
 
     const multiRoleServerSpec = {
@@ -3494,7 +3569,7 @@ const GenetecLicensingSizer = {
       const svaAppliance = serversDb.find(s => s.id === 'genetec-sva-1000e-r2') || serversDb.find(s => String(s.applianceSeries || '').startsWith('SVA-'));
       if (svaAppliance) {
         streamvaultPlan.analyticsAppliance = svaAppliance;
-        streamvaultPlan.analyticsQty = Math.max(1, corsightAiBridges);
+        streamvaultPlan.analyticsQty = Math.max(1, Math.ceil(corsightAiBridges / 2));
       }
     }
 
@@ -3508,21 +3583,21 @@ const GenetecLicensingSizer = {
       videoLoad,
       cameraUnits,
       // Feature Toggle Flags
+      enableFederation,
+      enableCardholderSync,
       enableEncodersDvr,
       enableSipelia,
       enableLpr,
       enableVideoFailover,
-      enableIntrusionPanels,
+      enableCloudServices,
       enableBiometricsIdentity,
       enableClearId,
       enableKeyManagement,
       enablePartnerSdks,
-      enableVideoAnalytics,
       enableBuildingPsim,
-      enableRsa,
-      enableFederation,
       enableIiot,
-      enableCloudServices,
+      enableIntrusionPanels,
+      enableRsa,
       // Calculated Counts
       analogEncoderChannels,
       dvrNvrChannels,
@@ -3545,6 +3620,12 @@ const GenetecLicensingSizer = {
       extraClients,
       mobileClients,
       webClients,
+      federationSites,
+      federationSmallSites,
+      stratocastFedSites,
+      globalCardholderSystems,
+      cardSyncDataSources,
+      cardSyncLicenseBlocks,
       effectiveLprCameras,
       sipeliaMode,
       effectiveSipIntercoms,
@@ -3552,13 +3633,14 @@ const GenetecLicensingSizer = {
       sipPublicAddress,
       intrusionPanels,
       intrusionPanelManufacturer,
-      supremaEndpoints,
+      supremaDevices,
+      supremaPluginServers,
+      supremaEndpoints: supremaPluginServers,
       supremaSdkConnections,
+      supremaCloudLinksNeeded,
       idemiaMorphoEnabled,
       controlIdBridgeServers,
       princetonIdentityServers,
-      cardSyncDataSources,
-      cardSyncLicenseBlocks,
       clearIdIdentities,
       clearIdKiosks,
       idScannerClients,
@@ -3567,6 +3649,7 @@ const GenetecLicensingSizer = {
       keyCabinetCount,
       briefCamConnections,
       corsightAiBridges,
+      alliedStreamConnectInstances,
       winGuardNodes,
       effectiveRsaTier,
       rsaShortRangeSensors,
