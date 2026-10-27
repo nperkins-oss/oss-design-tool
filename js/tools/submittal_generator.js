@@ -418,9 +418,9 @@ function renderSubmittalPreview() {
                 <th class="py-2 px-3">Equipment / Model</th>
                 <th class="py-2 px-3">Part / SKU</th>
                 <th class="py-2 px-3">Location / Space</th>
-                <th class="py-2 px-3 text-center">Qty</th>
+                <th class="py-2 px-3 text-center">Quantity</th>
                 <th class="py-2 px-3 text-right">Unit MSRP</th>
-                <th class="py-2 px-3 text-right">Ext MSRP</th>
+                <th class="py-2 px-3 text-right">Extended MSRP</th>
                 <th class="py-2 px-3 text-right">Power</th>
               </tr>
             </thead>

@@ -2110,7 +2110,7 @@ const VideoStorageSizer = {
           failoverBufferTb: failoverBufferTbPerServer
         });
       }
-      ringChainText = `${primaryServersCount} Main (${mainServerLabels.slice(0, 4).join(", ")}${primaryServersCount > 4 ? "…" : ""}) ➔ ${dedicatedFailoverServersCount} Shared Failover (${simultaneousFailures} Sim. Failure${simultaneousFailures === 1 ? "" : "s"})`;
+      ringChainText = `${primaryServersCount} Main (${mainServerLabels.slice(0, 4).join(", ")}${primaryServersCount > 4 ? "…" : ""}) ➔ ${dedicatedFailoverServersCount} Shared Failover (${simultaneousFailures} Simultaneous Failure${simultaneousFailures === 1 ? "" : "s"})`;
     }
 
     const theoreticalRawTb = Math.round(requiredUsableTb * raidDef.approxRawMultiplier * 100) / 100;
@@ -2173,35 +2173,35 @@ const VideoStorageSizer = {
       } else if (!isServerCountVerified) {
         genetecFindings.push({
           severity: "critical",
-          text: `${recommendedArchiverServers} Server(s) configured (${rolesPerServer} roles/srv @ ${bitratePerServerMbps} Mbps/srv), but profile supports max ${maxRolesPerPhysicalServer} Archiver roles and ${maxMbpsPerPhysicalServer} Mbps per server (${minRequiredServers} server(s) needed).`
+          text: `${recommendedArchiverServers} Server(s) configured (${rolesPerServer} roles per server @ ${bitratePerServerMbps} Mbps per server), but profile supports maximum ${maxRolesPerPhysicalServer} Archiver roles and ${maxMbpsPerPhysicalServer} Mbps per server (${minRequiredServers} server(s) needed).`
         });
       }
       if (directoryCoHostViolation) {
         genetecFindings.push({
           severity: "critical",
-          text: `Genetec 5.14 Sec 1.10 (p.15): Systems with >300 cameras (${totalSensorHeads} streams) must isolate the Directory role on a dedicated server (cannot use Unified Directory + Archiver).`
+          text: `Genetec 5.14 Section 1.10 (p.15): Systems with >300 cameras (${totalSensorHeads} streams) must isolate the Directory role on a dedicated server (cannot use Unified Directory + Archiver).`
         });
       } else if (requiresDedicatedDirectoryServer) {
         genetecFindings.push({
           severity: "info",
-          text: `Genetec 5.14 Sec 1.10 (p.15): >300 cameras (${totalSensorHeads} streams) requires +1 Dedicated Directory Server alongside the ${recommendedArchiverServers} Archiver server(s).`
+          text: `Genetec 5.14 Section 1.10 (p.15): >300 cameras (${totalSensorHeads} streams) requires +1 Dedicated Directory Server alongside the ${recommendedArchiverServers} Archiver server(s).`
         });
       }
       if (isRingFailover) {
         genetecFindings.push({
           severity: "info",
-          text: `Dynamic Ring Failover (${ringChainText}): Each of the ${activeRingNodes} servers hosts 1 Primary Archiver (${normalCamsPerServer} cams / ${normalMbpsPerServer} Mbps / ${primaryUsableTbPerServer} TB) + 1 Standby Archiver for its upstream neighbor (${failoverMbpsOnSurvivor} Mbps survivor load / +${failoverBufferTbPerServer} TB buffer).`
+          text: `Dynamic Ring Failover (${ringChainText}): Each of the ${activeRingNodes} servers hosts 1 Primary Archiver (${normalCamsPerServer} cameras / ${normalMbpsPerServer} Mbps / ${primaryUsableTbPerServer} TB) + 1 Standby Archiver for its upstream neighbor (${failoverMbpsOnSurvivor} Mbps survivor load / +${failoverBufferTbPerServer} TB buffer).`
         });
       } else if (isDedicatedFailover) {
         genetecFindings.push({
           severity: "info",
-          text: `Shared Dedicated Failover (${primaryServersCount} Main Servers ➔ ${dedicatedFailoverServersCount} Shared Failover Server(s) = ${totalPhysicalServers} Total Servers): Covers up to ${simultaneousFailures} simultaneous Main Server failure(s) (${failoverCamsOnSurvivor} cams / ${failoverMbpsOnSurvivor} Mbps / ${failoverBufferTbPerServer} TB per Failover Server).`
+          text: `Shared Dedicated Failover (${primaryServersCount} Main Servers ➔ ${dedicatedFailoverServersCount} Shared Failover Server(s) = ${totalPhysicalServers} Total Servers): Covers up to ${simultaneousFailures} simultaneous Main Server failure(s) (${failoverCamsOnSurvivor} cameras / ${failoverMbpsOnSurvivor} Mbps / ${failoverBufferTbPerServer} TB per Failover Server).`
         });
       }
       if (totalLogicalVolumes > 1 || activeArchiverRoles > 1 || arrayUsableTb > maxVolTb) {
         genetecFindings.push({
           severity: "info",
-          text: `Windows Volume Mapping (≤${maxVolTb} TB Cap & Separate Volumes per Role): Configure ${totalLogicalVolumes} separate Windows volume(s) across ${recommendedArchiverServers} server(s) — ${volumesPerArchiverRole} volume(s) per Archiver role (${volumesPerServer} vol/server @ ~${sizePerVolumeTb} TB each) so no role shares a volume or exceeds ${maxVolTb} TB.`
+          text: `Windows Volume Mapping (≤${maxVolTb} TB Cap & Separate Volumes per Role): Configure ${totalLogicalVolumes} separate Windows volume(s) across ${recommendedArchiverServers} server(s) — ${volumesPerArchiverRole} volume(s) per Archiver role (${volumesPerServer} volumes per server @ ~${sizePerVolumeTb} TB each) so no role shares a volume or exceeds ${maxVolTb} TB.`
         });
       }
     }
@@ -2261,7 +2261,7 @@ const VideoStorageSizer = {
       if (!msIsServerVerified) {
         milestoneFindings.push({
           severity: "critical",
-          text: `${msPrimaryServers}x ${msProfileDef.shortLabel} configured (${msCamsPerServer} ch / ${msMbpsPerServer} Mbps / ${msUsableTbPerServer} TB per unit), exceeding appliance limits (${msMaxCamsPerServer} ch / ${msMaxMbpsPerServer} Mbps / ${msMaxUsableTbPerServer} TB usable). Minimum ${msMinPrimaryServers}x ${msProfileDef.shortLabel} required.`
+          text: `${msPrimaryServers}x ${msProfileDef.shortLabel} configured (${msCamsPerServer} channels / ${msMbpsPerServer} Mbps / ${msUsableTbPerServer} TB per unit), exceeding appliance limits (${msMaxCamsPerServer} channels / ${msMaxMbpsPerServer} Mbps / ${msMaxUsableTbPerServer} TB usable). Minimum ${msMinPrimaryServers}x ${msProfileDef.shortLabel} required.`
         });
       } else {
         milestoneFindings.push({
@@ -2491,19 +2491,19 @@ const GenetecLicensingSizer = {
    * Supports multi-selection of any combination of Partner SDKs simultaneously.
    */
   PARTNER_SDK_OPTIONS: [
-    { key: 'corsight_ai', sku: 'GSC-1SDK-BAPS-SYFTYCORSIGHTAI', label: 'Corsight AI Fortify Facial Recognition (Syfty Suite v1.1)', ruleHint: 'Default 2 connections: 1 Syfty Event Processor + 1 Overlay Service / Plugin Role ($250/conn • Requires H.264 & Media Gateway RTSPS Off)', defaultQty: 2, catalogId: 'genetec-sdk-corsight-ai', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf' },
-    { key: 'briefcam', sku: 'GSC-1SDK-BRIEFCAM', label: 'BriefCam Video Synopsis & Analytics (REVIEW / RESPOND / RESEARCH)', ruleHint: 'Default 4 connections: 1 VSServer + Fetch/GPU + Embedded Clients + 1 Spare ($250/conn)', defaultQty: 4, catalogId: 'genetec-sdk-briefcam', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf' },
-    { key: 'allied_streamconnect', sku: 'GSC-1SDK-ALLIEDTELESIS-STREAMC', label: 'Allied Telesis StreamConnect v2.1 PoE Switch Integration', ruleHint: 'Default 4 instances: 1 per Main/Archiver Server + 1 per open Switch Mgmt task / Security Desk tile widget ($250/instance)', defaultQty: 4, catalogId: 'genetec-sdk-allied-streamconnect', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf' },
-    { key: 'lsp_netlink', sku: 'GSC-1SDK-LSP-NETLINK', label: 'LifeSafety Power NetLink Power Monitoring', ruleHint: '1 SDK connection per NetLink server instance ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-lsp-netlink', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'amg_ndm', sku: 'GSC-1SDK-AMG-NDM', label: 'AMG Systems Network Device Management', ruleHint: '1 SDK connection per AMG NDM instance ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-amg-ndm', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'hid_is', sku: 'GSC-1SDK-HID-IS', label: 'HID Integration Services / Origo Mobile / FARGO Connect', ruleHint: '1 SDK connection per HID Integration Service ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-hid-is', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'schlage_wifilock', sku: 'GSC-1SDK-SCHLAGE-WIFILOCK', label: 'Schlage NDE / LE Wi-Fi Lock Server', ruleHint: '1 SDK connection per Schlage Engage server ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-schlage-wifilock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'aa_accentra', sku: 'GSC-1SDK-AA-ACCENTRA', label: 'Assa Abloy Accentra Lock Integration', ruleHint: '1 SDK connection per Accentra sync service ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-aa-accentra', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'alcatraz_rock', sku: 'GSC-1SDK-ALCATRAZ-ROCK', label: 'Alcatraz AI The Rock Facial Authentication', ruleHint: '1 SDK connection per Alcatraz AI Cloud/On-Prem bridge ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-alcatraz-rock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'raptor_connect', sku: 'GSC-1SDK-RAPTOR-CONNECT', label: 'Raptor Connect / Envoy / iLobby Visitor Management', ruleHint: '1 SDK connection per visitor management gateway ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-raptor-connect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'omnilert_gundetect', sku: 'GSC-1SDK-OMNILERT-GUNDETECT', label: 'Omnilert / Amberbox / EAGL Gunshot Detection', ruleHint: '1 SDK connection per gunshot detection server ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-omnilert-gundetect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'senstar_nms', sku: 'GSC-1SDK-SENSTAR-NMS', label: 'Senstar Network Manager Perimeter Intrusion', ruleHint: '1 SDK connection per Senstar NMS gateway ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-senstar-nms', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
-    { key: 'commend_duetto', sku: 'GSC-1SDK-COMMEND-DUETTO', label: 'Commend Duetto / Symphony Intercom Interface', ruleHint: '1 SDK connection per Commend interface ($250/conn)', defaultQty: 1, catalogId: 'genetec-sdk-commend-duetto', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' }
+    { key: 'corsight_ai', sku: 'GSC-1SDK-BAPS-SYFTYCORSIGHTAI', label: 'Corsight AI Fortify Facial Recognition (Syfty Suite v1.1)', ruleHint: 'Default 2 connections: 1 Syfty Event Processor + 1 Overlay Service / Plugin Role ($250 per connection • Requires H.264 & Media Gateway RTSPS Off)', defaultQty: 2, catalogId: 'genetec-sdk-corsight-ai', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/Corsight Syfty Genetec - User Guide 2026.pdf' },
+    { key: 'briefcam', sku: 'GSC-1SDK-BRIEFCAM', label: 'BriefCam Video Synopsis & Analytics (REVIEW / RESPOND / RESEARCH)', ruleHint: 'Default 4 connections: 1 VSServer + Fetch/GPU + Embedded Clients + 1 Spare ($250 per connection)', defaultQty: 4, catalogId: 'genetec-sdk-briefcam', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/BriefCam_Corsight_Video_Analytics_Genetec_Integration.pdf' },
+    { key: 'allied_streamconnect', sku: 'GSC-1SDK-ALLIEDTELESIS-STREAMC', label: 'Allied Telesis StreamConnect v2.1 PoE Switch Integration', ruleHint: 'Default 4 instances: 1 per Main/Archiver Server + 1 per open Switch Management task / Security Desk tile widget ($250 per instance)', defaultQty: 4, catalogId: 'genetec-sdk-allied-streamconnect', msrp: 250, datasheet: 'Datasheets/Genetec/Plugins/StreamConnect_for_Genetec_v2_1_User_Guide.pdf' },
+    { key: 'lsp_netlink', sku: 'GSC-1SDK-LSP-NETLINK', label: 'LifeSafety Power NetLink Power Monitoring', ruleHint: '1 SDK connection per NetLink server instance ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-lsp-netlink', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'amg_ndm', sku: 'GSC-1SDK-AMG-NDM', label: 'AMG Systems Network Device Management', ruleHint: '1 SDK connection per AMG NDM instance ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-amg-ndm', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'hid_is', sku: 'GSC-1SDK-HID-IS', label: 'HID Integration Services / Origo Mobile / FARGO Connect', ruleHint: '1 SDK connection per HID Integration Service ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-hid-is', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'schlage_wifilock', sku: 'GSC-1SDK-SCHLAGE-WIFILOCK', label: 'Schlage NDE / LE Wi-Fi Lock Server', ruleHint: '1 SDK connection per Schlage Engage server ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-schlage-wifilock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'aa_accentra', sku: 'GSC-1SDK-AA-ACCENTRA', label: 'Assa Abloy Accentra Lock Integration', ruleHint: '1 SDK connection per Accentra sync service ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-aa-accentra', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'alcatraz_rock', sku: 'GSC-1SDK-ALCATRAZ-ROCK', label: 'Alcatraz AI The Rock Facial Authentication', ruleHint: '1 SDK connection per Alcatraz AI Cloud/On-Premise bridge ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-alcatraz-rock', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'raptor_connect', sku: 'GSC-1SDK-RAPTOR-CONNECT', label: 'Raptor Connect / Envoy / iLobby Visitor Management', ruleHint: '1 SDK connection per visitor management gateway ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-raptor-connect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'omnilert_gundetect', sku: 'GSC-1SDK-OMNILERT-GUNDETECT', label: 'Omnilert / Amberbox / EAGL Gunshot Detection', ruleHint: '1 SDK connection per gunshot detection server ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-omnilert-gundetect', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'senstar_nms', sku: 'GSC-1SDK-SENSTAR-NMS', label: 'Senstar Network Manager Perimeter Intrusion', ruleHint: '1 SDK connection per Senstar NMS gateway ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-senstar-nms', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' },
+    { key: 'commend_duetto', sku: 'GSC-1SDK-COMMEND-DUETTO', label: 'Commend Duetto / Symphony Intercom Interface', ruleHint: '1 SDK connection per Commend interface ($250 per connection)', defaultQty: 1, catalogId: 'genetec-sdk-commend-duetto', msrp: 250, datasheet: 'Datasheets/Genetec/SupportedPlugins.pdf' }
   ],
 
   /**

@@ -217,7 +217,7 @@ const DOMAIN_DEFINITIONS = {
     color: "indigo",
     modes: [
       { id: "access", label: "Access & Edge", icon: "layers" },
-      { id: "backbone", label: "Core & Agg", icon: "cpu" },
+      { id: "backbone", label: "Core & Aggregation", icon: "cpu" },
       { id: "firewalls", label: "Gateways & WAN", icon: "shield" },
       { id: "optics", label: "Optics & DACs", icon: "cable" },
       { id: "wireless", label: "Wireless PtP", icon: "radio" },
@@ -287,6 +287,115 @@ function debounce(func, wait = 150) {
   return debounced;
 }
 window.debounce = debounce;
+
+// -----------------------------------------------------------
+// Universal Interactive Table Column Resizer Engine
+// -----------------------------------------------------------
+window.ossTableColumnWidths = window.ossTableColumnWidths || {};
+
+function getTableSignature(table, ths) {
+  if (table.id) return "id:" + table.id;
+  if (table.dataset && table.dataset.tableId) return "ds:" + table.dataset.tableId;
+  const headerKey = Array.from(ths)
+    .map(th => (th.textContent || "").replace(/\s+/g, " ").trim().slice(0, 28))
+    .join("|");
+  return "hdr:" + headerKey;
+}
+
+function initResizableTables(root = document) {
+  if (!root || typeof root.querySelectorAll !== "function") return;
+  const tables = root.tagName === "TABLE" ? [root] : Array.from(root.querySelectorAll("table"));
+  tables.forEach(table => {
+    const headerRow = table.querySelector("thead tr") || table.querySelector("tr");
+    if (!headerRow) return;
+    const ths = Array.from(headerRow.querySelectorAll("th"));
+    if (ths.length < 2) return;
+
+    const sig = getTableSignature(table, ths);
+    const savedMap = window.ossTableColumnWidths[sig] || {};
+
+    ths.forEach((th, colIdx) => {
+      th.classList.add("oss-resizable-th");
+      if (savedMap[colIdx]) {
+        th.style.width = savedMap[colIdx] + "px";
+        th.style.minWidth = savedMap[colIdx] + "px";
+      }
+
+      if (th.querySelector(".oss-col-resizer")) return;
+
+      const handle = document.createElement("div");
+      handle.className = "oss-col-resizer";
+      handle.title = "Drag to resize column • Double-click to reset width";
+
+      handle.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+
+      handle.addEventListener("dblclick", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        th.style.width = "";
+        th.style.minWidth = "";
+        if (window.ossTableColumnWidths[sig]) {
+          delete window.ossTableColumnWidths[sig][colIdx];
+        }
+      });
+
+      handle.addEventListener("mousedown", (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const startX = e.clientX;
+        const startWidth = th.getBoundingClientRect().width;
+        handle.classList.add("is-resizing");
+        document.body.classList.add("oss-is-resizing-col");
+
+        const onMouseMove = (moveEvent) => {
+          const delta = moveEvent.clientX - startX;
+          const newWidth = Math.max(48, Math.round(startWidth + delta));
+          th.style.width = newWidth + "px";
+          th.style.minWidth = newWidth + "px";
+          if (!window.ossTableColumnWidths[sig]) {
+            window.ossTableColumnWidths[sig] = {};
+          }
+          window.ossTableColumnWidths[sig][colIdx] = newWidth;
+        };
+
+        const onMouseUp = () => {
+          handle.classList.remove("is-resizing");
+          document.body.classList.remove("oss-is-resizing-col");
+          window.removeEventListener("mousemove", onMouseMove);
+          window.removeEventListener("mouseup", onMouseUp);
+        };
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
+      });
+
+      th.appendChild(handle);
+    });
+  });
+}
+window.initResizableTables = initResizableTables;
+
+const debouncedInitResizableTables = debounce(() => {
+  initResizableTables(document);
+}, 60);
+
+document.addEventListener("DOMContentLoaded", () => {
+  initResizableTables(document);
+  if (typeof MutationObserver !== "undefined" && document.body) {
+    const tableObserver = new MutationObserver((mutations) => {
+      for (let i = 0; i < mutations.length; i++) {
+        if (mutations[i].addedNodes && mutations[i].addedNodes.length > 0) {
+          debouncedInitResizableTables();
+          break;
+        }
+      }
+    });
+    tableObserver.observe(document.body, { childList: true, subtree: true });
+  }
+});
 
 // -----------------------------------------------------------
 // Multi-Device Port & PoE Sizing Demand State
@@ -1378,7 +1487,7 @@ function buildCalculatorStrip() {
                   PoE Target: ${p.budgetWithHeadroom}W (+${extraHeadroomPercent}% Buffer)
                 </span>
                 <span class="px-2 py-0.5 rounded bg-slate-950 border border-slate-800 text-slate-300 font-mono text-[10px]">
-                  ${demandCounts.af || 0} af &bull; ${demandCounts.at || 0} at &bull; ${demandCounts.bt60 || 0} bt60 &bull; ${demandCounts.bt90 || 0} bt90 (${totalSyncedGenericCams} Generic Cams)
+                  ${demandCounts.af || 0} af &bull; ${demandCounts.at || 0} at &bull; ${demandCounts.bt60 || 0} bt60 &bull; ${demandCounts.bt90 || 0} bt90 (${totalSyncedGenericCams} Generic Cameras)
                 </span>
               </div>
               <p class="text-[11px] text-slate-400">
@@ -1423,7 +1532,7 @@ function buildCalculatorStrip() {
 
         <div class="flex flex-wrap items-center gap-3 text-xs">
           <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Routing:</span>
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Minimum Routing:</span>
             <select onchange="fwTargetThroughputGbps = parseFloat(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-white text-xs focus:outline-none">
               <option value="0" ${fwTargetThroughputGbps === 0 ? 'selected' : ''}>Any Speed</option>
               <option value="1" ${fwTargetThroughputGbps === 1 ? 'selected' : ''}>1.0+ Gbps</option>
@@ -1434,7 +1543,7 @@ function buildCalculatorStrip() {
           </div>
 
           <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min IPS / Threat:</span>
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Minimum IPS / Threat:</span>
             <select onchange="fwTargetThreatMbps = parseInt(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-rose-400 text-xs focus:outline-none">
               <option value="0" ${fwTargetThreatMbps === 0 ? 'selected' : ''}>Any IPS</option>
               <option value="500" ${fwTargetThreatMbps === 500 ? 'selected' : ''}>500+ Mbps</option>
@@ -1446,7 +1555,7 @@ function buildCalculatorStrip() {
 
           ${(fwTargetThroughputGbps > 0 || fwTargetThreatMbps > 0) ? `
             <button onclick="fwTargetThroughputGbps = 0; fwTargetThreatMbps = 0; buildCalculatorStrip(); runActiveFilter();" class="text-xs text-rose-400 hover:text-rose-300 font-semibold px-2">
-              Reset Specs
+              Reset Specifications
             </button>
           ` : ''}
         </div>
@@ -1497,13 +1606,13 @@ function buildCalculatorStrip() {
 
         <div class="flex flex-wrap items-center gap-3 text-xs">
           <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Distance:</span>
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Minimum Distance:</span>
             <input type="number" step="0.1" min="0" max="25" value="${wlTargetDistanceMiles || 0}" onchange="wlTargetDistanceMiles = parseFloat(this.value) || 0; runActiveFilter();" class="w-14 bg-transparent font-mono font-bold text-emerald-400 focus:outline-none text-right" />
             <span class="text-[10px] font-mono text-slate-500">Miles (${((wlTargetDistanceMiles || 0) * 1.609).toFixed(1)} km)</span>
           </div>
 
           <div class="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5">
-            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Min Speed:</span>
+            <span class="text-[10px] font-mono font-bold text-slate-400 uppercase">Minimum Speed:</span>
             <select onchange="wlTargetThroughputMbps = parseInt(this.value) || 0; runActiveFilter();" class="bg-transparent font-mono font-bold text-indigo-300 text-xs focus:outline-none">
               <option value="0" ${wlTargetThroughputMbps === 0 ? 'selected' : ''}>Any Speed</option>
               <option value="450" ${wlTargetThroughputMbps === 450 ? 'selected' : ''}>450+ Mbps (Camera Pole)</option>
@@ -1802,8 +1911,8 @@ function buildCalculatorStrip() {
               <div>
                 <div class="text-[9px] uppercase font-bold text-slate-400">Quoted Cameras</div>
                 <div class="text-xs font-mono font-bold text-white">
-                  ${totalBomCams} Cam${totalBomCams === 1 ? '' : 's'}
-                  <span class="text-[10px] font-normal text-slate-400">(${totalGenericCams} Gen / ${totalSpecificCams} SKU)</span>
+                  ${totalBomCams} Camera${totalBomCams === 1 ? '' : 's'}
+                  <span class="text-[10px] font-normal text-slate-400">(${totalGenericCams} Generic / ${totalSpecificCams} Specific)</span>
                 </div>
               </div>
               <div class="h-6 w-px bg-slate-800"></div>
@@ -1943,13 +2052,13 @@ function buildCalculatorStrip() {
               <div class="flex flex-wrap items-center gap-2">
                 <h4 class="text-xs font-bold text-white uppercase tracking-wider">Servers &amp; Storage Catalog</h4>
                 <span class="px-2 py-0.5 rounded bg-purple-950/80 border border-purple-700/50 text-purple-300 font-mono text-[10px] font-bold">
-                  ${vCalc.totalCameras} Cams &bull; ${vCalc.requiredUsableTB} TB Usable (${vCalc.raidLevel})
+                  ${vCalc.totalCameras} Cameras &bull; ${vCalc.requiredUsableTB} TB Usable (${vCalc.raidLevel})
                 </span>
                 <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300 font-mono text-[10px] font-bold">
                   ${vCalc.peakIngressMbps} / ${vCalc.averageRecordingMbps} Mbps
                 </span>
                 <span class="px-2 py-0.5 rounded ${g.isFullyCompliant !== false ? 'bg-emerald-950/80 border-emerald-700/50 text-emerald-300' : 'bg-rose-950/80 border-rose-700/50 text-rose-300'} border font-mono text-[10px] font-bold">
-                  ${isMilestoneVms ? `Milestone Husky: ${g.recommendedArchiverServers || 1} Srv` : `Genetec: ${g.activeArchiverRoles || 1} Role(s) (${g.recommendedArchiverServers || 1} Srv)`}
+                  ${isMilestoneVms ? `Milestone Husky: ${g.recommendedArchiverServers || 1} Server(s)` : `Genetec: ${g.activeArchiverRoles || 1} Role(s) (${g.recommendedArchiverServers || 1} Server(s))`}
                 </span>
               </div>
               <p class="text-[11px] text-slate-400">
@@ -1994,17 +2103,17 @@ function buildCalculatorStrip() {
                 <h4 class="text-xs font-bold text-white uppercase tracking-wider">VMS Software &amp; Licensing Catalog</h4>
                 ${licRes ? (isMilestoneLic ? `
                   <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300 font-mono text-[10px] font-bold">
-                    Milestone ${licRes.editionInfo?.shortLabel || 'Corporate'} &bull; ${licRes.totalDeviceLicenses} Dev Lic &bull; ${licRes.careYears}Y Care Plus
+                    Milestone ${licRes.editionInfo?.shortLabel || 'Corporate'} &bull; ${licRes.totalDeviceLicenses} Device Licenses &bull; ${licRes.careYears}Y Care Plus
                   </span>
                   <span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 font-mono text-[10px] font-bold">
-                    Total SW MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()}
+                    Total Software MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()}
                   </span>
                 ` : `
                   <span class="px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-700/50 text-emerald-300 font-mono text-[10px] font-bold">
-                    Genetec ${String(licRes.effectiveTier || 'Enterprise').toUpperCase()} &bull; ${licRes.cameraUnits} Cam Lic &bull; ${licRes.readerConnections} Doors
+                    Genetec ${String(licRes.effectiveTier || 'Enterprise').toUpperCase()} &bull; ${licRes.cameraUnits} Camera Licenses &bull; ${licRes.readerConnections} Doors
                   </span>
                   <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-mono text-[10px] font-bold">
-                    Total SW MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} (${licRes.advantageYears}Y Advantage)
+                    Total Software MSRP: $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} (${licRes.advantageYears}Y Advantage)
                   </span>
                 `) : ''}
               </div>
@@ -2051,10 +2160,10 @@ function buildCalculatorStrip() {
                 <h4 class="text-xs font-bold text-white uppercase tracking-wider">Client Workstations Catalog</h4>
                 ${wsCalc ? `
                   <span class="px-2 py-0.5 rounded bg-sky-950/80 border border-sky-700/50 text-sky-300 font-mono text-[10px] font-bold">
-                    Viewing ${wsCalc.totalViewedStreams} Streams (${wsCalc.monitorCount} Mon) &bull; ${recEv.utilizationPct || 0}% Decode Load
+                    Viewing ${wsCalc.totalViewedStreams} Streams (${wsCalc.monitorCount} Monitors) &bull; ${recEv.utilizationPct || 0}% Decode Load
                   </span>
                   <span class="px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-700/50 text-indigo-300 font-mono text-[10px] font-bold">
-                    ${wsCalc.vmsPlatform === 'milestone' ? 'Milestone Smart Client' : 'Genetec 5.14'} Spec: ${wsCalc.recommendedProfile?.shortLabel || 'Recommended'} ${recCat ? `(${recCat.sku})` : ''}
+                    ${wsCalc.vmsPlatform === 'milestone' ? 'Milestone Smart Client' : 'Genetec 5.14'} Specification: ${wsCalc.recommendedProfile?.shortLabel || 'Recommended'} ${recCat ? `(${recCat.sku})` : ''}
                   </span>
                 ` : ''}
               </div>
@@ -2257,7 +2366,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                   </button>
                 </div>
                 <span class="px-2 py-0.5 rounded-md bg-purple-950/80 border border-purple-700/50 text-[10px] font-mono font-bold text-purple-300">
-                  ${vCalc.totalCameras} Cameras (${vCalc.totalSensors} Streams @ ${vCalc.perCameraMbps} Mbps/cam)
+                  ${vCalc.totalCameras} Cameras (${vCalc.totalSensors} Streams @ ${vCalc.perCameraMbps} Mbps per Camera)
                 </span>
                 ${isMilestoneVms ? `
                   <button onclick="openDatasheetModal('Datasheets/Milestone/Systems Comparison Chart.pdf', 'Milestone XProtect 2026 R2 Systems Comparison Chart', 'MILESTONE-XPROTECT-2026')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone XProtect 2026 R2 Systems Comparison Chart PDF">
@@ -2271,7 +2380,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                 ` : `
                   <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide', 'GENETEC-SC-5.14')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec Security Center 5.14.1.0 System Requirements Guide PDF">
                     <i data-lucide="file-text" class="w-3 h-3"></i>
-                    <span>Genetec 5.14 Spec Guide</span>
+                    <span>Genetec 5.14 Specification Guide</span>
                   </button>
                 `}
               </div>
@@ -2287,7 +2396,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
           <div class="flex flex-wrap items-center gap-2.5 shrink-0">
             <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${g.isFullyCompliant !== false ? 'border-slate-800' : 'border-rose-600/80'}">
               <div>
-                <div class="text-[9px] uppercase font-bold text-slate-400">Peak / Avg Bitrate</div>
+                <div class="text-[9px] uppercase font-bold text-slate-400">Peak / Average Bitrate</div>
                 <div class="text-xs font-mono font-bold text-sky-400">${vCalc.peakIngressMbps} <span class="text-slate-500">/</span> ${vCalc.averageRecordingMbps} Mbps</div>
               </div>
               <div class="h-6 w-px bg-slate-800"></div>
@@ -2299,7 +2408,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
               <div>
                 <div class="text-[9px] uppercase font-bold text-slate-400">${isMilestoneVms ? 'Milestone Recorders' : 'Genetec Archivers'}</div>
                 <div class="text-xs font-mono font-bold ${g.isArchiverCountVerified !== false ? 'text-emerald-400' : 'text-rose-400'}">
-                  ${isMilestoneVms ? `${g.recommendedArchiverServers || 1} Husky Srv (${g.activeArchiverRoles || 1} Inst)` : `${g.activeArchiverRoles} Role${g.activeArchiverRoles === 1 ? '' : 's'} (${g.recommendedArchiverServers} Srv)`}
+                  ${isMilestoneVms ? `${g.recommendedArchiverServers || 1} Husky Server(s) (${g.activeArchiverRoles || 1} Instance(s))` : `${g.activeArchiverRoles} Role${g.activeArchiverRoles === 1 ? '' : 's'} (${g.recommendedArchiverServers} Server${g.recommendedArchiverServers === 1 ? '' : 's'})`}
                 </div>
               </div>
               <div class="h-6 w-px bg-slate-800"></div>
@@ -2346,7 +2455,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
             <div class="flex flex-wrap items-center gap-2">
               ${vCalc.anyLowFpsUntilMotion ? `
                 <span class="text-[10px] font-mono px-2 py-1 rounded-lg bg-emerald-950/90 border border-emerald-700/60 text-emerald-300" title="Low-FPS baseline active on ${vCalc.lowFpsGroupCount || 1} camera group(s), adding ${vCalc.lowFpsAddedMbps || 0} Mbps average (+${vCalc.lowFpsAddedUsableTb || 0} TB usable storage) compared to motion-only recording">
-                  Low-FPS Active (${vCalc.lowFpsGroupCount}/${(vCalc.cameraGroups || []).length} Grp): ${vCalc.idleIngressMbps || 0} Mbps Idle ➔ ${vCalc.peakIngressMbps} Mbps Boost (+${vCalc.lowFpsAddedUsableTb || 0} TB)
+                  Low-FPS Active (${vCalc.lowFpsGroupCount}/${(vCalc.cameraGroups || []).length} Groups): ${vCalc.idleIngressMbps || 0} Mbps Idle ➔ ${vCalc.peakIngressMbps} Mbps Boost (+${vCalc.lowFpsAddedUsableTb || 0} TB)
                 </span>
               ` : ''}
 
@@ -2379,13 +2488,13 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                 <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400 align-bottom">
                   <th class="py-1.5 px-2 min-w-[125px]">Group Name</th>
                   <th class="py-1.5 px-1.5 w-20">Cameras</th>
-                  <th class="py-1.5 px-1.5 w-24">
+                  <th class="py-1.5 px-1.5 min-w-[125px]">
                     <div class="flex flex-col gap-0.5">
-                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Sensors/Cam setting">
+                      <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Sensors per Camera setting">
                         <input type="checkbox" ${videoSyncAllColumns.heads ? 'checked' : ''} onchange="toggleVideoColumnSync('heads', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
                         <span>All Same</span>
                       </label>
-                      <span>Sensors/Cam</span>
+                      <span>Sensors per Camera</span>
                     </div>
                   </th>
                   <th class="py-1.5 px-1.5 min-w-[130px]">
@@ -2438,13 +2547,13 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                       <span>Scene Activity</span>
                     </div>
                   </th>
-                  <th class="py-1.5 px-1.5 min-w-[140px]">
+                  <th class="py-1.5 px-1.5 min-w-[155px]">
                     <div class="flex flex-col gap-0.5">
                       <label class="inline-flex items-center gap-1 text-[8px] font-mono text-purple-300 cursor-pointer select-none" title="Check to set all camera groups to the same Recording Mode / Motion %">
                         <input type="checkbox" ${videoSyncAllColumns.motionDutyPct ? 'checked' : ''} onchange="toggleVideoColumnSync('motionDutyPct', this.checked)" class="w-3 h-3 rounded accent-purple-500 cursor-pointer" />
                         <span>All Same</span>
                       </label>
-                      <span>Rec Mode / Motion</span>
+                      <span>Recording Mode / Motion</span>
                     </div>
                   </th>
                   <th class="py-1.5 px-1.5 w-28">
@@ -2456,7 +2565,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                       <span>Retention (Days)</span>
                     </div>
                   </th>
-                  <th class="py-1.5 px-2 text-right min-w-[115px]">Peak / Avg Mbps</th>
+                  <th class="py-1.5 px-2 text-right min-w-[130px]">Peak / Average Mbps</th>
                   <th class="py-1.5 px-2 text-right min-w-[95px]">Group Usable</th>
                   <th class="py-1.5 px-1.5 text-center w-16">Actions</th>
                 </tr>
@@ -2534,35 +2643,35 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                         <option value="ultra" class="bg-slate-900" ${grp.sceneActivity === 'ultra' ? 'selected' : ''}>Very High (1.75x)</option>
                       </select>
                     </td>
-                    <!-- Rec Mode / Motion Duty -->
+                    <!-- Recording Mode / Motion Duty -->
                     <td class="py-1.5 px-1.5">
                       <select onchange="updateVideoCameraGroup(${idx}, 'motionDutyPct', Number(this.value))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-1.5 py-1 text-white font-bold text-xs focus:outline-none cursor-pointer">
                         <option value="100" class="bg-slate-900" ${grp.motionDutyPct >= 100 ? 'selected' : ''}>Continuous (100%)</option>
                         <option value="75" class="bg-slate-900" ${grp.motionDutyPct === 75 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `75% Boost / 25% @ ${grp.idleFps || 2}FPS` : 'Motion High (75%)'}</option>
-                        <option value="70" class="bg-slate-900" ${grp.motionDutyPct === 70 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `70% Boost / 30% @ ${grp.idleFps || 2}FPS` : 'Motion Comm (70%)'}</option>
-                        <option value="50" class="bg-slate-900" ${grp.motionDutyPct === 50 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `50% Boost / 50% @ ${grp.idleFps || 2}FPS` : 'Motion Med (50%)'}</option>
+                        <option value="70" class="bg-slate-900" ${grp.motionDutyPct === 70 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `70% Boost / 30% @ ${grp.idleFps || 2}FPS` : 'Motion Commercial (70%)'}</option>
+                        <option value="50" class="bg-slate-900" ${grp.motionDutyPct === 50 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `50% Boost / 50% @ ${grp.idleFps || 2}FPS` : 'Motion Medium (50%)'}</option>
                         <option value="25" class="bg-slate-900" ${grp.motionDutyPct === 25 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `25% Boost / 75% @ ${grp.idleFps || 2}FPS` : 'Motion Low (25%)'}</option>
-                        <option value="10" class="bg-slate-900" ${grp.motionDutyPct === 10 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `10% Boost / 90% @ ${grp.idleFps || 2}FPS` : 'Motion Min (10%)'}</option>
+                        <option value="10" class="bg-slate-900" ${grp.motionDutyPct === 10 ? 'selected' : ''}>${grp.lowFpsUntilMotion ? `10% Boost / 90% @ ${grp.idleFps || 2}FPS` : 'Motion Minimum (10%)'}</option>
                       </select>
                     </td>
                     <!-- Retention Days (Number input with quick step) -->
                     <td class="py-1.5 px-1.5">
                       <div class="flex items-center gap-1">
                         <input type="number" min="1" max="1825" value="${grp.retentionDays}" onchange="updateVideoCameraGroup(${idx}, 'retentionDays', Math.max(1, parseInt(this.value, 10) || 30))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-mono font-bold text-amber-300 text-center focus:outline-none focus:border-purple-500" title="Retention in days for this camera group" />
-                        <span class="text-[10px] text-slate-400 font-mono">d</span>
+                        <span class="text-[10px] text-slate-400 font-mono">Days</span>
                       </div>
                     </td>
-                    <!-- Group Peak / Avg Bitrate -->
+                    <!-- Group Peak / Average Bitrate -->
                     <td class="py-1.5 px-2 text-right font-mono">
                       <div class="text-xs font-bold text-sky-400">${grp.peakIngressMbps} <span class="text-slate-500">/</span> ${grp.averageRecordingMbps}</div>
                       <div class="text-[9px] ${grp.lowFpsUntilMotion ? 'text-emerald-400' : 'text-slate-500'}">
-                        ${grp.lowFpsUntilMotion ? `Idle: ${grp.idleIngressMbps} Mbps (@${grp.idleFps}fps)` : `${grp.perCameraMbps} Mbps/cam (${grp.totalStreams} str)`}
+                        ${grp.lowFpsUntilMotion ? `Idle: ${grp.idleIngressMbps} Mbps (@${grp.idleFps}fps)` : `${grp.perCameraMbps} Mbps per Camera (${grp.totalStreams} Streams)`}
                       </div>
                     </td>
                     <!-- Group Usable TB -->
                     <td class="py-1.5 px-2 text-right font-mono">
                       <div class="text-xs font-bold text-purple-300">${grp.requiredUsableTb} TB</div>
-                      <div class="text-[9px] text-slate-500">${grp.dailyStorageGb} GB/d</div>
+                      <div class="text-[9px] text-slate-500">${grp.dailyStorageGb} GB/Day</div>
                     </td>
                     <!-- Row Actions -->
                     <td class="py-1.5 px-1.5 text-center">
@@ -2664,11 +2773,11 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                         <input type="number" min="1" max="32" value="${fo.dedicatedFailoverServers}" onchange="setVideoSizerParam('dedicatedFailoverCount', Math.max(1, parseInt(this.value, 10) || 1))" class="w-11 bg-slate-950 border border-slate-700/80 rounded px-1 py-0.5 text-xs font-mono font-bold text-indigo-300 focus:outline-none text-center" />
                       </div>
                       <div class="flex items-center gap-1.5 bg-slate-900 border border-amber-500/30 rounded-lg px-2.5 py-1" title="How many Main Servers can fail at the exact same time onto the shared Failover pool? (1 = Standard N+1 where 1 Main Server fails at a time; 2+ = multi-server simultaneous outage)">
-                        <span class="text-[9px] font-bold uppercase text-amber-300">Sim. Failures (K):</span>
+                        <span class="text-[9px] font-bold uppercase text-amber-300">Simultaneous Failures (K):</span>
                         <select onchange="setVideoSizerParam('maxSimultaneousFailures', Number(this.value))" class="bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-amber-300 font-mono font-bold text-xs focus:outline-none cursor-pointer">
                           ${Array.from({ length: Math.max(1, fo.primaryServerCount) }, (_, kIdx) => kIdx + 1).map(k => `
                             <option value="${k}" class="bg-slate-900" ${(fo.simultaneousFailures || 1) === k ? 'selected' : ''}>
-                              ${k} Main Srv at once${k === 1 ? ' (Standard N+1)' : k === fo.primaryServerCount ? ' (All Main Srv)' : ''}
+                              ${k} Main Server(s) at once${k === 1 ? ' (Standard N+1)' : k === fo.primaryServerCount ? ' (All Main Servers)' : ''}
                             </option>
                           `).join('')}
                         </select>
@@ -2705,7 +2814,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                         <span>Dynamic ${fo.ringNodes}-Server Ring Chain</span>
                       </span>
                       <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${fo.isRingSurvivorVerified ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
-                        ${fo.isRingSurvivorVerified ? '✓ 2x Survivor Load Verified' : `⚠ Min ${fo.minCompliantRingNodes} Ring Servers Needed`}
+                        ${fo.isRingSurvivorVerified ? '✓ 2x Survivor Load Verified' : `⚠ Minimum ${fo.minCompliantRingNodes} Ring Servers Needed`}
                       </span>
                     </div>
                     <div class="px-2.5 py-1.5 rounded bg-slate-950 border border-slate-800 font-mono text-xs font-bold text-cyan-300 text-center tracking-wide">
@@ -2718,8 +2827,8 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                             <span>${node.nodeLabel}</span>
                             <span class="text-cyan-400">➔ ${node.failsOverTo}</span>
                           </div>
-                          <div class="text-[9px] text-slate-400 mt-0.5">Normal: <strong class="text-sky-300">${node.normalCams} cam / ${node.normalMbps} Mbps</strong></div>
-                          <div class="text-[9px] text-slate-400">Failover: <strong class="text-amber-300">${node.survivorCams} cam / ${node.survivorMbps} Mbps</strong></div>
+                          <div class="text-[9px] text-slate-400 mt-0.5">Normal: <strong class="text-sky-300">${node.normalCams} Cameras / ${node.normalMbps} Mbps</strong></div>
+                          <div class="text-[9px] text-slate-400">Failover: <strong class="text-amber-300">${node.survivorCams} Cameras / ${node.survivorMbps} Mbps</strong></div>
                         </div>
                       `).join('')}
                     </div>
@@ -2729,21 +2838,21 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-slate-400">Ring Fleet Size</div>
                       <div class="text-sm font-mono font-bold text-cyan-300">${fo.ringNodes} Servers</div>
-                      <div class="text-[9px] text-slate-500">1 Primary + 1 Neighbor Standby/Srv</div>
+                      <div class="text-[9px] text-slate-500">1 Primary + 1 Neighbor Standby per Server</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-slate-400">Normal Load / Node</div>
                       <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps</div>
-                      <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cams • ${fo.primaryUsableTbPerServer} TB Primary</div>
+                      <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cameras • ${fo.primaryUsableTbPerServer} TB Primary</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border ${fo.isRingSurvivorVerified ? 'border-slate-800' : 'border-amber-600/70'} flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-amber-300">Survivor Load (2x)</div>
                       <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps</div>
-                      <div class="text-[9px] text-slate-400">${fo.failoverCamsOnSurvivor} Cams when neighbor fails</div>
+                      <div class="text-[9px] text-slate-400">${fo.failoverCamsOnSurvivor} Cameras when neighbor fails</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-purple-300">Storage / Ring Node</div>
-                      <div class="text-sm font-mono font-bold text-purple-300">${fo.totalUsableTbPerRingServer} TB / Srv</div>
+                      <div class="text-sm font-mono font-bold text-purple-300">${fo.totalUsableTbPerRingServer} TB per Server</div>
                       <div class="text-[9px] text-slate-400">+${fo.failoverBufferTbPerServer} TB buffer (+${fo.failoverAddedUsableTb} TB total)</div>
                     </div>
                   </div>
@@ -2760,7 +2869,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                         <span>Shared Failover Pool (${fo.primaryServerCount} Main ➔ ${fo.dedicatedFailoverServers} Failover)</span>
                       </span>
                       <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold ${fo.isDedicatedSurvivorVerified !== false ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60' : 'bg-amber-950 text-amber-300 border border-amber-700/60'}">
-                        ${fo.isDedicatedSurvivorVerified !== false ? `✓ Covers ${fo.simultaneousFailures || 1} Sim. Failure(s)` : `⚠ Need ≥${fo.minFailoverServersForK} Failover Srv`}
+                        ${fo.isDedicatedSurvivorVerified !== false ? `✓ Covers ${fo.simultaneousFailures || 1} Simultaneous Failure(s)` : `⚠ Need ≥${fo.minFailoverServersForK} Failover Server(s)`}
                       </span>
                     </div>
                     <div class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
@@ -2771,7 +2880,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                             <span class="text-amber-300">Absorbs ${pool.simultaneousAbsorbed}x Main Load</span>
                           </div>
                           <div class="text-[9px] text-slate-300 mt-0.5">Protects: <strong class="text-white">${pool.monitorsText}</strong></div>
-                          <div class="text-[9px] text-slate-400">Sized For: <strong class="text-amber-300">${pool.failoverCams} cam / ${pool.failoverMbps} Mbps / ${pool.failoverBufferTb} TB</strong></div>
+                          <div class="text-[9px] text-slate-400">Sized For: <strong class="text-amber-300">${pool.failoverCams} Cameras / ${pool.failoverMbps} Mbps / ${pool.failoverBufferTb} TB</strong></div>
                         </div>
                       `).join('')}
                     </div>
@@ -2780,22 +2889,22 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                   <div class="xl:col-span-7 grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-indigo-500/30 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-indigo-300">Total Fleet (N + M)</div>
-                      <div class="text-sm font-mono font-bold text-white">${fo.primaryServerCount} Main + ${fo.dedicatedFailoverServers} Failover = <span class="text-indigo-300">${fo.totalServersRequired} Srv</span></div>
-                      <div class="text-[9px] text-slate-400">${fo.primaryServerCount} Main Srv share ${fo.dedicatedFailoverServers} Failover Srv</div>
+                      <div class="text-sm font-mono font-bold text-white">${fo.primaryServerCount} Main + ${fo.dedicatedFailoverServers} Failover = <span class="text-indigo-300">${fo.totalServersRequired} Servers</span></div>
+                      <div class="text-[9px] text-slate-400">${fo.primaryServerCount} Main Servers share ${fo.dedicatedFailoverServers} Failover Server(s)</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-slate-400">Load / Main Server (N=${fo.primaryServerCount})</div>
-                      <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps / Srv</div>
-                      <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cams • ${fo.primaryUsableTbPerServer} TB Usable/Srv</div>
+                      <div class="text-sm font-mono font-bold text-sky-400">${fo.normalMbpsPerServer} Mbps per Server</div>
+                      <div class="text-[9px] text-slate-500">${fo.normalCamsPerServer} Cameras • ${fo.primaryUsableTbPerServer} TB Usable per Server</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border ${fo.isDedicatedSurvivorVerified !== false ? 'border-slate-800' : 'border-amber-600/70'} flex flex-col justify-between">
-                      <div class="text-[9px] font-mono uppercase text-amber-300">Failover Srv Spec (${fo.loadsPerFailoverServer || 1}x Load)</div>
-                      <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps Cap</div>
-                      <div class="text-[9px] text-slate-400">Absorbs ${fo.failoverCamsOnSurvivor} Cams (${fo.simultaneousFailures || 1} Sim. Failure${(fo.simultaneousFailures || 1) === 1 ? '' : 's'})</div>
+                      <div class="text-[9px] font-mono uppercase text-amber-300">Failover Server Specification (${fo.loadsPerFailoverServer || 1}x Load)</div>
+                      <div class="text-sm font-mono font-bold text-amber-300">${fo.failoverMbpsOnSurvivor} Mbps Capacity</div>
+                      <div class="text-[9px] text-slate-400">Absorbs ${fo.failoverCamsOnSurvivor} Cameras (${fo.simultaneousFailures || 1} Simultaneous Failure${(fo.simultaneousFailures || 1) === 1 ? '' : 's'})</div>
                     </div>
                     <div class="p-2.5 rounded-lg bg-slate-900/80 border border-purple-500/30 flex flex-col justify-between">
                       <div class="text-[9px] font-mono uppercase text-purple-300">Failover Storage Buffer</div>
-                      <div class="text-sm font-mono font-bold text-purple-300">${fo.failoverBufferTbPerServer} TB / Failover Srv</div>
+                      <div class="text-sm font-mono font-bold text-purple-300">${fo.failoverBufferTbPerServer} TB per Failover Server</div>
                       <div class="text-[9px] text-slate-400">Total Project: ${vCalc.requiredUsableTB} TB (+${fo.failoverAddedUsableTb} TB buffer)</div>
                     </div>
                   </div>
@@ -2831,11 +2940,11 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                   </div>
                   ${isMilestoneVms ? `
                     <select onchange="setVideoSizerParam('milestoneProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
-                      ${milestoneProfilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps • Up to ${p.maxRawStorageTb}TB Raw)</option>`).join('')}
+                      ${milestoneProfilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Maximum ${p.maxCamerasPerRole} Cameras / ${p.maxBitrateMbpsPerRole} Mbps • Up to ${p.maxRawStorageTb}TB Raw)</option>`).join('')}
                     </select>
                   ` : `
                     <select onchange="setVideoSizerParam('genetecProfile', this.value)" class="w-full bg-transparent text-sky-300 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
-                      ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Max ${p.maxCamerasPerRole} Cam / ${p.maxBitrateMbpsPerRole} Mbps/Role • ≤${p.maxRolesPerServer || 4} Roles/Srv)</option>`).join('')}
+                      ${profilesList.map(p => `<option value="${p.id}" class="bg-slate-900" ${g.profileKey === p.id ? 'selected' : ''}>${p.label} (Maximum ${p.maxCamerasPerRole} Cameras / ${p.maxBitrateMbpsPerRole} Mbps per Role • ≤${p.maxRolesPerServer || 4} Roles per Server)</option>`).join('')}
                     </select>
                   `}
                 </div>
@@ -2848,17 +2957,17 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                   </div>
                   <div class="flex items-center gap-1 mt-0.5">
                     <input type="number" min="0" max="64" value="${videoServerCount === 0 ? g.recommendedArchiverServers : videoServerCount}" onchange="setVideoSizerParam('serverCount', Math.max(0, parseInt(this.value, 10) || 0))" class="w-full bg-slate-950 border border-slate-700/80 rounded px-1.5 py-0.5 text-xs font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'} focus:outline-none" title="Number of physical servers" />
-                    <span class="text-[9px] text-slate-400 font-mono">Srv</span>
+                    <span class="text-[9px] text-slate-400 font-mono">Servers</span>
                   </div>
                 </div>
                 <div class="sm:col-span-3 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1.5 flex flex-col justify-center">
-                  <div class="text-[9px] font-bold uppercase text-slate-400">${isMilestoneVms ? 'DB Encryption' : 'Encryption (p.10)'}</div>
+                  <div class="text-[9px] font-bold uppercase text-slate-400">${isMilestoneVms ? 'Database Encryption' : 'Encryption (p.10)'}</div>
                   <select onchange="setVideoSizerParam('encryptionCerts', Number(this.value))" class="w-full bg-transparent text-slate-200 font-bold text-xs focus:outline-none cursor-pointer mt-0.5">
-                    <option value="0" class="bg-slate-900" ${g.encryptionCerts === 0 ? 'selected' : ''}>0 Certs (100%)</option>
-                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>${isMilestoneVms ? 'Media DB Enc (-15%)' : '1 Cert (-30%)'}</option>
-                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>${isMilestoneVms ? 'Signed + Enc (-25%)' : '5 Certs (-41%)'}</option>
-                    <option value="10" class="bg-slate-900" ${g.encryptionCerts === 10 ? 'selected' : ''}>10 Certs (-52%)</option>
-                    <option value="20" class="bg-slate-900" ${g.encryptionCerts === 20 ? 'selected' : ''}>20 Certs (-68%)</option>
+                    <option value="0" class="bg-slate-900" ${g.encryptionCerts === 0 ? 'selected' : ''}>0 Certificates (100%)</option>
+                    <option value="1" class="bg-slate-900" ${g.encryptionCerts === 1 ? 'selected' : ''}>${isMilestoneVms ? 'Media Database Encrypted (-15%)' : '1 Certificate (-30%)'}</option>
+                    <option value="5" class="bg-slate-900" ${g.encryptionCerts === 5 ? 'selected' : ''}>${isMilestoneVms ? 'Signed + Encrypted (-25%)' : '5 Certificates (-41%)'}</option>
+                    <option value="10" class="bg-slate-900" ${g.encryptionCerts === 10 ? 'selected' : ''}>10 Certificates (-52%)</option>
+                    <option value="20" class="bg-slate-900" ${g.encryptionCerts === 20 ? 'selected' : ''}>20 Certificates (-68%)</option>
                   </select>
                 </div>
               </div>
@@ -2866,24 +2975,24 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
               <!-- Per-Recorder/Archiver, Multi-Role Server & Storage Tier Mapping Grid -->
               <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center pt-1">
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">${isMilestoneVms ? 'Rec. Instances' : 'Archiver Roles'}</div>
-                  <div class="text-sm font-mono font-bold ${g.isArchiverCountVerified !== false ? 'text-emerald-400' : 'text-rose-400'}">${g.activeArchiverRoles} <span class="text-[10px] text-slate-400">/ ${g.minRequiredArchiverRoles} Min</span></div>
-                  <div class="text-[9px] text-slate-500">≤${g.effectiveMaxMbpsPerArchiver} Mbps/${isMilestoneVms ? 'Inst' : 'Role'}</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">${isMilestoneVms ? 'Recording Instances' : 'Archiver Roles'}</div>
+                  <div class="text-sm font-mono font-bold ${g.isArchiverCountVerified !== false ? 'text-emerald-400' : 'text-rose-400'}">${g.activeArchiverRoles} <span class="text-[10px] text-slate-400">/ ${g.minRequiredArchiverRoles} Minimum</span></div>
+                  <div class="text-[9px] text-slate-500">≤${g.effectiveMaxMbpsPerArchiver} Mbps per ${isMilestoneVms ? 'Instance' : 'Role'}</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
-                  <div class="text-[9px] font-mono uppercase text-slate-400">Load / ${isMilestoneVms ? 'Inst' : 'Role'}</div>
+                  <div class="text-[9px] font-mono uppercase text-slate-400">Load per ${isMilestoneVms ? 'Instance' : 'Role'}</div>
                   <div class="text-sm font-mono font-bold text-sky-400">${g.bitratePerArchiverRoleMbps} Mbps</div>
-                  <div class="text-[9px] text-slate-500">${g.camerasPerArchiverRole} Cam • ${g.usableTbPerArchiverRole} TB</div>
+                  <div class="text-[9px] text-slate-500">${g.camerasPerArchiverRole} Cameras • ${g.usableTbPerArchiverRole} TB</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90">
                   <div class="text-[9px] font-mono uppercase text-slate-400">${isMilestoneVms ? 'Husky Fleet' : 'Roles / Server'}</div>
-                  <div class="text-sm font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'}">${isMilestoneVms ? `${g.recommendedArchiverServers} Husky Srv` : `${g.rolesPerServer || 1} Role${(g.rolesPerServer || 1) === 1 ? '' : 's'}/Srv`}</div>
-                  <div class="text-[9px] text-slate-500">${g.recommendedArchiverServers} Srv (${g.bitratePerServerMbps} Mbps/Srv)</div>
+                  <div class="text-sm font-mono font-bold ${g.isServerCountVerified !== false ? 'text-amber-300' : 'text-rose-400'}">${isMilestoneVms ? `${g.recommendedArchiverServers} Husky Server(s)` : `${g.rolesPerServer || 1} Role${(g.rolesPerServer || 1) === 1 ? '' : 's'} per Server`}</div>
+                  <div class="text-[9px] text-slate-500">${g.recommendedArchiverServers} Server(s) (${g.bitratePerServerMbps} Mbps per Server)</div>
                 </div>
                 <div class="p-2 rounded-lg bg-slate-900/70 border border-slate-800/90 sm:col-span-2" title="${isMilestoneVms ? 'Milestone XProtect supports Live Database + Multi-Stage Archive tiering on RAID 5/6/10 arrays.' : 'Every Archiver role requires its own separate Windows volume(s), and each Windows volume is capped at ≤30 TB usable.'}">
-                  <div class="text-[9px] font-mono uppercase text-purple-300">${isMilestoneVms ? `Live + Archive Tiering (${g.profile?.raidSupport || 'RAID 5/6/10'})` : `Windows Volumes (≤${g.maxVolumeSizeTb || 30}TB Cap • Isolated/Role)`}</div>
-                  <div class="text-sm font-mono font-bold text-purple-300">${g.totalLogicalVolumes || 1} Vol${(g.totalLogicalVolumes || 1) === 1 ? '' : 's'} <span class="text-[10px] text-slate-400">(${g.volumesPerArchiverRole || 1} Vol/${isMilestoneVms ? 'Inst' : 'Role'})</span></div>
-                  <div class="text-[9px] text-slate-400">${g.volumesPerServer || 1} Vol/Srv • ~${g.sizePerVolumeTb || g.usableTbPerArchiverRole} TB/Vol</div>
+                  <div class="text-[9px] font-mono uppercase text-purple-300">${isMilestoneVms ? `Live + Archive Tiering (${g.profile?.raidSupport || 'RAID 5/6/10'})` : `Windows Volumes (≤${g.maxVolumeSizeTb || 30}TB Cap • Isolated per Role)`}</div>
+                  <div class="text-sm font-mono font-bold text-purple-300">${g.totalLogicalVolumes || 1} Volume${(g.totalLogicalVolumes || 1) === 1 ? '' : 's'} <span class="text-[10px] text-slate-400">(${g.volumesPerArchiverRole || 1} Volume(s) per ${isMilestoneVms ? 'Instance' : 'Role'})</span></div>
+                  <div class="text-[9px] text-slate-400">${g.volumesPerServer || 1} Volume(s) per Server • ~${g.sizePerVolumeTb || g.usableTbPerArchiverRole} TB per Volume</div>
                 </div>
               </div>
             </div>
@@ -2891,8 +3000,8 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
             <!-- Hardware Spec & VMS Rule Alerts -->
             <div class="space-y-1.5 border-t border-slate-800/80 pt-2 text-[11px]">
               <div class="flex items-center justify-between text-slate-300 font-mono text-[10px]">
-                <span>Min Spec: <strong class="text-white">${g.profile?.cpuSpec || ''} • ${g.profile?.ramGb || 16}GB RAM • ${g.profile?.nicSpec || '1 GbE'}</strong></span>
-                <span>Daily: <strong class="text-sky-300">${vCalc.dailyStorageGb} GB/day</strong></span>
+                <span>Minimum Specification: <strong class="text-white">${g.profile?.cpuSpec || ''} • ${g.profile?.ramGb || 16}GB RAM • ${g.profile?.nicSpec || '1 GbE'}</strong></span>
+                <span>Daily: <strong class="text-sky-300">${vCalc.dailyStorageGb} GB/Day</strong></span>
               </div>
               ${(g.findings && g.findings.length > 0) ? g.findings.map(f => `
                 <div class="px-2.5 py-1.5 rounded-lg text-[10px] font-medium flex items-start gap-1.5 ${f.severity === 'critical' ? 'bg-rose-950/70 border border-rose-700/70 text-rose-200' : f.severity === 'warning' ? 'bg-amber-950/70 border border-amber-700/70 text-amber-200' : 'bg-sky-950/70 border border-sky-700/70 text-sky-200'}">
@@ -2919,7 +3028,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                 </div>
               </div>
               <span class="text-[10px] font-mono text-purple-300 bg-purple-950/60 border border-purple-700/50 px-2 py-0.5 rounded">
-                Selected Plan: <strong>${dp.totalDrives || 0}x ${dp.driveSizeTb || 16}TB</strong> = <strong>${dp.rawStorageTb || 0} TB Raw</strong> (${dp.usableStorageTb || 0} TB Usable • ${dp.totalVolumes30Tb || 1} Win Vols)
+                Selected Plan: <strong>${dp.totalDrives || 0}x ${dp.driveSizeTb || 16}TB</strong> = <strong>${dp.rawStorageTb || 0} TB Raw</strong> (${dp.usableStorageTb || 0} TB Usable • ${dp.totalVolumes30Tb || 1} Windows Volumes)
               </span>
             </div>
 
@@ -2930,10 +3039,10 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                     <th class="py-1.5 px-2">Drive Size</th>
                     <th class="py-1.5 px-2">Total Drives</th>
                     <th class="py-1.5 px-2">Data + Parity</th>
-                    <th class="py-1.5 px-2">Drives / Srv</th>
+                    <th class="py-1.5 px-2">Drives per Server</th>
                     <th class="py-1.5 px-2">Total Raw TB</th>
-                    <th class="py-1.5 px-2">Usable TB (Eff%)</th>
-                    <th class="py-1.5 px-2">Windows Vols (≤30TB)</th>
+                    <th class="py-1.5 px-2">Usable TB (Efficiency %)</th>
+                    <th class="py-1.5 px-2">Windows Volumes (≤30TB)</th>
                     <th class="py-1.5 px-2">Chassis Bay Fit</th>
                   </tr>
                 </thead>
@@ -2948,11 +3057,11 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                         </td>
                         <td class="py-1.5 px-2 text-amber-300 font-bold">${opt.totalDrives} Drives</td>
                         <td class="py-1.5 px-2 text-slate-400">${opt.totalDataDrives}D + ${opt.totalParityDrives}P</td>
-                        <td class="py-1.5 px-2 text-sky-300">${opt.drivesPerServer} / srv</td>
+                        <td class="py-1.5 px-2 text-sky-300">${opt.drivesPerServer} per Server</td>
                         <td class="py-1.5 px-2 text-white">${opt.rawStorageTb} TB</td>
                         <td class="py-1.5 px-2 text-emerald-400">${opt.usableStorageTb} TB <span class="text-slate-500">(${opt.efficiencyPct}%)</span></td>
                         <td class="py-1.5 px-2 text-purple-300" title="${opt.windowsVolumesPerRole} Windows Volume(s) per role × ${g.activeArchiverRoles} role(s) = ${opt.totalVolumes30Tb} separate Volumes (~${opt.sizePerVolumeTb} TB each)">
-                          ${opt.totalVolumes30Tb} Vol${opt.totalVolumes30Tb === 1 ? '' : 's'} <span class="text-slate-400 text-[10px]">(${opt.windowsVolumesPerRole}/role @ ${opt.sizePerVolumeTb}TB)</span>
+                          ${opt.totalVolumes30Tb} Volume${opt.totalVolumes30Tb === 1 ? '' : 's'} <span class="text-slate-400 text-[10px]">(${opt.windowsVolumesPerRole}/Role @ ${opt.sizePerVolumeTb}TB)</span>
                         </td>
                         <td class="py-1.5 px-2 text-[10px] text-slate-300">${opt.chassisFormFactor}</td>
                       </tr>
@@ -2987,7 +3096,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                     </div>
                     ${prim ? `
                       <span class="text-[11px] text-slate-300 font-mono bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-lg">
-                        ${(hPlan.primaryQty * (prim.usableStorageTb || 0)).toFixed(1)} TB Usable (${prim.raidSupport}) &bull; ${hPlan.primaryQty * (prim.maxThroughputMbps || 0)} Mbps &bull; $${(hPlan.primaryQty * (prim.msrp || 0)).toLocaleString()} HW
+                        ${(hPlan.primaryQty * (prim.usableStorageTb || 0)).toFixed(1)} TB Usable (${prim.raidSupport}) &bull; ${hPlan.primaryQty * (prim.maxThroughputMbps || 0)} Mbps &bull; $${(hPlan.primaryQty * (prim.msrp || 0)).toLocaleString()} Hardware
                       </span>
                     ` : ''}
                     ${hPlan.analyticsAppliance ? `
@@ -2996,7 +3105,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                       </span>
                     ` : ''}
                     <span class="text-[11px] text-sky-200 font-mono bg-sky-950/60 border border-sky-500/30 px-2.5 py-0.5 rounded-lg">
-                      Edition: <strong>${mLicRes.editionInfo?.label || 'XProtect Corporate'}</strong> &bull; ${mLicRes.totalDeviceLicenses} Dev Lic + ${mLicRes.careYears}Y Care Plus = <strong>$${mLicRes.totalSoftwareMsrp.toLocaleString()}</strong> SW
+                      Edition: <strong>${mLicRes.editionInfo?.label || 'XProtect Corporate'}</strong> &bull; ${mLicRes.totalDeviceLicenses} Device Licenses + ${mLicRes.careYears}Y Care Plus = <strong>$${mLicRes.totalSoftwareMsrp.toLocaleString()}</strong> Software
                     </span>
                   </div>
 
@@ -3039,9 +3148,9 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
           const svPlan = licRes.streamvaultPlan || {};
           const prim = svPlan.primaryAppliance;
           const tierLabels = {
-            aio: "Streamvault AIO (≤32 Cams)",
-            standard: "Omnicast Standard (≤50 Cams)",
-            pro: "Omnicast Pro (≤100 Cams)",
+            aio: "Streamvault AIO (≤32 Cameras)",
+            standard: "Omnicast Standard (≤50 Cameras)",
+            pro: "Omnicast Pro (≤100 Cameras)",
             enterprise: "Omnicast Enterprise"
           };
           return `
@@ -3059,7 +3168,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                   </div>
                   ${prim ? `
                     <span class="text-[11px] text-slate-300 font-mono bg-slate-950/80 border border-slate-800 px-2 py-0.5 rounded-lg">
-                      ${(svPlan.primaryQty * (prim.usableStorageTb || 0)).toFixed(1)} TB Usable (${prim.raidSupport}) &bull; ${svPlan.primaryQty * (prim.maxThroughputMbps || 0)} Mbps &bull; $${(svPlan.primaryQty * (prim.msrp || 0)).toLocaleString()} HW
+                      ${(svPlan.primaryQty * (prim.usableStorageTb || 0)).toFixed(1)} TB Usable (${prim.raidSupport}) &bull; ${svPlan.primaryQty * (prim.maxThroughputMbps || 0)} Mbps &bull; $${(svPlan.primaryQty * (prim.msrp || 0)).toLocaleString()} Hardware
                     </span>
                   ` : ''}
                   ${svPlan.directoryAppliance ? `
@@ -3073,7 +3182,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                     </span>
                   ` : ''}
                   <span class="text-[11px] text-indigo-200 font-mono bg-indigo-950/60 border border-indigo-500/30 px-2.5 py-0.5 rounded-lg">
-                    Tier: <strong>${tierLabels[licRes.effectiveTier] || 'Enterprise'}</strong> &bull; ${licRes.cameraUnits} Cam Lic + ${licRes.advantageYears}Y Advantage = <strong>$${licRes.totalSoftwareMsrp.toLocaleString()}</strong> SW
+                    Tier: <strong>${tierLabels[licRes.effectiveTier] || 'Enterprise'}</strong> &bull; ${licRes.cameraUnits} Camera Licenses + ${licRes.advantageYears}Y Advantage = <strong>$${licRes.totalSoftwareMsrp.toLocaleString()}</strong> Software
                   </span>
                 </div>
 
@@ -4003,13 +4112,13 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
               <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
                 <div>
                   <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Federated Remote Security Center Sites with Over 20 Entities (GSC-1SCFED @ $1,000 per site)">
-                    Fed Sites (&gt;20 Entities • $1k):
+                    Federated Sites (&gt;20 Entities • $1k):
                   </label>
                   <input type="number" min="0" max="100" value="${cfg.federationSites || 0}" onchange="setGenetecLicParam('federationSites', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
                 </div>
                 <div>
                   <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Federated Remote Security Center Sites with 20 Entities or Fewer (GSC-1SCFED-20 @ $600 per site)">
-                    Small Fed Sites (&le;20 • $600):
+                    Small Federated Sites (&le;20 • $600):
                   </label>
                   <input type="number" min="0" max="100" value="${cfg.federationSmallSites || 0}" onchange="setGenetecLicParam('federationSmallSites', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
                 </div>
@@ -4066,7 +4175,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
         <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-2">
           <div class="text-[10px] font-bold uppercase tracking-wider text-sky-400 flex items-center justify-between">
             <span>2. Video, Sipelia Intercom, LPR &amp; Cloud Archives</span>
-            <span class="font-mono text-white">${licRes.cameraUnits} IP Cameras ($${licRes.effectiveTier === 'aio' ? 120 : licRes.effectiveTier === 'standard' ? 200 : 325}/cam)</span>
+            <span class="font-mono text-white">${licRes.cameraUnits} IP Cameras ($${licRes.effectiveTier === 'aio' ? 120 : licRes.effectiveTier === 'standard' ? 200 : 325} per Camera)</span>
           </div>
 
           <!-- Feature Toggle: Sipelia Intercom (Standard / Advanced / Unified) -->
@@ -4119,7 +4228,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                 <input type="checkbox" ${licRes.enableLpr ? 'checked' : ''} onchange="toggleGenetecFeature('enableLpr', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
                 <span class="text-[11px] font-bold ${licRes.enableLpr ? 'text-amber-300' : 'text-slate-300'}">AutoVu Fixed License Plate Recognition (LPR)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableLpr ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableLpr ? `${licRes.effectiveLprCameras} Cam` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableLpr ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableLpr ? `${licRes.effectiveLprCameras} Camera(s)` : 'OFF'}</span>
             </div>
             ${licRes.enableLpr ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
@@ -4171,7 +4280,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
               <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
                 <div>
                   <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">
-                    Standby Archiver ${licRes.effectiveTier === 'enterprise' ? '<span class="text-emerald-400 font-bold">($0.00 Ent)</span>' : '($45/cam)'}:
+                    Standby Archiver ${licRes.effectiveTier === 'enterprise' ? '<span class="text-emerald-400 font-bold">($0.00 Enterprise)</span>' : '($45 per Camera)'}:
                   </label>
                   <select onchange="setGenetecLicParam('failoverMode', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1.5 py-1 text-[10px] font-bold text-white focus:outline-none">
                     <option value="none" ${cfg.failoverMode === 'none' ? 'selected' : ''}>No Standby Archiver</option>
@@ -4209,8 +4318,8 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                 <div>
                   <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">Cloud Tier:</label>
                   <select onchange="setGenetecLicParam('cloudArchiveTier', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-1 py-1 text-[10px] font-bold text-sky-300 focus:outline-none">
-                    <option value="performance" ${cfg.cloudArchiveTier !== 'long_term' ? 'selected' : ''}>Perf ($257/TB)</option>
-                    <option value="long_term" ${cfg.cloudArchiveTier === 'long_term' ? 'selected' : ''}>Long ($122/TB)</option>
+                    <option value="performance" ${cfg.cloudArchiveTier !== 'long_term' ? 'selected' : ''}>Performance ($257/TB)</option>
+                    <option value="long_term" ${cfg.cloudArchiveTier === 'long_term' ? 'selected' : ''}>Long-Term ($122/TB)</option>
                   </select>
                 </div>
                 <div>
@@ -4218,7 +4327,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                   <input type="number" min="0" max="500" value="${cfg.cloudArchiveTb || 0}" onchange="setGenetecLicParam('cloudArchiveTb', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
                 </div>
                 <div>
-                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">Clearance Cams:</label>
+                  <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold">Clearance Cameras:</label>
                   <input type="number" min="0" max="1000" value="${cfg.clearanceCameras || 0}" onchange="setGenetecLicParam('clearanceCameras', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-sky-300" />
                 </div>
               </div>
@@ -4271,14 +4380,14 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                   </div>
                   <div>
                     <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Suprema Plugin Servers — Requires 3x GSC-1SDK-SUPREMA-READ ($250) per Server (1 license = 2 connections: 2 Config Tool + 1 Security Desk + 1 Suprema Extractor Plugin + 1 Suprema Device Plugin supporting up to 4 Cloud Links / 256 devices per Suprema Guide Page 16)">
-                      Suprema Servers (3x SDK/svr):
+                      Suprema Servers (3x SDK per Server):
                     </label>
                     <input type="number" min="0" max="50" value="${licRes.supremaPluginServers || 0}" onchange="setGenetecLicParam('supremaPluginServers', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-purple-300" />
                   </div>
                 </div>
                 ${licRes.supremaSdkConnections > 0 ? `
                   <div class="p-1.5 rounded bg-purple-950/40 border border-purple-500/30 text-[9px] text-purple-200 leading-tight">
-                    <span class="font-bold text-purple-300">Suprema Licensing (Page 16):</span> <code class="text-white">${licRes.supremaSdkConnections}x GSC-1SDK-SUPREMA-READ</code> ($${(licRes.supremaSdkConnections * 250).toLocaleString()}) + Suprema <code class="text-white">INT_GEN_GSC</code> plugin license + <strong class="text-white">${licRes.supremaCloudLinksNeeded} Dedicated Cloud Link(s)</strong> (&le;50 dev/Cloud Link, RIO enabled) + 1x <code class="text-white">GSC-Sy-X-1R(E)</code> per door.
+                    <span class="font-bold text-purple-300">Suprema Licensing (Page 16):</span> <code class="text-white">${licRes.supremaSdkConnections}x GSC-1SDK-SUPREMA-READ</code> ($${(licRes.supremaSdkConnections * 250).toLocaleString()}) + Suprema <code class="text-white">INT_GEN_GSC</code> plugin license + <strong class="text-white">${licRes.supremaCloudLinksNeeded} Dedicated Cloud Link(s)</strong> (&le;50 Devices per Cloud Link, RIO enabled) + 1x <code class="text-white">GSC-Sy-X-1R(E)</code> per door.
                   </div>
                 ` : ''}
                 <div class="grid grid-cols-2 gap-2">
@@ -4304,7 +4413,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                   </div>
                   <div>
                     <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Telaeris XpressEntry Handheld Badge & Mustering Servers (GSC-1SDK-TELAERIS-XPRESSENTRY @ $250/server)">
-                      XpressEntry Svr:
+                      XpressEntry Servers:
                     </label>
                     <input type="number" min="0" max="50" value="${licRes.xpressEntryServers || 0}" onchange="setGenetecLicParam('xpressEntryServers', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-emerald-300" />
                   </div>
@@ -4371,7 +4480,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                 </div>
                 <div>
                   <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Key & Asset Management Cabinets — Includes $1,500 Base Plugin (GSC-1P-KEYCABINETBASE) + $500 per Key Cabinet (Morse Watchmans, Traka, Deister)">
-                    Key Cabinets ($1.5k + $500/cab):
+                    Key Cabinets ($1.5k + $500 per Cabinet):
                   </label>
                   <input type="number" min="0" max="100" value="${cfg.keyCabinetCount || 0}" onchange="setGenetecLicParam('keyCabinetCount', Math.max(0, parseInt(this.value,10)||0))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-center font-mono font-bold text-white" />
                 </div>
@@ -4401,8 +4510,8 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
             ${licRes.enablePartnerSdks ? `
               <div class="space-y-1.5 pt-1 border-t border-slate-800/80">
                 <div class="text-[10px] text-slate-400 flex items-center justify-between">
-                  <span>Check all Partner SDK integrations needed ($250/conn):</span>
-                  <span class="font-mono text-emerald-300">Qty</span>
+                  <span>Check all Partner SDK integrations needed ($250 per Connection):</span>
+                  <span class="font-mono text-emerald-300">Quantity</span>
                 </div>
                 <div class="max-h-48 overflow-y-auto custom-scrollbar space-y-1 pr-1">
                   ${partnerSdkOptions.filter(opt => opt.key !== 'none').map(opt => {
@@ -4677,7 +4786,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           <!-- Multi-Role & Co-Hosted Plugin Server Resource Requirements -->
           <div class="p-2 rounded-lg bg-slate-900/90 border border-slate-800 space-y-1">
             <div class="flex items-center justify-between text-[10px]">
-              <span class="font-bold text-slate-300 uppercase tracking-wider">Shared Server Resource Spec:</span>
+              <span class="font-bold text-slate-300 uppercase tracking-wider">Shared Server Resource Specification:</span>
               <span class="font-mono font-bold text-emerald-400">${mrSpec.requiredServerCores || 4} Cores • ${mrSpec.requiredServerRamGb || 16} GB RAM • ~${licRes.estimatedSqlDbGb || 0.5} GB SQL</span>
             </div>
             ${Array.isArray(mrSpec.activeRolesAndPlugins) && mrSpec.activeRolesAndPlugins.length > 0 ? `
@@ -5141,7 +5250,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 Milestone XProtect 2026 R2 &amp; Husky IVO Turnkey Sizer
               </h5>
               <span class="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-500/30 text-sky-300 text-[10px] font-mono font-bold">
-                Edition: ${ed.label || 'XProtect Corporate'} &bull; ${licRes.totalDeviceLicenses ?? licRes.cameraUnits ?? 0} Device Lic &bull; ${licRes.careYears}Y Care Plus (${licRes.multiYearDiscountPct ?? licRes.careDiscountPct ?? 0}% Multi-Year Disc)
+                Edition: ${ed.label || 'XProtect Corporate'} &bull; ${licRes.totalDeviceLicenses ?? licRes.cameraUnits ?? 0} Device Licenses &bull; ${licRes.careYears}Y Care Plus (${licRes.multiYearDiscountPct ?? licRes.careDiscountPct ?? 0}% Multi-Year Discount)
               </span>
               <a href="Datasheets/Milestone/Milestone_XProtect_VMS_Product_Comparison_Chart.pdf" target="_blank" class="text-[10px] text-sky-400 hover:text-sky-300 underline flex items-center gap-1">
                 <i data-lucide="file-text" class="w-3 h-3"></i>
@@ -5162,7 +5271,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           <div class="px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-right">
             <div class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Total Software + Husky IVO</div>
             <div class="text-xs font-mono font-bold text-emerald-400">
-              $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} SW <span class="text-slate-500">+</span> <span class="text-sky-300">$${(licRes.totalHardwareMsrp || 0).toLocaleString()} HW</span>
+              $${(licRes.totalSoftwareMsrp || 0).toLocaleString()} Software <span class="text-slate-500">+</span> <span class="text-sky-300">$${(licRes.totalHardwareMsrp || 0).toLocaleString()} Hardware</span>
             </div>
           </div>
           <button
@@ -5196,15 +5305,15 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="col-span-2">
-              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Select Milestone XProtect VMS Edition (Auto promotes to Professional+ >48 cams, Expert for Failover, or Corporate for Smart Wall Included / Federation)">
+              <label class="text-[10px] text-slate-300 block mb-0.5 font-semibold" title="Select Milestone XProtect VMS Edition (Auto promotes to Professional+ >48 cameras, Expert for Failover, or Corporate for Smart Wall Included / Federation)">
                 XProtect Edition Tier:
               </label>
               <select onchange="setMilestoneLicParam('tierMode', this.value)" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none">
                 <option value="auto" ${(cfg.tierMode === 'auto' || !cfg.tierMode) ? 'selected' : ''}>Auto-Select Edition (${ed.shortLabel || 'Professional+'})</option>
-                <option value="express_plus" ${cfg.tierMode === 'express_plus' ? 'selected' : ''}>XProtect Express+ (≤100 Cams, 1 Server • $29 Base + $109/dev)</option>
-                <option value="professional_plus" ${cfg.tierMode === 'professional_plus' ? 'selected' : ''}>XProtect Professional+ (Unlimited Cams • $566 Base + $192/dev)</option>
-                <option value="expert" ${cfg.tierMode === 'expert' ? 'selected' : ''}>XProtect Expert (Failover &amp; Encryption • $2,267 Base + $305/dev)</option>
-                <option value="corporate" ${cfg.tierMode === 'corporate' ? 'selected' : ''}>XProtect Corporate (Smart Wall &amp; Incident Mgr Included • $3,610 Base + $373/dev)</option>
+                <option value="express_plus" ${cfg.tierMode === 'express_plus' ? 'selected' : ''}>XProtect Express+ (≤100 Cameras, 1 Server • $29 Base + $109 per Device)</option>
+                <option value="professional_plus" ${cfg.tierMode === 'professional_plus' ? 'selected' : ''}>XProtect Professional+ (Unlimited Cameras • $566 Base + $192 per Device)</option>
+                <option value="expert" ${cfg.tierMode === 'expert' ? 'selected' : ''}>XProtect Expert (Failover &amp; Encryption • $2,267 Base + $305 per Device)</option>
+                <option value="corporate" ${cfg.tierMode === 'corporate' ? 'selected' : ''}>XProtect Corporate (Smart Wall &amp; Incident Manager Included • $3,610 Base + $373 per Device)</option>
               </select>
             </div>
             <div>
@@ -5212,11 +5321,11 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 Care Plus Term:
               </label>
               <select onchange="setMilestoneLicParam('careYears', parseInt(this.value,10))" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs font-bold text-emerald-300 focus:outline-none">
-                <option value="1" ${licRes.careYears === 1 ? 'selected' : ''}>1 Year Care Plus (0% Disc)</option>
-                <option value="2" ${licRes.careYears === 2 ? 'selected' : ''}>2 Years Care Plus (-10% Disc)</option>
-                <option value="3" ${licRes.careYears === 3 ? 'selected' : ''}>3 Years Care Plus (-15% Disc)</option>
-                <option value="4" ${licRes.careYears === 4 ? 'selected' : ''}>4 Years Care Plus (-20% Disc)</option>
-                <option value="5" ${licRes.careYears === 5 ? 'selected' : ''}>5 Years Care Plus (-25% Disc)</option>
+                <option value="1" ${licRes.careYears === 1 ? 'selected' : ''}>1 Year Care Plus (0% Discount)</option>
+                <option value="2" ${licRes.careYears === 2 ? 'selected' : ''}>2 Years Care Plus (-10% Discount)</option>
+                <option value="3" ${licRes.careYears === 3 ? 'selected' : ''}>3 Years Care Plus (-15% Discount)</option>
+                <option value="4" ${licRes.careYears === 4 ? 'selected' : ''}>4 Years Care Plus (-20% Discount)</option>
+                <option value="5" ${licRes.careYears === 5 ? 'selected' : ''}>5 Years Care Plus (-25% Discount)</option>
               </select>
             </div>
             <div>
@@ -5277,11 +5386,11 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 <input type="checkbox" ${isXpAccessMode ? 'checked' : ''} onchange="toggleMilestoneFeature('enableAccessControl', this.checked)" class="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-0" />
                 <span class="text-[11px] font-bold ${isXpAccessMode ? 'text-amber-300' : 'text-slate-300'}">XProtect Access (3rd-Party ACS Integration)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${isXpAccessMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${isXpAccessMode ? `${licRes.effectiveAccessCount || 0} Rdrs` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${isXpAccessMode ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40' : 'bg-slate-800 text-slate-400'}">${isXpAccessMode ? `${licRes.effectiveAccessCount || 0} Readers` : 'OFF'}</span>
             </div>
             ${isXpAccessMode ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                <span class="text-[10px] text-slate-300">Base ($129) + Access Door/Reader Licenses ($39/rdr):</span>
+                <span class="text-[10px] text-slate-300">Base ($129) + Access Door/Reader Licenses ($39 per Reader):</span>
                 <input type="number" min="0" max="2000" value="${licRes.effectiveAccessCount || 0}" onchange="setMilestoneLicParam('accessReadersOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-amber-300" />
               </div>
             ` : ''}
@@ -5297,7 +5406,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             </div>
             ${isAxisMode ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                <span class="text-[10px] text-slate-300">Base ($0) + Axis Controller Door Lic ($89/door):</span>
+                <span class="text-[10px] text-slate-300">Base ($0) + Axis Controller Door Licenses ($89 per Door):</span>
                 <input type="number" min="0" max="500" value="${licRes.effectiveAccessCount || 0}" onchange="setMilestoneLicParam('axisSecureEntryDoorsOverride', Math.max(0, parseInt(this.value,10)||0))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-emerald-300" />
               </div>
             ` : ''}
@@ -5339,11 +5448,11 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                 <input type="checkbox" ${licRes.enableRapidReview ? 'checked' : ''} onchange="toggleMilestoneFeature('enableRapidReview', this.checked)" class="rounded border-slate-700 bg-slate-900 text-sky-500 focus:ring-0" />
                 <span class="text-[11px] font-bold ${licRes.enableRapidReview ? 'text-sky-300' : 'text-slate-300'}">XProtect Rapid REVIEW / BriefCam Forensics</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableRapidReview ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableRapidReview ? `${licRes.rapidReviewCameras} Cams` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableRapidReview ? 'bg-sky-500/20 text-sky-300 border border-sky-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableRapidReview ? `${licRes.rapidReviewCameras} Cameras` : 'OFF'}</span>
             </div>
             ${licRes.enableRapidReview ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
-                <span class="text-[10px] text-slate-300">Rapid REVIEW Camera Licenses ($220/cam):</span>
+                <span class="text-[10px] text-slate-300">Rapid REVIEW Camera Licenses ($220 per Camera):</span>
                 <input type="number" min="1" max="500" value="${licRes.rapidReviewCameras || 5}" onchange="setMilestoneLicParam('rapidReviewCameras', Math.max(1, parseInt(this.value,10)||1))" class="w-16 bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-center font-mono font-bold text-sky-300" />
               </div>
             ` : ''}
@@ -5361,9 +5470,9 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
             <div class="flex items-center justify-between gap-2">
               <label class="flex items-center gap-2 cursor-pointer select-none flex-1">
                 <input type="checkbox" ${licRes.enableInterconnect ? 'checked' : ''} onchange="toggleMilestoneFeature('enableInterconnect', this.checked)" class="rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-0" />
-                <span class="text-[11px] font-bold ${licRes.enableInterconnect ? 'text-emerald-300' : 'text-slate-300'}">Milestone Interconnect (<code class="text-emerald-400">XPCOMIDL</code> @ $77.76/cam)</span>
+                <span class="text-[11px] font-bold ${licRes.enableInterconnect ? 'text-emerald-300' : 'text-slate-300'}">Milestone Interconnect (<code class="text-emerald-400">XPCOMIDL</code> @ $77.76 per Camera)</span>
               </label>
-              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableInterconnect ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableInterconnect ? `${licRes.interconnectCameras || 0} Dev` : 'OFF'}</span>
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase ${licRes.enableInterconnect ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' : 'bg-slate-800 text-slate-400'}">${licRes.enableInterconnect ? `${licRes.interconnectCameras || 0} Devices` : 'OFF'}</span>
             </div>
             ${licRes.enableInterconnect ? `
               <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-800/80">
@@ -5827,12 +5936,12 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
               ${isMilestoneWs ? `
                 <button onclick="openDatasheetModal('Datasheets/Milestone/7_Milestone Husky IVO Viewing Stations flyer.pdf', 'Milestone Husky IVO 150D / 350T Viewing Station Datasheet', 'HIVO-350T-VS')" class="px-2 py-0.5 rounded-md bg-sky-950/80 hover:bg-sky-900 border border-sky-700/60 text-[10px] font-mono font-semibold text-sky-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Milestone Husky IVO 150D/350T Viewing Station Datasheet PDF">
                   <i data-lucide="file-text" class="w-3 h-3"></i>
-                  <span>Husky IVO VS Spec</span>
+                  <span>Husky IVO Viewing Station Specification</span>
                 </button>
               ` : `
                 <button onclick="openDatasheetModal('Datasheets/Genetec/SystemRequirements.pdf', 'Genetec Security Center 5.14.1.0 System Requirements Guide (Pages 5-6)', 'GENETEC-SC-5.14-WS')" class="px-2 py-0.5 rounded-md bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-700/60 text-[10px] font-mono font-semibold text-indigo-300 flex items-center gap-1 transition-all cursor-pointer" title="Open Genetec 5.14.1.0 System Requirements PDF (Pages 5-6 Client Workstation Specifications & Decoding Performance)">
                   <i data-lucide="file-text" class="w-3 h-3"></i>
-                  <span>Genetec 5.14 Spec Guide (p. 5–6)</span>
+                  <span>Genetec 5.14 Specification Guide (p. 5–6)</span>
                 </button>
               `}
             </div>
@@ -5846,7 +5955,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
         <div class="flex flex-wrap items-center gap-2.5 shrink-0">
           <div class="flex items-center gap-3 px-3 py-1.5 rounded-xl bg-slate-950 border ${wsCalc.exceedsSingleHighPerfWorkstation ? 'border-amber-600/80' : 'border-slate-800'}">
             <div>
-              <div class="text-[9px] uppercase font-bold text-slate-400">Required Spec Tier</div>
+              <div class="text-[9px] uppercase font-bold text-slate-400">Required Specification Tier</div>
               <div class="text-xs font-mono font-bold text-sky-400">${recProf.shortLabel || 'Recommended'}</div>
             </div>
             <div class="h-6 w-px bg-slate-800"></div>
@@ -5911,12 +6020,12 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
         <div class="flex flex-wrap items-center gap-2">
           <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.hwAccelDecode ? 'bg-emerald-950/40 border-emerald-600/50 text-emerald-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Hardware-accelerated GPU decoding enabled in Security Desk options">
             <input type="checkbox" ${wsCalc.hwAccelDecode ? 'checked' : ''} onchange="setWorkstationSizerParam('hwAccelDecode', this.checked)" class="w-3.5 h-3.5 rounded accent-emerald-500 cursor-pointer" />
-            <span>GPU HW Acceleration</span>
+            <span>GPU Hardware Acceleration</span>
           </label>
 
-          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.watermarking ? 'bg-amber-950/40 border-amber-600/50 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Genetec 5.14 Page 6: Video Watermarking reduces max decoded streams by 10% with HW acceleration or 30% without HW acceleration">
+          <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.watermarking ? 'bg-amber-950/40 border-amber-600/50 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Genetec 5.14 Page 6: Video Watermarking reduces maximum decoded streams by 10% with hardware acceleration or 30% without hardware acceleration">
             <input type="checkbox" ${wsCalc.watermarking ? 'checked' : ''} onchange="setWorkstationSizerParam('watermarking', this.checked)" class="w-3.5 h-3.5 rounded accent-amber-500 cursor-pointer" />
-            <span>Video Watermarking (${wsCalc.hwAccelDecode ? '-10%' : '-30%'} Cap)</span>
+            <span>Video Watermarking (${wsCalc.hwAccelDecode ? '-10%' : '-30%'} Capacity)</span>
           </label>
 
           <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.encryptedStreams ? 'bg-rose-950/40 border-rose-600/50 text-rose-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Viewing encrypted streams increases CPU load by up to 40% (~28.6% stream capacity reduction)">
@@ -5927,7 +6036,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
           ${isMilestoneWs ? `
             <label class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold cursor-pointer select-none transition-all ${wsCalc.adaptiveStreaming ? 'bg-sky-950/40 border-sky-600/50 text-sky-300' : 'bg-slate-900 border-slate-800 text-slate-400'}" title="Milestone XProtect Adaptive Streaming dynamically requests lower-resolution secondary streams for small grid tiles, increasing multi-tile decoding capacity by ~35%">
               <input type="checkbox" ${wsCalc.adaptiveStreaming ? 'checked' : ''} onchange="setWorkstationSizerParam('adaptiveStreaming', this.checked)" class="w-3.5 h-3.5 rounded accent-sky-500 cursor-pointer" />
-              <span>Adaptive Streaming (+35% Tile Cap)</span>
+              <span>Adaptive Streaming (+35% Tile Capacity)</span>
             </label>
           ` : ''}
         </div>
@@ -5955,13 +6064,13 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
           <div class="flex flex-wrap items-center gap-1.5">
             <span class="text-[10px] font-mono text-slate-400 uppercase mr-1">Quick Presets:</span>
             <button onclick="applyWorkstationPreset('operator_16_1080p')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-slate-300 cursor-pointer">
-              16x 1080p @ 15fps (2 Mon)
+              16x 1080p @ 15fps (2 Monitors)
             </button>
             <button onclick="applyWorkstationPreset('operator_32_mixed')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-sky-300 cursor-pointer">
-              24x 1080p + 8x 4K (3 Mon)
+              24x 1080p + 8x 4K (3 Monitors)
             </button>
             <button onclick="applyWorkstationPreset('soc_wall_48')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-indigo-300 cursor-pointer">
-              36x 4MP + 12x 4K Wall (4 Mon)
+              36x 4MP + 12x 4K Wall (4 Monitors)
             </button>
             <button onclick="applyWorkstationPreset('panoramic_multisensor')" class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-700 text-[10px] font-semibold text-purple-300 cursor-pointer">
               Multi-Sensor + 12MP Fisheye
@@ -5974,14 +6083,14 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
             <thead>
               <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400 align-bottom">
                 <th class="py-1.5 px-2 min-w-[160px]">Tile Group / Monitor Assignment</th>
-                <th class="py-1.5 px-1.5 w-24">Viewed Cams</th>
+                <th class="py-1.5 px-1.5 w-24">Viewed Cameras</th>
                 <th class="py-1.5 px-1.5 w-28">
                   <div class="flex flex-col gap-0.5">
                     <label class="inline-flex items-center gap-1 text-[8px] font-mono text-sky-300 cursor-pointer select-none">
                       <input type="checkbox" ${workstationSyncAllColumns.heads ? 'checked' : ''} onchange="toggleWorkstationColumnSync('heads', this.checked)" class="w-3 h-3 rounded accent-sky-500 cursor-pointer" />
                       <span>All Same</span>
                     </label>
-                    <span>Streams / Cam</span>
+                    <span>Streams per Camera</span>
                   </div>
                 </th>
                 <th class="py-1.5 px-1.5 min-w-[140px]">
@@ -5990,7 +6099,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                       <input type="checkbox" ${workstationSyncAllColumns.resolutionMp ? 'checked' : ''} onchange="toggleWorkstationColumnSync('resolutionMp', this.checked)" class="w-3 h-3 rounded accent-sky-500 cursor-pointer" />
                       <span>All Same</span>
                     </label>
-                    <span>Displayed Stream Res</span>
+                    <span>Displayed Stream Resolution</span>
                   </div>
                 </th>
                 <th class="py-1.5 px-1.5 w-28">
@@ -6013,8 +6122,8 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                 </th>
                 <th class="py-1.5 px-2 text-right">Decoded Streams</th>
                 <th class="py-1.5 px-2 text-right">Pixel Rate (MP/s)</th>
-                <th class="py-1.5 px-2 text-right">Est. Client Mbps</th>
-                <th class="py-1.5 px-2 text-right" title="Decode load on the Recommended Workstation profile">Load (${recProf.shortLabel || 'Rec'})</th>
+                <th class="py-1.5 px-2 text-right">Estimated Client Mbps</th>
+                <th class="py-1.5 px-2 text-right" title="Decode load on the Recommended Workstation profile">Load (${recProf.shortLabel || 'Recommended'})</th>
                 <th class="py-1.5 px-1.5 text-center w-16">Actions</th>
               </tr>
             </thead>
@@ -6066,12 +6175,12 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                         <option value="AV1" class="bg-slate-900" ${grp.codec === 'AV1' ? 'selected' : ''}>AV1 (Genetec 5.14)</option>
                       </select>
                     </td>
-                    <td class="py-1.5 px-2 text-right font-mono font-bold text-white">${recGroupDetail.streams || (grp.qty * (grp.heads || 1))} str</td>
+                    <td class="py-1.5 px-2 text-right font-mono font-bold text-white">${recGroupDetail.streams || (grp.qty * (grp.heads || 1))} Streams</td>
                     <td class="py-1.5 px-2 text-right font-mono text-sky-300">${recGroupDetail.pixelRateMpPerSec || 0} MP/s</td>
                     <td class="py-1.5 px-2 text-right font-mono text-purple-300">${recGroupDetail.estimatedBandwidthMbps || 0} Mbps</td>
                     <td class="py-1.5 px-2 text-right font-mono">
                       <span class="font-bold ${(recGroupDetail.groupLoadPct || 0) <= 80 ? 'text-emerald-400' : 'text-amber-400'}">${recGroupDetail.groupLoadPct || 0}%</span>
-                      <span class="text-[9px] text-slate-500 block">of ${recGroupDetail.effectiveMaxStreams || 0} max</span>
+                      <span class="text-[9px] text-slate-500 block">of ${recGroupDetail.effectiveMaxStreams || 0} Maximum</span>
                     </td>
                     <td class="py-1.5 px-1.5 text-center">
                       <div class="flex items-center justify-center gap-1">
@@ -6115,14 +6224,14 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                 <div class="flex items-center justify-between gap-2">
                   <div class="flex items-center gap-2">
                     <span class="text-xs font-black uppercase tracking-wider ${isRec ? 'text-sky-300' : 'text-white'}">${prof.shortLabel} Profile</span>
-                    ${isRec ? `<span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/50 text-sky-200 text-[9px] font-mono font-bold uppercase">★ Required Spec</span>` : ''}
+                    ${isRec ? `<span class="px-2 py-0.5 rounded bg-sky-500/20 border border-sky-400/50 text-sky-200 text-[9px] font-mono font-bold uppercase">★ Required Specification</span>` : ''}
                   </div>
                   <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
                     ev.isCompliant
                       ? 'bg-emerald-950 text-emerald-300 border border-emerald-700/60'
                       : 'bg-rose-950 text-rose-300 border border-rose-700/60'
                   }">
-                    ${ev.isCompliant ? `✓ PASS (${ev.utilizationPct}%)` : (!ev.isMonitorCompliant ? `⚠ MAX ${prof.maxMonitors} MON` : `✗ OVERLOAD (${ev.utilizationPct}%)`)}
+                    ${ev.isCompliant ? `✓ PASS (${ev.utilizationPct}%)` : (!ev.isMonitorCompliant ? `⚠ MAXIMUM ${prof.maxMonitors} MONITORS` : `✗ OVERLOAD (${ev.utilizationPct}%)`)}
                   </span>
                 </div>
 
@@ -6228,7 +6337,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                 ${typeof renderApplianceBuildOptionsAndAccessoriesHtml === 'function' ? renderApplianceBuildOptionsAndAccessoriesHtml(w) : ''}
                 <div class="flex items-center justify-between pt-1 border-t border-slate-800/80">
                   <span class="text-[9px] font-mono ${w.meetsSpec ? 'text-emerald-400' : 'text-rose-400'}">
-                    ${w.meetsSpec ? '✓ Meets Viewed Stream Spec' : 'Below Required Tier/Monitors'}
+                    ${w.meetsSpec ? '✓ Meets Viewed Stream Specification' : 'Below Required Tier/Monitors'}
                   </span>
                   <button onclick="addToBOM('${w.id}', ${wsCalc.workstationCount}); if(typeof showToast==='function') showToast('Added ${wsCalc.workstationCount}x ${w.sku} to BOM.', 'success');" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[10px] font-bold cursor-pointer">
                     + Add ${wsCalc.workstationCount}x to BOM
@@ -6674,8 +6783,8 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
             <span class="text-[9px] font-bold uppercase text-slate-400">ACS Platform:</span>
             <select onchange="setDoorBuilderParam('acsPlatform', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
               <option value="genetec_synergis" class="bg-slate-900" ${doorBuilderAcsPlatform === 'genetec_synergis' ? 'selected' : ''}>Genetec Synergis (Security Center 5.14)</option>
-              <option value="milestone_xpaccess" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_xpaccess' ? 'selected' : ''}>Milestone XProtect Access ($129 + $39/rdr)</option>
-              <option value="milestone_axis_secure_entry" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_axis_secure_entry' ? 'selected' : ''}>Milestone AXIS Secure Entry ($89/door)</option>
+              <option value="milestone_xpaccess" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_xpaccess' ? 'selected' : ''}>Milestone XProtect Access ($129 + $39 per Reader)</option>
+              <option value="milestone_axis_secure_entry" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_axis_secure_entry' ? 'selected' : ''}>Milestone AXIS Secure Entry ($89 per Door)</option>
               <option value="standalone" class="bg-slate-900" ${doorBuilderAcsPlatform === 'standalone' ? 'selected' : ''}>Standalone / Other ACS Head-End</option>
             </select>
           </div>
@@ -6711,8 +6820,8 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
               <tr class="border-b border-slate-800 text-[9px] uppercase font-bold text-slate-400">
                 <th class="py-1.5 px-2 min-w-[180px]">Door Zone / Group Name</th>
                 <th class="py-1.5 px-2 min-w-[260px]">Door Hardware Kit Preset</th>
-                <th class="py-1.5 px-1.5 w-24 text-center">Door Qty</th>
-                <th class="py-1.5 px-1.5 w-36">Readers / Door</th>
+                <th class="py-1.5 px-1.5 w-24 text-center">Door Quantity</th>
+                <th class="py-1.5 px-1.5 w-36">Readers per Door</th>
                 <th class="py-1.5 px-2">Included Lock &amp; Peripherals</th>
                 <th class="py-1.5 px-2 text-right">Controllers</th>
                 <th class="py-1.5 px-2 text-right">12V Load</th>

@@ -3232,7 +3232,7 @@ function renderBomLocationAccordion(locKey, items) {
                 <th class="py-2.5 px-4 font-bold w-[34%]">Item & Specification</th>
                 <th class="py-2.5 px-4 font-bold w-[18%]">Placement / Rack Slot</th>
                 <th class="py-2.5 px-4 font-bold w-[22%]">Engineering & Power</th>
-                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Qty</th>
+                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Quantity</th>
                 <th class="py-2.5 px-4 font-bold w-[10%] text-right">Actions</th>
               </tr>
             </thead>
@@ -3305,7 +3305,7 @@ function renderBomCategoryAccordion(catKey, catMeta, items) {
                 <th class="py-2.5 px-4 font-bold w-[34%]">Item & Specification</th>
                 <th class="py-2.5 px-4 font-bold w-[18%]">Placement / Rack Slot</th>
                 <th class="py-2.5 px-4 font-bold w-[22%]">Engineering & Power</th>
-                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Qty</th>
+                <th class="py-2.5 px-4 font-bold w-[16%]">Pricing & Quantity</th>
                 <th class="py-2.5 px-4 font-bold w-[10%] text-right">Actions</th>
               </tr>
             </thead>

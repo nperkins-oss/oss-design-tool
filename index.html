@@ -325,6 +325,48 @@
       padding-bottom: 1px;
     }
 
+    /* Interactive Resizable Table Columns */
+    th.oss-resizable-th {
+      position: relative;
+    }
+    .oss-col-resizer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 8px;
+      cursor: col-resize;
+      user-select: none;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+    }
+    .oss-col-resizer::after {
+      content: "";
+      display: block;
+      width: 2px;
+      height: 60%;
+      border-radius: 9999px;
+      background-color: rgba(100, 116, 139, 0.28);
+      transition: background-color 0.15s ease, height 0.15s ease, box-shadow 0.15s ease;
+    }
+    th.oss-resizable-th:hover > .oss-col-resizer::after {
+      background-color: rgba(148, 163, 184, 0.55);
+    }
+    .oss-col-resizer:hover::after,
+    .oss-col-resizer.is-resizing::after {
+      height: 100%;
+      width: 2.5px;
+      background-color: #38bdf8;
+      box-shadow: 0 0 8px rgba(56, 189, 248, 0.75);
+    }
+    body.oss-is-resizing-col,
+    body.oss-is-resizing-col * {
+      cursor: col-resize !important;
+      user-select: none !important;
+    }
+
     /* Formal Engineering Submittal & Proposal Print Stylesheet */
     @media print {
       body {
@@ -475,7 +517,7 @@
                   </div>
                   <div>
                     <div class="font-bold">Revisions &amp; Change Orders</div>
-                    <div class="text-[10px] text-slate-400 font-normal">Milestone baselines &amp; cost diffs</div>
+                    <div class="text-[10px] text-slate-400 font-normal">Milestone baselines &amp; cost differences</div>
                   </div>
                 </button>
                 <button onclick="toggleProjectLevelMenu(); openSubmittalModal()" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-amber-950/60 text-slate-200 hover:text-amber-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
@@ -484,7 +526,7 @@
                   </div>
                   <div>
                     <div class="font-bold">Engineering Submittal Package</div>
-                    <div class="text-[10px] text-slate-400 font-normal">Div 27 / 28 client submittal spec</div>
+                    <div class="text-[10px] text-slate-400 font-normal">Division 27 / 28 client submittal specification</div>
                   </div>
                 </button>
                 <button onclick="toggleProjectLevelMenu(); openCablePullScheduleModal()" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-indigo-950/60 text-slate-200 hover:text-indigo-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
@@ -1100,7 +1142,7 @@
                   </button>
                   <button type="button" data-plane="vms" onclick="setTopologyViewPlane('vms')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors">
                     <span>VMS Video Ingest Pipeline</span>
-                    <span class="text-[9px] font-mono text-teal-400">Cams ➔ NVR</span>
+                    <span class="text-[9px] font-mono text-teal-400">Cameras ➔ NVR</span>
                   </button>
                   <button type="button" data-plane="access" onclick="setTopologyViewPlane('access')" class="px-2 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 text-left flex items-center justify-between cursor-pointer transition-colors">
                     <span>Access Control Pipeline</span>

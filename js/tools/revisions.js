@@ -445,8 +445,8 @@ function createRevisionModalDOM() {
                   <th class="py-2.5 px-3">Status</th>
                   <th class="py-2.5 px-3">Item Description / Model</th>
                   <th class="py-2.5 px-3">Location / Closet</th>
-                  <th class="py-2.5 px-3 text-center">Base Qty</th>
-                  <th class="py-2.5 px-3 text-center">New Qty</th>
+                  <th class="py-2.5 px-3 text-center">Base Quantity</th>
+                  <th class="py-2.5 px-3 text-center">New Quantity</th>
                   <th class="py-2.5 px-3 text-center">Delta</th>
                   <th class="py-2.5 px-3 text-right">Unit MSRP</th>
                   <th class="py-2.5 px-3 text-right">Net Change ($)</th>

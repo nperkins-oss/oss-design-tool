@@ -654,7 +654,7 @@ function renderCablePullScheduleContent() {
             <th class="p-2.5">Headend Label (2-Line)</th>
             <th class="p-2.5">Field End Label (2-Line)</th>
             <th class="p-2.5">Destination Device &amp; Area</th>
-            <th class="p-2.5">Cable &amp; Patch Cord Spec</th>
+            <th class="p-2.5">Cable &amp; Patch Cord Specification</th>
             <th class="p-2.5">Cut Length</th>
             <th class="p-2.5">Switch Port</th>
             <th class="p-2.5 text-right">Floor Link</th>
