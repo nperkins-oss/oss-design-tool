@@ -395,7 +395,11 @@ const WalkReconciliationEngine = {
       "Variance / Action"
     ];
 
-    const rows = this.reconciledResults.map(r => [
+    const esc = (v) => typeof window.escapeCSVCell === "function" ? window.escapeCSVCell(v) : `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = this.reconciledResults.map(r => [r.status.toUpperCase(), r.walkTag, r.walkModel, r.walkLocation, r.walkNotes, r.designName, r.designModel, r.designFloor, r.designCloset, r.varianceNote].map(esc));
+    // Clean up old rows array lines
+    if (false) {
+      const _unused = [
       r.status.toUpperCase(),
       `"${(r.walkTag || '').replace(/"/g, '""')}"`,
       `"${(r.walkModel || '').replace(/"/g, '""')}"`,
@@ -405,11 +409,13 @@ const WalkReconciliationEngine = {
       `"${(r.designModel || '').replace(/"/g, '""')}"`,
       `"${(r.designFloor || '').replace(/"/g, '""')}"`,
       `"${(r.designCloset || '').replace(/"/g, '""')}"`,
-      `"${(r.varianceNote || '').replace(/"/g, '""')}"`
-    ]);
+      `"${(r.varianceNote || '').replace(/"/g, '""')}"`]; } // end unused
+      // end export rows
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvString = [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+    const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+    const encodedUri = URL.createObjectURL(blob);
+    setTimeout(() => URL.revokeObjectURL(encodedUri), 5000);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", `Camera_Walk_Audit_Reconciliation_${new Date().toISOString().split('T')[0]}.csv`);

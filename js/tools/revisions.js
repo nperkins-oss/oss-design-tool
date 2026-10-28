@@ -757,10 +757,10 @@ function exportChangeOrderCSV() {
   allItems.forEach(i => {
     rows.push([
       i.type.toUpperCase(),
-      `"${(i.item.sku || '').replace(/"/g, '""')}"`,
-      `"${(i.item.model || '').replace(/"/g, '""')}"`,
-      `"${(i.item.category || i.item.subsystem || '').replace(/"/g, '""')}"`,
-      `"${(i.item.closetName || i.item.rackId || '').replace(/"/g, '""')}"`,
+      i.item.sku || '',
+      i.item.model || '',
+      i.item.category || i.item.subsystem || '',
+      i.item.closetName || i.item.rackId || '',
       i.baseQty,
       i.compQty,
       i.qtyDelta,
@@ -776,8 +776,11 @@ function exportChangeOrderCSV() {
   rows.push(["Removed Items", diff.stats.removedCount]);
   rows.push(["Modified Lines", diff.stats.modifiedCount]);
 
-  const csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
-  const encodedUri = encodeURI(csvContent);
+  const esc = (v) => typeof window.escapeCSVCell === "function" ? window.escapeCSVCell(v) : `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const csvString = rows.map(e => e.map(esc).join(",")).join("\n");
+  const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+  const encodedUri = URL.createObjectURL(blob);
+  setTimeout(() => URL.revokeObjectURL(encodedUri), 5000);
   const link = document.createElement("a");
   link.setAttribute("href", encodedUri);
   link.setAttribute("download", `ChangeOrder_${diff.baseRev.code}_vs_${diff.compareRev.code}.csv`);

@@ -2184,7 +2184,7 @@ function exportRackPowerScheduleCSV() {
     "Brady PDU End (Line 2)"
   ];
 
-  const escapeCsv = (val) => `"${String(val ?? "").replace(/"/g, '""')}"`;
+  const escapeCsv = (val) => typeof window.escapeCSVCell === "function" ? window.escapeCSVCell(val) : `"${String(val ?? "").replace(/"/g, '""')}"`;
   const rows = metrics.powerCords.map(c => [
     c.powerCordId,
     c.cordSku,
@@ -2522,7 +2522,7 @@ function renderRackPowerMatrixModalContent() {
               </div>
               <button
                 type="button"
-                onclick="setRackPduCatalogSku('BOTH', '${escapeHTML(metrics.pduA.sku)}')"
+                onclick="setRackPduCatalogSku('BOTH', '${escapeJSAttr(metrics.pduA.sku)}')"
                 class="mt-3 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-[10px] font-mono font-bold text-slate-300 hover:text-white cursor-pointer"
                 title="Match PDU-B to the same catalog SKU as PDU-A"
               >
@@ -4834,10 +4834,10 @@ function renderIndustrialDinFrame(frame, assignedItems, unassignedItems, parsed,
         <span class="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-800">$${(activeEnc?.msrp || 0).toLocaleString()} MSRP</span>
         ${isPoleMounted ? `
           <button 
-            onclick="switchActiveRackElevation('${parsed.space} • Pole Mount')"
+            onclick="switchActiveRackElevation('${escapeJSAttr(parsed.space)} • Pole Mount')"
             ondragover="handleLocationTransferDragOver(event)"
             ondragleave="handleLocationTransferDragLeave(event)"
-            ondrop="handleLocationTransferDrop(event, '${parsed.space} • Pole Mount')"
+            ondrop="handleLocationTransferDrop(event, '${escapeJSAttr(parsed.space)} • Pole Mount')"
             class="px-2 py-1 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 text-cyan-300 rounded text-[10px] font-bold flex items-center gap-1 transition-colors shadow-sm"
             title="View outer Structural Pole elevation or drop hardware here to mount onto pole mast"
           >
@@ -5033,7 +5033,7 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
                 class="p-2.5 rounded-xl border border-cyan-500/50 hover:border-cyan-400 bg-slate-950/80 shadow-md flex items-center justify-between transition-all"
                 ondragover="handleLocationTransferDragOver(event)"
                 ondragleave="handleLocationTransferDragLeave(event)"
-                ondrop="handleLocationTransferDrop(event, '${escapeHTML(parsed.space)} • ${escapeHTML(enc.name)}')"
+                ondrop="handleLocationTransferDrop(event, '${escapeJSAttr(parsed.space)} • ${escapeJSAttr(enc.name)}')"
                 title="Drop hardware here to transfer and mount inside ${escapeHTML(enc.name)}"
               >
                 <div class="flex items-center gap-2.5 min-w-0">
@@ -5053,7 +5053,7 @@ function renderStructuralMountFrame(frame, assignedItems, unassignedItems, parse
                   </div>
                 </div>
                 <button 
-                  onclick="switchActiveRackElevation('${parsed.space} • ${enc.name}')"
+                  onclick="switchActiveRackElevation('${escapeJSAttr(parsed.space)} • ${escapeJSAttr(enc.name)}')"
                   class="px-2.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow shrink-0 ml-2"
                   title="Open internal DIN rail visualizer for ${escapeHTML(enc.name)}"
                 >
@@ -8362,7 +8362,7 @@ if (typeof window !== "undefined" && typeof window.escapeHTML !== "function") {
       .replace(/'/g, "&#039;");
   };
 }
-var escapeHTML = (typeof window !== "undefined" && typeof window.escapeHTML === "function") ? window.escapeHTML : function(str) { return String(str || ''); };
+var escapeHTML = (typeof window !== "undefined" && typeof window.escapeHTML === "function") ? window.escapeHTML : function(str) { return String(str ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;"); };
 
 // -----------------------------------------------------------
 // Persistence

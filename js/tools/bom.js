@@ -66,7 +66,7 @@ const BOM_CATEGORIES = {
   firewalls: { id: "firewalls", label: "Firewalls & Security Appliances", icon: "shield", color: "rose" },
   wireless: { id: "wireless", label: "Wireless APs & Bridges", icon: "wifi", color: "sky" },
   surveillance: { id: "surveillance", label: "Video Surveillance & Cameras", icon: "video", color: "amber" },
-  access_control: { id: "access_control", label: "Access Control (PACS)", icon: "key-round", color: "orange" },
+  access_control: { id: "access_control", label: "Access Control System (ACS)", icon: "key-round", color: "orange" },
   servers: { id: "servers", label: "Servers & Compute Systems", icon: "hard-drive", color: "blue" },
   racks_power: { id: "racks_power", label: "Racks, Power & PDUs", icon: "server", color: "purple" },
   optics_cabling: { id: "optics_cabling", label: "Transceivers, DACs & Structured Cabling", icon: "cable", color: "emerald" },
@@ -231,7 +231,7 @@ function renderBomLocationOptions(currentLocationKey, item = null) {
   }
 
   const isServer = item ? (typeof isServerDevice === "function" ? isServerDevice(item) : (item.role === "Server" || item.category === "servers" || /server/i.test(item.role || ''))) : false;
-  const groups = FacilityStore.getLocationGroups(true);
+  const groups = window._cachedBomLocationGroups || FacilityStore.getLocationGroups(true);
   let html = `<option value="${FacilityStore.UNASSIGNED}" ${currentLocationKey === FacilityStore.UNASSIGNED ? 'selected' : ''}>Unassigned (Staging)</option>`;
 
   // Spaces & Zones (Field locations) are prohibited for server-class hardware
@@ -2288,7 +2288,8 @@ function changeBomQty(instanceId, delta) {
       item.stackedUnits = item.qty >= 2 ? item.qty : 0;
     }
     projectBOM.filter(i => i.parentInstanceId === instanceId && i.role !== "Stacking Cable" && i.role !== "Uplink Interconnect").forEach(child => {
-      child.qty = item.qty;
+      const perParent = child.qtyPerUnit || child.qtyPerServer || 1;
+      child.qty = item.qty * perParent;
     });
     applyStackCabling(item);
     if (typeof PortEngine !== "undefined" && (item.canStack || item.ports)) {
@@ -2569,9 +2570,19 @@ function setPowerSource(childInstanceId, powerType) {
 // BOM View HTML Renderers & Studio Engine
 // -----------------------------------------------------------
 function updateBOMView() {
+  window._cachedBomLocationGroups = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getLocationGroups === "function")
+    ? FacilityStore.getLocationGroups(true)
+    : null;
+  window._cachedBomChildrenMap = new Map();
   if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
     projectBOM.forEach(item => {
       enrichBOMItemFromCatalog(item);
+      if (item.parentInstanceId) {
+        if (!window._cachedBomChildrenMap.has(item.parentInstanceId)) {
+          window._cachedBomChildrenMap.set(item.parentInstanceId, []);
+        }
+        window._cachedBomChildrenMap.get(item.parentInstanceId).push(item);
+      }
     });
   }
 
@@ -2830,7 +2841,7 @@ function renderBomTableRow(item) {
 
   const pwr = (typeof PortEngine !== "undefined") ? PortEngine.getDevicePowerSource(item) : (item.powerSource || "internal_psu");
   const pwrBadge = (pwr !== "passive" && typeof PortEngine !== "undefined" && PortEngine.POWER_MODES && PortEngine.POWER_MODES[pwr]) ? PortEngine.POWER_MODES[pwr] : null;
-  const childItems = projectBOM.filter(ch => ch.parentInstanceId === item.instanceId);
+  const childItems = (window._cachedBomChildrenMap && window._cachedBomChildrenMap.get(item.instanceId)) || projectBOM.filter(ch => ch.parentInstanceId === item.instanceId);
 
   const catSw = (item.modularUplink ? item : null) || 
     (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getSwitch === "function" ? CatalogRegistry.getSwitch(item.id || item.sku) : null) ||
@@ -2996,7 +3007,7 @@ function renderBomTableRow(item) {
             <i data-lucide="${isUnassigned ? 'inbox' : (currentLocationKey.endsWith(' • Field') ? 'radio' : 'map-pin')}" class="w-3.5 h-3.5 ${isUnassigned ? 'text-amber-400' : (currentLocationKey.endsWith(' • Field') ? 'text-cyan-400' : 'text-indigo-400')} shrink-0"></i>
             <select 
               onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" 
-              data-previous-val="${currentLocationKey}" 
+              data-previous-val="${escapeHTML(currentLocationKey)}" 
               class="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500 truncate cursor-pointer shadow-sm" 
               title="Change Assigned Space or Rack Enclosure"
             >
@@ -3022,7 +3033,7 @@ function renderBomTableRow(item) {
             ${item.closetName && !isUnassigned ? `
               <button 
                 type="button" 
-                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                onclick="openRackViewerFor('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="px-2 py-0.5 rounded bg-indigo-950/40 hover:bg-indigo-900/60 border border-indigo-800/60 text-indigo-300 hover:text-white text-[10px] font-mono flex items-center gap-1 transition-colors cursor-pointer"
                 title="View in Rack Elevation Visualizer"
               >
@@ -3169,7 +3180,7 @@ function renderBomLocationAccordion(locKey, items) {
     locUnits += (it.qty || 1);
     locWatts += ((it.poeBudget || 0) + (it.baseWatts || 0)) * (it.qty || 1);
     locCost += (it.msrp || 0) * (it.qty || 1);
-    projectBOM.filter(ch => ch.parentInstanceId === it.instanceId).forEach(ch => {
+    ((window._cachedBomChildrenMap && window._cachedBomChildrenMap.get(it.instanceId)) || projectBOM.filter(ch => ch.parentInstanceId === it.instanceId)).forEach(ch => {
       locCost += (ch.msrp || 0) * (ch.qty || 1);
       locWatts += (ch.baseWatts || 0) * (ch.qty || 1);
     });
@@ -3182,7 +3193,7 @@ function renderBomLocationAccordion(locKey, items) {
     <div class="bg-slate-950/90 rounded-2xl border ${isUnassigned ? 'border-amber-900/40 bg-amber-950/10' : 'border-slate-800'} overflow-hidden shadow-sm transition-all">
       <!-- Accordion Header Banner -->
       <div 
-        onclick="toggleBomLocationCollapse('${escapeHTML(locKey)}')" 
+        onclick="toggleBomLocationCollapse('${escapeJSAttr(locKey)}')" 
         class="px-4 py-3 bg-slate-900/90 hover:bg-slate-900 border-b border-slate-800/80 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
       >
         <div class="flex items-center gap-3">
@@ -3212,7 +3223,7 @@ function renderBomLocationAccordion(locKey, items) {
           ${!isUnassigned ? `
             <button 
               type="button" 
-              onclick="event.stopPropagation(); openRackViewerFor('${escapeHTML(locKey)}')" 
+              onclick="event.stopPropagation(); openRackViewerFor('${escapeJSAttr(locKey)}')" 
               class="px-2.5 py-1 bg-indigo-950/60 hover:bg-indigo-900 border border-indigo-800/60 text-indigo-300 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer"
               title="Open Enclosure Visualizer"
             >
@@ -3255,7 +3266,7 @@ function renderBomCategoryAccordion(catKey, catMeta, items) {
     catUnits += (it.qty || 1);
     catWatts += ((it.poeBudget || 0) + (it.baseWatts || 0)) * (it.qty || 1);
     catCost += (it.msrp || 0) * (it.qty || 1);
-    projectBOM.filter(ch => ch.parentInstanceId === it.instanceId).forEach(ch => {
+    ((window._cachedBomChildrenMap && window._cachedBomChildrenMap.get(it.instanceId)) || projectBOM.filter(ch => ch.parentInstanceId === it.instanceId)).forEach(ch => {
       catCost += (ch.msrp || 0) * (ch.qty || 1);
       catWatts += (ch.baseWatts || 0) * (ch.qty || 1);
     });
@@ -3267,7 +3278,7 @@ function renderBomCategoryAccordion(catKey, catMeta, items) {
     <div class="bg-slate-950/90 rounded-2xl border border-slate-800 overflow-hidden shadow-sm transition-all">
       <!-- Accordion Header Banner -->
       <div 
-        onclick="toggleBomLocationCollapse('${escapeHTML(catKey)}')" 
+        onclick="toggleBomLocationCollapse('${escapeJSAttr(catKey)}')" 
         class="px-4 py-3 bg-slate-900/90 hover:bg-slate-900 border-b border-slate-800/80 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
       >
         <div class="flex items-center gap-3">
@@ -3405,15 +3416,15 @@ function renderBomFlatTableRow(skuItem) {
             <div class="text-[10px] text-slate-400 font-mono">($${(skuItem.msrp || 0).toLocaleString()} ea)</div>
           </div>
           <div class="flex items-center bg-slate-900 border border-slate-700 rounded-xl overflow-hidden shadow-inner">
-            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Decrease Total Quantity">-</button>
+            <button onclick="changeRawSkuQty('${escapeJSAttr(skuItem.sku)}', -1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Decrease Total Quantity">-</button>
             <span class="px-2 text-xs font-mono font-bold text-white min-w-[24px] text-center">${skuItem.rawQty}</span>
-            <button onclick="changeRawSkuQty('${escapeHTML(skuItem.sku)}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Increase Total Quantity">+</button>
+            <button onclick="changeRawSkuQty('${escapeJSAttr(skuItem.sku)}', 1)" class="px-2 py-1 text-slate-400 hover:text-white font-bold transition-colors text-xs cursor-pointer" title="Increase Total Quantity">+</button>
           </div>
         </div>
       </td>
 
       <td class="py-3 px-4 align-top text-right">
-        <button onclick="deleteRawSkuFromBOM('${escapeHTML(skuItem.sku)}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition-colors rounded-lg hover:bg-slate-900 cursor-pointer" title="Delete all units of this SKU">
+        <button onclick="deleteRawSkuFromBOM('${escapeJSAttr(skuItem.sku)}')" class="text-slate-500 hover:text-rose-400 p-1.5 transition-colors rounded-lg hover:bg-slate-900 cursor-pointer" title="Delete all units of this SKU">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
       </td>
@@ -3500,6 +3511,14 @@ function deleteRawSkuFromBOM(skuKey) {
     return;
   }
 
+  matchingItems.forEach(ch => {
+    if (ch.parentInstanceId && ch.buildOptionCategory) {
+      const parentSrv = projectBOM.find(p => p.instanceId === ch.parentInstanceId);
+      if (parentSrv && parentSrv.selectedBuildOptions) {
+        delete parentSrv.selectedBuildOptions[ch.buildOptionCategory];
+      }
+    }
+  });
   const idsToDelete = matchingItems.map(x => x.instanceId);
   idsToDelete.forEach(id => {
     deleteDeviceFromBOM(id, true);
@@ -3788,6 +3807,7 @@ function exportBomCSV() {
     return;
   }
 
+  const escCell = typeof window.escapeCSVCell === "function" ? window.escapeCSVCell : (v => `"${String(v ?? "").replace(/"/g, '""')}"`);
   let csv = "Device ID,Friendly Name,Location,Rack,Role,Vendor,Model,SKU,Quantity,Uplink Mode,Unit MSRP,Total MSRP,PoE Budget,Power Watts\n";
   projectBOM.forEach(i => {
     const rawLoc = i.closetName || i.rackId || FacilityStore.UNASSIGNED;
@@ -3796,12 +3816,15 @@ function exportBomCSV() {
     const totalW = ((i.poeBudget || 0) + (i.baseWatts || 0)) * i.qty;
     const devNum = i.deviceNumber || "";
     const friendly = (typeof DeviceTaxonomy !== "undefined" ? DeviceTaxonomy.getFriendlyName(i) : (i.friendlyName || i.model)) || "";
-    csv += `"${devNum}","${friendly}","${parsed.space}","${parsed.enclosure}","${i.role || 'Accessory'}","${i.vendor}","${i.model}","${i.sku}",${i.qty},"${i.uplinkMode || 'single'}",${i.msrp},${i.msrp * i.qty},${i.poeBudget || 0},${totalW}\n`;
+    csv += `${escCell(devNum)},${escCell(friendly)},${escCell(parsed.space)},${escCell(parsed.enclosure)},${escCell(i.role || 'Accessory')},${escCell(i.vendor)},${escCell(i.model)},${escCell(i.sku)},${i.qty},${escCell(i.uplinkMode || 'single')},${i.msrp},${i.msrp * i.qty},${i.poeBudget || 0},${totalW}\n`;
   });
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
-  link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+  link.href = url;
   link.download = `Security_Infrastructure_BOM_${new Date().toISOString().slice(0, 10)}.csv`;
   link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
   showToast("Exported BOM CSV.");
 }
 
@@ -4102,11 +4125,11 @@ function exportComprehensiveProjectCSV() {
   }
 
   const data = compileProjectEngineeringData();
-  const esc = (val) => {
+  const esc = typeof window.escapeCSVCell === "function" ? window.escapeCSVCell : ((val) => {
     if (val === null || val === undefined) return '""';
     const str = String(val).replace(/"/g, '""');
     return `"${str}"`;
-  };
+  });
 
   let csv = "";
 

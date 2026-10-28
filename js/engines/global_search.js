@@ -917,7 +917,7 @@ const GlobalSearchEngine = {
           return `
             <div
               id="search-item-${idx}"
-              onclick="GlobalSearchEngine.navigateTo('${escapeHTML(entry.sku)}')"
+              onclick="GlobalSearchEngine.navigateTo('${escapeJSAttr(entry.sku)}')"
               class="group flex items-center justify-between p-2 rounded-xl cursor-pointer transition-all ${isSel ? 'bg-brand-600/20 border border-brand-500/40 text-white' : 'hover:bg-slate-800/80 text-slate-200 border border-transparent'}"
             >
               <div class="flex items-center gap-2.5 min-w-0 flex-1">
@@ -1092,7 +1092,7 @@ const GlobalSearchEngine = {
           return `
             <div
               id="modal-search-item-${idx}"
-              onclick="GlobalSearchEngine.navigateTo('${escapeHTML(entry.sku)}')"
+              onclick="GlobalSearchEngine.navigateTo('${escapeJSAttr(entry.sku)}')"
               class="group flex items-center justify-between p-3 rounded-2xl cursor-pointer transition-all border ${isSel ? 'bg-brand-600/20 border-brand-500/50 shadow-lg text-white' : 'bg-slate-950/60 hover:bg-slate-800/80 border-slate-800/80 text-slate-200'}"
             >
               <div class="flex items-center gap-3.5 min-w-0 flex-1">
@@ -1118,7 +1118,7 @@ const GlobalSearchEngine = {
                   <span class="text-[10px] text-slate-400 block">Est. MSRP</span>
                   <div class="font-mono text-sm font-bold text-emerald-400">$${entry.msrp.toLocaleString()}</div>
                 </div>
-                <button onclick="event.stopPropagation(); GlobalSearchEngine.navigateTo('${escapeHTML(entry.sku)}')" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1 shadow-md transition-colors">
+                <button onclick="event.stopPropagation(); GlobalSearchEngine.navigateTo('${escapeJSAttr(entry.sku)}')" class="px-3 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1 shadow-md transition-colors">
                   <span>Jump</span> <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                 </button>
               </div>

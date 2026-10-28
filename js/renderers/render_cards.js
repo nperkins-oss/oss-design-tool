@@ -267,7 +267,7 @@ function renderSwitchCard(sw) {
     <div id="product-card-${sw.id}" data-item-id="${sw.id}" data-item-sku="${escapeHTML(sw.sku || '')}" class="bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all rounded-2xl p-4 flex flex-col justify-between shadow-md group">
       <div>
         ${sw.image ? `
-          <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${sw.image}', '${escapeHTML(sw.model)}', '${escapeHTML(sw.sku)}')" title="Click to view full photo">
+          <div class="mb-3 w-full h-24 bg-slate-950/70 border border-slate-800/80 rounded-xl flex items-center justify-center p-2 relative overflow-hidden group/img cursor-pointer transition-all hover:border-brand-500/40" onclick="openProductImageModal('${escapeJSAttr(sw.image)}', '${escapeJSAttr(sw.model)}', '${escapeJSAttr(sw.sku)}')" title="Click to view full photo">
             <img src="${sw.image}" alt="${escapeHTML(sw.model)}" class="max-h-full max-w-full object-contain filter drop-shadow(0 4px 8px rgba(0,0,0,0.7)) transition-transform duration-300 group-hover/img:scale-105" loading="lazy" />
             <div class="absolute bottom-1 right-1.5 opacity-0 group-hover/img:opacity-100 transition-opacity bg-slate-900/85 border border-slate-700/80 rounded px-1.5 py-0.5 text-[9px] text-slate-300 font-mono flex items-center gap-1">
               <i data-lucide="zoom-in" class="w-2.5 h-2.5 text-brand-400"></i> Zoom
@@ -486,14 +486,14 @@ function renderSwitchCard(sw) {
         </div>
       </div>
 
-      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap 2xl:flex-nowrap">
         <button onclick="toggleCompareItem('${sw.id}')" class="px-2.5 py-1.5 rounded-lg border ${isCompared ? 'border-brand-500 bg-brand-500/20 text-brand-300' : 'border-slate-700 bg-slate-800 text-slate-300'} text-xs font-medium flex items-center gap-1 shrink-0">
           <i data-lucide="${isCompared ? 'check-square' : 'plus-square'}" class="w-3.5 h-3.5"></i>
           <span>${isCompared ? 'Compared' : 'Compare'}</span>
         </button>
 
         ${sw.datasheetPath ? `
-          <button onclick="openDatasheetModal('${sw.datasheetPath}', '${escapeHTML(sw.model)}', '${escapeHTML(sw.sku)}')" class="px-2 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1 shrink-0 transition-colors" title="View Official Engineering Datasheet">
+          <button onclick="openDatasheetModal('${escapeJSAttr(sw.datasheetPath)}', '${escapeJSAttr(sw.model)}', '${escapeJSAttr(sw.sku)}')" class="px-2 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1 shrink-0 transition-colors" title="View Official Engineering Datasheet">
             <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-400"></i>
             <span class="text-[11px]">Datasheet</span>
           </button>
@@ -568,7 +568,7 @@ function renderFirewallCard(fw) {
         </div>
       </div>
 
-      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap 2xl:flex-nowrap">
         <button onclick="toggleCompareItem('${safeSku}')" class="px-2.5 py-1.5 rounded-lg border ${isCompared ? 'border-brand-500 bg-brand-500/20 text-brand-300' : 'border-slate-700 bg-slate-800 text-slate-300'} text-xs font-medium flex items-center gap-1 shrink-0">
           <i data-lucide="${isCompared ? 'check-square' : 'plus-square'}" class="w-3.5 h-3.5"></i>
         </button>
@@ -939,7 +939,7 @@ function renderAccessoryCard(acc) {
         ` : ''}
       </div>
 
-      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap 2xl:flex-nowrap">
         ${acc.datasheetPath ? `
           <button onclick="openDatasheetModal('${acc.datasheetPath}', '${safeModel}', '${safeSku}')" class="px-2.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium flex items-center gap-1 shrink-0 transition-colors" title="View Official Engineering Datasheet">
             <i data-lucide="file-text" class="w-3.5 h-3.5 text-rose-400"></i>
@@ -1305,7 +1305,7 @@ function renderCardByDomain(item, mode) {
         <p class="text-xs text-slate-300 mb-3 line-clamp-2">${escapeHTML(item.description || (item.keyFeatures ? item.keyFeatures[0] : 'Enterprise hardware specification and sizing asset.'))}</p>
       </div>
 
-      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between gap-1.5 flex-wrap 2xl:flex-nowrap">
         <button onclick="toggleCompareItem('${safeId}')" class="px-2.5 py-1.5 rounded-lg border ${isCompared ? 'border-brand-500 bg-brand-500/20 text-brand-300' : 'border-slate-700 bg-slate-800 text-slate-300'} text-xs font-medium flex items-center gap-1 shrink-0">
           <i data-lucide="${isCompared ? 'check-square' : 'plus-square'}" class="w-3.5 h-3.5"></i>
         </button>

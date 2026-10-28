@@ -376,13 +376,13 @@ function renderSubmittalPreview() {
           <td class="py-2 px-3">
             <div class="flex items-center gap-2.5">
               ${img ? `
-                <img src="${img}" alt="${escapeHTML(i.model)}" class="w-10 h-7 object-contain bg-slate-900 border border-slate-800 rounded p-0.5 shrink-0 cursor-pointer hover:border-brand-500/50" onclick="if(typeof openProductImageModal==='function') openProductImageModal('${img}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" title="Click to view full photo" loading="lazy" />
+                <img src="${escapeHTML(img)}" alt="${escapeHTML(i.model)}" class="w-10 h-7 object-contain bg-slate-900 border border-slate-800 rounded p-0.5 shrink-0 cursor-pointer hover:border-brand-500/50" onclick="if(typeof openProductImageModal==='function') openProductImageModal('${escapeJSAttr(img)}', '${escapeJSAttr(i.model)}', '${escapeJSAttr(i.sku)}')" title="Click to view full photo" loading="lazy" />
               ` : ''}
               <div>
                 <div class="font-bold text-white flex items-center gap-1.5 flex-wrap">
                   <span>${escapeHTML(i.vendor || '')} ${escapeHTML(i.model || '')}</span>
                   ${dsheet ? `
-                    <button onclick="if(typeof openDatasheetModal==='function') openDatasheetModal('${dsheet}', '${escapeHTML(i.model)}', '${escapeHTML(i.sku)}')" class="inline-flex items-center gap-0.5 text-[10px] text-rose-400 hover:text-rose-300 font-normal underline ml-1 cursor-pointer" title="View Technical Datasheet">
+                    <button onclick="if(typeof openDatasheetModal==='function') openDatasheetModal('${escapeJSAttr(dsheet)}', '${escapeJSAttr(i.model)}', '${escapeJSAttr(i.sku)}')" class="inline-flex items-center gap-0.5 text-[10px] text-rose-400 hover:text-rose-300 font-normal underline ml-1 cursor-pointer" title="View Technical Datasheet">
                       <i data-lucide="file-text" class="w-2.5 h-2.5"></i> Datasheet
                     </button>
                   ` : ''}
@@ -572,7 +572,7 @@ function renderSubmittalPreview() {
                         </td>
                         <td class="py-2 px-3 text-right font-mono text-amber-400">${r.watts} W</td>
                         <td class="py-2 px-3 text-right font-mono text-rose-400">${r.btu.toLocaleString()}</td>
-                        <td class="py-2 px-3 text-[11px] text-slate-300 truncate" title="${escapeHTML(r.equipment)}">${escapeHTML(r.equipment || "No active equipment assigned")}</td>
+                        <td class="py-2 px-3 text-[11px] text-slate-300 leading-relaxed break-words" title="${escapeHTML(r.equipment)}">${escapeHTML(r.equipment || "No active equipment assigned")}</td>
                       </tr>
                     `).join("")}
                   </tbody>

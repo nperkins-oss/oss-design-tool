@@ -11,7 +11,9 @@
 const EngineeringWorkbookExporter = {
   xmlEscape(str) {
     if (str === null || str === undefined) return "";
-    return String(str)
+    let s = String(str).replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, "");
+    if (/^[=+\-@]/.test(s) && !/^-[0-9]+(\.[0-9]+)?$/.test(s)) s = "'" + s;
+    return s
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
@@ -507,7 +509,7 @@ const EngineeringWorkbookExporter = {
         rowsXml += `
           <Row ss:Height="19">
             <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(swName)}</Data></Cell>
-            <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(closet)} (${uSlot})</Data></Cell>
+            <Cell ss:StyleID="CellLeft"><Data ss:Type="String">${this.xmlEscape(closet)} (${this.xmlEscape(uSlot)})</Data></Cell>
             <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(sw.sku || sw.model)}</Data></Cell>
             <Cell ss:StyleID="CellCode"><Data ss:Type="String">${this.xmlEscape(ifaceLabel)}</Data></Cell>
             <Cell ss:StyleID="CellCenter"><Data ss:Type="String">${this.xmlEscape(speedStr)}</Data></Cell>
@@ -578,7 +580,7 @@ const EngineeringWorkbookExporter = {
    */
   generateRackScheduleWorksheetXml(bom) {
     let rowsXml = "";
-    const mountedItems = bom.filter(i => i.rackSlot || i.closetName || i.rackId);
+    const mountedItems = bom.filter(i => !i.parentInstanceId && !i.isServerBuildOption && i.category !== "Software" && i.category !== "License" && i.role !== "Software / License" && i.role !== "Stacking Cable" && i.role !== "Uplink Interconnect" && (i.rackSlot || i.closetName || i.rackId));
 
     mountedItems.forEach(item => {
       const name = item.friendlyName || item.model || "Rack Device";

@@ -297,7 +297,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
     return `
       <div 
         class="h-9 rounded-lg border ${bg} flex flex-col items-center justify-center font-mono text-[9px] cursor-pointer transition-all hover:scale-105 select-none"
-        title="${p.label}: ${escapeHTML(p.connectedDeviceModel || 'Free Port')} [${p.speedLabel || p.speed}] ${isPoE ? `(${p.poeOutputWatts}W)` : ''} ${pm.fullPatchCoordinate ? `via ${pm.fullPatchCoordinate}` : ''}"
+        title="${escapeHTML(p.label)}: ${escapeHTML(p.connectedDeviceModel || 'Free Port')} [${escapeHTML(p.speedLabel || p.speed)}] ${isPoE ? `(${p.poeOutputWatts}W)` : ''} ${pm.fullPatchCoordinate ? `via ${escapeHTML(pm.fullPatchCoordinate)}` : ''}"
         onclick="highlightMatrixPort(${p.portNumber})"
       >
         <div class="flex items-center gap-0.5 leading-none">
@@ -555,7 +555,7 @@ function renderPortMatrixStudioContent(switchInstanceId) {
       return `
                         <div 
                           class="px-2.5 py-1 rounded-lg border ${bg} font-mono text-[10px] flex items-center gap-1.5 cursor-pointer hover:border-cyan-400 transition-all"
-                          title="${p.label}: ${p.connectedDeviceModel || 'Free Optical Cage'} (${p.speedLabel || p.speed})"
+                          title="${escapeHTML(p.label)}: ${escapeHTML(p.connectedDeviceModel || 'Free Optical Cage')} (${escapeHTML(p.speedLabel || p.speed)})"
                           onclick="highlightMatrixPort(${p.portNumber})"
                         >
                           <i data-lucide="${isStack ? 'layers' : 'zap'}" class="w-3 h-3 ${isStack ? 'text-indigo-400' : 'text-cyan-400'}"></i>

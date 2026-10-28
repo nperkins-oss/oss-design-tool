@@ -523,7 +523,7 @@ function populateRevisionCompareDropdown() {
     : [];
   
   sel.innerHTML = `<option value="none">Compare Rev: Off</option>` + revisions.map(r => `
-    <option value="${r.id}" ${activeRevisionCompareId === r.id ? 'selected' : ''}>${r.code}: ${r.name || 'Snapshot'}</option>
+    <option value="${escapeHTML(r.id)}" ${activeRevisionCompareId === r.id ? 'selected' : ''}>${escapeHTML(r.code)}: ${escapeHTML(r.name || 'Snapshot')}</option>
   `).join('');
 }
 
@@ -1748,7 +1748,7 @@ function renderFloorSelector() {
   sel.innerHTML = facilityFloors.map(f => {
     const drops = (f.nodes || []).filter(n => n.type === 'device').length;
     const closets = (f.nodes || []).filter(n => n.type === 'closet').length;
-    return `<option value="${f.id}" ${f.id === activeFloorId ? 'selected' : ''}>${f.name} (${closets} Racks, ${drops} Drops)</option>`;
+    return `<option value="${escapeHTML(f.id)}" ${f.id === activeFloorId ? 'selected' : ''}>${escapeHTML(f.name)} (${closets} Racks, ${drops} Drops)</option>`;
   }).join('');
 }
 
@@ -2538,6 +2538,9 @@ function syncBOMDevicesToFloors() {
 
   facilityFloors.forEach(fl => {
     if (!fl.nodes) fl.nodes = [];
+    const bomByInstanceId = new Map((typeof projectBOM !== "undefined" && Array.isArray(projectBOM) ? projectBOM : []).map(i => [i.instanceId, i]));
+    const allClosets = getAllClosetsAcrossFacility();
+    const closetById = new Map(allClosets.map(c => [c.id, c]));
     const before = fl.nodes.length;
     fl.nodes = fl.nodes.filter(n => {
       if (n.type === "device") {
@@ -2550,15 +2553,14 @@ function syncBOMDevicesToFloors() {
         if (instId) {
           if (!validInstanceIds.has(instId)) return false;
           // Synchronize name and deviceNumber with current BOM item!
-          const item = projectBOM.find(i => i.instanceId === instId);
+          const item = bomByInstanceId.get(instId);
           if (item) {
             n.name = item.friendlyName || item.model;
             n.deviceNumber = item.deviceNumber;
 
             // Synchronize BOM location with terminating closet if item was unassigned or in virtual field
             if (n.assignedClosetId) {
-              const allClosets = getAllClosetsAcrossFacility();
-              const closet = allClosets.find(c => c.id === n.assignedClosetId);
+              const closet = closetById.get(n.assignedClosetId);
               if (closet) {
                 const cur = (item.closetName || "").toLowerCase().trim();
                 if (!item.closetName || cur === "unassigned" || cur === "field" || cur.endsWith("• field") || cur.endsWith("-field")) {
@@ -2600,6 +2602,9 @@ function clearPhysicalLayoutDrops() {
   if (typeof facilityFloors === "undefined" || !Array.isArray(facilityFloors)) return;
   facilityFloors.forEach(fl => {
     if (!fl.nodes) fl.nodes = [];
+    const bomByInstanceId = new Map((typeof projectBOM !== "undefined" && Array.isArray(projectBOM) ? projectBOM : []).map(i => [i.instanceId, i]));
+    const allClosets = getAllClosetsAcrossFacility();
+    const closetById = new Map(allClosets.map(c => [c.id, c]));
     fl.nodes = fl.nodes.filter(n => n.type !== "device");
   });
   selectedNodeId = null;
@@ -2620,6 +2625,9 @@ function removePhysicalLayoutDropByInstanceId(instanceId) {
   let didRemove = false;
   facilityFloors.forEach(fl => {
     if (!fl.nodes) fl.nodes = [];
+    const bomByInstanceId = new Map((typeof projectBOM !== "undefined" && Array.isArray(projectBOM) ? projectBOM : []).map(i => [i.instanceId, i]));
+    const allClosets = getAllClosetsAcrossFacility();
+    const closetById = new Map(allClosets.map(c => [c.id, c]));
     const before = fl.nodes.length;
     fl.nodes = fl.nodes.filter(n => {
       if (n.type === "device") {
@@ -3371,7 +3379,7 @@ function renderSidebarTabContent() {
                 </span>
               </div>
               <div class="flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                <span>To: ${run.closetName}</span>
+                <span>To: ${escapeHTML(run.closetName)}</span>
                 <span>${(dev.waypoints || []).length} Bends</span>
               </div>
             </div>
@@ -5138,6 +5146,9 @@ function moveClosetToFloor(closetId, newFloorId) {
   let foundCloset = null;
   facilityFloors.forEach(fl => {
     if (!fl.nodes) fl.nodes = [];
+    const bomByInstanceId = new Map((typeof projectBOM !== "undefined" && Array.isArray(projectBOM) ? projectBOM : []).map(i => [i.instanceId, i]));
+    const allClosets = getAllClosetsAcrossFacility();
+    const closetById = new Map(allClosets.map(c => [c.id, c]));
     const idx = fl.nodes.findIndex(n => n.id === closetId);
     if (idx !== -1) {
       foundCloset = fl.nodes.splice(idx, 1)[0];

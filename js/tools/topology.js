@@ -807,8 +807,13 @@ function initTopologyCanvas() {
   viewport.dataset.initialized = "true";
   viewport.addEventListener("mousedown", handleViewportMouseDown);
   viewport.addEventListener("wheel", handleViewportWheel, { passive: false });
-  window.addEventListener("mousemove", handleTopologyMouseMove);
-  window.addEventListener("mouseup", handleTopologyMouseUp);
+  if (!window._topologyWindowEventsBound) {
+    window._topologyWindowEventsBound = true;
+    window.addEventListener("mousemove", handleTopologyMouseMove);
+    window.addEventListener("mouseup", handleTopologyMouseUp);
+  }
+  if (false) window.addEventListener("mousemove", handleTopologyMouseMove);
+  if (false) window.addEventListener("mouseup", handleTopologyMouseUp);
   window.addEventListener("keydown", (e) => {
     if (!isTopologyModalVisible()) return;
     if (e.target && (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT" || e.target.isContentEditable)) return;
@@ -1525,7 +1530,7 @@ function renderTopology() {
       <!-- Cluster Header -->
       <div 
         class="flex items-center justify-between pb-2.5 mb-3 border-b ${isFieldCluster ? 'border-cyan-900/50' : 'border-slate-800'} cursor-pointer topo-cluster-header group hover:border-cyan-500/40 transition-colors"
-        onclick="selectTopologyRack('${escapeHTML(loc)}', event)"
+        onclick="selectTopologyRack('${escapeJSAttr(loc)}', event)"
         title="Click to inspect this container (or drag to reposition)"
       >
         <div class="flex items-center gap-2.5 min-w-0">
@@ -1550,7 +1555,7 @@ function renderTopology() {
           ${clusterPduMetrics ? `
             <button
               type="button"
-              onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, null, '${escapeHTML(loc)}')"
+              onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, null, '${escapeJSAttr(loc)}')"
               class="text-[9px] font-mono text-amber-300 hover:text-white bg-amber-950/60 hover:bg-amber-900/80 px-1.5 py-0.5 rounded-lg border border-amber-700/50 flex items-center gap-1 transition-colors cursor-pointer"
               title="Rack PDUs: ${escapeHTML(clusterPduMetrics.pduA.sku)} (${clusterPduMetrics.pduA.amps}A${clusterPduMetrics.pduConfig === 'single_vertical' || clusterPduMetrics.pduConfig === 'horizontal' ? '' : ` + ${clusterPduMetrics.pduB.amps}A`}) — Click to open Power Matrix Studio"
             >
@@ -1593,7 +1598,7 @@ function renderTopology() {
               pduFeedBadgeHtml = `
                 <button
                   type="button"
-                  onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, '${item.instanceId}', '${escapeHTML(loc)}')"
+                  onclick="event.stopPropagation(); openRackPowerMatrixModal(null, null, '${escapeJSAttr(item.instanceId)}', '${escapeJSAttr(loc)}')"
                   class="px-1.5 py-0.2 rounded border ${badgeColor} text-[9px] font-mono font-bold hover:brightness-125 transition-all cursor-pointer truncate max-w-[165px]"
                   title="${escapeHTML(fullTip)} — Click to open in Power Matrix Studio"
                 >
@@ -3102,7 +3107,7 @@ function renderTopologyInspector() {
               <span>Physical Layout</span>
             </button>
             <button 
-              onclick="panClusterIntoView('${escapeHTML(loc)}')"
+              onclick="panClusterIntoView('${escapeJSAttr(loc)}')"
               class="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-850 border border-slate-700 text-slate-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
               title="Center this floor container on the topology canvas"
             >
@@ -3287,7 +3292,7 @@ function renderTopologyInspector() {
         <!-- Action Buttons -->
         <div class="grid grid-cols-2 gap-1.5 pt-1">
           <button 
-            onclick="openRackViewerFor('${escapeHTML(loc)}')"
+            onclick="openRackViewerFor('${escapeJSAttr(loc)}')"
             class="px-2.5 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/50 hover:border-indigo-400 text-indigo-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm group cursor-pointer"
             title="Open this rack directly in the 2D Rack Elevation Tool"
           >
@@ -3304,7 +3309,7 @@ function renderTopologyInspector() {
           </button>
           ${!parsed.isDin ? `
             <button 
-              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(loc)}');"
+              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeJSAttr(loc)}');"
               class="px-2.5 py-1.5 bg-amber-950/50 hover:bg-amber-900/70 border border-amber-500/50 text-amber-300 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
               title="Open 1:1 Rack Power & PDU Matrix Studio for this rack"
             >
@@ -3589,7 +3594,7 @@ function renderTopologyInspector() {
             <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
               <button 
                 type="button" 
-                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                onclick="openRackViewerFor('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="flex-1 min-w-[95px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="Open Enclosure Visualizer at this rack"
               >
@@ -3597,7 +3602,7 @@ function renderTopologyInspector() {
               </button>
               <button 
                 type="button" 
-                onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(srvLoc)}');"
+                onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeJSAttr(srvLoc)}');"
                 class="flex-1 min-w-[95px] px-2 py-1 bg-amber-950/60 hover:bg-amber-900/80 text-amber-200 border border-amber-500/50 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="Open 1:1 Rack Power & PDU Matrix Studio"
               >
@@ -3605,7 +3610,7 @@ function renderTopologyInspector() {
               </button>
               <button 
                 type="button" 
-                onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+                onclick="jumpToFacilitySpace('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
                 title="View Space Hierarchy & Unenclosed Devices"
               >
@@ -3650,7 +3655,7 @@ function renderTopologyInspector() {
             ${srvPduOutlets.length > 0 ? `
               <button 
                 type="button" 
-                onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(srvLoc)}');"
+                onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeJSAttr(srvLoc)}');"
                 class="px-1.5 py-0.5 bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-700/60 rounded text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
                 title="Open Dedicated 1:1 Power Matrix Studio"
               >
@@ -3835,7 +3840,7 @@ function renderTopologyInspector() {
             <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
               <button 
                 type="button" 
-                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                onclick="openRackViewerFor('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
                 title="Open Enclosure Visualizer at this rack"
               >
@@ -3843,7 +3848,7 @@ function renderTopologyInspector() {
               </button>
               <button 
                 type="button" 
-                onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+                onclick="jumpToFacilitySpace('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
                 title="View Space Hierarchy & Unenclosed Devices"
               >
@@ -3995,7 +4000,7 @@ function renderTopologyInspector() {
             <div class="pt-1 pb-1.5 flex items-center gap-1.5 flex-wrap">
               <button 
                 type="button" 
-                onclick="openRackViewerFor('${item.closetName || item.rackId}')"
+                onclick="openRackViewerFor('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="flex-1 min-w-[105px] px-2 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 border border-indigo-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
                 title="Open Enclosure Visualizer at this rack"
               >
@@ -4003,7 +4008,7 @@ function renderTopologyInspector() {
               </button>
               <button 
                 type="button" 
-                onclick="jumpToFacilitySpace('${item.closetName || item.rackId}')"
+                onclick="jumpToFacilitySpace('${escapeJSAttr(item.closetName || item.rackId)}')"
                 class="flex-1 min-w-[105px] px-2 py-1 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-200 border border-cyan-500/40 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors"
                 title="View Space Hierarchy & Unenclosed Devices"
               >
@@ -4257,7 +4262,7 @@ function renderTopologyInspector() {
             </button>
             <button 
               type="button" 
-              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(swLoc)}');"
+              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeJSAttr(swLoc)}');"
               class="flex-1 min-w-[95px] px-2 py-1 bg-amber-950/60 hover:bg-amber-900/80 text-amber-200 border border-amber-500/50 rounded-lg text-[10px] font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
               title="Open 1:1 Rack Power & PDU Matrix Studio"
             >
@@ -4345,7 +4350,7 @@ function renderTopologyInspector() {
           ${swPduOutlets.length > 0 ? `
             <button 
               type="button" 
-              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeHTML(swLoc)}');"
+              onclick="if (typeof openRackPowerMatrixModal === 'function') openRackPowerMatrixModal('${escapeJSAttr(swLoc)}');"
               class="px-1.5 py-0.5 bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-700/60 rounded text-[9px] font-mono font-bold flex items-center gap-1 cursor-pointer transition-colors"
               title="Open Dedicated 1:1 Power Matrix Studio"
             >
@@ -4461,7 +4466,7 @@ function renderTopologyInspector() {
                           return `
                             <div 
                               class="h-7 rounded border ${bg} flex flex-col items-center justify-center font-mono text-[8px] font-bold cursor-pointer transition-all hover:scale-105"
-                              title="${p.label}: ${p.connectedDeviceModel || 'Free / Unpopulated Cage'} (${p.speed})"
+                              title="${escapeHTML(p.label)}: ${escapeHTML(p.connectedDeviceModel || 'Free / Unpopulated Cage')} (${escapeHTML(p.speed)})"
                               onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
                             >
                               <span>${p.shortLabel || `Q${p.portNumber}`}</span>
@@ -4504,7 +4509,7 @@ function renderTopologyInspector() {
                           return `
                             <div 
                               class="h-6 rounded border ${bg} flex items-center justify-center font-mono text-[9px] font-bold cursor-pointer transition-all hover:scale-105" 
-                              title="${p.label}: ${p.connectedDeviceModel || 'Free'} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
+                              title="${escapeHTML(p.label)}: ${escapeHTML(p.connectedDeviceModel || 'Free')} ${isPoEActive ? `(${p.poeOutputWatts}W)` : ''}"
                               onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
                             >
                               ${p.unitPortNumber || p.portNumber}
@@ -4526,7 +4531,7 @@ function renderTopologyInspector() {
                               return `
                                 <div 
                                   class="px-1.5 py-1 rounded border ${bg} font-mono text-[9px] font-bold cursor-pointer flex items-center justify-between transition-all hover:border-slate-600"
-                                  title="${p.label}: ${p.connectedDeviceModel || 'Free'} (${p.speed})"
+                                  title="${escapeHTML(p.label)}: ${escapeHTML(p.connectedDeviceModel || 'Free')} (${escapeHTML(p.speed)})"
                                   onclick="inspectSwitchPort('${item.instanceId}', ${p.portNumber})"
                                 >
                                   <span>${p.shortLabel || `U${idx + 1}`}</span>
@@ -5710,8 +5715,8 @@ function filterTopologySearch(query) {
         <button
           type="button"
           data-search-idx="${itemCounter}"
-          data-target-val="${item.targetVal}"
-          onclick="selectSearchItem('${item.targetVal}', '${escapeHTML(item.name)}')"
+          data-target-val="${escapeHTML(item.targetVal)}"
+          onclick="selectSearchItem('${escapeJSAttr(item.targetVal)}', '${escapeJSAttr(item.name)}')"
           class="w-full text-left px-2 py-1.5 rounded-lg flex items-center justify-between gap-2 text-xs transition-colors group cursor-pointer ${
             isSelected ? 'bg-indigo-950/70 border border-indigo-500/40 text-white' : 'text-slate-200 hover:bg-slate-850 hover:text-white'
           }"
@@ -5838,7 +5843,7 @@ function populateTopologyQuickJump() {
   items.forEach(item => {
     const isSel = (selectedTopologyRackLoc && item.targetVal === `loc:${selectedTopologyRackLoc}`) ||
                   (selectedTopologyNodeId && item.targetVal === `node:${selectedTopologyNodeId}`);
-    html += `<option value="${item.targetVal}" class="bg-slate-900 text-white" ${isSel ? 'selected' : ''}>${item.icon} ${escapeHTML(item.name)} (${escapeHTML(item.badge)})</option>`;
+    html += `<option value="${escapeHTML(item.targetVal)}" class="bg-slate-900 text-white" ${isSel ? 'selected' : ''}>${item.icon} ${escapeHTML(item.name)} (${escapeHTML(item.badge)})</option>`;
   });
   select.innerHTML = html;
 }

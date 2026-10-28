@@ -32,6 +32,31 @@ if (typeof window.escapeJSAttr !== "function") {
   };
 }
 
+if (typeof window.escapeCSVCell !== "function") {
+  window.escapeCSVCell = function(val) {
+    if (val === null || val === undefined) return '""';
+    let str = String(val);
+    if (/^[=+\-@\t\r]/.test(str) && !/^-[0-9]+(\.[0-9]+)?$/.test(str)) {
+      str = "'" + str;
+    }
+    return '"' + str.replace(/"/g, '""') + '"';
+  };
+}
+
+if (typeof window.safeJsonParse !== "function") {
+  window.safeJsonParse = function(raw, fallback = null) {
+    if (!raw || typeof raw !== "string") return fallback;
+    try {
+      return JSON.parse(raw, (key, value) => {
+        if (key === "__proto__" || key === "constructor" || key === "prototype") return undefined;
+        return value;
+      });
+    } catch (e) {
+      return fallback;
+    }
+  };
+}
+
 if (typeof window.safeCreateIcons !== "function") {
   window.safeCreateIcons = function(rootElement) {
     if (typeof lucide !== "undefined" && typeof lucide.createIcons === "function") {
@@ -1108,8 +1133,8 @@ const StorageService = {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const parsed = JSON.parse(e.target.result);
-        if (!parsed || typeof parsed !== "object") {
+        const parsed = window.safeJsonParse ? window.safeJsonParse(e.target.result, null) : JSON.parse(e.target.result);
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
           throw new Error("Invalid project structure: file does not contain a JSON object");
         }
 
@@ -1117,10 +1142,11 @@ const StorageService = {
 
         // Deep sanitize and validate each BOM item against injection
         const sanitizedBOM = rawBOM.map(item => {
-          if (!item || typeof item !== "object") return null;
+          if (!item || typeof item !== "object" || Array.isArray(item)) return null;
           return {
             id: String(item.id || '').replace(/[<>"'/]/g, '').slice(0, 100),
-            instanceId: String(item.instanceId || `inst-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`),
+            ...item,
+            instanceId: String(item.instanceId || `inst-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`).replace(/[^a-zA-Z0-9_\-:.]/g, '_').slice(0, 80),
             sku: String(item.sku || '').replace(/[<>"'/]/g, '').slice(0, 100),
             model: String(item.model || '').replace(/[<>"']/g, '').slice(0, 120),
             vendor: String(item.vendor || '').replace(/[<>"']/g, '').slice(0, 60),
@@ -1132,7 +1158,9 @@ const StorageService = {
             qty: Math.max(1, parseInt(item.qty, 10) || 1),
             ports: parseInt(item.ports, 10) || 0,
             poeBudget: parseFloat(item.poeBudget) || 0,
-            parentInstanceId: item.parentInstanceId ? String(item.parentInstanceId).replace(/[<>"']/g, '').slice(0, 100) : null,
+            parentInstanceId: item.parentInstanceId ? String(item.parentInstanceId).replace(/[^a-zA-Z0-9_\-:.]/g, '_').slice(0, 100) : null,
+            friendlyName: item.friendlyName ? String(item.friendlyName).replace(/[<>"'`]/g, '').slice(0, 120) : undefined,
+            deviceNumber: item.deviceNumber ? String(item.deviceNumber).replace(/[<>"'`]/g, '').slice(0, 60) : undefined,
             closetName: item.closetName ? String(item.closetName).replace(/[<>"']/g, '').slice(0, 60) : "Unassigned",
             rackId: item.rackId ? String(item.rackId).replace(/[<>"']/g, '').slice(0, 60) : null,
             mountMethod: item.mountMethod ? String(item.mountMethod).replace(/[<>"']/g, '').slice(0, 60) : null,

@@ -479,9 +479,22 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof MutationObserver !== "undefined" && document.body) {
     const tableObserver = new MutationObserver((mutations) => {
       for (let i = 0; i < mutations.length; i++) {
-        if (mutations[i].addedNodes && mutations[i].addedNodes.length > 0) {
-          debouncedInitResizableTables();
-          break;
+        const m = mutations[i];
+        const t = m.target;
+        if (!t || t.namespaceURI === "http://www.w3.org/2000/svg") continue;
+        if (t.closest && t.closest("svg, #topologySvgOverlay, #topologyNodesContainer, #cableSvgCanvas")) continue;
+        if (m.addedNodes && m.addedNodes.length > 0) {
+          for (let j = 0; j < m.addedNodes.length; j++) {
+            const node = m.addedNodes[j];
+            if (node.nodeType === 1 && (
+              node.tagName === "TABLE" ||
+              (node.classList && node.classList.contains("oss-pane-resizer")) ||
+              (node.querySelector && node.querySelector("table, .oss-pane-resizer"))
+            )) {
+              debouncedInitResizableTables();
+              return;
+            }
+          }
         }
       }
     });
@@ -2667,7 +2680,7 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
                   <tr class="hover:bg-slate-900/50 transition-colors">
                     <!-- Group Name -->
                     <td class="py-1.5 px-2">
-                      <input type="text" value="${String(grp.name || `Group ${idx + 1}`).replace(/"/g, '&quot;')}" onchange="updateVideoCameraGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-purple-500" />
+                      <input type="text" value="${escapeHTML(grp.name || `Group ${idx + 1}`)}" onchange="updateVideoCameraGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-purple-500" />
                     </td>
                     <!-- Camera Count -->
                     <td class="py-1.5 px-1.5">
@@ -4956,7 +4969,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
                     <td class="py-1.5 px-3 font-bold ${li.isIncludedZeroCost ? 'text-emerald-300' : 'text-indigo-300'} whitespace-nowrap">${li.sku}</td>
                     <td class="py-1.5 px-3 font-sans text-slate-200">
                       <div class="font-semibold">${li.model}</div>
-                      ${li.notes ? `<div class="text-[10px] ${li.isIncludedZeroCost ? 'text-emerald-300/90' : 'text-slate-400'}">${li.notes}</div>` : ''}
+                      ${li.notes ? `<div class="text-[10px] ${li.isIncludedZeroCost ? 'text-emerald-300/90' : 'text-slate-400'}">${escapeHTML(li.notes)}</div>` : ''}
                     </td>
                     <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel}</td>
                     <td class="py-1.5 px-3 text-center font-bold text-amber-300">${li.qty}</td>
@@ -4996,16 +5009,19 @@ function setApplianceBuildSelection(applianceId, optKey, val) {
 }
 window.setApplianceBuildSelection = setApplianceBuildSelection;
 
-function addServerAccessoryToBom(sku, label, msrp, parentVendor) {
+function addServerAccessoryToBom(sku, labelOrQty, msrp, parentVendor) {
   if (!sku) return;
-  // First check if SKU is in catalog (e.g. HEMS-* warranties)
+  const isNumericSecondArg = typeof labelOrQty === "number";
+  const addQty = isNumericSecondArg ? Math.max(1, labelOrQty) : 1;
+  // First check if SKU is in catalog (e.g. HEMS-* warranties or GPU kits)
   if (typeof addToBOM === "function") {
     const swDb = (typeof window !== "undefined" && window.SOFTWARE_DATABASE && Array.isArray(window.SOFTWARE_DATABASE.vms))
       ? window.SOFTWARE_DATABASE.vms
       : [];
-    const matchedCatalogItem = swDb.find(s => s.sku === sku || s.id === sku);
+    const matchedCatalogItem = swDb.find(s => s.sku === sku || s.id === sku) ||
+      ((typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function") ? CatalogRegistry.get(sku) : null);
     if (matchedCatalogItem) {
-      addToBOM(matchedCatalogItem.id, 1);
+      addToBOM(matchedCatalogItem.id || matchedCatalogItem.sku, addQty);
       if (typeof showToast === "function") {
         showToast(`Added ${matchedCatalogItem.sku} (${matchedCatalogItem.model}) to BOM.`, "success");
       }
@@ -5013,28 +5029,35 @@ function addServerAccessoryToBom(sku, label, msrp, parentVendor) {
       return;
     }
   }
-  // Otherwise add as a custom hardware accessory line item on projectBOM
+  // Otherwise add as a canonical flat hardware accessory line item on projectBOM
   if (Array.isArray(projectBOM)) {
-    const existing = projectBOM.find(entry => entry && entry.item && entry.item.sku === sku);
+    const label = (!isNumericSecondArg && labelOrQty) ? String(labelOrQty) : sku;
+    const existing = projectBOM.find(entry => entry && entry.sku === sku && !entry.parentInstanceId);
     if (existing) {
-      existing.qty = (Number(existing.qty) || 1) + 1;
+      existing.qty = (Number(existing.qty) || 1) + addQty;
     } else {
+      const cleanId = `acc_${sku.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`;
       projectBOM.push({
-        id: `acc_${sku.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
-        qty: 1,
-        item: {
-          id: `acc_${sku.toLowerCase().replace(/[^a-z0-9]+/g, "_")}`,
-          sku: sku,
-          vendor: parentVendor || "Server Option / Accessory",
-          model: label || sku,
-          category: "servers",
-          subcategory: "Server Build Option / Accessory",
-          msrp: Number(msrp) || 0,
-          description: label || sku
-        }
+        instanceId: `inst-acc-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        id: cleanId,
+        sku: sku,
+        vendor: parentVendor || (sku.toLowerCase().includes("husky") ? "Milestone" : "Genetec"),
+        model: label,
+        role: "Server Build Option / Accessory",
+        category: "servers",
+        subcategory: "Server Build Option / Accessory",
+        qty: addQty,
+        msrp: Number(msrp) || 0,
+        description: label,
+        closetName: "Unassigned",
+        rackId: "Unassigned"
       });
     }
-    if (typeof updateBOMTable === "function") updateBOMTable();
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange();
+    } else if (typeof updateBOMView === "function") {
+      updateBOMView();
+    }
     if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
     if (typeof showToast === "function") {
       showToast(`Added Server Accessory ${sku} (${label}${msrp ? ' • $' + Number(msrp).toLocaleString() : ''}) to BOM.`, "success");
@@ -5664,7 +5687,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
                     <td class="py-1.5 px-3 font-bold ${isZero ? 'text-emerald-300' : 'text-sky-300'} whitespace-nowrap">${li.sku}</td>
                     <td class="py-1.5 px-3 font-sans text-slate-200">
                       <div class="font-semibold">${li.model}</div>
-                      ${li.notes ? `<div class="text-[10px] ${isZero ? 'text-emerald-300/90' : 'text-slate-400'}">${li.notes}</div>` : ''}
+                      ${li.notes ? `<div class="text-[10px] ${isZero ? 'text-emerald-300/90' : 'text-slate-400'}">${escapeHTML(li.notes)}</div>` : ''}
                     </td>
                     <td class="py-1.5 px-3 text-[10px] text-slate-400 whitespace-nowrap">${li.categoryLabel || li.category || ''}</td>
                     <td class="py-1.5 px-3 text-center font-bold text-amber-300">${li.qty}</td>
@@ -6225,7 +6248,7 @@ function renderWorkstationSizerStudioHtml(isFullStudio = true) {
                 return `
                   <tr class="hover:bg-slate-900/50 transition-colors">
                     <td class="py-1.5 px-2">
-                      <input type="text" value="${String(grp.name || `Grid ${idx + 1}`).replace(/"/g, '&quot;')}" onchange="updateWorkstationCameraGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-sky-500" />
+                      <input type="text" value="${escapeHTML(grp.name || `Grid ${idx + 1}`)}" onchange="updateWorkstationCameraGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-sky-500" />
                     </td>
                     <td class="py-1.5 px-1.5">
                       <input type="number" min="1" max="256" value="${grp.qty}" onchange="updateWorkstationCameraGroup(${idx}, 'qty', Math.max(1, parseInt(this.value, 10) || 1))" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-mono font-bold text-white text-center focus:outline-none focus:border-sky-500" />
@@ -6924,7 +6947,7 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
               ${rollup.rows.map((row, idx) => `
                 <tr class="hover:bg-slate-900/50 transition-colors">
                   <td class="py-1.5 px-2">
-                    <input type="text" value="${String(row.name || `Door Group ${idx + 1}`).replace(/"/g, '&quot;')}" onchange="updateDoorScheduleGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-amber-500" />
+                    <input type="text" value="${escapeHTML(row.name || `Door Group ${idx + 1}`)}" onchange="updateDoorScheduleGroup(${idx}, 'name', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-xs font-semibold text-white focus:outline-none focus:border-amber-500" />
                   </td>
                   <td class="py-1.5 px-2">
                     <select onchange="updateDoorScheduleGroup(${idx}, 'preset', this.value)" class="w-full bg-slate-900 border border-slate-700/80 rounded px-2 py-1 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
@@ -7347,7 +7370,7 @@ function runActiveFilter() {
                   </div>
                   <div class="flex flex-wrap items-center justify-center gap-2">
                     ${otherMatches.map(m => `
-                      <button onclick="GlobalSearchEngine.navigateTo('${escapeHTML(m.sku)}')" class="px-3 py-1.5 bg-slate-900 hover:bg-brand-600 border border-slate-700 hover:border-brand-500 rounded-xl text-white font-medium flex items-center gap-1.5 transition-all shadow-sm cursor-pointer group">
+                      <button onclick="GlobalSearchEngine.navigateTo('${escapeJSAttr(m.sku)}')" class="px-3 py-1.5 bg-slate-900 hover:bg-brand-600 border border-slate-700 hover:border-brand-500 rounded-xl text-white font-medium flex items-center gap-1.5 transition-all shadow-sm cursor-pointer group">
                         <span class="text-[10px] text-brand-300 font-mono font-bold">${escapeHTML(m.target.modeLabel)}:</span>
                         <span class="font-bold">${escapeHTML(m.model)}</span>
                         <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400 group-hover:text-white transition-colors"></i>

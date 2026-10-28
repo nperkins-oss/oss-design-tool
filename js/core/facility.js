@@ -136,6 +136,24 @@ const FacilityStore = {
   defaultFloors: [],
   defaultSpaces: [],
   defaultEnclosures: [],
+  _cacheProjId: null,
+  _floorsCache: null,
+  _spacesCache: null,
+  _enclosuresCache: null,
+
+  invalidateCache() {
+    this._floorsCache = null;
+    this._spacesCache = null;
+    this._enclosuresCache = null;
+  },
+
+  _safeSetItem(key, val) {
+    if (typeof StorageService !== "undefined" && typeof StorageService.safeSetItem === "function") {
+      StorageService.safeSetItem(key, val);
+    } else {
+      try { localStorage.setItem(key, val); } catch (e) {}
+    }
+  },
 
   getProjectId() {
     try {
@@ -148,6 +166,7 @@ const FacilityStore = {
   setProjectId(projId) {
     if (!projId) return;
     try {
+      this.invalidateCache();
       localStorage.setItem("netselect_active_project_id", projId);
     } catch (e) {}
   },
@@ -156,6 +175,8 @@ const FacilityStore = {
   // Hierarchy Data Accessors (Floors, Spaces, Enclosures)
   // -----------------------------------------------------------
   getFloors() {
+    const reqProj = this.getProjectId();
+    if (this._cacheProjId === reqProj && Array.isArray(this._floorsCache)) return this._floorsCache;
     const projKey = this.getProjectId();
     try {
       const raw = localStorage.getItem(`netselect_fac_floors_${projKey}`);
@@ -166,6 +187,8 @@ const FacilityStore = {
           parsed.forEach(f => {
             if (f.name === "Level 1 - Main Floor") f.name = "Main Floor";
           });
+          this._cacheProjId = projKey;
+          this._floorsCache = parsed;
           return parsed;
         }
       }
@@ -176,7 +199,9 @@ const FacilityStore = {
   saveFloors(list) {
     try {
       const projKey = this.getProjectId();
-      localStorage.setItem(`netselect_fac_floors_${projKey}`, JSON.stringify(list));
+      this._cacheProjId = projKey;
+      this._floorsCache = Array.isArray(list) ? list : [];
+      this._safeSetItem(`netselect_fac_floors_${projKey}`, JSON.stringify(list));
     } catch (e) {}
   },
 
@@ -307,6 +332,8 @@ const FacilityStore = {
   },
 
   getSpaces(floorId = null) {
+    const reqProj = this.getProjectId();
+    if (this._cacheProjId === reqProj && Array.isArray(this._spacesCache)) return floorId ? this._spacesCache.filter(s => s.floorId === floorId) : this._spacesCache;
     const projKey = this.getProjectId();
     let list = [];
     try {
@@ -317,6 +344,8 @@ const FacilityStore = {
       list = JSON.parse(JSON.stringify(this.defaultSpaces));
     }
     // Ensure all spaces have a type, and pole spaces have poleHeightFt and poleDiameterInches
+    this._cacheProjId = projKey;
+    this._spacesCache = list;
     list.forEach(s => {
       if (!s) return;
       if (!s.type) s.type = "idf";
@@ -335,7 +364,9 @@ const FacilityStore = {
   saveSpaces(list) {
     try {
       const projKey = this.getProjectId();
-      localStorage.setItem(`netselect_fac_spaces_${projKey}`, JSON.stringify(list));
+      this._cacheProjId = projKey;
+      this._spacesCache = Array.isArray(list) ? list : [];
+      this._safeSetItem(`netselect_fac_spaces_${projKey}`, JSON.stringify(list));
     } catch (e) {}
   },
 
@@ -555,6 +586,8 @@ const FacilityStore = {
   },
 
   getEnclosures(spaceId = null) {
+    const reqProj = this.getProjectId();
+    if (this._cacheProjId === reqProj && Array.isArray(this._enclosuresCache)) return spaceId ? this._enclosuresCache.filter(e => e.spaceId === spaceId) : this._enclosuresCache;
     const projKey = this.getProjectId();
     let list = [];
     try {
@@ -597,6 +630,8 @@ const FacilityStore = {
       }
     });
 
+    this._cacheProjId = projKey;
+    this._enclosuresCache = list;
     if (spaceId) {
       return list.filter(e => e.spaceId === spaceId);
     }
@@ -847,7 +882,9 @@ const FacilityStore = {
   saveEnclosures(list) {
     try {
       const projKey = this.getProjectId();
-      localStorage.setItem(`netselect_fac_enclosures_${projKey}`, JSON.stringify(list));
+      this._cacheProjId = projKey;
+      this._enclosuresCache = Array.isArray(list) ? list : [];
+      this._safeSetItem(`netselect_fac_enclosures_${projKey}`, JSON.stringify(list));
     } catch (e) {}
   },
 
@@ -1049,7 +1086,7 @@ const FacilityStore = {
   saveEndpoints(list) {
     try {
       const projKey = this.getProjectId();
-      localStorage.setItem(`netselect_fac_endpoints_${projKey}`, JSON.stringify(list));
+      this._safeSetItem(`netselect_fac_endpoints_${projKey}`, JSON.stringify(list));
     } catch (e) {}
   },
 
@@ -2816,7 +2853,7 @@ function renderFacilityManager() {
                 onclick="selectFacilityFloor('${f.id}')"
                 ondragover="handleFloorCardDragOver(event, '${f.id}')"
                 ondragleave="handleFloorCardDragLeave(event, '${f.id}')"
-                ondrop="handleFloorCardDrop(event, '${escapeHTML(f.name)}')"
+                ondrop="handleFloorCardDrop(event, '${escapeJSAttr(f.name)}')"
                 class="floor-drop-target p-3 rounded-xl border ${isSelected ? 'border-sky-500 bg-sky-500/10' : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'} cursor-pointer transition-all flex items-center justify-between group"
               >
                 <div class="min-w-0 pr-1">
@@ -2951,7 +2988,7 @@ function renderFacilityManager() {
                 <div class="flex items-center gap-1.5 shrink-0">
                   ${isPole ? `
                     <button 
-                      onclick="event.stopPropagation(); openRackViewerFor('${s.name} • Pole Mount')"
+                      onclick="event.stopPropagation(); openRackViewerFor('${escapeJSAttr(s.name)} • Pole Mount')"
                       class="px-2 py-1 bg-cyan-600/30 hover:bg-cyan-600 text-cyan-200 hover:text-white text-[10px] font-bold rounded-lg border border-cyan-500/40 transition-all flex items-center gap-1 shadow-sm"
                       title="Open Pole Elevation Visualizer for ${escapeHTML(s.name)}"
                     >
@@ -3072,7 +3109,7 @@ function renderFacilityManager() {
                 ondragend="handleEnclosureDragEnd(event)"
                 ondragover="handleEnclosureCardDragOver(event)"
                 ondragleave="handleEnclosureCardDragLeave(event)"
-                ondrop="handleEnclosureCardDrop(event, '${locName}')"
+                ondrop="handleEnclosureCardDrop(event, '${escapeJSAttr(locName)}')"
                 data-enclosure-id="${e.id}"
               >
                 <!-- Drag Handle Bar (Requirement 5) -->
@@ -3111,7 +3148,7 @@ function renderFacilityManager() {
                   <div class="flex items-center gap-1.5 shrink-0">
                     ${hostType === 'equipment_rack' ? `
                       <button 
-                        onclick="window.TabManager ? TabManager.openTab('power_matrix', { targetRackId: '${locName}' }) : (typeof openRackPowerMatrixModal === 'function' && openRackPowerMatrixModal(null, null, null, '${locName}'))"
+                        onclick="window.TabManager ? TabManager.openTab('power_matrix', { targetRackId: '${escapeJSAttr(locName)}' }) : (typeof openRackPowerMatrixModal === 'function' && openRackPowerMatrixModal(null, null, null, '${escapeJSAttr(locName)}'))"
                         class="px-2.5 py-1.5 bg-emerald-600/25 hover:bg-emerald-600 text-emerald-200 hover:text-white text-[10px] font-bold rounded-xl border border-emerald-500/40 transition-all flex items-center gap-1.5 shadow-sm"
                         title="Open Power Matrix Studio for ${escapeHTML(e.name)}"
                       >
@@ -3119,7 +3156,7 @@ function renderFacilityManager() {
                       </button>
                     ` : ''}
                     <button 
-                      onclick="openRackViewerFor('${locName}')"
+                      onclick="openRackViewerFor('${escapeJSAttr(locName)}')"
                       class="px-2.5 py-1.5 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white text-[10px] font-bold rounded-xl border border-indigo-500/40 transition-all flex items-center gap-1.5 shadow-sm"
                       title="Open Elevation Visualizer for ${escapeHTML(e.name)}"
                     >
@@ -3232,7 +3269,7 @@ function renderFacilityManager() {
               class="floor-field-drop-target p-3 bg-slate-900/90 border border-slate-800 rounded-xl space-y-2.5 shadow-md transition-all"
               ondragover="handleFloorFieldDragOver(event)"
               ondragleave="handleFloorFieldDragLeave(event)"
-              ondrop="handleFloorFieldDrop(event, '${escapeHTML(currentFloor.name)}')"
+              ondrop="handleFloorFieldDrop(event, '${escapeJSAttr(currentFloor.name)}')"
             >
               <div class="flex items-center justify-between">
                 <div>
@@ -3246,7 +3283,7 @@ function renderFacilityManager() {
                 </div>
                 <button 
                   type="button" 
-                  onclick="promptAssignHardwareToFloorField('${escapeHTML(currentFloor.name)}')" 
+                  onclick="promptAssignHardwareToFloorField('${escapeJSAttr(currentFloor.name)}')" 
                   class="px-2 py-0.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 rounded text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer" 
                   title="Assign an unassigned camera, door, or sensor to this floor"
                 >
@@ -3345,7 +3382,7 @@ function renderFacilityManager() {
             ${unassignedItems.length > 0 && currentSpace ? `
               <div class="flex items-center gap-2 shrink-0">
                 <button 
-                  onclick="assignAllUnassignedToSpace('${escapeHTML(currentSpace.name)}')" 
+                  onclick="assignAllUnassignedToSpace('${escapeJSAttr(currentSpace.name)}')" 
                   class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
                   title="Assign all unassigned equipment to ${escapeHTML(currentSpace.name)} Field"
                 >
@@ -3398,7 +3435,7 @@ function renderFacilityManager() {
                     <div class="flex items-center justify-between gap-1 pt-1.5 border-t border-slate-900 text-xs">
                       ${(currentSpace && !(isServer || isServerDevice(item))) ? `
                         <button 
-                          onclick="assignHardwareToLocation('${item.instanceId}', '${escapeHTML(currentSpace.name)} • Field')" 
+                          onclick="assignHardwareToLocation('${escapeJSAttr(item.instanceId)}', '${escapeJSAttr(currentSpace.name)} • Field')" 
                           class="flex-1 px-2 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white rounded text-[10px] font-bold border border-indigo-500/40 transition-colors flex items-center justify-center gap-1 cursor-pointer"
                           title="Assign to ${escapeHTML(currentSpace.name)} (Field / Space Level)"
                         >

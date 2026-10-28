@@ -23,6 +23,9 @@ function generateCableScheduleData() {
 
   // 1. Group drops by Telecom Closet / Mounting Host
   const dropsByCloset = {};
+  const bomByInstanceId = new Map();
+  projectBOM.forEach(i => { if (i && i.instanceId) bomByInstanceId.set(i.instanceId, i); });
+  const seenInstanceIds = new Set();
 
   if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
     facilityFloors.forEach(floor => {
@@ -40,7 +43,8 @@ function generateCableScheduleData() {
 
         if (!dropsByCloset[normCloset]) dropsByCloset[normCloset] = [];
 
-        const bomItem = dev.instanceId ? projectBOM.find(i => i.instanceId === dev.instanceId) : null;
+        const bomItem = dev.instanceId ? (bomByInstanceId.get(dev.instanceId) || null) : null;
+        if (bomItem && bomItem.instanceId) seenInstanceIds.add(bomItem.instanceId);
 
         dropsByCloset[normCloset].push({
           devNode: dev,
@@ -61,14 +65,15 @@ function generateCableScheduleData() {
     const isCableable = cableableRoles.some(r => role.includes(r) || sub.includes(r));
     if (!isCableable) return;
 
-    let alreadyAdded = false;
-    for (const drops of Object.values(dropsByCloset)) {
+    let alreadyAdded = Boolean(bomItem.instanceId && seenInstanceIds.has(bomItem.instanceId));
+    for (const drops of (alreadyAdded ? [] : Object.values(dropsByCloset))) {
       if (drops.some(d => d.bomItem && d.bomItem.instanceId === bomItem.instanceId)) {
         alreadyAdded = true;
         break;
       }
     }
     if (!alreadyAdded) {
+      if (bomItem.instanceId) seenInstanceIds.add(bomItem.instanceId);
       const loc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(bomItem.closetName || bomItem.rackId) : (bomItem.closetName || "MDF • Rack-1");
       const normLoc = (loc === FacilityStore.UNASSIGNED || loc.endsWith("• Field")) ? "MDF • Rack-1" : loc;
       if (!dropsByCloset[normLoc]) dropsByCloset[normLoc] = [];
@@ -102,6 +107,25 @@ function generateCableScheduleData() {
     if (layer === "intercom") return 4;
     return 5;
   };
+
+  // Pre-index switch ports and patch mappings in O(S * P) once instead of O(Drops * S * P)
+  const portByConnectedDeviceId = new Map();
+  const patchMapBySwitchId = new Map();
+  projectBOM.forEach((sw, swIdx) => {
+    if (typeof isNetworkSwitchItem === "function" && !isNetworkSwitchItem(sw)) return;
+    const ports = (typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(sw) : null) || sw.physicalPorts || sw.portsList || [];
+    const swCode = (sw.deviceNumber && String(sw.deviceNumber).startsWith("SW"))
+      ? String(sw.deviceNumber).split("-")[0]
+      : `SW${String(swIdx + 1).padStart(2, "0")}`;
+    if (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function") {
+      patchMapBySwitchId.set(sw.instanceId || swIdx, PortEngine.resolveSwitchPatchMapping(sw));
+    }
+    ports.forEach(p => {
+      if (p && p.connectedDeviceId) {
+        portByConnectedDeviceId.set(p.connectedDeviceId, { sw, swIdx, swCode, foundP: p });
+      }
+    });
+  });
 
   // 3. Iterate through each closet and assign sequential cable numbers per OSS Standard Cable Label Legend
   Object.keys(dropsByCloset).sort().forEach(closetKey => {
@@ -245,7 +269,18 @@ function generateCableScheduleData() {
       if (bom) bom.cableId = cableId;
 
       // Find switch port assignment if patched in Port Matrix
-      const hostSw = projectBOM.find((sw, swIdx) => {
+      // Find switch port assignment if patched in Port Matrix (O(1) via pre-indexed Map)
+      const targetConnId = bom ? bom.instanceId : (dev ? dev.instanceId : null);
+      const preIndexedHit = targetConnId ? portByConnectedDeviceId.get(targetConnId) : null;
+      const hostSw = preIndexedHit ? preIndexedHit.sw : null;
+      if (preIndexedHit) {
+        const foundP = preIndexedHit.foundP;
+        switchPortNumber = foundP.portNumber;
+        switchCode = preIndexedHit.swCode;
+        portVlan = foundP.vlan || (typeof getProjectVlanForDevice === "function" ? getProjectVlanForDevice(bom || dev, foundP) : "Untagged (Flat)");
+        portPoe = (foundP.poeOutputWatts || foundP.allocatedWatts) ? `${foundP.poeOutputWatts || foundP.allocatedWatts}W (${foundP.poeStandard || foundP.poeType || '802.3at'})` : 'Data Only';
+      }
+      if (false) { projectBOM.find((sw, swIdx) => {
         if (typeof isNetworkSwitchItem === "function" && !isNetworkSwitchItem(sw)) return false;
         const ports = (typeof PortEngine !== "undefined" ? PortEngine.initSwitchPorts(sw) : null) || sw.physicalPorts || sw.portsList || [];
         const foundP = ports.find(p => p.connectedDeviceId === (bom ? bom.instanceId : (dev ? dev.instanceId : null)));
@@ -260,6 +295,7 @@ function generateCableScheduleData() {
         }
         return false;
       });
+      }
       if (!hostSw && typeof getProjectVlanForDevice === "function") {
         portVlan = getProjectVlanForDevice(bom || dev, null);
       }
@@ -271,7 +307,7 @@ function generateCableScheduleData() {
       if (hostSw) {
         switchName = hostSw.friendlyName || hostSw.model;
         if (typeof PortEngine !== "undefined" && typeof PortEngine.resolveSwitchPatchMapping === "function" && switchPortNumber) {
-          const patchData = PortEngine.resolveSwitchPatchMapping(hostSw);
+          const patchData = patchMapBySwitchId.get(hostSw.instanceId || (preIndexedHit ? preIndexedHit.swIdx : -1)) || PortEngine.resolveSwitchPatchMapping(hostSw);
           const pm = patchData && patchData.byPortNumber ? patchData.byPortNumber[switchPortNumber] : null;
           if (pm) {
             resolvedPanelTag = pm.panelTag || resolvedPanelTag;
@@ -718,7 +754,7 @@ function renderCablePullScheduleContent() {
               <!-- Switch & Port -->
               <td class="p-2.5">
                 ${r.switchPortNumber ? `
-                  <div class="font-bold text-sky-300">${r.switchCode}: Port ${r.switchPortNumber}</div>
+                  <div class="font-bold text-sky-300">${escapeHTML(r.switchCode)}: Port ${escapeHTML(r.switchPortNumber)}</div>
                   <div class="text-[10px] text-slate-400 truncate font-sans">${escapeHTML(r.portVlan)}</div>
                 ` : `
                   <span class="text-slate-600 italic">Unpatched in Switch</span>
@@ -728,7 +764,7 @@ function renderCablePullScheduleContent() {
               <!-- Quick Action Jump Button -->
               <td class="p-2.5 text-right font-sans">
                 <button 
-                  onclick="jumpToPhysicalLayoutTarget('${r.instanceId || r.nodeId}')"
+                  onclick="jumpToPhysicalLayoutTarget('${escapeJSAttr(r.instanceId || r.nodeId)}')"
                   class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[10px] cursor-pointer transition-colors"
                   title="Locate drop on floor plan"
                 >
@@ -813,7 +849,7 @@ function exportCableScheduleCSV() {
 
   const csvContent = [
     headers.map(h => `"${h}"`).join(","),
-    ...rows.map(row => row.map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(","))
+    ...rows.map(row => row.map(v => typeof window.escapeCSVCell === "function" ? window.escapeCSVCell(v) : `"${String(v || '').replace(/"/g, '""')}"`).join(","))
   ].join("\r\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -858,7 +894,7 @@ function printCableSchedule() {
       </td>
       <td style="padding: 5px; border: 1px solid #ccc; text-align: center;">${escapeHTML(r.runCategory)} (${escapeHTML(r.runColor)})</td>
       <td style="padding: 5px; border: 1px solid #ccc; text-align: center; font-family: monospace; font-weight: bold;">${r.cutLengthFt} ft</td>
-      <td style="padding: 5px; border: 1px solid #ccc; font-family: monospace;">${r.switchPortNumber ? `${r.switchCode}: Port ${r.switchPortNumber}` : 'Unpatched'}</td>
+      <td style="padding: 5px; border: 1px solid #ccc; font-family: monospace;">${r.switchPortNumber ? `${escapeHTML(r.switchCode)}: Port ${escapeHTML(r.switchPortNumber)}` : 'Unpatched'}</td>
     </tr>
   `).join('');
 
