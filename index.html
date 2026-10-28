@@ -366,6 +366,45 @@
       cursor: col-resize !important;
       user-select: none !important;
     }
+    table.oss-table-resized td [class*="max-w-"] {
+      max-width: 100% !important;
+    }
+
+    /* Interactive Split-Pane & Sidebar Resizers */
+    .oss-pane-resizer {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 10px;
+      cursor: col-resize;
+      user-select: none;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .oss-pane-resizer-right {
+      right: 0;
+    }
+    .oss-pane-resizer-left {
+      left: 0;
+    }
+    .oss-pane-resizer::after {
+      content: "";
+      display: block;
+      width: 2.5px;
+      height: 56px;
+      border-radius: 9999px;
+      background-color: rgba(100, 116, 139, 0.35);
+      transition: background-color 0.15s ease, height 0.15s ease, box-shadow 0.15s ease;
+    }
+    .oss-pane-resizer:hover::after,
+    .oss-pane-resizer.is-resizing::after {
+      height: 100%;
+      width: 3px;
+      background-color: #38bdf8;
+      box-shadow: 0 0 10px rgba(56, 189, 248, 0.85);
+    }
 
     /* Formal Engineering Submittal & Proposal Print Stylesheet */
     @media print {
@@ -778,7 +817,8 @@
   <div id="workspaceMainViewport" class="flex-1 flex overflow-hidden relative">
 
     <!-- Left Filter Sidebar -->
-    <aside class="w-72 bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0 overflow-hidden">
+    <aside id="catalogFilterSidebar" class="w-72 min-w-[200px] max-w-[520px] bg-slate-900/90 border-r border-slate-800 flex flex-col shrink-0 overflow-hidden relative">
+      <div class="oss-pane-resizer oss-pane-resizer-right" data-resize-target="catalogFilterSidebar" data-resize-edge="right" data-min-width="200" data-max-width="520" title="Drag to resize Filter Sidebar • Double-click to reset"></div>
       <div class="p-4 border-b border-slate-800 flex items-center justify-between">
         <span id="sidebarFilterTitle" class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
           <i data-lucide="filter" class="w-3.5 h-3.5 text-brand-400"></i> Filters
@@ -1266,7 +1306,8 @@
         </div>
 
         <!-- Topology Inspector Side Panel -->
-        <aside id="topologyInspectorPanel" class="w-80 md:w-96 max-w-[380px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-30 overflow-hidden shadow-2xl transition-all">
+        <aside id="topologyInspectorPanel" class="w-80 md:w-96 min-w-[260px] max-w-[680px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-30 overflow-hidden shadow-2xl transition-all relative">
+          <div class="oss-pane-resizer oss-pane-resizer-left" data-resize-target="topologyInspectorPanel" data-resize-edge="left" data-min-width="260" data-max-width="680" title="Drag to resize Topology Inspector • Double-click to reset"></div>
           <div class="p-3 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between">
             <div class="flex items-center gap-2">
               <i data-lucide="sliders" class="w-4 h-4 text-emerald-400" id="topoInspectorHeaderIcon"></i>
@@ -1690,7 +1731,8 @@
           </div>
         </div>
 
-        <aside id="cableSidebar" class="w-80 md:w-96 max-w-[380px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-20 overflow-hidden transition-all">
+        <aside id="cableSidebar" class="w-80 md:w-96 min-w-[260px] max-w-[680px] bg-slate-900 border-l border-slate-800 flex flex-col shrink-0 z-20 overflow-hidden transition-all relative">
+          <div class="oss-pane-resizer oss-pane-resizer-left" data-resize-target="cableSidebar" data-resize-edge="left" data-min-width="260" data-max-width="680" title="Drag to resize Physical Layout Inspector • Double-click to reset"></div>
           <div id="inspectorPanel" class="p-3.5 border-b border-slate-800 bg-slate-950/80 space-y-3 max-h-[460px] overflow-y-auto shrink-0">
             <div class="flex items-center justify-between">
               <span class="text-[11px] font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
@@ -2679,7 +2721,7 @@
       <!-- View 2: Enclosure Visualizer Frame & Engineering Analytics -->
       <div id="facilityVisualizerView" class="hidden flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6 bg-slate-950">
         <!-- Host Frame Elevation Column -->
-        <div class="flex-1 flex flex-col items-center">
+        <div class="flex-1 min-w-0 flex flex-col items-center">
           <div class="w-full max-w-5xl bg-slate-900 border-2 border-slate-700 rounded-2xl p-4 shadow-xl">
             <!-- Elevation Action Toolbar: Title + Orientation Toggle + PDU Config + Dimension Selectors + Auto-Mount/Unmount -->
             <div class="pb-3 mb-3 border-b border-slate-800 flex flex-col xl:flex-row xl:items-center justify-between gap-2">
@@ -2769,7 +2811,8 @@
         </div>
 
         <!-- Right Side: Collapsible Inspector Pane for Analytics, Served Endpoints & Unassigned Staging -->
-        <div id="rackRightSidePane" class="w-full lg:w-96 flex flex-col gap-3">
+        <div id="rackRightSidePane" class="w-full lg:w-96 lg:min-w-[280px] lg:max-w-[680px] lg:shrink-0 relative flex flex-col gap-3 lg:pl-2">
+          <div class="oss-pane-resizer oss-pane-resizer-left hidden lg:flex" data-resize-target="rackRightSidePane" data-resize-edge="left" data-min-width="280" data-max-width="680" title="Drag to resize Engineering & Staging Pane • Double-click to reset"></div>
           <!-- Sidebar Tabs + Expand/Collapse All Accordions -->
           <div class="flex items-center justify-between gap-1.5">
             <div class="flex-1 flex items-center bg-slate-900 border border-slate-800 p-1 rounded-xl gap-1 text-xs font-semibold">

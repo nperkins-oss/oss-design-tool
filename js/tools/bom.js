@@ -2997,7 +2997,7 @@ function renderBomTableRow(item) {
             <select 
               onchange="handleLocationDropdownChange(this, (newLoc) => setItemLocation('${item.instanceId}', newLoc))" 
               data-previous-val="${currentLocationKey}" 
-              class="w-full max-w-[210px] bg-slate-900 border border-slate-700/80 text-slate-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500 truncate cursor-pointer shadow-sm" 
+              class="w-full bg-slate-900 border border-slate-700/80 text-slate-200 text-xs font-semibold rounded-lg px-2 py-1 focus:outline-none focus:border-brand-500 truncate cursor-pointer shadow-sm" 
               title="Change Assigned Space or Rack Enclosure"
             >
               ${renderBomLocationOptions(currentLocationKey, item)}
@@ -3390,7 +3390,7 @@ function renderBomFlatTableRow(skuItem) {
       <td class="py-3 px-4 align-top">
         <div class="flex items-center gap-1.5 text-xs text-slate-300">
           <i data-lucide="map-pin" class="w-3.5 h-3.5 text-indigo-400 shrink-0"></i>
-          <span class="font-mono text-[11px] truncate max-w-sm" title="${escapeHTML(locSummary)}">${escapeHTML(locSummary)}</span>
+          <span class="font-mono text-[11px] truncate" title="${escapeHTML(locSummary)}">${escapeHTML(locSummary)}</span>
         </div>
       </td>
 
@@ -3605,58 +3605,74 @@ function renderLicenseManagerContent() {
 
       <div class="space-y-2">
         <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Individual Device Management Routing:</span>
-        ${parentDevices.map(dev => {
-          const vendorProfiles = MGMT_SUBSCRIPTION_CATALOG[dev.vendor] || {};
-          const currentMgmtItem = projectBOM.find(i => i.parentInstanceId === dev.instanceId && (i.role === "Mgmt License" || i.role === "Security License"));
-          
-          let activeKey = dev.selectedMgmtProfile;
-          if (!activeKey || (!vendorProfiles[activeKey] && activeKey !== "standalone")) {
-            activeKey = dev.vendor === "Meraki" ? "cloud" : "standalone";
-            dev.selectedMgmtProfile = activeKey;
-          }
+        <div class="overflow-x-auto rounded-xl border border-slate-800 bg-slate-900/80">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-950/90 text-[10px] font-mono uppercase text-slate-400 border-b border-slate-800">
+                <th class="py-2.5 px-3.5 font-bold">Hardware Model &amp; Vendor</th>
+                <th class="py-2.5 px-3.5 font-bold">Quantity &amp; Assigned Location</th>
+                <th class="py-2.5 px-3.5 font-bold">Management Platform / License Tier</th>
+                <th class="py-2.5 px-3.5 font-bold">Subscription Term</th>
+                <th class="py-2.5 px-3.5 font-bold text-right">Extended Cost</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${parentDevices.map(dev => {
+                const vendorProfiles = MGMT_SUBSCRIPTION_CATALOG[dev.vendor] || {};
+                const currentMgmtItem = projectBOM.find(i => i.parentInstanceId === dev.instanceId && (i.role === "Mgmt License" || i.role === "Security License"));
+                
+                let activeKey = dev.selectedMgmtProfile;
+                if (!activeKey || (!vendorProfiles[activeKey] && activeKey !== "standalone")) {
+                  activeKey = dev.vendor === "Meraki" ? "cloud" : "standalone";
+                  dev.selectedMgmtProfile = activeKey;
+                }
 
-          const activeProfile = vendorProfiles[activeKey];
-          const deviceSupportedTerms = (activeProfile && activeProfile.terms) ? Object.keys(activeProfile.terms).filter(t => t !== "PERP") : [];
-          const rawLoc = dev.closetName || dev.rackId || FacilityStore.UNASSIGNED;
-          const locationLabel = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
+                const activeProfile = vendorProfiles[activeKey];
+                const deviceSupportedTerms = (activeProfile && activeProfile.terms) ? Object.keys(activeProfile.terms).filter(t => t !== "PERP") : [];
+                const rawLoc = dev.closetName || dev.rackId || FacilityStore.UNASSIGNED;
+                const locationLabel = typeof FacilityStore !== "undefined" ? FacilityStore.normalize(rawLoc) : rawLoc;
 
-          return `
-            <div class="bg-slate-900 p-3 rounded-xl border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
-              <div class="min-w-0">
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-white truncate">${dev.model}</span>
-                  <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 text-slate-400 font-mono">${dev.vendor}</span>
-                </div>
-                <span class="text-[10px] text-slate-400 font-mono">${dev.qty}x units &bull; Location: [${locationLabel}]</span>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-3">
-                <select onchange="updateSwitchMgmtProfile('${dev.instanceId}', this.value)" class="bg-slate-950 border border-slate-700 text-purple-300 font-semibold rounded px-2.5 py-1 text-xs focus:outline-none focus:border-purple-500">
-                  ${Object.entries(vendorProfiles).map(([pKey, pData]) => `
-                    <option value="${pKey}" ${activeKey === pKey ? 'selected' : ''}>${pData.name}</option>
-                  `).join('')}
-                  ${dev.vendor !== "Meraki" ? `
-                    <option value="standalone" ${activeKey === 'standalone' ? 'selected' : ''}>Standalone / Air-Gapped CLI ($0)</option>
-                  ` : ''}
-                </select>
-
-                ${deviceSupportedTerms.length > 1 ? `
-                  <div class="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-                    ${deviceSupportedTerms.map(t => `
-                      <button onclick="setIndividualDeviceTerm('${dev.instanceId}', '${t}')" class="px-1.5 py-0.5 text-[10px] font-mono rounded font-bold ${dev.individualTerm === t || (!dev.individualTerm && globalSelectedTerm === t) ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}">
-                        ${t}
-                      </button>
-                    `).join('')}
-                  </div>
-                ` : ''}
-
-                <div class="w-24 text-right font-mono text-emerald-400 font-bold text-xs">
-                  ${currentMgmtItem ? `$${(currentMgmtItem.msrp * currentMgmtItem.qty).toLocaleString()}` : '$0'}
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('')}
+                return `
+                  <tr class="border-b border-slate-800/70 hover:bg-slate-850/40 transition-colors">
+                    <td class="py-2.5 px-3.5">
+                      <div class="flex items-center gap-2">
+                        <span class="font-bold text-white">${dev.model}</span>
+                        <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 border border-slate-700 text-slate-400 font-mono">${dev.vendor}</span>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-3.5 font-mono text-[11px] text-slate-300">
+                      <span class="font-bold text-white">${dev.qty}x</span> units &bull; <span class="text-slate-400">${locationLabel}</span>
+                    </td>
+                    <td class="py-2.5 px-3.5">
+                      <select onchange="updateSwitchMgmtProfile('${dev.instanceId}', this.value)" class="w-full bg-slate-950 border border-slate-700 text-purple-300 font-semibold rounded-lg px-2.5 py-1 text-xs focus:outline-none focus:border-purple-500">
+                        ${Object.entries(vendorProfiles).map(([pKey, pData]) => `
+                          <option value="${pKey}" ${activeKey === pKey ? 'selected' : ''}>${pData.name}</option>
+                        `).join('')}
+                        ${dev.vendor !== "Meraki" ? `
+                          <option value="standalone" ${activeKey === 'standalone' ? 'selected' : ''}>Standalone / Air-Gapped CLI ($0)</option>
+                        ` : ''}
+                      </select>
+                    </td>
+                    <td class="py-2.5 px-3.5">
+                      ${deviceSupportedTerms.length > 1 ? `
+                        <div class="inline-flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
+                          ${deviceSupportedTerms.map(t => `
+                            <button onclick="setIndividualDeviceTerm('${dev.instanceId}', '${t}')" class="px-1.5 py-0.5 text-[10px] font-mono rounded font-bold ${dev.individualTerm === t || (!dev.individualTerm && globalSelectedTerm === t) ? 'bg-purple-600 text-white' : 'text-slate-400 hover:text-white'}">
+                              ${t}
+                            </button>
+                          `).join('')}
+                        </div>
+                      ` : `<span class="text-[11px] font-mono text-slate-500">N/A</span>`}
+                    </td>
+                    <td class="py-2.5 px-3.5 text-right font-mono text-emerald-400 font-bold text-xs">
+                      ${currentMgmtItem ? `$${(currentMgmtItem.msrp * currentMgmtItem.qty).toLocaleString()}` : '$0'}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   `;

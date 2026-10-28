@@ -2761,10 +2761,11 @@ function renderFacilityManager() {
     </div>
 
     <!-- 3-Column Master Hierarchy View -->
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+    <div class="flex flex-col md:flex-row gap-4 items-stretch">
       
       <!-- Col 1: Floors/Buildings (3 cols) -->
-      <div class="md:col-span-3 space-y-3">
+      <div id="facilityColFloors" class="w-full md:w-[25%] md:min-w-[210px] md:max-w-[55%] md:shrink-0 relative md:pr-2 space-y-3" style="${window.ossPaneWidths && window.ossPaneWidths['facilityColFloors'] ? `width: ${window.ossPaneWidths['facilityColFloors']}px;` : ''}">
+        <div class="oss-pane-resizer oss-pane-resizer-right hidden md:flex" data-resize-target="facilityColFloors" data-resize-edge="right" data-min-width="210" data-max-width="640" title="Drag to resize Floors/Buildings column • Double-click to reset"></div>
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="layers" class="w-3.5 h-3.5 text-sky-400"></i> Floors/Buildings (${floors.length})
@@ -2826,7 +2827,7 @@ function renderFacilityManager() {
                       ${dropSummary.dropCount} Drops (${dropSummary.totalWatts}W)
                     </span>
                     ${dropSummary.servingEnclosures.length > 0 ? `
-                      <span class="text-[9px] font-mono text-slate-400 truncate max-w-[170px]" title="Terminating Closets: ${escapeHTML(dropSummary.servingEnclosures.join(', '))}">
+                      <span class="text-[9px] font-mono text-slate-400 truncate max-w-full" title="Terminating Closets: ${escapeHTML(dropSummary.servingEnclosures.join(', '))}">
                         Fed by: ${escapeHTML(dropSummary.servingEnclosures.join(', '))}
                       </span>
                     ` : ''}
@@ -2847,7 +2848,8 @@ function renderFacilityManager() {
       </div>
 
       <!-- Col 2: Spaces, Closets & Outdoor Poles (4 cols) -->
-      <div class="md:col-span-4 space-y-3">
+      <div id="facilityColSpaces" class="w-full md:w-[33%] md:min-w-[230px] md:max-w-[60%] md:shrink-0 relative md:pr-2 space-y-3" style="${window.ossPaneWidths && window.ossPaneWidths['facilityColSpaces'] ? `width: ${window.ossPaneWidths['facilityColSpaces']}px;` : ''}">
+        <div class="oss-pane-resizer oss-pane-resizer-right hidden md:flex" data-resize-target="facilityColSpaces" data-resize-edge="right" data-min-width="230" data-max-width="680" title="Drag to resize Telecom Spaces column • Double-click to reset"></div>
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="door-open" class="w-3.5 h-3.5 text-indigo-400"></i> Telecom Spaces & Poles (${currentFloorSpaces.length})
@@ -2991,7 +2993,7 @@ function renderFacilityManager() {
       </div>
 
       <!-- Col 3: Mounting Hosts & Enclosures (5 cols) -->
-      <div class="md:col-span-5 space-y-3">
+      <div id="facilityColHosts" class="w-full md:flex-1 md:min-w-[260px] space-y-3">
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
             <i data-lucide="${currentSpace && currentSpace.type === 'pole' ? 'box' : 'server'}" class="w-3.5 h-3.5 ${currentSpace && currentSpace.type === 'pole' ? 'text-cyan-400' : 'text-emerald-400'}"></i>

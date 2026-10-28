@@ -685,7 +685,7 @@ function renderCablePullScheduleContent() {
               <td class="p-2.5">
                 <div class="p-1.5 rounded-lg bg-slate-900 border border-slate-700/80 font-mono text-[11px] leading-tight">
                   <div class="text-white font-bold tracking-wider">${escapeHTML(r.fieldLabelLine1)}</div>
-                  <div class="text-cyan-400 text-[10px] truncate max-w-[200px]" title="${escapeHTML(r.fieldLabelLine2)}">${escapeHTML(r.fieldLabelLine2)}</div>
+                  <div class="text-cyan-400 text-[10px] truncate" title="${escapeHTML(r.fieldLabelLine2)}">${escapeHTML(r.fieldLabelLine2)}</div>
                 </div>
               </td>
 
@@ -719,7 +719,7 @@ function renderCablePullScheduleContent() {
               <td class="p-2.5">
                 ${r.switchPortNumber ? `
                   <div class="font-bold text-sky-300">${r.switchCode}: Port ${r.switchPortNumber}</div>
-                  <div class="text-[10px] text-slate-400 truncate max-w-[130px] font-sans">${escapeHTML(r.portVlan)}</div>
+                  <div class="text-[10px] text-slate-400 truncate font-sans">${escapeHTML(r.portVlan)}</div>
                 ` : `
                   <span class="text-slate-600 italic">Unpatched in Switch</span>
                 `}

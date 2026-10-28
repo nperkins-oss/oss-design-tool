@@ -572,7 +572,7 @@ function renderSubmittalPreview() {
                         </td>
                         <td class="py-2 px-3 text-right font-mono text-amber-400">${r.watts} W</td>
                         <td class="py-2 px-3 text-right font-mono text-rose-400">${r.btu.toLocaleString()}</td>
-                        <td class="py-2 px-3 text-[11px] text-slate-300 max-w-xs truncate" title="${escapeHTML(r.equipment)}">${escapeHTML(r.equipment || "No active equipment assigned")}</td>
+                        <td class="py-2 px-3 text-[11px] text-slate-300 truncate" title="${escapeHTML(r.equipment)}">${escapeHTML(r.equipment || "No active equipment assigned")}</td>
                       </tr>
                     `).join("")}
                   </tbody>
