@@ -82,7 +82,7 @@ def main():
     data["version"] = new_ver
     data["build"] = build_stamp
     data["schemaVersion"] = schema_ver
-    VERSION_FILE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    VERSION_FILE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
     # Sync js/core/app.js
     if APP_JS_FILE.exists():
@@ -105,9 +105,9 @@ def main():
             app_text,
             count=1,
         )
-        APP_JS_FILE.write_text(app_text, encoding="utf-8")
+        APP_JS_FILE.write_text(app_text, encoding="utf-8", newline="\n")
 
-    # Sync index.html fallback badge text
+    # Sync index.html fallback badge text & cache-busting query params on local CSS/JS assets
     if INDEX_HTML_FILE.exists():
         idx_text = INDEX_HTML_FILE.read_text(encoding="utf-8")
         idx_text = re.sub(
@@ -116,7 +116,12 @@ def main():
             idx_text,
             count=1,
         )
-        INDEX_HTML_FILE.write_text(idx_text, encoding="utf-8")
+        idx_text = re.sub(
+            r'((?:src|href)="(?:js|assets/css)/[^"?]+\.(?:js|css))(?:\?v=[^"]*)?(")',
+            rf"\g<1>?v={new_ver}\g<2>",
+            idx_text,
+        )
+        INDEX_HTML_FILE.write_text(idx_text, encoding="utf-8", newline="\n")
 
     # Sync login.html badge
     if LOGIN_HTML_FILE.exists():
@@ -127,7 +132,7 @@ def main():
             login_text,
             count=1,
         )
-        LOGIN_HTML_FILE.write_text(login_text, encoding="utf-8")
+        LOGIN_HTML_FILE.write_text(login_text, encoding="utf-8", newline="\n")
 
     print(f"[Version Sync] Updated APP_VERSION = v{new_ver}, BUILD_NUMBER = {build_stamp}, SCHEMA_VERSION = {schema_ver}")
 

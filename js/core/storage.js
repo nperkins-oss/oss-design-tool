@@ -201,6 +201,8 @@ NetSelectIDB.preloadAllToCache();
 const StorageService = {
   AUTO_SAVE_DEBOUNCE_MS: 300,
   _autoSaveTimer: null,
+  _pendingDeleteProjectId: null,
+  _pendingClearAllProjects: false,
 
   /**
    * Offloads heavy base64 floorplan images into IndexedDB + BlueprintCache,
@@ -391,6 +393,8 @@ const StorageService = {
     if (!modal) return;
     modal.classList.toggle("hidden");
     if (!modal.classList.contains("hidden")) {
+      this._pendingDeleteProjectId = null;
+      this._pendingClearAllProjects = false;
       this.renderSavedProjectsList();
       if (typeof renderProjectDefaultsSummary === "function") {
         renderProjectDefaultsSummary();
@@ -451,7 +455,7 @@ const StorageService = {
   /**
    * Persists project-wide technical defaults and synchronizes runtime engines
    */
-  setProjectDefaults(defaults, projId = null) {
+  setProjectDefaults(defaults, projId = null, opts = {}) {
     if (!defaults) return;
     const pId = projId || this.getActiveProjectId();
     this.safeSetItem(`netselect_project_defaults_${pId}`, JSON.stringify(defaults));
@@ -465,12 +469,15 @@ const StorageService = {
       if (tSel) tSel.value = globalSelectedTerm;
     }
     if (defaults.cabling?.fiberType && typeof setProjectFiberType === "function") {
-      setProjectFiberType(defaults.cabling.fiberType);
+      setProjectFiberType(defaults.cabling.fiberType, true, true);
     }
     if (defaults.cabling?.horizontalCategories?.length > 0 && typeof activeCableSku !== "undefined") {
       activeCableSku = defaults.cabling.horizontalCategories[0];
       const cSel = document.getElementById("cableSkuSelect");
       if (cSel) cSel.value = activeCableSku;
+    }
+    if (!opts.skipEngineSync && typeof syncRuntimeEnginesFromProjectDefaults === "function") {
+      syncRuntimeEnginesFromProjectDefaults(defaults);
     }
     return defaults;
   },
@@ -572,6 +579,12 @@ const StorageService = {
   applyProjectBundle(bundle) {
     if (!bundle || typeof bundle !== "object") return;
 
+    clearTimeout(this._autoSaveTimer);
+    if (typeof FacilityStore !== "undefined" && FacilityStore._notifyTimer) {
+      clearTimeout(FacilityStore._notifyTimer);
+      FacilityStore._notifyTimer = null;
+    }
+
     const projId = bundle.projectId || `proj-${Date.now()}`;
     const projName = bundle.projectName || "Project";
 
@@ -657,10 +670,10 @@ const StorageService = {
       });
     }
 
-    // 8b. Restore Project Fiber Specification & Link Interconnect Overrides
+    // 8b. Restore Project Fiber Specification & Link Interconnect Overrides (silent during bundle load)
     if (bundle.projectFiberType) {
       if (typeof setProjectFiberType === "function") {
-        setProjectFiberType(bundle.projectFiberType);
+        setProjectFiberType(bundle.projectFiberType, true, true);
       } else {
         this.safeSetItem(`netselect_fiber_type_${projId}`, String(bundle.projectFiberType));
       }
@@ -673,81 +686,341 @@ const StorageService = {
       }
     }
 
-    // 8c. Restore Project Technical Standards & Scope Defaults
-    if (bundle.projectDefaults) {
-      this.setProjectDefaults(bundle.projectDefaults, projId);
-    } else {
-      this.setProjectDefaults({
-        metadata: {
-          projectName: projName,
-          jobOpportunityNumber: "",
-          clientName: "",
-          siteAddress: "",
-          leadDesigner: ""
-        },
-        licensing: {
-          globalSelectedTerm: bundle.globalSelectedTerm || "1YR"
-        },
-        accessControl: {
-          enabled: true,
-          engine: "Genetec",
-          readerProtocol: "osdp"
-        },
-        vms: {
-          enabled: true,
-          platform: "Milestone XProtect",
-          cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"],
-          retentionDays: 30,
-          promptAnalytics: true
-        },
-        cabling: (typeof DEFAULT_PROJECT_STANDARDS !== "undefined")
-          ? JSON.parse(JSON.stringify(DEFAULT_PROJECT_STANDARDS.cabling))
-          : {
-              horizontalCategories: ["C6A-CMP-1K-YL", "C6A-CMP-1K-BL"],
-              compositeType: "AC-COMP-CMP-500",
-              rackTermination: "patch_panels",
-              patchCordLength: 0.5,
-              fiberType: bundle.projectFiberType || "mmf",
-              standards: {
-                defaultRunColor: "Yellow",
-                defaultRunCategory: "C6A-CMP-1K-YL",
-                defaultPatchColor: "Yellow",
-                defaultPatchLength: 0.5,
-                defaultPatchType: "slim",
-                byDeviceType: {}
-              }
+    // 8c. Restore Project Technical Standards & Scope Defaults (defer engine sync until step 10)
+    const resolvedDefaults = bundle.projectDefaults || {
+      metadata: {
+        projectName: projName,
+        jobOpportunityNumber: "",
+        clientName: "",
+        siteAddress: "",
+        leadDesigner: ""
+      },
+      licensing: {
+        globalSelectedTerm: bundle.globalSelectedTerm || "1YR"
+      },
+      accessControl: {
+        enabled: true,
+        engine: "Genetec",
+        readerProtocol: "osdp"
+      },
+      vms: {
+        enabled: true,
+        platform: "Milestone XProtect",
+        cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"],
+        retentionDays: 30,
+        promptAnalytics: true
+      },
+      cabling: (typeof DEFAULT_PROJECT_STANDARDS !== "undefined")
+        ? JSON.parse(JSON.stringify(DEFAULT_PROJECT_STANDARDS.cabling))
+        : {
+            horizontalCategories: ["C6A-CMP-1K-YL", "C6A-CMP-1K-BL"],
+            compositeType: "AC-COMP-CMP-500",
+            rackTermination: "patch_panels",
+            patchCordLength: 0.5,
+            fiberType: bundle.projectFiberType || "mmf",
+            standards: {
+              defaultRunColor: "Yellow",
+              defaultRunCategory: "C6A-CMP-1K-YL",
+              defaultPatchColor: "Yellow",
+              defaultPatchLength: 0.5,
+              defaultPatchType: "slim",
+              byDeviceType: {}
             }
-      }, projId);
-    }
+          }
+    };
+    this.setProjectDefaults(resolvedDefaults, projId, { skipEngineSync: true });
 
     // 9. Persist active state cache
     this.saveStateToLocalStorage();
 
-    // 10. Trigger cross-modal and UI updates
-    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
-      FacilityStore.notifyWorkspaceChange();
+    // 10. Single-pass UI & runtime engine synchronization (avoids redundant hidden-modal redraws)
+    if (typeof syncRuntimeEnginesFromProjectDefaults === "function") {
+      syncRuntimeEnginesFromProjectDefaults(resolvedDefaults);
+    } else {
+      if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
+      if (typeof runActiveFilter === "function") runActiveFilter();
+      if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
+      if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
     }
-    if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
-    if (typeof runActiveFilter === "function") runActiveFilter();
-    if (typeof updateBOMView === "function") updateBOMView();
-    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
-    if (typeof renderCableCanvas === "function") renderCableCanvas();
-    if (typeof renderTopology === "function") renderTopology();
-    if (typeof renderRackVisualizer === "function") renderRackVisualizer();
-    if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
-    if (typeof renderProjectDefaultsSummary === "function") renderProjectDefaultsSummary();
+
+    if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
+      FacilityStore.notifyWorkspaceChange(true);
+    } else if (typeof updateBOMView === "function") {
+      updateBOMView();
+    }
+
+    if (typeof renderProjectDefaultsSummary === "function") {
+      renderProjectDefaultsSummary();
+    }
   },
 
   /**
-   * Internal helper to insert or update an entry in netselect_saved_quotes
+   * Reads the lightweight project library index (`netselect_saved_quotes`),
+   * transparently migrating any legacy monolithic embedded bundles into isolated
+   * `netselect_bundle_<id>` keys so project listing and deletion are O(1) and instant.
+   */
+  _getSavedProjectsIndex() {
+    let rawList = [];
+    try {
+      rawList = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
+      if (!Array.isArray(rawList)) rawList = [];
+    } catch (e) {
+      rawList = [];
+    }
+
+    let needsIndexMigration = false;
+    const usedIds = new Set();
+
+    const slimList = rawList.map((entry, idx) => {
+      if (!entry || typeof entry !== "object") {
+        needsIndexMigration = true;
+        return null;
+      }
+
+      let cleanId = String(entry.id || `proj-legacy-${idx}`).replace(/[^a-zA-Z0-9_-]/g, '');
+      if (!cleanId || usedIds.has(cleanId)) {
+        cleanId = `${cleanId || 'proj'}-${idx}-${Date.now()}`;
+        needsIndexMigration = true;
+      }
+      usedIds.add(cleanId);
+
+      // Migrate heavy embedded bundle / bom / facilityFloors out of the shared index key
+      if (entry.bundle || entry.bom || entry.facilityFloors) {
+        needsIndexMigration = true;
+        const bundleKey = `netselect_bundle_${cleanId}`;
+        if (!localStorage.getItem(bundleKey)) {
+          let migratedBundle = entry.bundle;
+          if (!migratedBundle) {
+            migratedBundle = {
+              schemaVersion: "1.0.0",
+              projectId: cleanId,
+              projectName: entry.name || "Project",
+              updatedAt: entry.updatedAt || Date.now(),
+              globalSelectedTerm: "1YR",
+              calculator: {
+                demandCounts: entry.demandCounts || { af: 0, at: 0, bt60: 0, bt90: 0 },
+                extraHeadroomPercent: 20
+              },
+              projectBOM: Array.isArray(entry.bom) ? entry.bom : [],
+              physicalCanvas: {
+                facilityFloors: Array.isArray(entry.facilityFloors) ? entry.facilityFloors : []
+              },
+              topology: { positions: {} },
+              rackSettings: { heights: {}, pdus: {} }
+            };
+          } else {
+            migratedBundle.projectId = cleanId;
+          }
+          if (migratedBundle.physicalCanvas && Array.isArray(migratedBundle.physicalCanvas.facilityFloors)) {
+            migratedBundle.physicalCanvas.facilityFloors = this.offloadFloorBlueprints(migratedBundle.physicalCanvas.facilityFloors);
+          }
+          this.safeSetItem(bundleKey, JSON.stringify(migratedBundle));
+        }
+      }
+
+      return {
+        id: cleanId,
+        name: entry.name || "Untitled Project",
+        date: entry.date || new Date(entry.updatedAt || Date.now()).toLocaleDateString(),
+        updatedAt: entry.updatedAt || Date.now(),
+        itemsCount: parseInt(entry.itemsCount, 10) || 0,
+        totalMsrp: parseFloat(entry.totalMsrp) || 0
+      };
+    }).filter(Boolean);
+
+    if (needsIndexMigration) {
+      this.safeSetItem("netselect_saved_quotes", JSON.stringify(slimList));
+    }
+
+    return slimList;
+  },
+
+  /**
+   * Retrieves the stored full bundle for a project metadata entry
+   */
+  _getStoredBundleForEntry(proj) {
+    if (!proj) return null;
+    const projId = String(proj.id || "default").replace(/[^a-zA-Z0-9_-]/g, '');
+    try {
+      const rawBundle = localStorage.getItem(`netselect_bundle_${projId}`);
+      if (rawBundle) {
+        const parsed = JSON.parse(rawBundle);
+        if (parsed && typeof parsed === "object") {
+          parsed.projectId = projId;
+          if (!parsed.projectName && proj.name) parsed.projectName = proj.name;
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.warn(`[StorageService] Failed reading netselect_bundle_${projId}:`, e);
+    }
+
+    if (proj.bundle && typeof proj.bundle === "object") {
+      return proj.bundle;
+    }
+
+    // Fallback: synthesize from per-project active state if present
+    let fallbackBom = Array.isArray(proj.bom) ? proj.bom : [];
+    let fallbackDemands = proj.demandCounts || { af: 0, at: 0, bt60: 0, bt90: 0 };
+    try {
+      const rawActive = localStorage.getItem(`netselect_active_state_${projId}`);
+      if (rawActive) {
+        const st = JSON.parse(rawActive);
+        if (Array.isArray(st.projectBOM)) fallbackBom = st.projectBOM;
+        if (st.demandCounts) fallbackDemands = st.demandCounts;
+      }
+    } catch (e) {}
+
+    return {
+      schemaVersion: "2.1.0",
+      projectId: projId,
+      projectName: proj.name || "Project",
+      updatedAt: proj.updatedAt || Date.now(),
+      globalSelectedTerm: "1YR",
+      calculator: {
+        demandCounts: fallbackDemands,
+        extraHeadroomPercent: 20
+      },
+      projectBOM: fallbackBom,
+      facilityHierarchy: { floors: [], spaces: [], enclosures: [], endpoints: [] },
+      physicalCanvas: { facilityFloors: Array.isArray(proj.facilityFloors) ? proj.facilityFloors : [] },
+      topology: { positions: {} },
+      rackSettings: { heights: {}, pdus: {} },
+      projectDefaults: this.getProjectDefaults(projId)
+    };
+  },
+
+  /**
+   * Purges all isolated LocalStorage keys belonging to a deleted project ID
+   */
+  _purgeProjectStorageKeys(deletedId) {
+    if (!deletedId) return;
+    clearTimeout(this._autoSaveTimer);
+    if (typeof FacilityStore !== "undefined" && FacilityStore._notifyTimer) {
+      clearTimeout(FacilityStore._notifyTimer);
+      FacilityStore._notifyTimer = null;
+    }
+
+    const directKeys = [
+      `netselect_bundle_${deletedId}`,
+      `netselect_facility_${deletedId}`,
+      `netselect_active_state_${deletedId}`,
+      `netselect_fac_floors_${deletedId}`,
+      `netselect_fac_spaces_${deletedId}`,
+      `netselect_fac_enclosures_${deletedId}`,
+      `netselect_fac_endpoints_${deletedId}`,
+      `netselect_topo_pos_${deletedId}`,
+      `netselect_project_defaults_${deletedId}`,
+      `netselect_fiber_type_${deletedId}`,
+      `netselect_link_overrides_${deletedId}`,
+      `netselect_project_revisions_${deletedId}`,
+      `netselect_walk_audit_${deletedId}`
+    ];
+    directKeys.forEach((k) => {
+      try { localStorage.removeItem(k); } catch (e) {}
+    });
+
+    try {
+      const prefix = `netselect_rack_height_${deletedId}_`;
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(prefix)) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+    } catch (e) {}
+  },
+
+  /**
+   * Builds a clean blank project bundle object without mutating saved snapshots
+   */
+  _buildBlankProjectBundle(customDefaults = null, defaultName = "New Project") {
+    const baseStandards = typeof DEFAULT_PROJECT_STANDARDS !== "undefined"
+      ? DEFAULT_PROJECT_STANDARDS
+      : {
+          metadata: { projectName: defaultName, jobOpportunityNumber: "", clientName: "", siteAddress: "", leadDesigner: "" },
+          licensing: { globalSelectedTerm: "1YR" },
+          accessControl: { enabled: true, engine: "Genetec", readerProtocol: "osdp" },
+          vms: { enabled: true, platform: "Milestone XProtect", cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"], retentionDays: 30, promptAnalytics: true, headEndInScope: true },
+          cabling: { horizontalCategories: ["C6A-CMP-1K-BL"], compositeType: "AC-COMP-CMP-500", rackTermination: "patch_panels", patchCordLength: 0.5, patchCordColors: { security: "Yellow", data: "Blue" }, fiberType: "mmf" },
+          network: { switchesInScope: true, vlanMode: "none" }
+        };
+
+    const mergedDefaults = JSON.parse(JSON.stringify(baseStandards));
+    if (customDefaults && typeof customDefaults === "object") {
+      if (customDefaults.metadata) Object.assign(mergedDefaults.metadata, customDefaults.metadata);
+      if (customDefaults.licensing) Object.assign(mergedDefaults.licensing, customDefaults.licensing);
+      if (customDefaults.accessControl) Object.assign(mergedDefaults.accessControl, customDefaults.accessControl);
+      if (customDefaults.vms) Object.assign(mergedDefaults.vms, customDefaults.vms);
+      if (customDefaults.cabling) Object.assign(mergedDefaults.cabling, customDefaults.cabling);
+      if (customDefaults.network) mergedDefaults.network = Object.assign(mergedDefaults.network || {}, customDefaults.network);
+    } else {
+      mergedDefaults.metadata.projectName = defaultName;
+    }
+
+    const safeName = ((mergedDefaults.metadata && mergedDefaults.metadata.projectName) || defaultName)
+      .replace(/[<>"'/]/g, '').trim().slice(0, 80) || defaultName;
+    mergedDefaults.metadata.projectName = safeName;
+
+    const newId = `proj-${Date.now()}`;
+    const primaryCable = (mergedDefaults.cabling?.horizontalCategories && mergedDefaults.cabling.horizontalCategories.length > 0)
+      ? mergedDefaults.cabling.horizontalCategories[0]
+      : "C6A-CMP-1K-BL";
+
+    return {
+      schemaVersion: "2.1.0",
+      projectId: newId,
+      projectName: safeName,
+      createdAt: new Date().toISOString(),
+      updatedAt: Date.now(),
+      globalSelectedTerm: mergedDefaults.licensing?.globalSelectedTerm || "1YR",
+      calculator: {
+        demandCounts: { af: 0, at: 0, bt60: 0, bt90: 0 },
+        extraHeadroomPercent: parseInt(mergedDefaults.network?.poeHeadroomPercent, 10) || 20
+      },
+      projectBOM: [],
+      facilityHierarchy: {
+        floors: [],
+        spaces: [],
+        enclosures: [],
+        endpoints: []
+      },
+      physicalCanvas: {
+        activeFloorId: null,
+        activeCableSku: primaryCable,
+        useOrthogonalRouting: false,
+        facilityFloors: []
+      },
+      topology: {
+        positions: {}
+      },
+      rackSettings: {
+        heights: {},
+        pdus: {}
+      },
+      projectFiberType: mergedDefaults.cabling?.fiberType || "mmf",
+      linkInterconnectOverrides: {},
+      projectDefaults: mergedDefaults
+    };
+  },
+
+  /**
+   * Resets active workspace to a fresh unsaved blank state (used when the last saved project is deleted)
+   */
+  _resetToCleanBlankWorkspace() {
+    const freshBundle = this._buildBlankProjectBundle(null, "Default Project");
+    this.applyProjectBundle(freshBundle);
+    return freshBundle;
+  },
+
+  /**
+   * Internal helper to insert or update an entry in netselect_saved_quotes + netselect_bundle_<id>
    */
   _upsertSavedQuote(id, name, bundle) {
-    let saved = [];
-    try {
-      saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
-    } catch (e) {
-      saved = [];
-    }
+    const cleanId = String(id || `proj-${Date.now()}`).replace(/[^a-zA-Z0-9_-]/g, '');
+    const saved = this._getSavedProjectsIndex();
 
     let totalMsrp = 0;
     if (bundle.projectBOM && Array.isArray(bundle.projectBOM)) {
@@ -756,32 +1029,31 @@ const StorageService = {
 
     const itemsCount = bundle.projectBOM ? bundle.projectBOM.reduce((acc, i) => acc + (i.qty || 1), 0) : 0;
 
-    // Offload base64 floorplan images to IndexedDB before persisting quote snapshot in LocalStorage
+    // Offload base64 floorplan images to IndexedDB before persisting isolated project bundle
     const compactBundle = JSON.parse(JSON.stringify(bundle));
-    let compactFloors = [];
+    compactBundle.projectId = cleanId;
+    compactBundle.projectName = name;
     if (compactBundle.physicalCanvas && Array.isArray(compactBundle.physicalCanvas.facilityFloors)) {
-      compactFloors = this.offloadFloorBlueprints(compactBundle.physicalCanvas.facilityFloors);
-      compactBundle.physicalCanvas.facilityFloors = compactFloors;
+      compactBundle.physicalCanvas.facilityFloors = this.offloadFloorBlueprints(compactBundle.physicalCanvas.facilityFloors);
     }
 
-    const entry = {
-      id,
+    // Write ONLY this project's bundle (O(1), never re-serializes other projects!)
+    this.safeSetItem(`netselect_bundle_${cleanId}`, JSON.stringify(compactBundle));
+
+    const metaEntry = {
+      id: cleanId,
       name,
       date: new Date().toLocaleDateString(),
       updatedAt: Date.now(),
       itemsCount,
-      totalMsrp,
-      bom: compactBundle.projectBOM || [],
-      demandCounts: compactBundle.calculator?.demandCounts || compactBundle.demandCounts || {},
-      facilityFloors: compactFloors,
-      bundle: compactBundle
+      totalMsrp
     };
 
-    const existingIdx = saved.findIndex(p => p.id === id);
+    const existingIdx = saved.findIndex(p => p.id === cleanId);
     if (existingIdx >= 0) {
-      saved[existingIdx] = entry;
+      saved[existingIdx] = metaEntry;
     } else {
-      saved.unshift(entry);
+      saved.unshift(metaEntry);
     }
 
     this.safeSetItem("netselect_saved_quotes", JSON.stringify(saved));
@@ -845,9 +1117,6 @@ const StorageService = {
    * Supports interactive launch of the Project Wizard, or direct invocation with custom defaults
    */
   createNewBlankProject(customDefaults = null) {
-    // 1. Auto-save current work first
-    this.saveCurrentProject(false);
-
     let defaults = customDefaults;
 
     // Backward-compatibility: if called with string as first arg (e.g. from tests)
@@ -870,71 +1139,18 @@ const StorageService = {
       defaults = this.getProjectDefaults();
     }
 
-    const baseStandards = typeof DEFAULT_PROJECT_STANDARDS !== "undefined"
-      ? DEFAULT_PROJECT_STANDARDS
-      : {
-          metadata: { projectName: "New Project", jobOpportunityNumber: "", clientName: "", siteAddress: "", leadDesigner: "" },
-          licensing: { globalSelectedTerm: "1YR" },
-          accessControl: { enabled: true, engine: "Genetec", readerProtocol: "osdp" },
-          vms: { enabled: true, platform: "Milestone XProtect", cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"], retentionDays: 30, promptAnalytics: true },
-          cabling: { horizontalCategories: ["C6A-CMP-1K-BL"], compositeType: "AC-COMP-CMP-500", rackTermination: "patch_panels", patchCordLength: 0.5, patchCordColors: { security: "Yellow", data: "Blue" }, fiberType: "mmf" }
-        };
+    // 1. Auto-save outgoing project only if it already exists in saved library or has BOM items
+    const hasOutgoingWork = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && projectBOM.length > 0) ||
+      this._getSavedProjectsIndex().some(p => p.id === this.getActiveProjectId());
+    if (hasOutgoingWork) {
+      this.saveCurrentProject(false);
+    }
 
-    const mergedDefaults = JSON.parse(JSON.stringify(baseStandards));
-    if (defaults.metadata) Object.assign(mergedDefaults.metadata, defaults.metadata);
-    if (defaults.licensing) Object.assign(mergedDefaults.licensing, defaults.licensing);
-    if (defaults.accessControl) Object.assign(mergedDefaults.accessControl, defaults.accessControl);
-    if (defaults.vms) Object.assign(mergedDefaults.vms, defaults.vms);
-    if (defaults.cabling) Object.assign(mergedDefaults.cabling, defaults.cabling);
-
-    const safeName = ((mergedDefaults.metadata && mergedDefaults.metadata.projectName) || "New Project")
-      .replace(/[<>"'/]/g, '').trim().slice(0, 80) || "New Project";
-    const newId = `proj-${Date.now()}`;
-
-    const primaryCable = (mergedDefaults.cabling?.horizontalCategories && mergedDefaults.cabling.horizontalCategories.length > 0)
-      ? mergedDefaults.cabling.horizontalCategories[0]
-      : "C6A-CMP-1K-BL";
-
-    const blankBundle = {
-      schemaVersion: "2.1.0",
-      projectId: newId,
-      projectName: safeName,
-      createdAt: new Date().toISOString(),
-      updatedAt: Date.now(),
-      globalSelectedTerm: mergedDefaults.licensing?.globalSelectedTerm || "1YR",
-      calculator: {
-        demandCounts: { af: 0, at: 0, bt60: 0, bt90: 0 },
-        extraHeadroomPercent: 20
-      },
-      projectBOM: [],
-      facilityHierarchy: {
-        floors: [],
-        spaces: [],
-        enclosures: [],
-        endpoints: []
-      },
-      physicalCanvas: {
-        activeFloorId: null,
-        activeCableSku: primaryCable,
-        useOrthogonalRouting: false,
-        facilityFloors: []
-      },
-      topology: {
-        positions: {}
-      },
-      rackSettings: {
-        heights: {},
-        pdus: {}
-      },
-      projectFiberType: mergedDefaults.cabling?.fiberType || "mmf",
-      linkInterconnectOverrides: {},
-      projectDefaults: mergedDefaults
-    };
-
+    const blankBundle = this._buildBlankProjectBundle(defaults, "New Project");
     this.applyProjectBundle(blankBundle);
-    this._upsertSavedQuote(newId, safeName, blankBundle);
+    this._upsertSavedQuote(blankBundle.projectId, blankBundle.projectName, blankBundle);
     this.renderSavedProjectsList();
-    if (typeof showToast === "function") showToast(`Created blank project: ${safeName}`);
+    if (typeof showToast === "function") showToast(`Created blank project: ${blankBundle.projectName}`);
     return blankBundle;
   },
 
@@ -951,110 +1167,172 @@ const StorageService = {
   },
 
   /**
+   * Resolves a project index entry by either project ID string or numeric array index
+   */
+  _resolveProjectEntry(saved, idOrIdx) {
+    if (!Array.isArray(saved) || saved.length === 0) return { idx: -1, proj: null };
+    if (typeof idOrIdx === "string" && isNaN(Number(idOrIdx))) {
+      const foundIdx = saved.findIndex(p => p.id === idOrIdx);
+      return { idx: foundIdx, proj: foundIdx >= 0 ? saved[foundIdx] : null };
+    }
+    const numIdx = parseInt(idOrIdx, 10);
+    if (!isNaN(numIdx) && numIdx >= 0 && numIdx < saved.length) {
+      return { idx: numIdx, proj: saved[numIdx] };
+    }
+    const fallbackIdx = saved.findIndex(p => String(p.id) === String(idOrIdx));
+    return { idx: fallbackIdx, proj: fallbackIdx >= 0 ? saved[fallbackIdx] : null };
+  },
+
+  /**
    * Loads a saved snapshot into the active workspace with seamless backward-compatibility
    */
-  loadProjectSnapshot(idx) {
-    let saved = [];
-    try {
-      saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
-    } catch (e) { return; }
-
-    const proj = saved[idx];
+  loadProjectSnapshot(idOrIdx, opts = {}) {
+    const saved = this._getSavedProjectsIndex();
+    const { proj } = this._resolveProjectEntry(saved, idOrIdx);
     if (!proj) return;
 
-    // 1. Auto-save current work first so switching never drops dirty state
-    this.saveCurrentProject(false);
-
-    // 2. Extract or synthesize complete bundle
-    const projId = (proj.id || `proj-${idx}`).replace(/[^a-zA-Z0-9_-]/g, '');
-    let bundle = proj.bundle;
-    if (!bundle) {
-      bundle = {
-        schemaVersion: "1.0.0",
-        projectId: projId,
-        projectName: proj.name || "Project",
-        updatedAt: Date.now(),
-        globalSelectedTerm: "1YR",
-        calculator: {
-          demandCounts: proj.demandCounts || { af: 0, at: 0, bt60: 0, bt90: 0 },
-          extraHeadroomPercent: 20
-        },
-        projectBOM: Array.isArray(proj.bom) ? proj.bom : [],
-        facilityHierarchy: {
-          floors: (typeof FacilityStore !== "undefined") ? FacilityStore.getFloors() : [],
-          spaces: (typeof FacilityStore !== "undefined") ? FacilityStore.getSpaces() : [],
-          enclosures: (typeof FacilityStore !== "undefined") ? FacilityStore.getEnclosures() : [],
-          endpoints: (typeof FacilityStore !== "undefined") ? FacilityStore.getEndpoints() : []
-        },
-        physicalCanvas: {
-          facilityFloors: Array.isArray(proj.facilityFloors) ? proj.facilityFloors : []
-        },
-        topology: { positions: {} },
-        rackSettings: { heights: {}, pdus: {} }
-      };
-      proj.bundle = bundle;
-      this.safeSetItem("netselect_saved_quotes", JSON.stringify(saved));
+    // 1. Auto-save outgoing work ONLY if not switching away from a just-deleted project
+    if (!opts.skipSaveOutgoing) {
+      const activeId = this.getActiveProjectId();
+      const outgoingIsSavedOrDirty = saved.some(p => p.id === activeId) ||
+        (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && projectBOM.length > 0);
+      if (outgoingIsSavedOrDirty) {
+        this.saveCurrentProject(false);
+      }
     }
+
+    // 2. Load isolated project bundle
+    const bundle = this._getStoredBundleForEntry(proj);
+    if (!bundle) return;
 
     // 3. Apply the project bundle
     this.applyProjectBundle(bundle);
 
-    this.toggleProjectModal();
-    if (typeof showToast === "function") showToast(`Loaded project: ${proj.name || "Project"}`);
+    if (opts.keepModalOpen) {
+      this.renderSavedProjectsList();
+      if (typeof renderProjectDefaultsSummary === "function") {
+        renderProjectDefaultsSummary();
+      }
+    } else {
+      this.toggleProjectModal();
+    }
+
+    if (!opts.suppressToast && typeof showToast === "function") {
+      showToast(`Loaded project: ${proj.name || "Project"}`);
+    }
   },
 
   /**
-   * Deletes a saved project snapshot with confirmation and active project fallback
+   * Arms inline two-click deletion confirmation on a specific project card
    */
-  deleteProjectSnapshot(idx) {
-    let saved = [];
-    try {
-      saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
-    } catch (e) { return; }
-
-    const proj = saved[idx];
+  requestDeleteProjectSnapshot(idOrIdx) {
+    const saved = this._getSavedProjectsIndex();
+    const { proj } = this._resolveProjectEntry(saved, idOrIdx);
     if (!proj) return;
+    this._pendingClearAllProjects = false;
+    this._pendingDeleteProjectId = proj.id;
+    this.renderSavedProjectsList();
+  },
+
+  /**
+   * Cancels pending inline project deletion confirmation
+   */
+  cancelDeleteProjectSnapshot() {
+    this._pendingDeleteProjectId = null;
+    this._pendingClearAllProjects = false;
+    this.renderSavedProjectsList();
+  },
+
+  /**
+   * Deletes a saved project snapshot instantly without resurrecting deleted active workspaces
+   */
+  deleteProjectSnapshot(idOrIdx, skipConfirm = false) {
+    const saved = this._getSavedProjectsIndex();
+    const { idx, proj } = this._resolveProjectEntry(saved, idOrIdx);
+    if (!proj || idx < 0) return;
 
     const projName = proj.name || "Untitled Project";
-    if (!confirm(`Are you sure you want to delete "${projName}"? This action cannot be undone.`)) {
-      return;
-    }
-
     const deletedId = proj.id;
-    if (deletedId) {
-      localStorage.removeItem(`netselect_facility_${deletedId}`);
-      localStorage.removeItem(`netselect_active_state_${deletedId}`);
-      localStorage.removeItem(`netselect_fac_floors_${deletedId}`);
-      localStorage.removeItem(`netselect_fac_spaces_${deletedId}`);
-      localStorage.removeItem(`netselect_fac_enclosures_${deletedId}`);
-      localStorage.removeItem(`netselect_fac_endpoints_${deletedId}`);
-      localStorage.removeItem(`netselect_topo_pos_${deletedId}`);
 
-      try {
-        const keysToRemove = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i);
-          if (k && k.startsWith(`netselect_rack_height_${deletedId}_`)) {
-            keysToRemove.push(k);
-          }
-        }
-        keysToRemove.forEach(k => localStorage.removeItem(k));
-      } catch (e) {}
+    if (!skipConfirm && this._pendingDeleteProjectId !== deletedId) {
+      const modal = document.getElementById("projectModal");
+      const isModalOpen = modal && !modal.classList.contains("hidden");
+      if (isModalOpen) {
+        this._pendingDeleteProjectId = deletedId;
+        this.renderSavedProjectsList();
+        return;
+      }
+      if (typeof confirm === "function" && !confirm(`Are you sure you want to delete "${projName}"? This action cannot be undone.`)) {
+        return;
+      }
     }
 
+    this._pendingDeleteProjectId = null;
+    this._pendingClearAllProjects = false;
+
+    const activeId = this.getActiveProjectId();
+    const wasActive = (activeId === deletedId);
+
+    // 1. Purge all isolated LocalStorage keys for this project and cancel pending auto-save timers
+    this._purgeProjectStorageKeys(deletedId);
+
+    // 2. Remove from lightweight saved index immediately
     saved.splice(idx, 1);
     this.safeSetItem("netselect_saved_quotes", JSON.stringify(saved));
 
-    const activeId = this.getActiveProjectId();
-    if (activeId === deletedId) {
+    // 3. Handle active workspace fallback WITHOUT saving the deleted project back into storage
+    if (wasActive) {
       if (saved.length > 0) {
-        this.loadProjectSnapshot(0);
+        this.loadProjectSnapshot(saved[0].id, {
+          skipSaveOutgoing: true,
+          keepModalOpen: true,
+          suppressToast: true
+        });
       } else {
-        this.createNewBlankProject();
+        this._resetToCleanBlankWorkspace();
       }
-    } else {
-      this.renderSavedProjectsList();
-      if (typeof showToast === "function") showToast(`Deleted project: ${projName}`);
+    }
+
+    this.renderSavedProjectsList();
+    if (typeof renderProjectDefaultsSummary === "function") {
+      renderProjectDefaultsSummary();
+    }
+    if (typeof showToast === "function") {
+      showToast(`Deleted project: ${projName}`);
+    }
+  },
+
+  /**
+   * Arms inline confirmation to delete all saved project snapshots
+   */
+  requestClearAllProjects() {
+    this._pendingDeleteProjectId = null;
+    this._pendingClearAllProjects = true;
+    this.renderSavedProjectsList();
+  },
+
+  /**
+   * Deletes all saved project snapshots and resets to a fresh blank workspace
+   */
+  clearAllSavedProjects() {
+    const saved = this._getSavedProjectsIndex();
+    const count = saved.length;
+    saved.forEach((p) => {
+      if (p && p.id) this._purgeProjectStorageKeys(p.id);
+    });
+    this._purgeProjectStorageKeys(this.getActiveProjectId());
+
+    this._pendingDeleteProjectId = null;
+    this._pendingClearAllProjects = false;
+    this.safeSetItem("netselect_saved_quotes", "[]");
+
+    this._resetToCleanBlankWorkspace();
+    this.renderSavedProjectsList();
+    if (typeof renderProjectDefaultsSummary === "function") {
+      renderProjectDefaultsSummary();
+    }
+    if (typeof showToast === "function") {
+      showToast(`Deleted all ${count} saved project${count === 1 ? "" : "s"}.`);
     }
   },
 
@@ -1090,27 +1368,13 @@ const StorageService = {
   /**
    * Exports an arbitrary project snapshot directly from the list without activating it
    */
-  exportProjectSnapshot(idx) {
-    let saved = [];
-    try {
-      saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
-    } catch (e) { return; }
-
-    const proj = saved[idx];
+  exportProjectSnapshot(idOrIdx) {
+    const saved = this._getSavedProjectsIndex();
+    const { proj } = this._resolveProjectEntry(saved, idOrIdx);
     if (!proj) return;
 
-    let bundle = proj.bundle;
-    if (!bundle) {
-      bundle = {
-        schemaVersion: "1.0.0",
-        projectId: proj.id || `proj-${idx}`,
-        projectName: proj.name || "Project",
-        exportDate: new Date().toISOString(),
-        projectBOM: proj.bom || [],
-        demandCounts: proj.demandCounts || {},
-        facilityFloors: proj.facilityFloors || []
-      };
-    }
+    const bundle = this._getStoredBundleForEntry(proj);
+    if (!bundle) return;
 
     const exportCopy = JSON.parse(JSON.stringify(bundle));
     if (exportCopy.physicalCanvas && Array.isArray(exportCopy.physicalCanvas.facilityFloors)) {
@@ -1210,11 +1474,16 @@ const StorageService = {
           rackSettings: parsed.rackSettings || {
             heights: {},
             pdus: {}
-          }
+          },
+          projectDefaults: parsed.projectDefaults || undefined
         };
 
-        // 1. Auto-save outgoing project first
-        this.saveCurrentProject(false);
+        // 1. Auto-save outgoing project first if it has work or is already saved
+        const hasOutgoing = this._getSavedProjectsIndex().some(p => p.id === this.getActiveProjectId()) ||
+          (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && projectBOM.length > 0);
+        if (hasOutgoing) {
+          this.saveCurrentProject(false);
+        }
 
         // 2. Apply bundle to active workspace
         this.applyProjectBundle(importedBundle);
@@ -1236,7 +1505,7 @@ const StorageService = {
   },
 
   /**
-   * Renders saved project snapshots with active highlighting and direct actions
+   * Renders saved project snapshots with active highlighting and instant inline deletion controls
    */
   renderSavedProjectsList() {
     const container = document.getElementById("savedProjectsList");
@@ -1248,31 +1517,75 @@ const StorageService = {
     const modalActiveTitle = document.getElementById("modalActiveProjectTitle");
     if (modalActiveTitle) modalActiveTitle.innerText = activeName;
 
-    let saved = [];
-    try {
-      saved = JSON.parse(localStorage.getItem("netselect_saved_quotes") || "[]");
-    } catch (e) {
-      saved = [];
-    }
+    const saved = this._getSavedProjectsIndex();
 
     if (saved.length === 0) {
       container.innerHTML = `
-        <div class="text-center py-6 border border-dashed border-slate-800 rounded-xl bg-slate-950/40">
-          <i data-lucide="folder-open" class="w-8 h-8 text-slate-600 mx-auto mb-2"></i>
-          <span class="text-xs text-slate-400 block font-medium">No saved project snapshots yet.</span>
-          <span class="text-[11px] text-slate-500 block mt-0.5">Click "Save Changes" above to save your current work.</span>
+        <div class="text-center py-6 px-4 border border-dashed border-slate-800 rounded-xl bg-slate-950/40 space-y-2.5">
+          <i data-lucide="folder-open" class="w-8 h-8 text-slate-600 mx-auto"></i>
+          <div>
+            <span class="text-xs text-slate-300 block font-semibold">No saved project snapshots yet.</span>
+            <span class="text-[11px] text-slate-400 block mt-0.5">Start a fresh guided project to configure Scope, VMS/ACS, DOR &amp; Optics defaults, or click "Save Changes" above.</span>
+          </div>
+          <button type="button" onclick="openProjectWizardModal('create')" class="mx-auto px-3.5 py-1.5 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 transition-all shadow-md shadow-brand-500/20 cursor-pointer">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            <span>Start New Project Wizard</span>
+          </button>
         </div>
       `;
       safeCreateIcons(container);
       return;
     }
 
-    container.innerHTML = saved.map((proj, idx) => {
+    const clearAllBanner = saved.length >= 2 ? (
+      this._pendingClearAllProjects ? `
+        <div class="px-3 py-2 rounded-xl bg-rose-950/50 border border-rose-500/50 flex items-center justify-between gap-2 text-[11px]">
+          <span class="text-rose-200 font-semibold">Delete all ${saved.length} saved projects?</span>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" onclick="StorageService.clearAllSavedProjects()" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg cursor-pointer transition-colors">Confirm Delete All</button>
+            <button type="button" onclick="StorageService.cancelDeleteProjectSnapshot()" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 cursor-pointer transition-colors">Cancel</button>
+          </div>
+        </div>
+      ` : `
+        <div class="flex items-center justify-between px-1 pb-0.5 text-[10px] text-slate-500">
+          <span>${saved.length} saved projects</span>
+          <button type="button" onclick="StorageService.requestClearAllProjects()" class="text-slate-400 hover:text-rose-400 font-semibold transition-colors cursor-pointer">Delete All...</button>
+        </div>
+      `
+    ) : "";
+
+    const rowsHtml = saved.map((proj) => {
       const safeName = escapeHTML(proj.name || "Untitled Snapshot");
       const safeDate = escapeHTML(proj.date || "");
+      const safeIdAttr = escapeJSAttr(proj.id);
       const itemsCount = parseInt(proj.itemsCount, 10) || 0;
       const totalMsrp = parseFloat(proj.totalMsrp) || 0;
       const isActive = (proj.id === activeId);
+      const isPendingDelete = (this._pendingDeleteProjectId === proj.id);
+
+      if (isPendingDelete) {
+        return `
+          <div class="p-3 rounded-xl border bg-rose-950/35 border-rose-500/60 ring-1 ring-rose-500/30 flex items-center justify-between gap-3 text-xs transition-all">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-rose-200 truncate text-xs">Delete "${safeName}"?</span>
+                ${isActive ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 shrink-0">ACTIVE</span>' : ''}
+              </div>
+              <div class="text-[10px] text-rose-300/80 mt-0.5">
+                This permanently removes this project snapshot from browser storage.
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+              <button type="button" onclick="StorageService.deleteProjectSnapshot('${safeIdAttr}', true)" class="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-[11px] shadow-sm transition-colors cursor-pointer">
+                Delete
+              </button>
+              <button type="button" onclick="StorageService.cancelDeleteProjectSnapshot()" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold rounded-lg text-[11px] border border-slate-700 transition-colors cursor-pointer">
+                Cancel
+              </button>
+            </div>
+          </div>
+        `;
+      }
 
       return `
         <div class="p-3 rounded-xl border transition-all ${
@@ -1296,20 +1609,21 @@ const StorageService = {
           <div class="flex items-center gap-1.5 shrink-0">
             ${
               isActive 
-                ? '<button onclick="saveCurrentProject()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-[11px] transition-all flex items-center gap-1 shadow-sm"><i data-lucide="check" class="w-3 h-3"></i> Saved</button>' 
-                : `<button onclick="StorageService.loadProjectSnapshot(${idx})" class="px-2.5 py-1 bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white font-semibold rounded-lg text-[11px] border border-slate-700 hover:border-transparent transition-all">Load</button>`
+                ? '<button type="button" onclick="saveCurrentProject()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-[11px] transition-all flex items-center gap-1 shadow-sm cursor-pointer"><i data-lucide="check" class="w-3 h-3"></i> Saved</button>' 
+                : `<button type="button" onclick="StorageService.loadProjectSnapshot('${safeIdAttr}')" class="px-2.5 py-1 bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white font-semibold rounded-lg text-[11px] border border-slate-700 hover:border-transparent transition-all cursor-pointer">Load</button>`
             }
-            <button onclick="StorageService.exportProjectSnapshot(${idx})" class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors" title="Export this Project JSON">
+            <button type="button" onclick="StorageService.exportProjectSnapshot('${safeIdAttr}')" class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="Export this Project JSON">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
             </button>
-            <button onclick="StorageService.deleteProjectSnapshot(${idx})" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors" title="Delete Snapshot">
-              <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+            <button type="button" onclick="StorageService.requestDeleteProjectSnapshot('${safeIdAttr}')" class="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="Delete Project">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
           </div>
         </div>
       `;
     }).join('');
 
+    container.innerHTML = clearAllBanner + rowsHtml;
     safeCreateIcons(container);
   }
 };
@@ -1324,10 +1638,10 @@ window.toggleProjectModal = () => StorageService.toggleProjectModal();
 window.renderSavedProjectsList = () => StorageService.renderSavedProjectsList();
 window.saveCurrentProject = (showNotification) => StorageService.saveCurrentProject(showNotification);
 window.saveCurrentAsNewProject = () => StorageService.saveCurrentAsNewProject();
-window.loadProjectSnapshot = (idx) => StorageService.loadProjectSnapshot(idx);
-window.deleteProjectSnapshot = (idx) => StorageService.deleteProjectSnapshot(idx);
-window.exportProjectSnapshot = (idx) => StorageService.exportProjectSnapshot(idx);
+window.loadProjectSnapshot = (idOrIdx, opts) => StorageService.loadProjectSnapshot(idOrIdx, opts);
+window.deleteProjectSnapshot = (idOrIdx, skipConfirm) => StorageService.deleteProjectSnapshot(idOrIdx, skipConfirm);
+window.exportProjectSnapshot = (idOrIdx) => StorageService.exportProjectSnapshot(idOrIdx);
 window.exportCurrentProjectJSON = () => StorageService.exportCurrentProjectJSON();
 window.importProjectJSON = (event) => StorageService.importProjectJSON(event);
-window.createNewBlankProject = () => StorageService.createNewBlankProject();
+window.createNewBlankProject = (customDefaults) => StorageService.createNewBlankProject(customDefaults);
 window.renameActiveProject = () => StorageService.renameActiveProject();

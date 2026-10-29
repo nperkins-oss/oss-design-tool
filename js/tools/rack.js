@@ -6136,6 +6136,9 @@ function toggleSwitchStandardPod(instanceId) {
 
   if (typeof applyStandardPodCabling === "function") {
     applyStandardPodCabling(item);
+    if (typeof commitCablingToBOM === "function" && typeof facilityFloors !== "undefined" && facilityFloors.some(f => (f.nodes || []).some(n => n.type === "device"))) {
+      commitCablingToBOM({ silent: true });
+    }
   }
 
   projectBOM.filter(ch => ch.parentInstanceId === item.instanceId).forEach(ch => {
@@ -6167,7 +6170,7 @@ function applyStandardPodsToActiveRack() {
   const hostId = FacilityStore.normalize(activeRackId);
 
   // 1. Remove previous auto-generated fiber/firewall HCMs so we can re-evaluate freshly without doubling up
-  projectBOM = projectBOM.filter(it => !(it.source === "fiber_firewall_hcm" && FacilityStore.normalize(it.closetName || it.rackId) === hostId));
+  projectBOM = projectBOM.filter(it => !((it.source === "fiber_firewall_hcm" || (it.source === "cabling_sync" && (it.sku || "").startsWith("PP-"))) && FacilityStore.normalize(it.closetName || it.rackId) === hostId));
 
   // 2. Find all mounted items in active rack
   const mountedItems = projectBOM.filter(it => {
@@ -6288,6 +6291,11 @@ function applyStandardPodsToActiveRack() {
   const totalRequiredU = finalOrderedItems.reduce((acc, it) => acc + getRackItemHeight(it), 0);
   if (totalRequiredU > activeRackHeight && typeof showToast === "function") {
     showToast(`Notice: Standard Pods & Cable Managers require ${totalRequiredU}U, which exceeds the ${activeRackHeight}U enclosure height.`);
+  }
+
+  // Reconcile floorplan cabling_sync items so standalone patch panels/keystones/cords deduct the new Standard Pods
+  if (typeof commitCablingToBOM === "function" && typeof facilityFloors !== "undefined" && facilityFloors.some(f => (f.nodes || []).some(n => n.type === "device"))) {
+    commitCablingToBOM({ silent: true });
   }
 
   // Synchronize child items
@@ -7627,6 +7635,9 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
               <button onclick="addPassiveToActiveRack('pp48')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 2U 48-Port Modular Keystone Patch Panel">
                 <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 48P Panel
               </button>
+              <button onclick="addPassiveToActiveRack('liu24')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/60 rounded text-[10px] font-bold text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 24-Fiber (12-Port Duplex LC) Rack-Mount Fiber LIU Enclosure">
+                <i data-lucide="plus" class="w-3 h-3 text-cyan-400"></i> 1U Fiber LIU
+              </button>
               <button onclick="addPassiveToActiveRack('hcm1u')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-indigo-500/60 rounded text-[10px] font-bold text-indigo-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U Horizontal Cable Manager">
                 <i data-lucide="plus" class="w-3 h-3 text-indigo-400"></i> 1U Cable Mgr
               </button>
@@ -8239,7 +8250,8 @@ function getDeviceMountPriority(item) {
   if (role.includes("isp") || role.includes("demarc") || role.includes("nid") ||
       cat.includes("isp") || cat.includes("demarc") ||
       allText.includes("isp") || allText.includes("demarc") || allText.includes("nid") ||
-      allText.includes("carrier") || allText.includes("modem") || allText.includes("ont")) {
+      allText.includes("carrier") || allText.includes("modem") || allText.includes("ont") ||
+      allText.includes("fiber liu") || item.sku === "LIU-1U-24LC") {
     return { priority: 1, group: "isp", portCount: 0 };
   }
 
@@ -8430,6 +8442,17 @@ function addPassiveToActiveRack(type) {
       role: "Structured Cabling",
       weightLbs: 2.0
     };
+  } else if (type === "liu24") {
+    itemData = {
+      sku: "LIU-1U-24LC",
+      model: "1U 24-Fiber (12-Port Duplex LC) Rack-Mount Fiber LIU Patch Enclosure",
+      vendor: "Corning",
+      msrp: 245,
+      rackUnits: 1,
+      ports: 12,
+      role: "Structured Cabling",
+      weightLbs: 6.5
+    };
   } else if (type === "blank1u") {
     itemData = {
       sku: "PP-BLANK-1U",
@@ -8446,8 +8469,10 @@ function addPassiveToActiveRack(type) {
   if (!itemData) return;
 
   const instanceId = `passive-${itemData.sku}-${Date.now()}`;
+  const passiveSource = "rack_passive";
   const newItem = {
     instanceId: instanceId,
+    source: passiveSource,
     id: itemData.sku,
     model: itemData.model,
     sku: itemData.sku,

@@ -992,7 +992,13 @@ function filterCamerasStrategy(items, ctx) {
   const reqTaa = typeof ctx.requireCamTaa !== "undefined" ? ctx.requireCamTaa : (typeof requireCamTaa !== "undefined" && requireCamTaa);
 
   if (!isGenericMode && vendors.length > 0) {
-    results = results.filter(c => vendors.some(v => (c.vendor || '').toLowerCase().includes(v.toLowerCase())));
+    results = results.filter(c => {
+      const cv = (c.vendor || '').toLowerCase().replace(/\s+security$/, '');
+      return vendors.some(v => {
+        const nv = String(v || '').toLowerCase().replace(/\s+security$/, '');
+        return cv.includes(nv) || nv.includes(cv);
+      });
+    });
   }
   if (forms.length > 0) {
     results = results.filter(c => {

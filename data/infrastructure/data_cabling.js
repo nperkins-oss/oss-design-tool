@@ -261,6 +261,27 @@ const CABLING_CATALOG = {
       msrp: 115
     },
     {
+      sku: "LIU-1U-24LC",
+      name: "1U 24-Fiber (12-Port Duplex LC) Rack-Mount Fiber LIU Patch Enclosure",
+      vendor: "Corning",
+      ports: 12,
+      fiberCount: 24,
+      rackUnits: 1,
+      weightLbs: 6.5,
+      depthInches: 12.0,
+      msrp: 245
+    },
+    {
+      sku: "HCM-1U",
+      name: "1U Horizontal Cable Manager with Dual-Hinged Cover",
+      vendor: "Panduit",
+      ports: 0,
+      rackUnits: 1,
+      weightLbs: 1.6,
+      depthInches: 3.5,
+      msrp: 45
+    },
+    {
       sku: "PP-BLANK-1U",
       name: "1U Metal Snap-in Blank Filler Panel",
       vendor: "Panduit",

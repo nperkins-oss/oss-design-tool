@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <!-- Pre-Compiled Tailwind CSS (v3.4.17 Static Build — Option A) -->
-  <link rel="stylesheet" href="assets/css/tailwind.min.css" />
+  <link rel="stylesheet" href="assets/css/tailwind.min.css?v=0.11.0-beta.2" />
 
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -528,17 +528,21 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-xs sm:text-sm font-bold text-white tracking-tight truncate max-w-[140px] sm:max-w-none">OSS Network Design Tool</h1>
-            <span id="appVersionBadge" class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden xl:inline" title="Application Version &amp; Build">v0.11.0-beta.1</span>
+            <span id="appVersionBadge" class="text-[10px] font-mono bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-1.5 py-0.5 rounded hidden xl:inline" title="Application Version &amp; Build">v0.11.0-beta.2</span>
           </div>
           <div class="flex items-center gap-1.5 sm:gap-2 mt-0.5">
             <button onclick="toggleProjectModal()" class="text-left group flex items-center gap-1 hover:text-white cursor-pointer" title="Switch or Manage Projects">
               <span id="activeProjectLabel" class="text-xs text-slate-400 group-hover:text-slate-200 transition-colors font-semibold truncate max-w-[100px] sm:max-w-[150px]">Default Project</span>
               <i data-lucide="chevron-down" class="w-3 h-3 text-slate-500 group-hover:text-slate-300"></i>
             </button>
+            <button onclick="openProjectWizardModal('create')" class="px-1.5 py-0.5 rounded-md bg-brand-600/20 hover:bg-brand-600 text-brand-300 hover:text-white border border-brand-500/40 text-[10px] font-bold flex items-center gap-1 cursor-pointer transition-all" title="Start a New Project and configure all Scope &amp; Technical Defaults">
+              <i data-lucide="plus" class="w-2.5 h-2.5"></i>
+              <span>New</span>
+            </button>
             <span class="text-slate-700 text-xs">|</span>
             <!-- Project Level Dropdown Menu Button -->
             <div class="relative" id="projectLevelMenuWrapper">
-              <button onclick="toggleProjectLevelMenu()" class="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-sm" title="Project Level Tools (Revisions, Submittals, Standards)">
+              <button onclick="toggleProjectLevelMenu()" class="px-2 py-0.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/80 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-sm" title="Project Level Tools (New Project, Revisions, Submittals, Standards)">
                 <i data-lucide="folder-cog" class="w-3 h-3 text-indigo-400"></i>
                 <span class="hidden sm:inline">Project Menu</span>
                 <span class="inline sm:hidden">Menu</span>
@@ -546,10 +550,19 @@
               </button>
               
               <!-- Floating Project Menu Dropdown -->
-              <div id="projectLevelDropdown" class="hidden absolute left-0 top-full mt-1.5 w-64 bg-slate-900 border border-slate-700/90 rounded-xl shadow-2xl z-[70] p-1.5 space-y-1 backdrop-blur-xl">
+              <div id="projectLevelDropdown" class="hidden absolute left-0 top-full mt-1.5 w-72 bg-slate-900 border border-slate-700/90 rounded-xl shadow-2xl z-[70] p-1.5 space-y-1 backdrop-blur-xl">
                 <div class="px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-800/80">
                   Project Workspace Tools
                 </div>
+                <button onclick="toggleProjectLevelMenu(); openProjectWizardModal('create')" class="w-full text-left px-2.5 py-2 rounded-lg bg-brand-500/10 hover:bg-slate-800 border border-brand-500/30 text-white text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
+                  <div class="p-1 rounded bg-brand-500/20 text-brand-400 border border-brand-500/40">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div>
+                    <div class="font-bold">New Project Wizard...</div>
+                    <div class="text-[10px] text-slate-300 font-normal">Guided Scope, VMS/ACS, DOR &amp; Optics setup</div>
+                  </div>
+                </button>
                 <button onclick="toggleProjectLevelMenu(); openRevisionModal()" class="w-full text-left px-2.5 py-2 rounded-lg hover:bg-purple-950/60 text-slate-200 hover:text-purple-300 text-xs font-semibold flex items-center gap-2.5 transition-colors cursor-pointer">
                   <div class="p-1 rounded bg-purple-500/20 text-purple-400 border border-purple-500/30">
                     <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
@@ -1128,11 +1141,18 @@
             <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i> Power Matrix
           </button>
 
-          <!-- Auto-Synthesize Optics & DACs -->
-          <button onclick="autoSynthesizeInterconnects()" class="px-2.5 py-1.5 bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-emerald-700/60 transition-colors shadow-sm cursor-pointer" title="Auto-synthesize DAC cables and optical transceivers for all active topology links into BOM">
-            <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
-            <span>Synthesize Optics &amp; DACs</span>
-          </button>
+          <!-- SFP / DAC Sourcing Mode + Auto-Synthesize Optics & DACs -->
+          <div class="flex items-center bg-slate-900 border border-emerald-700/60 rounded-xl p-0.5 shadow-sm">
+            <select id="topoOpticsVendorSelect" onchange="setProjectOpticsVendorMode(this.value, true)" class="bg-slate-900 text-emerald-300 font-bold text-xs px-2 py-1 rounded-l-lg focus:outline-none cursor-pointer" title="Select 1st-Party Native OEM vs. 3rd-Party Coded (IronLink or FS.com) SFPs &amp; DACs">
+              <option value="oem" class="bg-slate-900 text-white">Optics: 1st-Party OEM</option>
+              <option value="ironlink" class="bg-slate-900 text-white">Optics: IronLink (3rd-Party)</option>
+              <option value="fs" class="bg-slate-900 text-white">Optics: FS.com (3rd-Party)</option>
+            </select>
+            <button onclick="autoSynthesizeInterconnects()" class="px-2.5 py-1 bg-emerald-950/90 hover:bg-emerald-900 text-emerald-300 hover:text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 border-l border-emerald-800/80 transition-colors cursor-pointer" title="Auto-synthesize DAC cables and optical transceivers for all active topology links into BOM">
+              <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Synthesize</span>
+            </button>
+          </div>
 
           <!-- Toggle Inspector Drawer -->
           <button id="topologyInspectorHeaderBtn" onclick="toggleTopologyInspector()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer" title="Toggle Inspector Panel">
@@ -1728,6 +1748,20 @@
                 <option value="C6A-OUTDOOR-1K">Cat6A Outdoor</option>
               </select>
             </div>
+
+            <div class="w-px h-4 bg-slate-800"></div>
+
+            <!-- Infrastructure Responsibility Scope Selector -->
+            <div class="flex items-center gap-1 bg-slate-950/80 border border-slate-800 rounded-xl px-2 py-0.5 text-xs shadow-inner" title="Infrastructure Division of Responsibility: Select which cabling components Orion is responsible for quoting">
+              <span class="text-slate-400 text-[10px] uppercase font-mono hidden sm:inline">Scope:</span>
+              <select id="physInfraScopeSelect" onchange="applyWizardInfraScopePreset(this.value, true)" class="bg-transparent text-emerald-300 font-mono font-bold text-xs focus:outline-none cursor-pointer max-w-[125px] truncate">
+                <option value="full_turnkey" class="bg-slate-900 text-white">Full Turnkey</option>
+                <option value="no_fiber" class="bg-slate-900 text-white">Copper &amp; Gear (No Fiber)</option>
+                <option value="hardware_and_patch" class="bg-slate-900 text-white">Gear + Patch Cords</option>
+                <option value="active_hardware_only" class="bg-slate-900 text-white">Active Gear Only</option>
+                <option value="custom" class="bg-slate-900 text-white">Custom DOR Scope</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -1896,27 +1930,40 @@
         <!-- Project Scope & Technical Standards Summary Card -->
         <div id="projectDefaultsSummaryWidget" class="p-3 bg-slate-950/70 rounded-xl border border-slate-800 space-y-2"></div>
 
-        <!-- Project Inter-Rack Fiber Specification -->
-        <div class="space-y-1.5 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
-          <label class="text-[11px] font-semibold text-slate-300 flex items-center justify-between">
-            <span class="flex items-center gap-1.5"><i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i> Project Inter-Rack Fiber Default:</span>
-            <span class="text-[10px] font-mono text-slate-500">Backbone Optics & Patch</span>
-          </label>
-          <select id="projectFiberSelect" onchange="setProjectFiberType(this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500 transition-colors font-mono">
-            <option value="mmf">Multi-Mode Fiber (MMF / OM4, SR Optics, 850nm)</option>
-            <option value="smf">Single-Mode Fiber (SMF / OS2, LR Optics, 1310nm)</option>
-          </select>
-          <p class="text-[10px] text-slate-400 leading-tight">Same-rack connections automatically use DAC cables sized by RU distance. Connections between different racks use this default fiber specification unless overridden per link in Topology.</p>
+        <!-- Project Inter-Rack Fiber & Optics Sourcing Specification -->
+        <div class="space-y-2 p-3 bg-slate-950/60 rounded-xl border border-slate-800">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5 mb-1">
+                <i data-lucide="spline" class="w-3.5 h-3.5 text-cyan-400"></i> Inter-Rack Fiber Default:
+              </label>
+              <select id="projectFiberSelect" onchange="setProjectFiberType(this.value)" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl px-2.5 py-2 focus:outline-none focus:border-brand-500 transition-colors font-mono">
+                <option value="mmf">Multi-Mode (OM4 SR, 850nm)</option>
+                <option value="smf">Single-Mode (OS2 LR, 1310nm)</option>
+              </select>
+            </div>
+            <div>
+              <label class="text-[11px] font-semibold text-slate-300 flex items-center gap-1.5 mb-1">
+                <i data-lucide="cpu" class="w-3.5 h-3.5 text-emerald-400"></i> SFP / DAC Sourcing Mode:
+              </label>
+              <select id="projectOpticsVendorSelect" onchange="setProjectOpticsVendorMode(this.value, true)" class="w-full bg-slate-900 border border-slate-700 text-emerald-300 font-semibold text-xs rounded-xl px-2.5 py-2 focus:outline-none focus:border-emerald-500 transition-colors">
+                <option value="oem">1st-Party Native OEM</option>
+                <option value="ironlink">3rd-Party: IronLink MSA</option>
+                <option value="fs">3rd-Party: FS.com MSA</option>
+              </select>
+            </div>
+          </div>
+          <p class="text-[10px] text-slate-400 leading-tight">Same-rack connections use DAC cables sized by RU distance. 3rd-Party mode automatically codes IronLink or FS.com SFPs/DACs to each endpoint's vendor EEPROM.</p>
         </div>
 
         <!-- Clone / Save As New Snapshot Section -->
         <div class="space-y-1.5">
-          <label class="text-[11px] font-semibold text-slate-300 block">Save Snapshot / Clone As New Project:</label>
+          <label class="text-[11px] font-semibold text-slate-300 block">Duplicate Active Workspace As Option / Revision:</label>
           <div class="flex items-center gap-2">
             <input type="text" id="newProjectNameInput" placeholder="e.g. Acme Corp Phase 2 / Option B" class="flex-1 bg-slate-950 border border-slate-700 text-white text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-brand-500 transition-colors" />
-            <button onclick="saveCurrentAsNewProject()" class="px-3 py-2 bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white rounded-xl text-xs font-bold border border-slate-700 hover:border-transparent transition-all shadow shrink-0 flex items-center gap-1.5">
+            <button onclick="saveCurrentAsNewProject()" class="px-3 py-2 bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white rounded-xl text-xs font-bold border border-slate-700 hover:border-transparent transition-all shadow shrink-0 flex items-center gap-1.5" title="Duplicate the current BOM and floorplans as a separate option (use 'New Project' above to start fresh with the Defaults Wizard)">
               <i data-lucide="copy" class="w-3.5 h-3.5 text-indigo-400"></i>
-              <span>Save As New</span>
+              <span>Clone Option</span>
             </button>
           </div>
         </div>
@@ -1947,18 +1994,18 @@
   </div>
 
   <!-- New Project & Technical Defaults Wizard Modal -->
-  <div id="newProjectModal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in zoom-in-95 duration-150">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl flex flex-col shadow-2xl overflow-hidden max-h-[92vh]">
+  <div id="newProjectModal" style="z-index: 90;" class="hidden fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-3xl flex flex-col shadow-2xl overflow-hidden max-h-[92vh]">
       
       <!-- Modal Header -->
-      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0">
+      <div class="px-6 py-3.5 border-b border-slate-800 flex items-center justify-between bg-slate-950/70 shrink-0">
         <div class="flex items-center gap-3">
           <div class="w-9 h-9 rounded-xl bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400">
             <i data-lucide="sparkles" class="w-5 h-5"></i>
           </div>
           <div>
             <h3 id="wizardModalTitle" class="text-sm sm:text-base font-bold text-white tracking-tight">Create New Project</h3>
-            <p id="wizardModalSubtitle" class="text-[11px] text-slate-400 font-medium">Configure technical standards, vendor ecosystems, and proposal metadata.</p>
+            <p id="wizardModalSubtitle" class="text-[11px] text-slate-400 font-medium">Configure Orion scope of work, security platforms, switching, fiber/optics sourcing, and cabling standards.</p>
           </div>
         </div>
         <button onclick="closeProjectWizardModal()" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
@@ -1966,178 +2013,373 @@
         </button>
       </div>
 
-      <!-- 3-Step Wizard Navigation Pills -->
-      <div class="px-6 py-2.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-2 overflow-x-auto shrink-0">
-        <button type="button" onclick="setProjectWizardStep(1)" id="wizStepPill-1" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-brand-600 text-white shadow-md shadow-brand-500/20 border border-brand-400/40 transition-all">
+      <!-- 4-Step Wizard Navigation Pills -->
+      <div class="px-4 sm:px-6 py-2.5 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-1.5 overflow-x-auto shrink-0">
+        <button type="button" onclick="setProjectWizardStep(1)" id="wizStepPill-1" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold bg-brand-600 text-white shadow-md shadow-brand-500/20 border border-brand-400/40 transition-all shrink-0">
           <span id="wizStepNum-1" class="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
           <i id="wizStepCheck-1" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Details & Profile</span>
+          <span>Project &amp; Orion Scope</span>
         </button>
-        <div class="w-4 h-[1px] bg-slate-800 shrink-0"></div>
-        <button type="button" onclick="setProjectWizardStep(2)" id="wizStepPill-2" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer">
+        <div class="w-3 h-[1px] bg-slate-800 shrink-0"></div>
+        <button type="button" onclick="setProjectWizardStep(2)" id="wizStepPill-2" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer shrink-0">
           <span id="wizStepNum-2" class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">2</span>
           <i id="wizStepCheck-2" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Subsystems & Scope</span>
+          <span>Video, VMS &amp; ACS</span>
         </button>
-        <div class="w-4 h-[1px] bg-slate-800 shrink-0"></div>
-        <button type="button" onclick="setProjectWizardStep(3)" id="wizStepPill-3" class="flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer">
+        <div class="w-3 h-[1px] bg-slate-800 shrink-0"></div>
+        <button type="button" onclick="setProjectWizardStep(3)" id="wizStepPill-3" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer shrink-0">
           <span id="wizStepNum-3" class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">3</span>
           <i id="wizStepCheck-3" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
-          <span>Cabling & Standards</span>
+          <span>Switching &amp; VLANs</span>
+        </button>
+        <div class="w-3 h-[1px] bg-slate-800 shrink-0"></div>
+        <button type="button" onclick="setProjectWizardStep(4)" id="wizStepPill-4" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 text-slate-400 border border-slate-800 transition-all cursor-pointer shrink-0">
+          <span id="wizStepNum-4" class="w-4 h-4 rounded-full bg-slate-800 flex items-center justify-center text-[10px]">4</span>
+          <i id="wizStepCheck-4" data-lucide="check" class="hidden w-3.5 h-3.5 text-emerald-400"></i>
+          <span>Cabling Standards</span>
         </button>
       </div>
 
       <!-- Step Panels Body (Scrollable) -->
-      <div class="p-6 space-y-4 overflow-y-auto flex-1">
+      <div class="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
         
-        <!-- STEP 1: Project Details & Profile -->
+        <!-- STEP 1: Project Identity & Orion Scope of Work (Subsystems, DOR, Fiber & 1st/3rd-Party SFP/DAC) -->
         <div id="wizStepContent-1" class="space-y-4">
-          <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 text-xs text-slate-400 flex items-start gap-2.5">
-            <i data-lucide="info" class="w-4 h-4 text-brand-400 shrink-0 mt-0.5"></i>
-            <div>
-              <strong class="text-slate-200">Clean Slate Project Architecture:</strong> All new projects are created completely blank. Your selected technical standards, cable colors, and preferred vendors will be set as project defaults across all floors and enclosures.
+
+          <!-- 1A. Compact Project Identity Card -->
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2.5">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div class="sm:col-span-2">
+                <label class="block text-[11px] font-bold text-slate-200 mb-1">
+                  Project Name <span class="text-rose-400">*</span>
+                </label>
+                <input type="text" id="wizProjectName" onkeydown="handleWizardInputKeydown(event)" placeholder="e.g. Acme HQ - Physical Security Expansion" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Job / Opportunity #</label>
+                <input type="text" id="wizJobOpp" onkeydown="handleWizardInputKeydown(event)" placeholder="e.g. ACME-2026-HQ" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors font-mono" />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Client / Facility Name</label>
+                <input type="text" id="wizClientName" onkeydown="handleWizardInputKeydown(event)" placeholder="e.g. Acme Corp" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Site Address</label>
+                <input type="text" id="wizSiteAddress" onkeydown="handleWizardInputKeydown(event)" placeholder="e.g. 100 Enterprise Way" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Lead Designer / Estimator</label>
+                <input type="text" id="wizLeadDesigner" onkeydown="handleWizardInputKeydown(event)" placeholder="e.g. N. Perkins" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-2.5 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
+              </div>
             </div>
           </div>
 
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-bold text-slate-200 mb-1">
-                Project Name <span class="text-rose-400">*</span>
-              </label>
-              <input type="text" id="wizProjectName" placeholder="e.g. Acme HQ - Physical Security Expansion" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Job / Opportunity #</label>
-                <input type="text" id="wizJobOpp" placeholder="e.g. ACME-2026-HQ-PH1" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors font-mono" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Client / Facility Name</label>
-                <input type="text" id="wizClientName" placeholder="e.g. Acme Corporation" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
-              </div>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Site Address</label>
-                <input type="text" id="wizSiteAddress" placeholder="e.g. 100 Enterprise Way, Dallas, TX" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Lead System Designer / Estimator</label>
-                <input type="text" id="wizLeadDesigner" placeholder="e.g. N. Perkins" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none transition-colors" />
-              </div>
-            </div>
-
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Software Licensing & Warranty Term</label>
-              <select id="wizLicensingTerm" class="w-full bg-slate-950 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
-                <option value="1YR">1-Year Term (1YR Standard)</option>
-                <option value="3YR">3-Year Term (3YR Multi-Year Support)</option>
-                <option value="5YR">5-Year Term (5YR Enterprise Warranty)</option>
-                <option value="Perpetual">Perpetual / Lifetime License</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- STEP 2: Subsystems In Scope & Platform Defaults -->
-        <div id="wizStepContent-2" class="hidden space-y-4">
-          
-          <!-- Access Control Card -->
-          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
+          <!-- 1B. Orion Active Systems Scope of Work Matrix -->
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-brand-500/30 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
               <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                  <i data-lucide="door-closed" class="w-4 h-4"></i>
+                <div class="w-7 h-7 rounded-lg bg-brand-500/10 border border-brand-500/30 flex items-center justify-center text-brand-400">
+                  <i data-lucide="shield-check" class="w-4 h-4"></i>
                 </div>
                 <div>
-                  <h4 class="text-xs font-bold text-white">Access Control System (ACS)</h4>
-                  <p class="text-[10px] text-slate-400">Door controllers, subplates, readers, and credential management.</p>
+                  <h4 class="text-xs font-bold text-white">Orion Active Systems Scope of Work</h4>
+                  <p class="text-[10px] text-slate-400">Select which active security &amp; network systems Orion is furnishing vs. Customer-Furnished / Existing (OFE).</p>
                 </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span id="wizAcsScopeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="wizAcsToggle" checked onchange="toggleAcsScope(this.checked)" class="sr-only peer" />
-                  <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
-                </label>
               </div>
             </div>
 
-            <div id="wizAcsConfigContainer" class="pt-2 border-t border-slate-850 grid grid-cols-1 sm:grid-cols-2 gap-3 transition-opacity">
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">ACS Engine / Host Software</label>
-                <select id="wizAcsEngine" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
-                  <option value="Genetec">Genetec (Synergis)</option>
-                  <option value="LenelS2 OnGuard">LenelS2 OnGuard</option>
-                  <option value="Software House C•CURE 9000">Software House C•CURE 9000</option>
-                  <option value="Lenel Elements">Lenel Elements (Cloud)</option>
-                  <option value="Genetec SaaS">Genetec SaaS (CloudLink)</option>
-                  <option value="Avigilon Alta">Avigilon Alta (Openpath)</option>
-                  <option value="Avigilon Unity">Avigilon Unity Access</option>
-                </select>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1.5 border-t border-slate-850">
+              <!-- Scope 1: Video Cameras -->
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-6 h-6 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                    <i data-lucide="video" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">Video Surveillance Cameras</div>
+                    <div class="text-[10px] text-slate-400 truncate">IP cameras, mounts &amp; edge analytics</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span id="wizVmsScopeBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="wizVmsToggle" checked onchange="toggleVmsScope(this.checked); updateWizardStateFromUI()" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-600"></div>
+                  </label>
+                </div>
               </div>
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Card Reader Protocol</label>
-                <select id="wizAcsReaderProto" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
-                  <option value="osdp">OSDP v2 Secure Channel (Encrypted)</option>
-                  <option value="wiegand">Legacy Wiegand (Unencrypted)</option>
-                </select>
+
+              <!-- Scope 2: VMS Servers & Licensing -->
+              <div id="wizVmsHeadEndCard" class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2 transition-opacity">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-6 h-6 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <i data-lucide="server" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">VMS Servers &amp; Licensing</div>
+                    <div class="text-[10px] text-slate-400 truncate">Streamvault / Husky IVO &amp; VMS licenses</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span id="wizVmsHeadEndBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">TURNKEY</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="wizVmsHeadEndInScope" checked onchange="toggleWizardVmsHeadEndUI(this.checked); updateWizardStateFromUI()" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
               </div>
-              <div class="sm:col-span-2 text-[10px] text-slate-400">
-                <span class="text-indigo-400 font-semibold">Note:</span> OSDP v2 automatically configures 22/4 shielded twisted pair (RS-485) and tamper-proof encrypted smart readers.
+
+              <!-- Scope 3: Access Control & Door Hardware -->
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-6 h-6 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <i data-lucide="door-closed" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">Access Control &amp; Doors</div>
+                    <div class="text-[10px] text-slate-400 truncate">Controllers, readers, locks &amp; Altronix</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span id="wizAcsScopeBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="wizAcsToggle" checked onchange="toggleAcsScope(this.checked); updateWizardStateFromUI()" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Scope 4: Active Network Switches -->
+              <div class="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <div class="w-6 h-6 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <i data-lucide="network" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-xs font-bold text-white truncate">Active Network Switches</div>
+                    <div class="text-[10px] text-slate-400 truncate">PoE switches, core &amp; firewalls (OFF = Customer IT)</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span id="wizNetScopeBadge" class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                  <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="wizNetworkSwitchesToggle" checked onchange="toggleNetSwitchesScope(this.checked); updateWizardStateFromUI()" class="sr-only peer" />
+                    <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Video Surveillance Card -->
+          <!-- 1C. Cabling, Fiber & SFP/DAC Scope (Division of Responsibility + 1st/3rd-Party Optics) -->
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-emerald-500/30 space-y-2.5">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Cabling, Fiber &amp; Optics Scope (Division of Responsibility)</h4>
+                  <p class="text-[10px] text-slate-400">Choose Orion's cabling responsibility (e.g. No Fiber / Cable by EC) and 1st-Party OEM vs. 3rd-Party (IronLink / FS) SFPs &amp; DACs.</p>
+                </div>
+              </div>
+              <span id="wizInfraScopeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">FULL TURNKEY</span>
+            </div>
+
+            <div class="pt-2 border-t border-slate-850 space-y-2.5">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Infrastructure Responsibility Preset</label>
+                <select id="wizInfraScopePreset" onchange="applyWizardInfraScopePreset(this.value, false); updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-semibold">
+                  <option value="full_turnkey" selected>Full Turnkey Infrastructure (All Copper Runs, Patch Panels, Patch Cords, Fiber Trunks &amp; Optics)</option>
+                  <option value="no_fiber">Switches, Edge Devices &amp; Copper Cabling Only (No Fiber Trunks or LIUs — Existing Fiber)</option>
+                  <option value="hardware_and_patch">Hardware, Optics &amp; Patch Cords Only (Bulk Cable &amp; Patch Panels by Electrical Contractor)</option>
+                  <option value="active_hardware_only">Active Hardware &amp; Optics Only (All Passive Copper &amp; Fiber Cabling by Others)</option>
+                  <option value="custom">Custom Division of Responsibility (Select Granular Scope Below)</option>
+                </select>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 cursor-pointer select-none">
+                  <input type="checkbox" id="wizScopeHorizontal" checked onchange="onWizardInfraScopeCheckboxChange(); updateWizardStateFromUI()" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0 mt-0.5" />
+                  <div>
+                    <span class="font-bold text-slate-200 block text-[11px]">Horizontal Bulk Cable Runs</span>
+                    <span class="text-[10px] text-slate-400">1,000' Cat6A spools &amp; Access Control composite cable</span>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 cursor-pointer select-none">
+                  <input type="checkbox" id="wizScopePanels" checked onchange="onWizardInfraScopeCheckboxChange(); updateWizardStateFromUI()" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0 mt-0.5" />
+                  <div>
+                    <span class="font-bold text-slate-200 block text-[11px]">Rack Patch Panels &amp; Keystones</span>
+                    <span class="text-[10px] text-slate-400">24P/48P modular panels (incl. Standard Pods) &amp; RJ45 jacks</span>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 cursor-pointer select-none">
+                  <input type="checkbox" id="wizScopePatchCords" checked onchange="onWizardInfraScopeCheckboxChange(); updateWizardStateFromUI()" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0 mt-0.5" />
+                  <div>
+                    <span class="font-bold text-slate-200 block text-[11px]">Copper Patch Cords &amp; Field Whips</span>
+                    <span class="text-[10px] text-slate-400">6" Slim rack patch cords &amp; 3'/7' field device whips</span>
+                  </div>
+                </label>
+
+                <label class="flex items-start gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 cursor-pointer select-none">
+                  <input type="checkbox" id="wizScopeFiberBackbone" checked onchange="onWizardInfraScopeCheckboxChange(); updateWizardStateFromUI()" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0 mt-0.5" />
+                  <div>
+                    <span class="font-bold text-slate-200 block text-[11px]">Fiber Backbone Trunks &amp; LIU Panels</span>
+                    <span class="text-[10px] text-slate-400">Inter-closet OM4/OS2 fiber trunks &amp; 1U LC Fiber LIUs</span>
+                  </div>
+                </label>
+
+                <label class="sm:col-span-2 flex items-start gap-2 p-2 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-slate-700 cursor-pointer select-none">
+                  <input type="checkbox" id="wizScopeSfpDac" checked onchange="onWizardInfraScopeCheckboxChange(); updateWizardStateFromUI()" class="rounded bg-slate-950 border-slate-700 text-emerald-500 focus:ring-0 mt-0.5" />
+                  <div>
+                    <span class="font-bold text-slate-200 block text-[11px]">Switch &amp; Firewall Uplinks (SFPs, DACs &amp; Fiber Jumpers)</span>
+                    <span class="text-[10px] text-slate-400">Optical transceivers, twinax DACs, and 2m duplex LC-LC patch cords to light up uplinks</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- 1st-Party vs. 3rd-Party SFP/DAC Sourcing & Inter-Rack Fiber Type -->
+              <div class="pt-2 border-t border-slate-850 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label class="block text-[11px] font-semibold text-emerald-300 mb-1">SFP / DAC Transceiver Sourcing (1st vs. 3rd Party)</label>
+                  <select id="wizOpticsVendorMode" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none transition-colors font-semibold">
+                    <option value="oem" selected>1st-Party Native OEM (Cisco, Meraki, Fortinet, Juniper, UniFi)</option>
+                    <option value="ironlink">3rd-Party Coded: IronLink MSA (Vendor EEPROM Coded)</option>
+                    <option value="fs">3rd-Party Coded: FS.com MSA (Vendor EEPROM Coded)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-cyan-300 mb-1">Inter-Rack Fiber Standard (When Fiber / Optics Used)</label>
+                  <select id="wizFiberType" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-cyan-500 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                    <option value="mmf">Multi-Mode Fiber (MMF / OM4, SR Optics, 850nm)</option>
+                    <option value="smf">Single-Mode Fiber (SMF / OS2, LR Optics, 1310nm)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- STEP 2: Physical Security Technical Defaults — Licensing Term, Video/VMS & Access Control -->
+        <div id="wizStepContent-2" class="hidden space-y-4">
+
+          <!-- Software Licensing & Support Term Card (Applies across VMS, ACS & Cloud Networking) -->
+          <div class="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <div class="w-7 h-7 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                <i data-lucide="calendar-clock" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-white">Software Licensing, Cloud &amp; Maintenance Support Term</h4>
+                <p class="text-[10px] text-slate-400">Drives Milestone Care Plus, Genetec Advantage, SaaS ACS, and Meraki Cloud license terms.</p>
+              </div>
+            </div>
+            <select id="wizLicensingTerm" onchange="updateWizardStateFromUI()" class="w-full sm:w-60 bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono shrink-0">
+              <option value="1YR">1-Year Term (1YR Support / Cloud)</option>
+              <option value="3YR">3-Year Term (3YR Multi-Year Support)</option>
+              <option value="5YR">5-Year Term (5YR Enterprise Support)</option>
+              <option value="Perpetual">Perpetual / Base Only (Min Support)</option>
+            </select>
+          </div>
+
+          <!-- Video Surveillance & VMS Defaults Card -->
           <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
               <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-lg bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-sky-400">
                   <i data-lucide="video" class="w-4 h-4"></i>
                 </div>
                 <div>
-                  <h4 class="text-xs font-bold text-white">Video Surveillance (VMS / CCTV)</h4>
-                  <p class="text-[10px] text-slate-400">IP cameras, recording servers, storage calculation, and edge analytics.</p>
+                  <h4 class="text-xs font-bold text-white">Video Surveillance, Camera Mode &amp; VMS Defaults</h4>
+                  <p class="text-[10px] text-slate-400">Camera design mode, VMS software platform/tier, retention target, failover, and approved camera brands.</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <span id="wizVmsScopeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
-                <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" id="wizVmsToggle" checked onchange="toggleVmsScope(this.checked)" class="sr-only peer" />
-                  <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-600"></div>
-                </label>
+                <span id="wizVmsStep2Badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">CAMERAS + VMS TURNKEY</span>
+                <button type="button" onclick="setProjectWizardStep(1)" class="text-[10px] text-brand-400 hover:text-brand-300 underline cursor-pointer">Edit Scope</button>
               </div>
             </div>
 
             <div id="wizVmsConfigContainer" class="pt-2 border-t border-slate-850 space-y-3 transition-opacity">
+              <!-- Camera Specification Workflow Mode -->
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">Camera Design &amp; Estimation Workflow Mode</label>
+                <input type="hidden" id="wizCameraDesignMode" value="generic" />
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <button type="button" id="wizCamModeCard-generic" onclick="selectWizardCameraDesignMode('generic')" class="text-left p-2.5 rounded-xl border border-emerald-500/60 bg-emerald-950/30 ring-1 ring-emerald-500/30 transition-all cursor-pointer">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        <span>Initial Design / ROM</span>
+                      </span>
+                      <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">Generic Types</span>
+                    </div>
+                    <p class="text-[10px] text-slate-300 leading-relaxed">Size PoE, licenses &amp; storage fast using Generic Camera Types (2MP–4K, 360°, Multi-Sensor, PTZ, LPR), then bulk-upgrade to exact SKUs later.</p>
+                  </button>
+                  <button type="button" id="wizCamModeCard-specific" onclick="selectWizardCameraDesignMode('specific')" class="text-left p-2.5 rounded-xl border border-slate-800 bg-slate-950/70 hover:border-slate-700 transition-all cursor-pointer">
+                    <div class="flex items-center justify-between mb-1">
+                      <span class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
+                        <span>Full Engineering Design</span>
+                      </span>
+                      <span class="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-300">Exact SKUs</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 leading-relaxed">Start directly with exact Axis, Hanwha, Avigilon, or Bosch camera models, mounting accessories, and analytics specs.</p>
+                  </button>
+                </div>
+              </div>
+
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">VMS Platform</label>
-                  <select id="wizVmsPlatform" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
-                    <option value="Milestone XProtect">Milestone XProtect</option>
-                    <option value="Genetec">Genetec (Omnicast)</option>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">VMS Software Platform</label>
+                  <select id="wizVmsPlatform" onchange="updateWizardVmsTierOptions(this.value)" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                    <option value="Milestone XProtect">Milestone XProtect (2026 R2 + Husky IVO)</option>
+                    <option value="Genetec">Genetec Security Center (Omnicast + Streamvault)</option>
                     <option value="Avigilon Unity">Avigilon Unity Video</option>
                     <option value="YourSix">YourSix (Cloud VMS)</option>
-                    <option value="Genetec SaaS">Genetec SaaS</option>
+                    <option value="Genetec SaaS">Genetec Security Center SaaS</option>
                   </select>
                 </div>
+                <div id="wizVmsEditionWrapper">
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default VMS Edition / Base Tier</label>
+                  <select id="wizVmsEditionTier" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                    <option value="auto">Auto-Select Optimal Tier by Camera Count &amp; Features</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="wizVmsStorageRow" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default Retention Target</label>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default Video Retention Target</label>
                   <select id="wizVmsRetention" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
-                    <option value="30">30 Days Continuous / Motion</option>
+                    <option value="14">14 Days Short-Term Retention</option>
+                    <option value="30" selected>30 Days Standard Enterprise</option>
                     <option value="60">60 Days Extended Retention</option>
                     <option value="90">90 Days Compliance Standard</option>
                     <option value="120">120 Days High-Security Archive</option>
+                    <option value="180">180 Days Semi-Annual Archive</option>
+                    <option value="365">365 Days 1-Year Full Archive</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">Recording Server Failover Architecture</label>
+                  <select id="wizVmsFailover" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors">
+                    <option value="none" selected>None — Standalone Recording Servers</option>
+                    <option value="dedicated">Dedicated Hot-Standby Failover Server (N+1)</option>
+                    <option value="ring">Distributed Peer / Ring Failover Buffer</option>
                   </select>
                 </div>
               </div>
 
               <div>
                 <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">
-                  Preferred Camera Manufacturers <span class="text-[10px] text-slate-400 font-normal">(Select all that apply)</span>
+                  Preferred Camera Manufacturers <span class="text-[10px] text-slate-400 font-normal">(Select all approved brands for this project)</span>
                 </label>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <label class="flex items-center gap-2 p-2 bg-slate-900 border border-slate-800 rounded-xl cursor-pointer hover:border-slate-700 transition-colors">
@@ -2159,21 +2401,190 @@
                 </div>
               </div>
 
-              <div class="pt-1">
-                <label class="flex items-start gap-2.5 cursor-pointer">
-                  <input type="checkbox" id="wizVmsPromptAnalytics" checked class="rounded border-slate-700 text-brand-600 focus:ring-0 mt-0.5" />
-                  <span class="text-xs text-slate-300">
-                    <strong class="text-white">Auto-Prompt Video Analytics:</strong> Automatically detect and configure AI object detection (DLPU / IVA Pro / NGVA) based on camera hardware capabilities when adding cameras.
-                  </span>
-                </label>
+              <label class="flex items-start gap-2.5 cursor-pointer pt-0.5">
+                <input type="checkbox" id="wizVmsPromptAnalytics" checked class="rounded border-slate-700 text-brand-600 focus:ring-0 mt-0.5" />
+                <span class="text-xs text-slate-300">
+                  <strong class="text-white">Auto-Prompt AI Video Analytics:</strong> Automatically detect and configure edge AI object detection (DLPU / IVA Pro / WiseAI) when adding capable cameras.
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Access Control Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <i data-lucide="door-closed" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Access Control System (ACS &amp; Door Hardware) Defaults</h4>
+                  <p class="text-[10px] text-slate-400">ACS host software, door controller architecture, Altronix power enclosures, and reader protocol.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="wizAcsStep2Badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                <button type="button" onclick="setProjectWizardStep(1)" class="text-[10px] text-brand-400 hover:text-brand-300 underline cursor-pointer">Edit Scope</button>
+              </div>
+            </div>
+
+            <div id="wizAcsConfigContainer" class="pt-2 border-t border-slate-850 grid grid-cols-1 sm:grid-cols-3 gap-3 transition-opacity">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">ACS Host Software</label>
+                <select id="wizAcsEngine" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none transition-colors">
+                  <option value="Genetec">Genetec (Synergis)</option>
+                  <option value="Milestone XProtect Access">Milestone XProtect Access</option>
+                  <option value="Milestone AXIS Secure Entry">Milestone AXIS Secure Entry</option>
+                  <option value="Genetec SaaS">Genetec SaaS (CloudLink)</option>
+                  <option value="LenelS2 OnGuard">LenelS2 OnGuard</option>
+                  <option value="Software House C•CURE 9000">Software House C•CURE 9000</option>
+                  <option value="Lenel Elements">Lenel Elements (Cloud)</option>
+                  <option value="Avigilon Alta">Avigilon Alta (Openpath)</option>
+                  <option value="Avigilon Unity">Avigilon Unity Access</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Door Controller Architecture</label>
+                <select id="wizAcsControllerVendor" class="w-full bg-slate-900 border border-slate-700 focus:border-emerald-500 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none transition-colors">
+                  <option value="mercury" selected>Mercury LP Series (LP1502 + Cloud Link + Trove2)</option>
+                  <option value="mercury_mp">Mercury MP Series (MP1502 Native SC 5.12.1+)</option>
+                  <option value="axis_pbg">Axis Powered by Genetec (A1610 Network Controller)</option>
+                  <option value="axis">Axis Network Controllers (A1001 / A1610 PoE+)</option>
+                  <option value="scl312">Synergis Cloud Link-312 (12x RS-485 Direct OSDP)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Card Reader Protocol</label>
+                <select id="wizAcsReaderProto" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-2.5 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                  <option value="osdp">OSDP v2 Encrypted (RS-485)</option>
+                  <option value="wiegand">Legacy Wiegand</option>
+                </select>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- STEP 3: Cabling, Termination & Infrastructure Standards -->
+        <!-- STEP 3: Active Network Switching, PoE Sizing & Network VLAN Architecture -->
         <div id="wizStepContent-3" class="hidden space-y-4">
-          
+
+          <!-- Active Network Switching & PoE Sizing Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <i data-lucide="network" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Active Network Switching, Routing &amp; PoE Headroom</h4>
+                  <p class="text-[10px] text-slate-400">PoE reserve engineering buffer and preferred switch vendors when switches are in Orion's scope.</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="wizNetStep3Badge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">IN SCOPE</span>
+                <button type="button" onclick="setProjectWizardStep(1)" class="text-[10px] text-brand-400 hover:text-brand-300 underline cursor-pointer">Edit Scope</button>
+              </div>
+            </div>
+
+            <div id="wizNetConfigContainer" class="pt-2 border-t border-slate-850 space-y-3 transition-opacity">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">PoE Power Sizing Engineering Buffer</label>
+                  <select id="wizPoeHeadroom" class="w-full bg-slate-900 border border-slate-700 focus:border-amber-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                    <option value="10">+10% PoE Reserve Buffer</option>
+                    <option value="15">+15% PoE Reserve Buffer</option>
+                    <option value="20" selected>+20% PoE Reserve Buffer (Orion Standard)</option>
+                    <option value="25">+25% PoE Reserve Buffer</option>
+                    <option value="30">+30% PoE Reserve Buffer (High Expansion)</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[11px] font-semibold text-slate-300 mb-1">
+                    Preferred Switch Brands <span class="text-[10px] text-slate-400 font-normal">(Leave empty for All)</span>
+                  </label>
+                  <div class="flex flex-wrap gap-1.5">
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-Meraki" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>Meraki</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-Cisco" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>Cisco</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-UniFi" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>UniFi</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-Ruckus" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>Ruckus</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-Juniper" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>Juniper</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-AlliedTelesis" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>Allied Telesis</span>
+                    </label>
+                    <label class="inline-flex items-center gap-1.5 px-2 py-1 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700 text-[11px] text-slate-200">
+                      <input type="checkbox" id="wizSwVendor-AMG" class="rounded border-slate-700 text-amber-500 focus:ring-0" />
+                      <span>AMG</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Network VLAN Architecture Card -->
+          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                  <i data-lucide="git-fork" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold text-white">Network VLAN &amp; Logical Segmentation Architecture</h4>
+                  <p class="text-[10px] text-slate-400">Default switch port tagging across Port Matrix, Cable Schedule &amp; Engineering Workbooks.</p>
+                </div>
+              </div>
+              <span id="wizVlanModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">NO VLANS (DEFAULT)</span>
+            </div>
+
+            <div class="pt-1 border-t border-slate-850 space-y-3">
+              <div>
+                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Project VLAN Mode</label>
+                <select id="wizVlanMode" onchange="toggleWizardVlanConfigUI(this.value); updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
+                  <option value="none" selected>No VLANs (Flat / Untagged Network — Default)</option>
+                  <option value="segmented">Segmented Security VLANs (802.1Q Tagged Subsystems)</option>
+                </select>
+              </div>
+
+              <div id="wizVlanSegmentGrid" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800/80">
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Camera (CCTV) VLAN</label>
+                  <input type="number" id="wizVlanCamera" value="20" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Access (ACS) VLAN</label>
+                  <input type="number" id="wizVlanAccess" value="30" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Voice / SIP VLAN</label>
+                  <input type="number" id="wizVlanVoice" value="40" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
+                </div>
+                <div>
+                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Compute / MGMT VLAN</label>
+                  <input type="number" id="wizVlanMgmt" value="99" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 4: Copper Cabling Standards, Colors & Per-Subsystem Overrides -->
+        <div id="wizStepContent-4" class="hidden space-y-4">
+
           <!-- Global Project Cable Standards (Baseline) -->
           <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
             <div class="flex items-center justify-between">
@@ -2277,22 +2688,26 @@
             </div>
           </div>
 
-          <!-- Device-Specific Cable Standards Matrix -->
-          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
+          <!-- Device-Specific Cable Standards Matrix (Collapsible Optional Overrides) -->
+          <details id="wizDeviceCablingAccordion" class="group rounded-xl bg-slate-950/70 border border-slate-800 overflow-hidden">
+            <summary class="p-4 flex items-center justify-between cursor-pointer select-none list-none hover:bg-slate-900/50 transition-colors">
               <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
                   <i data-lucide="layers" class="w-4 h-4"></i>
                 </div>
                 <div>
-                  <h4 class="text-xs font-bold text-white">Device-Specific Cabling Specifications</h4>
-                  <p class="text-[10px] text-slate-400">Tailor bulk field cable run color and rack patch cord color/length for each hardware subsystem.</p>
+                  <h4 class="text-xs font-bold text-white flex items-center gap-2">
+                    <span>Per-Subsystem Cable Color &amp; Length Overrides</span>
+                    <span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">OPTIONAL • 7 SUBSYSTEMS</span>
+                  </h4>
+                  <p class="text-[10px] text-slate-400">Expand to customize individual run/patch colors or lengths for Cameras, Access Control, Intercoms, Wireless, Data, Servers &amp; Uplinks.</p>
                 </div>
               </div>
-            </div>
+              <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform shrink-0"></i>
+            </summary>
 
             <!-- Subsystem Cabling Matrix -->
-            <div class="space-y-2 pt-1 border-t border-slate-850">
+            <div class="px-4 pb-4 space-y-2 pt-2 border-t border-slate-850">
               
               <!-- 1. Cameras -->
               <div class="p-2.5 bg-slate-900/90 border border-slate-800 rounded-xl grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center">
@@ -2540,111 +2955,92 @@
               </div>
 
             </div>
-          </div>
-
-          <!-- Inter-Rack Fiber Backbone Card -->
-          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
-                  <i data-lucide="spline" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <h4 class="text-xs font-bold text-white">Inter-Rack Fiber Backbone</h4>
-                  <p class="text-[10px] text-slate-400">Media and optical transceivers for campus/closet interconnects.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="pt-1 border-t border-slate-850">
-              <label class="block text-[11px] font-semibold text-slate-300 mb-1">Default Inter-Rack Fiber Specification</label>
-              <select id="wizFiberType" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
-                <option value="mmf">Multi-Mode Fiber (MMF / OM4, SR Optics, 850nm)</option>
-                <option value="smf">Single-Mode Fiber (SMF / OS2, LR Optics, 1310nm)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Network VLAN Architecture Card -->
-          <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-3">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <div class="w-7 h-7 rounded-lg bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                  <i data-lucide="network" class="w-4 h-4"></i>
-                </div>
-                <div>
-                  <h4 class="text-xs font-bold text-white">Network VLAN Architecture</h4>
-                  <p class="text-[10px] text-slate-400">Default switch port tagging and logical segmentation across Port Matrix, Cable Schedule &amp; Workbooks.</p>
-                </div>
-              </div>
-              <span id="wizVlanModeBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">NO VLANS (DEFAULT)</span>
-            </div>
-
-            <div class="pt-1 border-t border-slate-850 space-y-3">
-              <div>
-                <label class="block text-[11px] font-semibold text-slate-300 mb-1">Project VLAN Mode</label>
-                <select id="wizVlanMode" onchange="toggleWizardVlanConfigUI(this.value); updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-brand-500 rounded-xl px-3 py-2 text-xs text-white focus:outline-none transition-colors font-mono">
-                  <option value="none" selected>No VLANs (Flat / Untagged Network — Default)</option>
-                  <option value="segmented">Segmented Security VLANs (802.1Q Tagged Subsystems)</option>
-                </select>
-              </div>
-
-              <div id="wizVlanSegmentGrid" class="hidden grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 border-t border-slate-800/80">
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Camera (CCTV) VLAN</label>
-                  <input type="number" id="wizVlanCamera" value="20" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
-                </div>
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Access (ACS) VLAN</label>
-                  <input type="number" id="wizVlanAccess" value="30" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
-                </div>
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Voice / SIP VLAN</label>
-                  <input type="number" id="wizVlanVoice" value="40" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
-                </div>
-                <div>
-                  <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Compute / MGMT VLAN</label>
-                  <input type="number" id="wizVlanMgmt" value="99" min="1" max="4094" onchange="updateWizardStateFromUI()" class="w-full bg-slate-900 border border-slate-700 focus:border-indigo-500 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none" />
-                </div>
-              </div>
-            </div>
-          </div>
+          </details>
 
         </div>
 
       </div>
 
       <!-- Modal Footer -->
-      <div class="px-6 py-3.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0">
-        <div>
-          <button type="button" onclick="closeProjectWizardModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all border border-slate-700">
+      <div class="px-6 py-3.5 border-t border-slate-800 bg-slate-950/80 flex items-center justify-between gap-3 shrink-0 flex-wrap">
+        <div class="flex items-center gap-2.5">
+          <button type="button" onclick="closeProjectWizardModal()" class="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition-all border border-slate-700 cursor-pointer">
             Cancel
+          </button>
+          <button type="button" id="wizardQuickCreateBtn" onclick="quickCreateProjectWithDefaults()" class="text-[11px] text-slate-400 hover:text-emerald-300 underline decoration-slate-700 hover:decoration-emerald-400 underline-offset-4 px-1.5 py-1 transition-colors cursor-pointer" title="Save your Scope choices above and create the project immediately using Orion's standard technical defaults">
+            Create Now (Keep Standard Technical Defaults)
           </button>
         </div>
 
         <div class="flex items-center gap-2">
-          <button type="button" id="wizardQuickCreateBtn" onclick="quickCreateProjectWithDefaults()" class="px-3.5 py-2 bg-slate-800 hover:bg-amber-950/40 text-amber-300 hover:text-amber-200 border border-slate-700 hover:border-amber-700/60 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm" title="Quick create blank project using standard defaults">
-            <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
-            <span>Quick Create</span>
-          </button>
+          <span id="wizardStepCounter" class="hidden sm:inline text-[11px] font-mono text-slate-400 mr-1">Step 1 of 4</span>
 
-          <button type="button" id="wizardBackBtn" onclick="setProjectWizardStep(currentWizardStep - 1)" class="hidden px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700">
+          <button type="button" id="wizardBackBtn" onclick="setProjectWizardStep(currentWizardStep - 1)" class="hidden px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 cursor-pointer">
             <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
             <span>Back</span>
           </button>
 
-          <button type="button" id="wizardNextBtn" onclick="setProjectWizardStep(currentWizardStep + 1)" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-brand-500/20">
-            <span>Next: Subsystems & Scope</span>
+          <button type="button" id="wizardNextBtn" onclick="setProjectWizardStep(currentWizardStep + 1)" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-brand-500/20 cursor-pointer">
+            <span>Next: Video, VMS &amp; ACS</span>
             <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
           </button>
 
-          <button type="button" id="wizardSubmitBtn" onclick="submitProjectWizard()" class="hidden px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/25">
+          <button type="button" id="wizardSubmitBtn" onclick="submitProjectWizard()" class="hidden px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/25 cursor-pointer">
             <i data-lucide="rocket" class="w-3.5 h-3.5"></i>
-            <span>Create Blank Project</span>
+            <span>Create Project</span>
           </button>
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- Project Default Change / Scope Override Confirmation Modal -->
+  <div id="projectDefaultConfirmModal" style="z-index: 110;" class="hidden fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-150">
+    <div class="bg-slate-900 border border-amber-500/40 rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden">
+      <div class="px-5 py-3.5 border-b border-slate-800 bg-slate-950/80 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center text-amber-400 shrink-0">
+            <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 id="projDefConfirmTitle" class="text-sm font-bold text-white tracking-tight">Project Default Change Confirmation</h3>
+            <p id="projDefConfirmSetting" class="text-[10px] font-mono uppercase tracking-wider text-amber-300/90">Project Scope &amp; Technical Standards</p>
+          </div>
+        </div>
+        <button type="button" onclick="resolveProjectDefaultConfirm('cancel')" class="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-3.5 text-xs">
+        <p id="projDefConfirmMessage" class="text-slate-300 leading-relaxed">
+          Your Project Scope &amp; Defaults currently specify a different baseline setting. Are you sure you want to change it?
+        </p>
+
+        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Project Default</span>
+            <span id="projDefConfirmCurrentBadge" class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-amber-300 font-mono font-bold text-[11px] text-right">Current Default</span>
+          </div>
+          <div class="border-t border-slate-800/80 pt-2 flex items-center justify-between gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-emerald-400">New Selection</span>
+            <span id="projDefConfirmNewBadge" class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 font-mono font-bold text-[11px] text-right">Requested Value</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-950/80 flex flex-wrap items-center justify-end gap-2">
+        <button type="button" id="projDefConfirmCancelBtn" onclick="resolveProjectDefaultConfirm('cancel')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 rounded-xl text-xs font-semibold transition-all cursor-pointer">
+          Keep Default
+        </button>
+        <button type="button" id="projDefConfirmLocalBtn" onclick="resolveProjectDefaultConfirm('local')" class="hidden px-3 py-1.5 bg-indigo-950/80 hover:bg-indigo-900 text-indigo-200 hover:text-white border border-indigo-700/60 rounded-xl text-xs font-semibold transition-all cursor-pointer">
+          Override Here Only
+        </button>
+        <button type="button" id="projDefConfirmUpdateBtn" onclick="resolveProjectDefaultConfirm('update_default')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition-all cursor-pointer">
+          Update Project Default
+        </button>
+      </div>
     </div>
   </div>
 
@@ -3115,43 +3511,43 @@
   </div>
 
   <!-- Core Data Stores & Persistence -->
-  <script src="js/core/storage.js"></script>
-  <script src="js/core/facility.js"></script>
+  <script src="js/core/storage.js?v=0.11.0-beta.2"></script>
+  <script src="js/core/facility.js?v=0.11.0-beta.2"></script>
 
   <!-- Sizing & Filtering Engines -->
-  <script src="js/engines/device_taxonomy.js"></script>
-  <script src="js/engines/port_engine.js"></script>
-  <script src="js/engines/sizer_network.js"></script>
-  <script src="js/engines/search_filter.js"></script>
-  <script src="js/engines/global_search.js"></script>
+  <script src="js/engines/device_taxonomy.js?v=0.11.0-beta.2"></script>
+  <script src="js/engines/port_engine.js?v=0.11.0-beta.2"></script>
+  <script src="js/engines/sizer_network.js?v=0.11.0-beta.2"></script>
+  <script src="js/engines/search_filter.js?v=0.11.0-beta.2"></script>
+  <script src="js/engines/global_search.js?v=0.11.0-beta.2"></script>
 
   <!-- Presentation Renderers -->
-  <script src="js/renderers/render_compare.js"></script>
-  <script src="js/renderers/render_cards.js"></script>
-  <script src="js/renderers/render_sidebar.js"></script>
+  <script src="js/renderers/render_compare.js?v=0.11.0-beta.2"></script>
+  <script src="js/renderers/render_cards.js?v=0.11.0-beta.2"></script>
+  <script src="js/renderers/render_sidebar.js?v=0.11.0-beta.2"></script>
 
   <!-- Interactive Canvas Tools & Specialized Studios -->
-  <script src="js/tools/topology.js"></script>
-  <script src="js/tools/port_matrix.js"></script>
-  <script src="js/tools/physical_layout.js"></script>
-  <script src="js/tools/rack.js"></script>
-  <script src="js/tools/bom.js"></script>
-  <script src="js/tools/project_health.js"></script>
-  <script src="js/tools/project_wizard.js"></script>
-  <script src="js/tools/cable_schedule.js"></script>
-  <script src="js/tools/revisions.js"></script>
-  <script src="js/tools/submittal_generator.js"></script>
-  <script src="js/tools/walk_reconciliation.js"></script>
-  <script src="js/tools/engineering_workbook_export.js"></script>
+  <script src="js/tools/topology.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/port_matrix.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/physical_layout.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/rack.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/bom.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/project_health.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/project_wizard.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/cable_schedule.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/revisions.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/submittal_generator.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/walk_reconciliation.js?v=0.11.0-beta.2"></script>
+  <script src="js/tools/engineering_workbook_export.js?v=0.11.0-beta.2"></script>
 
   <!-- Master Application Orchestrator -->
-  <script src="js/core/app.js"></script>
+  <script src="js/core/app.js?v=0.11.0-beta.2"></script>
   
   <!-- Workspace Tab-Based Navigation Engine -->
-  <script src="js/core/tab_manager.js"></script>
+  <script src="js/core/tab_manager.js?v=0.11.0-beta.2"></script>
 
   <!-- Azure Static Web Apps Corporate Authentication & Domain Guard -->
-  <script src="js/core/auth.js"></script>
+  <script src="js/core/auth.js?v=0.11.0-beta.2"></script>
   
   <script>
     // Notify physical canvas when switching projects so blueprints reload

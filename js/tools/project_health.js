@@ -34,6 +34,26 @@ function auditProjectHealth() {
     if (it && it.instanceId) bomById.set(it.instanceId, it);
   });
 
+  // Project Scope & Division of Responsibility (DOR) Standards
+  const projDefaults = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : null;
+  const drcInfraScope = (typeof getProjectInfrastructureScope === "function")
+    ? getProjectInfrastructureScope()
+    : {
+        horizontalCopper: true,
+        rackPatchPanels: true,
+        patchCords: true,
+        fiberBackbone: true,
+        sfpAndDac: true,
+        wirelessBackhaul: true
+      };
+  const drcSwitchesInScope = projDefaults?.network?.switchesInScope !== false;
+  const drcPanelsInScope = drcInfraScope.rackPatchPanels !== false && projDefaults?.cabling?.rackTermination !== "direct_rj45";
+  const drcSfpDacInScope = drcInfraScope.sfpAndDac !== false;
+  const drcVmsEnabled = projDefaults?.vms?.enabled !== false;
+  const drcVmsHeadEndInScope = drcVmsEnabled && (projDefaults?.vms?.headEndInScope !== false);
+
   const safeJsArg = (val) => {
     if (typeof window.escapeJSAttr === "function") return window.escapeJSAttr(val);
     return String(val ?? "")
@@ -116,8 +136,8 @@ function auditProjectHealth() {
   stats.poeSupplyWatts = totalPoEAvailable;
   stats.poeDemandWatts = activeConnectedPoE;
 
-  // Global PoE capacity deficit
-  if (activeConnectedPoE > totalPoEAvailable) {
+  // Global PoE capacity deficit (only audited when Active Network Switching is in Orion Scope)
+  if (drcSwitchesInScope && activeConnectedPoE > totalPoEAvailable) {
     const deficitWatts = activeConnectedPoE - totalPoEAvailable;
     const poeRec = getContextAwarePoERecommendation();
     const closetShort = poeRec.targetCloset.split(' • ')[0];
@@ -132,7 +152,7 @@ function auditProjectHealth() {
       actionFn: "autoAddPoeSupplyOrSwitch()",
       badgeText: `-${deficitWatts}W SHORTFALL`
     });
-  } else if (totalPoEAvailable > 0 && activeConnectedPoE > (totalPoEAvailable * 0.9)) {
+  } else if (drcSwitchesInScope && totalPoEAvailable > 0 && activeConnectedPoE > (totalPoEAvailable * 0.9)) {
     const freeWatts = totalPoEAvailable - activeConnectedPoE;
     issues.push({
       id: "poe_headroom_warning",
@@ -253,7 +273,7 @@ function auditProjectHealth() {
         });
         stats.totalPatchPanelPorts += totalPanelPorts;
 
-        if (totalSwitchPorts < totalDrops) {
+        if (drcSwitchesInScope && totalSwitchPorts < totalDrops) {
           const deficit = totalDrops - totalSwitchPorts;
           issues.push({
             id: `closet_switch_deficit_${normLoc.replace(/[^a-zA-Z0-9]/g, '_')}`,
@@ -268,7 +288,7 @@ function auditProjectHealth() {
           });
         }
 
-        if (totalPanelPorts < totalDrops) {
+        if (drcPanelsInScope && totalPanelPorts < totalDrops) {
           const panelDeficit = totalDrops - totalPanelPorts;
           issues.push({
             id: `closet_panel_deficit_${normLoc.replace(/[^a-zA-Z0-9]/g, '_')}`,
@@ -348,7 +368,7 @@ function auditProjectHealth() {
     i.role === "Stacking Cable" || (i.role === "Optics & DAC" && (i.sku === "STACK-DAC-1M" || (i.model || '').includes("DAC")))
   ).reduce((acc, i) => acc + (i.qty || 1), 0);
 
-  if (requiredDACCables > 0 && existingDACCables < requiredDACCables) {
+  if (drcSfpDacInScope && requiredDACCables > 0 && existingDACCables < requiredDACCables) {
     const missingDAC = requiredDACCables - existingDACCables;
     issues.push({
       id: "missing_stack_dac",
@@ -380,6 +400,7 @@ function auditProjectHealth() {
     "XPCODL", "XPEXDL", "XPPPDL", "XPXPDL", "XPCOMIDL"
   ]);
   const isMilestoneActiveDrc = (typeof window !== "undefined" && (window.activeVmsLicensingVendor === "milestone" || window.videoVmsVendor === "milestone")) ||
+    String(projDefaults?.vms?.platform || "").toLowerCase().includes("milestone") ||
     projectBOM.some(i => !i.parentInstanceId && String(i.vendor || "").toLowerCase().includes("milestone"));
   const licenseItems = projectBOM.filter(i => {
     const sku = String(i.sku || "");
@@ -393,7 +414,7 @@ function auditProjectHealth() {
   const totalLicenses = licenseItems.reduce((acc, i) => acc + (i.qty || 1), 0);
   stats.totalLicenses = totalLicenses;
 
-  if (totalCameras > 0 && totalLicenses < totalCameras) {
+  if (drcVmsHeadEndInScope && totalCameras > 0 && totalLicenses < totalCameras) {
     const missingLic = totalCameras - totalLicenses;
     issues.push({
       id: "missing_licenses",
@@ -423,7 +444,7 @@ function auditProjectHealth() {
   if (typeof StorageService !== "undefined") {
     const defaults = StorageService.getProjectDefaults();
     if (defaults) {
-      const vmsEnabled = defaults.vms?.enabled !== false;
+      const vmsEnabled = defaults.vms?.enabled !== false && defaults.vms?.headEndInScope !== false;
       const acsEnabled = defaults.accessControl?.enabled !== false;
 
       if (vmsEnabled && totalCameras > 0) {

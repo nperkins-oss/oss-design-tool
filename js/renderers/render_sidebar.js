@@ -1434,7 +1434,8 @@ function buildCamerasSidebar(container, baseSet) {
         <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Camera Manufacturer</span>
         <div class="space-y-1.5">
           ${vendors.map(v => {
-            const count = baseSet.filter(c => (c.vendor || '').toLowerCase().includes(v.toLowerCase())).length;
+            const nv = v.toLowerCase().replace(/\s+security$/, '');
+            const count = baseSet.filter(c => (c.vendor || '').toLowerCase().replace(/\s+security$/, '').includes(nv)).length;
             const isChecked = camVendors.includes(v);
             return `
               <label class="flex items-center justify-between text-xs text-slate-300 cursor-pointer hover:text-white">

@@ -2312,7 +2312,53 @@ function setCableTool(tool) {
   }
 }
 
-function updateSelectedCableSpec(sku) {
+function updateSelectedCableSpec(sku, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  const normSpec = (s) => String(s || "").toUpperCase().replace(/-(YL|BL|WH|GN|OR|GY|BK|RD|PU)$/, "");
+  const specLabel = (s) => {
+    const n = normSpec(s);
+    if (n.includes("C6A-OUTDOOR")) return "Cat6A OSP Outdoor";
+    if (n.includes("C6A-CMR")) return "Cat6A F/UTP Riser (CMR)";
+    if (n.includes("C6-CMP")) return "Cat6 U/UTP Plenum (CMP)";
+    return "Cat6A F/UTP Plenum (CMP)";
+  };
+  const defCat = defs?.cabling?.standards?.defaultRunCategory || defs?.cabling?.horizontalCategories?.[0] || "C6A-CMP-1K-YL";
+  if (!skipConfirm && defs && normSpec(sku) !== normSpec(defCat) && normSpec(sku) !== normSpec(activeCableSku) && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const selEl = document.getElementById("cableTypeSelector");
+    confirmProjectDefaultChange({
+      title: "Change Baseline Horizontal Cable Category?",
+      settingLabel: "Horizontal Copper Cable Specification",
+      defaultLabel: specLabel(defCat),
+      newLabel: specLabel(sku),
+      message: `Your Project Default Baseline Run Category is set to "${specLabel(defCat)}". Are you sure you want to change the floorplan cable specification to "${specLabel(sku)}"?`,
+      allowLocalOverride: true,
+      localOverrideLabel: "Use on This Floorplan Only",
+      updateDefaultLabel: `Update Project Default to ${specLabel(sku)}`,
+      onLocalOverride: () => updateSelectedCableSpec(sku, true),
+      onUpdateDefault: () => {
+        const mappedDefaultSku = sku.endsWith("-BL") && (defs.cabling?.standards?.defaultRunColor || "Yellow") === "Yellow"
+          ? sku.replace(/-BL$/, "-YL")
+          : sku;
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => {
+            if (!d.cabling) d.cabling = {};
+            d.cabling.horizontalCategories = [mappedDefaultSku];
+            if (!d.cabling.standards) d.cabling.standards = {};
+            d.cabling.standards.defaultRunCategory = mappedDefaultSku;
+          });
+        }
+        updateSelectedCableSpec(sku, true);
+      },
+      onCancel: () => {
+        if (selEl) {
+          const curPrefix = normSpec(activeCableSku);
+          const matchOpt = Array.from(selEl.options).find(o => normSpec(o.value) === curPrefix);
+          if (matchOpt) selEl.value = matchOpt.value;
+        }
+      }
+    });
+    return;
+  }
   activeCableSku = sku;
   const label = document.getElementById("activeCableLabel");
   if (label && typeof CABLING_CATALOG !== "undefined") {
@@ -6222,7 +6268,7 @@ function renderCableCanvas() {
 function commitCablingToBOM(options = {}) {
   let grossFootage = 0;
   let totalDrops = 0;
-  const dropsByCloset = {}; // key: closetName -> { name, drops, footage, closetId }
+  const dropsByCloset = {}; // key: closetName -> { name, drops, footage, closetId, devices: [] }
 
   facilityFloors.forEach(fl => {
     (fl.nodes || []).filter(n => n.type === "device").forEach(dev => {
@@ -6233,15 +6279,16 @@ function commitCablingToBOM(options = {}) {
       const closetName = dev.assignedCloset || (dev.calculatedRun && dev.calculatedRun.closetName) || "MDF • Rack-1";
       const normalizedCloset = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(closetName) : closetName;
       if (!dropsByCloset[normalizedCloset]) {
-        dropsByCloset[normalizedCloset] = { name: normalizedCloset, drops: 0, footage: 0, closetId: dev.assignedClosetId || dev.closetId };
+        dropsByCloset[normalizedCloset] = { name: normalizedCloset, drops: 0, footage: 0, closetId: dev.assignedClosetId || dev.closetId, devices: [] };
       }
       dropsByCloset[normalizedCloset].drops++;
       dropsByCloset[normalizedCloset].footage += runFt;
+      dropsByCloset[normalizedCloset].devices.push(dev);
     });
   });
 
   const orderedFootage = Math.ceil(grossFootage * 1.15); // 15% slack & waste buffer
-  const spoolCount = Math.max(1, Math.ceil(orderedFootage / 1000));
+  const spoolCount = totalDrops > 0 ? Math.max(1, Math.ceil(orderedFootage / 1000)) : 0;
 
   const selectedCable = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.bulkCable?.find(c => c.sku === activeCableSku)) || {
     sku: activeCableSku,
@@ -6280,9 +6327,18 @@ function commitCablingToBOM(options = {}) {
     lengthMeters: 0.3
   };
 
+  const defaultCord3ft = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords?.find(c => c.lengthFt === 3)) || {
+    sku: "C6A-SLIM-3FT-BL",
+    name: "Cat6A Slim 28AWG 3-Foot Patch Cords (Field Equipment Whip)",
+    vendor: "Panduit",
+    msrp: 8.50,
+    lengthFt: 3,
+    lengthMeters: 1.0
+  };
+
   const defaultCord7ft = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords?.find(c => c.lengthFt === 7)) || {
     sku: "C6A-SLIM-7FT-BL",
-    name: "Cat6A Slim 28AWG 7-Foot Patch Cords (Field Device)",
+    name: "Cat6A Slim 28AWG 7-Foot Patch Cords (Workstation / Field Device)",
     vendor: "Panduit",
     msrp: 11.00,
     lengthFt: 7,
@@ -6290,118 +6346,165 @@ function commitCablingToBOM(options = {}) {
   };
 
   if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
-    // Preserve existing mounted patch panel slots per closet so re-generated panels keep their rack positions
+    // Preserve existing mounted cabling_sync patch panel slots per closet so re-generated panels keep their rack positions
     const existingMountedPanelsByCloset = {};
     projectBOM.forEach(i => {
-      if ((i.role === "Structured Cabling" || i.category === "cabling") && (i.model || '').includes("Patch Panel") && i.rackSlot) {
+      if (i.source === "cabling_sync" && (i.model || '').includes("Patch Panel") && i.rackSlot) {
         const c = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId);
         if (!existingMountedPanelsByCloset[c]) existingMountedPanelsByCloset[c] = [];
         existingMountedPanelsByCloset[c].push(i.rackSlot);
       }
     });
 
-    // 1. Remove previously committed structured cabling items in-place
+    // 1. Remove ONLY previously committed cabling_sync items (preserve switch_standard_pod, stack_patch_panel, topology_auto_sync, and manual rack passives)
     for (let i = projectBOM.length - 1; i >= 0; i--) {
-      if (projectBOM[i].role === "Structured Cabling" || projectBOM[i].source === "cabling_sync") {
+      if (projectBOM[i].source === "cabling_sync") {
         projectBOM.splice(i, 1);
       }
     }
+
+    const infraScope = (typeof getProjectInfrastructureScope === "function")
+      ? getProjectInfrastructureScope()
+      : { horizontalCabling: true, rackPatchPanels: true, patchCords: true, fiberBackbone: true, sfpAndDac: true };
 
     // Determine primary closet for bulk spools
     const closetKeys = Object.keys(dropsByCloset);
     const primaryCloset = closetKeys.find(k => k.toLowerCase().includes("mdf")) || closetKeys[0] || "MDF • Rack-1";
 
-    // 2. Add Bulk Cable Spools (Allocated to primary MDF or bulk pool)
-    projectBOM.push({
-      instanceId: `spool-${Date.now()}`,
-      id: selectedCable.sku,
-      model: `${selectedCable.name} (${spoolCount}x 1,000' Spools for ${grossFootage.toLocaleString()} ft run)`,
-      sku: selectedCable.sku,
-      role: "Structured Cabling",
-      vendor: selectedCable.vendor,
-      msrp: selectedCable.msrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      qty: spoolCount,
-      closetName: primaryCloset,
-      rackId: primaryCloset,
-      rackSlot: null,
-      source: "cabling_sync"
-    });
+    // 2. Add Bulk Cable Spools (Allocated to primary MDF or bulk pool) — gated by infraScope.horizontalCabling
+    if (spoolCount > 0 && infraScope.horizontalCabling !== false) {
+      projectBOM.push({
+        instanceId: `spool-${Date.now()}`,
+        id: selectedCable.sku,
+        model: `${selectedCable.name} (${spoolCount}x 1,000' Spools for ${grossFootage.toLocaleString()} ft run)`,
+        sku: selectedCable.sku,
+        role: "Structured Cabling",
+        vendor: selectedCable.vendor,
+        msrp: selectedCable.msrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        qty: spoolCount,
+        closetName: primaryCloset,
+        rackId: primaryCloset,
+        rackSlot: null,
+        source: "cabling_sync"
+      });
+    }
 
-    // 3. For each telecom closet with drops, allocate dedicated patch panels, keystone packs, and patch cords
+    // 3. For each telecom closet with drops, allocate net patch panels, keystone packs (rack + field), and color-matched patch cords
     Object.values(dropsByCloset).forEach((cd, idx) => {
       const closetDropsCount = cd.drops;
       if (closetDropsCount === 0) return;
 
-      const p48 = Math.floor(closetDropsCount / 48);
-      const rem = closetDropsCount % 48;
-      const p24 = rem > 0 ? (rem <= 24 ? 1 : 2) : (closetDropsCount === 0 ? 0 : 0);
-      const keystonePacks = Math.ceil(closetDropsCount / 24);
+      const normLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cd.name) : cd.name;
 
-      if (p48 > 0) {
-        projectBOM.push({
-          instanceId: `pp48-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
-          id: defaultPanel48.sku,
-          model: defaultPanel48.name,
-          sku: defaultPanel48.sku,
-          role: "Structured Cabling",
-          vendor: defaultPanel48.vendor,
-          msrp: defaultPanel48.msrp,
-          poeBudget: 0,
-          baseWatts: 0,
-          rackUnits: 2,
-          qty: p48,
-          closetName: cd.name,
-          rackId: cd.name,
-          rackSlot: (existingMountedPanelsByCloset[cd.name]?.length > 0) ? existingMountedPanelsByCloset[cd.name].shift() : null,
-          source: "cabling_sync"
-        });
-      }
+      // Deduct copper patch panel capacity already provided in this closet by Standard Switch Pods, Stack Panels, or Manual Rack Passives
+      let existingPanelCapacity = 0;
+      let existingPodKeystoneCount = 0;
+      let existingPodPatchCordsCount = 0;
 
-      if (p24 > 0 || (p48 === 0 && closetDropsCount > 0)) {
-        const qty24 = p24 > 0 ? p24 : 1;
-        projectBOM.push({
-          instanceId: `pp24-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
-          id: defaultPanel24.sku,
-          model: defaultPanel24.name,
-          sku: defaultPanel24.sku,
-          role: "Structured Cabling",
-          vendor: defaultPanel24.vendor,
-          msrp: defaultPanel24.msrp,
-          poeBudget: 0,
-          baseWatts: 0,
-          rackUnits: 1,
-          qty: qty24,
-          closetName: cd.name,
-          rackId: cd.name,
-          rackSlot: (existingMountedPanelsByCloset[cd.name]?.length > 0) ? existingMountedPanelsByCloset[cd.name].shift() : null,
-          source: "cabling_sync"
-        });
-      }
+      projectBOM.forEach(item => {
+        if (item.source === "cabling_sync") return;
+        const itemLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(item.closetName || item.rackId) : (item.closetName || item.rackId);
+        if (itemLoc !== normLoc) return;
 
-      // Keystone packs for this closet
-      projectBOM.push({
-        instanceId: `jacks-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
-        id: defaultJack.sku,
-        model: defaultJack.name,
-        sku: defaultJack.sku,
-        role: "Structured Cabling",
-        vendor: defaultJack.vendor,
-        msrp: defaultJack.msrp,
-        poeBudget: 0,
-        baseWatts: 0,
-        qty: keystonePacks,
-        closetName: cd.name,
-        rackId: cd.name,
-        rackSlot: null,
-        source: "cabling_sync"
+        const qty = item.qty || 1;
+        const sku = (item.sku || item.id || "").toUpperCase();
+        const model = (item.model || "").toLowerCase();
+
+        // Copper patch panels (exclude Fiber LIU)
+        if ((sku.includes("PP-") || model.includes("patch panel")) && !sku.includes("BLANK") && !sku.includes("LIU") && !model.includes("fiber")) {
+          const portsPerUnit = Number(item.ports) || (sku.includes("48") || model.includes("48-port") ? 48 : 24);
+          existingPanelCapacity += portsPerUnit * qty;
+        }
+        // Keystone jack 24-packs already provided by Standard Switch Pods
+        if (sku === "C6A-KEY-SLD-24" || model.includes("keystone jacks")) {
+          existingPodKeystoneCount += 24 * qty;
+        }
+        // Headend patch cords already provided by Standard Switch Pods
+        if (item.source === "switch_standard_pod" && (sku.includes("SLIM") || model.includes("patch cord"))) {
+          existingPodPatchCordsCount += qty;
+        }
       });
 
-      // Dynamic switch-to-panel patch cord calculation based on U-separation in this closet
-      let closetPatchCord = defaultCord1ft;
+      const netPanelDropsNeeded = Math.max(0, closetDropsCount - existingPanelCapacity);
+      const p48 = Math.floor(netPanelDropsNeeded / 48);
+      const rem = netPanelDropsNeeded % 48;
+      const p24 = rem > 0 ? (rem <= 24 ? 1 : 2) : 0;
+
+      if (infraScope.rackPatchPanels !== false) {
+        if (p48 > 0) {
+          projectBOM.push({
+            instanceId: `pp48-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+            id: defaultPanel48.sku,
+            model: defaultPanel48.name,
+            sku: defaultPanel48.sku,
+            role: "Structured Cabling",
+            vendor: defaultPanel48.vendor,
+            msrp: defaultPanel48.msrp,
+            ports: 48,
+            poeBudget: 0,
+            baseWatts: 0,
+            rackUnits: 2,
+            qty: p48,
+            closetName: cd.name,
+            rackId: cd.name,
+            rackSlot: (existingMountedPanelsByCloset[cd.name]?.length > 0) ? existingMountedPanelsByCloset[cd.name].shift() : null,
+            source: "cabling_sync"
+          });
+        }
+
+        if (p24 > 0) {
+          projectBOM.push({
+            instanceId: `pp24-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+            id: defaultPanel24.sku,
+            model: defaultPanel24.name,
+            sku: defaultPanel24.sku,
+            role: "Structured Cabling",
+            vendor: defaultPanel24.vendor,
+            msrp: defaultPanel24.msrp,
+            ports: 24,
+            poeBudget: 0,
+            baseWatts: 0,
+            rackUnits: 1,
+            qty: p24,
+            closetName: cd.name,
+            rackId: cd.name,
+            rackSlot: (existingMountedPanelsByCloset[cd.name]?.length > 0) ? existingMountedPanelsByCloset[cd.name].shift() : null,
+            source: "cabling_sync"
+          });
+        }
+
+        // Keystone jacks: 2 per horizontal drop (1 at rack patch panel + 1 at field biscuit/surface-mount box), minus any pod headend keystones
+        const totalKeystonesRequired = closetDropsCount * (infraScope.horizontalCabling !== false ? 2 : 1);
+        const netKeystonesNeeded = Math.max(0, totalKeystonesRequired - existingPodKeystoneCount);
+        const keystonePacks = Math.ceil(netKeystonesNeeded / 24);
+
+        if (keystonePacks > 0) {
+          projectBOM.push({
+            instanceId: `jacks-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
+            id: defaultJack.sku,
+            model: `${defaultJack.name} (Headend Patch Panel + Field Biscuit Terminations)`,
+            sku: defaultJack.sku,
+            role: "Structured Cabling",
+            vendor: defaultJack.vendor,
+            msrp: defaultJack.msrp,
+            poeBudget: 0,
+            baseWatts: 0,
+            qty: keystonePacks,
+            closetName: cd.name,
+            rackId: cd.name,
+            rackSlot: null,
+            source: "cabling_sync"
+          });
+        }
+      }
+
+      // Dynamic switch-to-panel patch cord length calculation based on U-separation in this closet
       let closetUDiff = 1;
-      const normLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(cd.name) : cd.name;
+      let targetHeadendLengthFt = 1;
+      let targetHeadendLengthMeters = 0.3;
+
       const closetSwitches = projectBOM.filter(i => 
         (typeof isNetworkSwitchItem === "function" ? isNetworkSwitchItem(i) : (i.role === "Access" || (i.model || '').includes("Switch"))) &&
         ((typeof FacilityStore !== "undefined" ? FacilityStore.normalize(i.closetName || i.rackId) : (i.closetName || i.rackId)) === normLoc) &&
@@ -6414,7 +6517,7 @@ function commitCablingToBOM(options = {}) {
         (typeof parseRackU === "function" ? parseRackU(i.rackSlot) !== null : i.rackSlot)
       );
 
-      if (closetSwitches.length > 0 && closetPanels.length > 0 && typeof getPatchCordLengthForUDiff === "function" && typeof findPatchCordItem === "function") {
+      if (closetSwitches.length > 0 && closetPanels.length > 0 && typeof getPatchCordLengthForUDiff === "function") {
         const uDiffs = [];
         closetSwitches.forEach(sw => {
           const swU = parseRackU(sw.rackSlot);
@@ -6433,97 +6536,144 @@ function commitCablingToBOM(options = {}) {
         if (uDiffs.length > 0) {
           closetUDiff = Math.round(uDiffs.reduce((a, b) => a + b, 0) / uDiffs.length);
           const cordSpec = getPatchCordLengthForUDiff(closetUDiff);
-          const matched = findPatchCordItem(cordSpec.lengthFt, "Panduit");
-          if (matched) {
-            closetPatchCord = {
-              sku: matched.sku,
-              name: `${matched.name} (${closetUDiff}U Separation)`,
-              vendor: matched.vendor || "Panduit",
-              msrp: matched.msrp,
-              lengthFt: cordSpec.lengthFt,
-              lengthMeters: cordSpec.lengthMeters
-            };
-          }
+          targetHeadendLengthFt = cordSpec.lengthFt;
+          targetHeadendLengthMeters = cordSpec.lengthMeters;
         }
       }
 
-      // Patch cords for this closet (dynamic switch-to-panel + 7ft field end)
-      projectBOM.push({
-        instanceId: `patch1ft-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
-        id: closetPatchCord.sku,
-        model: closetPatchCord.name,
-        sku: closetPatchCord.sku,
-        role: "Structured Cabling",
-        vendor: closetPatchCord.vendor,
-        msrp: closetPatchCord.msrp,
-        poeBudget: 0,
-        baseWatts: 0,
-        qty: closetDropsCount,
-        closetName: cd.name,
-        rackId: cd.name,
-        rackSlot: null,
-        source: "cabling_sync",
-        lengthFt: closetPatchCord.lengthFt || 1,
-        lengthMeters: closetPatchCord.lengthMeters || 0.3,
-        uDiff: closetUDiff
+      // Group closet devices by Orion color standard and field cord length (3ft whip for security/wireless, 7ft for workstations)
+      const headendColorCounts = {};
+      const fieldCordBuckets = {}; // key: `${lengthFt}_${colorName}` -> { lengthFt, colorName, count }
+
+      (cd.devices || []).forEach(dev => {
+        let colorName = "Yellow";
+        if (typeof getProjectCablingStandard === "function") {
+          const std = getProjectCablingStandard(dev, "patch");
+          if (std && (std.color || std.name)) colorName = std.color || std.name;
+        }
+        headendColorCounts[colorName] = (headendColorCounts[colorName] || 0) + 1;
+
+        const cat = (dev.category || dev.role || dev.type || "").toLowerCase();
+        const isWorkstationOrData = cat.includes("workstation") || cat.includes("data") || cat.includes("voip") || cat.includes("phone") || cat.includes("printer");
+        const fieldLengthFt = isWorkstationOrData ? 7 : 3;
+        const bucketKey = `${fieldLengthFt}_${colorName}`;
+        if (!fieldCordBuckets[bucketKey]) {
+          fieldCordBuckets[bucketKey] = { lengthFt: fieldLengthFt, colorName, count: 0 };
+        }
+        fieldCordBuckets[bucketKey].count++;
       });
 
-      projectBOM.push({
-        instanceId: `patch7ft-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
-        id: defaultCord7ft.sku,
-        model: defaultCord7ft.name,
-        sku: defaultCord7ft.sku,
-        role: "Structured Cabling",
-        vendor: defaultCord7ft.vendor,
-        msrp: defaultCord7ft.msrp,
-        poeBudget: 0,
-        baseWatts: 0,
-        qty: closetDropsCount,
-        closetName: cd.name,
-        rackId: cd.name,
-        rackSlot: null,
-        source: "cabling_sync"
-      });
+      if (infraScope.patchCords !== false) {
+        // Deduct headend patch cords already provided by Standard Switch Pods in this closet
+        let remainingPodDeduct = existingPodPatchCordsCount;
+        Object.entries(headendColorCounts).forEach(([colorName, count]) => {
+          const deduct = Math.min(count, remainingPodDeduct);
+          remainingPodDeduct -= deduct;
+          const netCount = count - deduct;
+          if (netCount <= 0) return;
+
+          const matchedHeadend = (typeof findPatchCordItem === "function")
+            ? findPatchCordItem(targetHeadendLengthFt, "Panduit", false, colorName)
+            : defaultCord1ft;
+          const cordObj = matchedHeadend || defaultCord1ft;
+
+          projectBOM.push({
+            instanceId: `patch-headend-${cd.name.replace(/\W+/g, '_')}-${colorName.replace(/\W+/g, '')}-${Date.now()}-${idx}`,
+            id: cordObj.sku,
+            model: `${cordObj.name} (${colorName} — Headend Switch-to-Panel, ${closetUDiff}U Separation)`,
+            sku: cordObj.sku,
+            role: "Structured Cabling",
+            vendor: cordObj.vendor || "Panduit",
+            msrp: cordObj.msrp,
+            poeBudget: 0,
+            baseWatts: 0,
+            qty: netCount,
+            closetName: cd.name,
+            rackId: cd.name,
+            rackSlot: null,
+            source: "cabling_sync",
+            lengthFt: targetHeadendLengthFt,
+            lengthMeters: targetHeadendLengthMeters,
+            uDiff: closetUDiff
+          });
+        });
+
+        // Add Field-End Equipment Patch Cords (3ft for cameras/readers/APs/intercoms, 7ft for workstations), color-coded
+        Object.values(fieldCordBuckets).forEach(bucket => {
+          if (bucket.count <= 0) return;
+          const fallbackCord = bucket.lengthFt === 3 ? defaultCord3ft : defaultCord7ft;
+          const matchedField = (typeof findPatchCordItem === "function")
+            ? findPatchCordItem(bucket.lengthFt, "Panduit", false, bucket.colorName)
+            : fallbackCord;
+          const cordObj = matchedField || fallbackCord;
+          const whipRoleDesc = bucket.lengthFt === 3 ? "Field Device Equipment Whip" : "Field Workstation Cord";
+
+          projectBOM.push({
+            instanceId: `patch-field-${cd.name.replace(/\W+/g, '_')}-${bucket.lengthFt}ft-${bucket.colorName.replace(/\W+/g, '')}-${Date.now()}-${idx}`,
+            id: cordObj.sku,
+            model: `${cordObj.name} (${bucket.colorName} — ${whipRoleDesc})`,
+            sku: cordObj.sku,
+            role: "Structured Cabling",
+            vendor: cordObj.vendor || "Panduit",
+            msrp: cordObj.msrp,
+            poeBudget: 0,
+            baseWatts: 0,
+            qty: bucket.count,
+            closetName: cd.name,
+            rackId: cd.name,
+            rackSlot: null,
+            source: "cabling_sync",
+            lengthFt: bucket.lengthFt
+          });
+        });
+      }
     });
 
-    // 4. Fiber Trunks between closets
-    facilityFloors.forEach(fl => {
-      (fl.fiberBackbones || []).forEach(fb => {
-        const fType = (fb.fiberType || (typeof getProjectFiberType === "function" ? getProjectFiberType() : "mmf")).toLowerCase();
-        const strands = parseInt(fb.strandCount) || 12;
-        const catalogList = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.fiberBackbone) ? CABLING_CATALOG.fiberBackbone : [];
-        const trunkItem = catalogList.find(i => i.medium === fType && i.strands === strands) ||
-          catalogList.find(i => i.medium === fType) ||
-          catalogList[0] || {
-            sku: fType === "smf" ? "FIBER-OS2-12STRAND" : "FIBER-OM4-12STRAND",
-            name: `${strands}-Strand ${fType === "smf" ? "OS2 Single-Mode" : "OM4 Multi-Mode"} Armored Pre-Term LC Fiber Trunk Assembly`,
-            msrpPerFt: fType === "smf" ? 2.60 : 2.45,
-            baseTerminationMsrp: 280
-          };
+    // 4. Fiber Trunks between closets — gated by infraScope.fiberBackbone
+    if (infraScope.fiberBackbone !== false) {
+      facilityFloors.forEach(fl => {
+        (fl.fiberBackbones || []).forEach(fb => {
+          const fType = (fb.fiberType || (typeof getProjectFiberType === "function" ? getProjectFiberType() : "mmf")).toLowerCase();
+          const strands = parseInt(fb.strandCount) || 12;
+          const catalogList = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.fiberBackbone) ? CABLING_CATALOG.fiberBackbone : [];
+          const trunkItem = catalogList.find(i => i.medium === fType && i.strands === strands) ||
+            catalogList.find(i => i.medium === fType) ||
+            catalogList[0] || {
+              sku: fType === "smf" ? "FIBER-OS2-12STRAND" : "FIBER-OM4-12STRAND",
+              name: `${strands}-Strand ${fType === "smf" ? "OS2 Single-Mode" : "OM4 Multi-Mode"} Armored Pre-Term LC Fiber Trunk Assembly`,
+              msrpPerFt: fType === "smf" ? 2.60 : 2.45,
+              baseTerminationMsrp: 280
+            };
 
-        const trunkPrice = Math.round((fb.totalFt * trunkItem.msrpPerFt) + trunkItem.baseTerminationMsrp);
-        const fromName = fb.fromClosetName || "MDF";
-        const toName = fb.toClosetName || "IDF-1";
-        const ratingLabel = (fb.rating || "plenum").toUpperCase();
+          const trunkPrice = Math.round((fb.totalFt * trunkItem.msrpPerFt) + trunkItem.baseTerminationMsrp);
+          const fromName = fb.fromClosetName || "MDF";
+          const toName = fb.toClosetName || "IDF-1";
+          const ratingLabel = (fb.rating || "plenum").toUpperCase();
 
-        projectBOM.push({
-          instanceId: `trunk-${fb.id || Date.now()}`,
-          id: trunkItem.sku,
-          model: `${trunkItem.name} (${fromName} to ${toName}, ${fb.totalFt} ft, ${ratingLabel})`,
-          sku: trunkItem.sku,
-          role: "Structured Cabling",
-          vendor: "Corning / Panduit",
-          msrp: trunkPrice,
-          poeBudget: 0,
-          baseWatts: 0,
-          qty: 1,
-          closetName: fromName,
-          rackId: fromName,
-          rackSlot: null,
-          source: "cabling_sync"
+          projectBOM.push({
+            instanceId: `trunk-${fb.id || Date.now()}`,
+            id: trunkItem.sku,
+            model: `${trunkItem.name} (${fromName} to ${toName}, ${fb.totalFt} ft, ${ratingLabel})`,
+            sku: trunkItem.sku,
+            role: "Structured Cabling",
+            vendor: "Corning / Panduit",
+            msrp: trunkPrice,
+            poeBudget: 0,
+            baseWatts: 0,
+            qty: 1,
+            closetName: fromName,
+            rackId: fromName,
+            rackSlot: null,
+            source: "cabling_sync"
+          });
         });
       });
-    });
+    }
+  }
+
+  // Keep Fiber LIUs & Interconnects synchronized with floorplan fiber backbones
+  if (typeof autoSynthesizeInterconnects === "function") {
+    autoSynthesizeInterconnects(true);
   }
 
   if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {

@@ -5,8 +5,8 @@
 // =========================================================================
 
 // Version & Build Information (Single Source of Truth — synced via scripts/bump_version.py)
-const APP_VERSION = "0.11.0-beta.1";
-const BUILD_NUMBER = "2026.10.13.1230";
+const APP_VERSION = "0.11.0-beta.2";
+const BUILD_NUMBER = "2026.10.29.1413";
 const SCHEMA_VERSION = "2.1.0";
 
 function getAppEnvironment() {
@@ -112,18 +112,53 @@ function setPoeCalcTargetLocation(loc) {
 }
 window.setPoeCalcTargetLocation = setPoeCalcTargetLocation;
 
-function setCameraDesignMode(mode) {
+function setCameraDesignMode(mode, skipConfirm = false) {
   const normalized = mode === "specific" ? "specific" : "generic";
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : null;
+  const defCamMode = defs?.vms?.cameraDesignMode === "specific" ? "specific" : "generic";
+  const labelForMode = (m) => m === "specific"
+    ? "Full Engineering Design (Exact Catalog SKUs)"
+    : "Initial Design / ROM (Generic Camera Types)";
+
+  if (!skipConfirm && defs && normalized !== cameraDesignMode && normalized !== defCamMode && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    confirmProjectDefaultChange({
+      title: "Switch Camera Design Workflow Mode?",
+      settingLabel: "Camera Specification & Estimation Mode",
+      defaultLabel: labelForMode(defCamMode),
+      newLabel: labelForMode(normalized),
+      message: `Your Project Default Camera Design Mode is set to "${labelForMode(defCamMode)}". Are you sure you want to switch to "${labelForMode(normalized)}"?`,
+      allowLocalOverride: true,
+      localOverrideLabel: "Switch Session View Only",
+      updateDefaultLabel: `Switch & Update Project Default`,
+      onLocalOverride: () => setCameraDesignMode(normalized, true),
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.cameraDesignMode = normalized; });
+        }
+        setCameraDesignMode(normalized, true);
+      },
+      onCancel: () => renderGlobalDesignModeToggle()
+    });
+    return;
+  }
+
   cameraDesignMode = normalized;
   window.cameraDesignMode = normalized;
 
   if (normalized === "generic") {
     selectedCamVendors = [];
+    window.selectedCamVendors = [];
     requireCamAnalytics = false;
     requireCamVandal = false;
     requireCamTaa = false;
     poeCalcInputMode = "camera_types";
     window.poeCalcInputMode = "camera_types";
+  } else if (defs && Array.isArray(defs.vms?.cameraVendors) && defs.vms.cameraVendors.length > 0 && selectedCamVendors.length === 0) {
+    const normFn = typeof normalizeCameraVendorName === "function" ? normalizeCameraVendorName : (v) => v;
+    selectedCamVendors = defs.vms.cameraVendors.map(normFn);
+    window.selectedCamVendors = [...selectedCamVendors];
   }
 
   renderGlobalDesignModeToggle();
@@ -1315,8 +1350,38 @@ function deriveDemandFromBOM(silent = false) {
   }
 }
 
-function updateHeadroom(val) {
-  extraHeadroomPercent = parseInt(val, 10) || 20;
+function updateHeadroom(val, skipConfirm = false) {
+  const targetHr = parseInt(val, 10) || 20;
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? StorageService.getProjectDefaults()
+    : null;
+  const defHr = parseInt(defs?.network?.poeHeadroomPercent, 10) || 20;
+
+  if (!skipConfirm && defs && targetHr !== extraHeadroomPercent && targetHr !== defHr && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    confirmProjectDefaultChange({
+      title: "Change PoE Power Sizing Reserve Buffer?",
+      settingLabel: "PoE Engineering Reserve Buffer",
+      defaultLabel: `+${defHr}% Buffer`,
+      newLabel: `+${targetHr}% Buffer`,
+      message: `Your Project Default PoE Power Reserve Buffer is set to +${defHr}%. Are you sure you want to change it to +${targetHr}%?`,
+      allowLocalOverride: true,
+      localOverrideLabel: `Use +${targetHr}% Here Only`,
+      updateDefaultLabel: `Update Project Default to +${targetHr}%`,
+      onLocalOverride: () => updateHeadroom(targetHr, true),
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.network) d.network = {}; d.network.poeHeadroomPercent = targetHr; });
+        }
+        updateHeadroom(targetHr, true);
+      },
+      onCancel: () => buildCalculatorStrip()
+    });
+    return;
+  }
+
+  extraHeadroomPercent = targetHr;
+  window.extraHeadroomPercent = targetHr;
+  if (typeof AppState !== "undefined" && AppState) AppState.extraHeadroomPercent = targetHr;
   buildCalculatorStrip();
   runActiveFilter();
   if (typeof FacilityStore !== "undefined") FacilityStore.notifyWorkspaceChange();
@@ -3329,7 +3394,87 @@ function renderStorageCalculatorStudioHtml(isFullStudio = true) {
 }
 window.renderStorageCalculatorStudioHtml = renderStorageCalculatorStudioHtml;
 
-function setVideoSizerParam(key, val) {
+function setVideoSizerParam(key, val, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    if (key === "retentionDays") {
+      const defRet = parseInt(defs.vms?.retentionDays, 10) || 30;
+      const newRet = parseInt(val, 10) || 30;
+      if (newRet !== defRet && newRet !== videoRetentionDays) {
+        confirmProjectDefaultChange({
+          title: "Change Video Retention Target?",
+          settingLabel: "VMS Default Retention Target",
+          defaultLabel: `${defRet} Days`,
+          newLabel: `${newRet} Days`,
+          message: `Your Project Default Retention Target is set to ${defRet} Days. Are you sure you want to change it to ${newRet} Days?`,
+          allowLocalOverride: true,
+          localOverrideLabel: `Override in Sizer (${newRet}D)`,
+          updateDefaultLabel: `Update Project Default to ${newRet}D`,
+          onLocalOverride: () => setVideoSizerParam(key, newRet, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.retentionDays = newRet; });
+            }
+            setVideoSizerParam(key, newRet, true);
+          },
+          onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+        });
+        return;
+      }
+    } else if (key === "vmsVendor") {
+      const cleanVal = ["genetec", "milestone", "generic"].includes(val) ? val : "genetec";
+      const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+      if (cleanVal !== defVendor && cleanVal !== videoVmsVendor) {
+        const defLbl = defs.vms?.platform || (typeof mapVmsVendorToPlatformLabel === "function" ? mapVmsVendorToPlatformLabel(defVendor) : defVendor);
+        const newLbl = typeof mapVmsVendorToPlatformLabel === "function" ? mapVmsVendorToPlatformLabel(cleanVal) : cleanVal;
+        confirmProjectDefaultChange({
+          title: "Change VMS Platform & Appliance Ecosystem?",
+          settingLabel: "VMS Platform & Recording Server Profile",
+          defaultLabel: defLbl,
+          newLabel: newLbl,
+          message: `Your Project Default VMS Platform is set to "${defLbl}". Are you sure you want to switch to "${newLbl}"?`,
+          allowLocalOverride: true,
+          localOverrideLabel: `Compare ${newLbl} Here Only`,
+          updateDefaultLabel: `Update Project Default to ${newLbl}`,
+          onLocalOverride: () => setVideoSizerParam(key, cleanVal, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = newLbl; }, true);
+            } else {
+              setVideoSizerParam(key, cleanVal, true);
+            }
+          },
+          onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+        });
+        return;
+      }
+    } else if (key === "failoverStructure") {
+      const normVal = ["none", "ring", "dedicated"].includes(val) ? val : "none";
+      const defFail = ["none", "ring", "dedicated"].includes(defs.vms?.failoverMode) ? defs.vms.failoverMode : "none";
+      const failLbl = (m) => m === "dedicated" ? "Dedicated Hot-Standby (N+1)" : (m === "ring" ? "Distributed Peer / Ring Failover" : "None (Standalone Servers)");
+      if (normVal !== defFail && normVal !== videoFailoverStructure) {
+        confirmProjectDefaultChange({
+          title: "Change Recording Server Failover Architecture?",
+          settingLabel: "VMS Recording Failover Mode",
+          defaultLabel: failLbl(defFail),
+          newLabel: failLbl(normVal),
+          message: `Your Project Default Recording Failover Architecture is set to "${failLbl(defFail)}". Are you sure you want to change it to "${failLbl(normVal)}"?`,
+          allowLocalOverride: true,
+          localOverrideLabel: "Override in Storage Sizer Only",
+          updateDefaultLabel: `Update Project Default`,
+          onLocalOverride: () => setVideoSizerParam(key, normVal, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.failoverMode = normVal; });
+            }
+            setVideoSizerParam(key, normVal, true);
+          },
+          onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+        });
+        return;
+      }
+    }
+  }
   if (key === "retentionDays") {
     videoRetentionDays = val; window.videoRetentionDays = val;
     if (typeof VideoStorageSizer !== "undefined") VideoStorageSizer.state.retentionDays = val;
@@ -3758,7 +3903,61 @@ window.autoFitNvrToBom = autoFitNvrToBom;
 // GENETEC STREAMVAULT APPLIANCE & SECURITY CENTER LICENSING CONTROLLERS
 // =========================================================================
 
-function setGenetecLicParam(key, val) {
+function setGenetecLicParam(key, val, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (key === "advantageYears" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defTerm = defs.licensing?.globalSelectedTerm || "1YR";
+    const defYrs = typeof mapTermToMaintenanceYears === "function" ? mapTermToMaintenanceYears(defTerm) : 1;
+    const newYrs = parseInt(val, 10) || 1;
+    const curYrs = window.genetecLicensingConfig?.advantageYears ?? GenetecLicensingSizer?.state?.advantageYears ?? defYrs;
+    if (newYrs !== defYrs && newYrs !== curYrs) {
+      const newTerm = typeof mapYearsToTermString === "function" ? mapYearsToTermString(newYrs) : `${newYrs}YR`;
+      confirmProjectDefaultChange({
+        title: "Change Software Maintenance & Licensing Term?",
+        settingLabel: "Genetec Advantage Maintenance Term",
+        defaultLabel: `${defTerm} (${defYrs}-Year Default)`,
+        newLabel: `${newTerm} (${newYrs}-Year Advantage)`,
+        message: `Your Project Default Software Licensing Term is set to "${defTerm}". Are you sure you want to change Genetec Advantage maintenance to ${newYrs}-Year?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Use ${newYrs}-Year for Genetec Only`,
+        updateDefaultLabel: `Update Project Default to ${newTerm}`,
+        onLocalOverride: () => setGenetecLicParam(key, newYrs, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.licensing) d.licensing = {}; d.licensing.globalSelectedTerm = newTerm; }, true);
+          }
+          setGenetecLicParam(key, newYrs, true);
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  } else if (key === "tierMode" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defTier = defs.vms?.editionTier || "auto";
+    const curTier = window.genetecLicensingConfig?.tierMode || "auto";
+    const tierLbl = (t) => t === "aio" ? "Streamvault All-in-One" : (t === "standard" ? "Base Standard (GSC-BASE-S)" : (t === "enterprise" ? "Base Enterprise (GSC-BASE-E)" : "Auto-Select Optimal Tier"));
+    if (val !== defTier && val !== curTier) {
+      confirmProjectDefaultChange({
+        title: "Change Genetec Base Package Tier?",
+        settingLabel: "VMS Default Edition / Base Tier",
+        defaultLabel: tierLbl(defTier),
+        newLabel: tierLbl(val),
+        message: `Your Project Default VMS Base Tier is set to "${tierLbl(defTier)}". Are you sure you want to change it to "${tierLbl(val)}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Override Here Only`,
+        updateDefaultLabel: `Update Project Default to ${tierLbl(val)}`,
+        onLocalOverride: () => setGenetecLicParam(key, val, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.editionTier = val; });
+          }
+          setGenetecLicParam(key, val, true);
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  }
   if (typeof window.genetecLicensingConfig !== "object" || !window.genetecLicensingConfig) {
     window.genetecLicensingConfig = (typeof GenetecLicensingSizer !== "undefined")
       ? GenetecLicensingSizer.getDefaultConfig()
@@ -3926,8 +4125,53 @@ function autoFitStreamvaultToBom() {
 }
 window.autoFitStreamvaultToBom = autoFitStreamvaultToBom;
 
-function addGenetecLicensesToBom() {
+function addGenetecLicensesToBom(skipConfirm = false) {
   if (typeof GenetecLicensingSizer === "undefined" || typeof addToBOM !== "function") return;
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
+    if (defs.vms?.enabled === false || defs.vms?.headEndInScope === false) {
+      const curState = defs.vms?.enabled === false ? "VMS Out of Scope" : "Cameras Only (Existing Customer VMS)";
+      confirmProjectDefaultChange({
+        title: "VMS Licensing Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • VMS Software Licensing",
+        defaultLabel: curState,
+        newLabel: "Genetec 5.14 Software Licensing In Scope",
+        message: `Your Project Scope currently has VMS Servers & Software Licensing set to "${curState}". Are you sure you want to quote Genetec software licenses in this BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Licenses Once",
+        updateDefaultLabel: "Enable VMS Licensing in Project Scope",
+        onLocalOverride: () => addGenetecLicensesToBom(true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; d.vms.headEndInScope = true; d.vms.platform = "Genetec"; }, true);
+          }
+          addGenetecLicensesToBom(true);
+        }
+      });
+      return;
+    }
+    const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "genetec";
+    if (defVms !== "genetec") {
+      confirmProjectDefaultChange({
+        title: "Project Default VMS is Not Genetec",
+        settingLabel: "VMS Software Platform Mismatch",
+        defaultLabel: defs.vms?.platform || "Milestone XProtect",
+        newLabel: "Genetec Security Center 5.14",
+        message: `Your Project Default VMS Platform is set to "${defs.vms?.platform || 'Milestone XProtect'}". Are you sure you want to add Genetec Security Center licenses to the BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Genetec Licenses Only",
+        updateDefaultLabel: "Switch Project Default to Genetec & Add",
+        onLocalOverride: () => addGenetecLicensesToBom(true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = "Genetec"; }, true);
+          }
+          addGenetecLicensesToBom(true);
+        }
+      });
+      return;
+    }
+  }
   const licRes = GenetecLicensingSizer.calculate(projectBOM);
   const items = licRes.lineItems || [];
   if (items.length === 0) {
@@ -5190,7 +5434,37 @@ window.renderApplianceBuildOptionsAndAccessoriesHtml = renderApplianceBuildOptio
 // MILESTONE HUSKY IVO APPLIANCE & XPROTECT 2026 R2 LICENSING CONTROLLERS
 // =========================================================================
 
-function setVmsLicensingVendor(vendor) {
+function setVmsLicensingVendor(vendor, skipConfirm = false) {
+  const cleanVendor = vendor === "milestone" ? "milestone" : "genetec";
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    const defLicVendor = defVendor === "milestone" ? "milestone" : "genetec";
+    if (cleanVendor !== defLicVendor && cleanVendor !== activeVmsLicensingVendor) {
+      const defLbl = defs.vms?.platform || (defLicVendor === "milestone" ? "Milestone XProtect" : "Genetec");
+      const newLbl = cleanVendor === "milestone" ? "Milestone XProtect" : "Genetec";
+      confirmProjectDefaultChange({
+        title: "Switch VMS Licensing & Appliance Ecosystem?",
+        settingLabel: "VMS Software & Appliance Manufacturer",
+        defaultLabel: defLbl,
+        newLabel: newLbl,
+        message: `Your Project Default VMS Platform is set to "${defLbl}". Are you sure you want to switch the VMS Licensing & Appliance Studio to "${newLbl}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Compare ${newLbl} Here Only`,
+        updateDefaultLabel: `Update Project Default to ${newLbl}`,
+        onLocalOverride: () => setVmsLicensingVendor(cleanVendor, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = newLbl; }, true);
+          } else {
+            setVmsLicensingVendor(cleanVendor, true);
+          }
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  }
   activeVmsLicensingVendor = vendor === "milestone" ? "milestone" : "genetec";
   window.activeVmsLicensingVendor = activeVmsLicensingVendor;
   videoVmsVendor = activeVmsLicensingVendor;
@@ -5203,7 +5477,61 @@ function setVmsLicensingVendor(vendor) {
 }
 window.setVmsLicensingVendor = setVmsLicensingVendor;
 
-function setMilestoneLicParam(key, val) {
+function setMilestoneLicParam(key, val, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (key === "careYears" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defTerm = defs.licensing?.globalSelectedTerm || "1YR";
+    const defYrs = typeof mapTermToMaintenanceYears === "function" ? mapTermToMaintenanceYears(defTerm) : 1;
+    const newYrs = parseInt(val, 10) || 1;
+    const curYrs = window.milestoneLicensingConfig?.careYears ?? MilestoneLicensingSizer?.state?.careYears ?? defYrs;
+    if (newYrs !== defYrs && newYrs !== curYrs) {
+      const newTerm = typeof mapYearsToTermString === "function" ? mapYearsToTermString(newYrs) : `${newYrs}YR`;
+      confirmProjectDefaultChange({
+        title: "Change Care Plus Maintenance Term?",
+        settingLabel: "Milestone Care Plus Support Term",
+        defaultLabel: `${defTerm} (${defYrs}-Year Default)`,
+        newLabel: `${newYrs}-Year Care Plus`,
+        message: `Your Project Default Software Licensing Term is set to "${defTerm}". Are you sure you want to change Milestone Care Plus to ${newYrs}-Year?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Use ${newYrs}-Year for Milestone Only`,
+        updateDefaultLabel: `Update Project Default to ${newTerm}`,
+        onLocalOverride: () => setMilestoneLicParam(key, newYrs, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.licensing) d.licensing = {}; d.licensing.globalSelectedTerm = newTerm; }, true);
+          }
+          setMilestoneLicParam(key, newYrs, true);
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  } else if ((key === "tierMode" || key === "edition") && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defTier = defs.vms?.editionTier || "auto";
+    const curTier = window.milestoneLicensingConfig?.tierMode || "auto";
+    const tierLbl = (t) => t === "express_plus" ? "XProtect Express+" : (t === "professional_plus" ? "XProtect Professional+" : (t === "expert" ? "XProtect Expert" : (t === "corporate" ? "XProtect Corporate" : "Auto-Select Edition")));
+    if (val !== defTier && val !== curTier) {
+      confirmProjectDefaultChange({
+        title: "Change Milestone XProtect Edition Tier?",
+        settingLabel: "VMS Default Edition / Base Tier",
+        defaultLabel: tierLbl(defTier),
+        newLabel: tierLbl(val),
+        message: `Your Project Default VMS Edition is set to "${tierLbl(defTier)}". Are you sure you want to change it to "${tierLbl(val)}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Override Here Only`,
+        updateDefaultLabel: `Update Project Default to ${tierLbl(val)}`,
+        onLocalOverride: () => setMilestoneLicParam(key, val, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.editionTier = val; });
+          }
+          setMilestoneLicParam(key, val, true);
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  }
   if (typeof window.milestoneLicensingConfig !== "object" || !window.milestoneLicensingConfig) {
     window.milestoneLicensingConfig = (typeof MilestoneLicensingSizer !== "undefined")
       ? MilestoneLicensingSizer.getDefaultConfig()
@@ -5301,8 +5629,53 @@ function autoFitHuskyToBom() {
 }
 window.autoFitHuskyToBom = autoFitHuskyToBom;
 
-function addMilestoneLicensesToBom() {
+function addMilestoneLicensesToBom(skipConfirm = false) {
   if (typeof MilestoneLicensingSizer === "undefined" || typeof addToBOM !== "function") return;
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
+    if (defs.vms?.enabled === false || defs.vms?.headEndInScope === false) {
+      const curState = defs.vms?.enabled === false ? "VMS Out of Scope" : "Cameras Only (Existing Customer VMS)";
+      confirmProjectDefaultChange({
+        title: "VMS Licensing Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • VMS Software Licensing",
+        defaultLabel: curState,
+        newLabel: "Milestone XProtect Licensing In Scope",
+        message: `Your Project Scope currently has VMS Servers & Software Licensing set to "${curState}". Are you sure you want to quote Milestone XProtect licenses in this BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Licenses Once",
+        updateDefaultLabel: "Enable VMS Licensing in Project Scope",
+        onLocalOverride: () => addMilestoneLicensesToBom(true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; d.vms.headEndInScope = true; d.vms.platform = "Milestone XProtect"; }, true);
+          }
+          addMilestoneLicensesToBom(true);
+        }
+      });
+      return;
+    }
+    const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    if (defVms !== "milestone") {
+      confirmProjectDefaultChange({
+        title: "Project Default VMS is Not Milestone XProtect",
+        settingLabel: "VMS Software Platform Mismatch",
+        defaultLabel: defs.vms?.platform || "Genetec",
+        newLabel: "Milestone XProtect 2026 R2",
+        message: `Your Project Default VMS Platform is set to "${defs.vms?.platform || 'Genetec'}". Are you sure you want to add Milestone XProtect licenses to the BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Milestone Licenses Only",
+        updateDefaultLabel: "Switch Project Default to Milestone & Add",
+        onLocalOverride: () => addMilestoneLicensesToBom(true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = "Milestone XProtect"; }, true);
+          }
+          addMilestoneLicensesToBom(true);
+        }
+      });
+      return;
+    }
+  }
   const res = MilestoneLicensingSizer.calculate(projectBOM);
   if (!res.lineItems || res.lineItems.length === 0) {
     if (typeof showToast === "function") showToast("No Milestone XProtect licenses needed yet — add cameras or access readers first.", "info");
@@ -5759,7 +6132,28 @@ function renderVmsLicensingStudioHtml(isCompactDrawer = false) {
 window.renderVmsLicensingStudioHtml = renderVmsLicensingStudioHtml;
 
 
-function addDoorPackageToBom() {
+function addDoorPackageToBom(skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && defs.accessControl?.enabled === false && typeof confirmProjectDefaultChange === "function") {
+    confirmProjectDefaultChange({
+      title: "Access Control Marked Out of Orion Scope",
+      settingLabel: "Orion Scope of Work • Access Control System (ACS)",
+      defaultLabel: "Excluded / Out of Scope",
+      newLabel: "Access Control In Scope",
+      message: "Your Project Scope & Defaults currently mark Access Control (ACS) as Excluded / Out of Scope. Are you sure you want to add this Door Package to the BOM?",
+      allowLocalOverride: true,
+      localOverrideLabel: "Add Door Package Once",
+      updateDefaultLabel: "Enable Access Control in Project Scope",
+      onLocalOverride: () => { window._bypassAcsScopePromptOnce = true; try { addDoorPackageToBom(true); } finally { window._bypassAcsScopePromptOnce = false; } },
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.accessControl) d.accessControl = {}; d.accessControl.enabled = true; });
+        }
+        addDoorPackageToBom(true);
+      }
+    });
+    return;
+  }
   const doors = Math.max(1, parseInt(doorPkgQty, 10) || 1);
   const preset = doorPkgPreset || "standard_strike";
   if (typeof addToBOM !== "function") return;
@@ -5894,9 +6288,39 @@ function toggleWorkstationColumnSync(field, checked) {
 }
 window.toggleWorkstationColumnSync = toggleWorkstationColumnSync;
 
-function setWorkstationSizerParam(key, val) {
+function setWorkstationSizerParam(key, val, skipConfirm = false) {
   if (typeof ClientWorkstationSizer === "undefined") return;
   const st = ClientWorkstationSizer.state;
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (key === "vmsPlatform" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const cleanPlat = val === "milestone" ? "milestone" : "genetec";
+    const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    const defPlat = defVendor === "milestone" ? "milestone" : "genetec";
+    if (cleanPlat !== defPlat && cleanPlat !== st.vmsPlatform) {
+      const defLbl = defs.vms?.platform || (defPlat === "milestone" ? "Milestone XProtect" : "Genetec");
+      const newLbl = cleanPlat === "milestone" ? "Milestone XProtect" : "Genetec";
+      confirmProjectDefaultChange({
+        title: "Change Client Workstation VMS Client?",
+        settingLabel: "VMS Client Decode Profile",
+        defaultLabel: defLbl,
+        newLabel: newLbl,
+        message: `Your Project Default VMS Platform is set to "${defLbl}". Are you sure you want to size workstations for "${newLbl}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Override in Workstation Sizer Only`,
+        updateDefaultLabel: `Update Project Default to ${newLbl}`,
+        onLocalOverride: () => setWorkstationSizerParam(key, cleanPlat, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = newLbl; }, true);
+          } else {
+            setWorkstationSizerParam(key, cleanPlat, true);
+          }
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  }
   if (key === "vmsPlatform") {
     st.vmsPlatform = val === "milestone" ? "milestone" : "genetec";
   } else if (key === "adaptiveStreaming") {
@@ -6644,7 +7068,65 @@ const DOOR_BUILDER_PRESETS = {
   }
 };
 
-function setDoorBuilderParam(key, val) {
+function setDoorBuilderParam(key, val, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (key === "acsPlatform" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defDoorPlat = typeof mapProjectAcsEngineToDoorPlatform === "function" ? mapProjectAcsEngineToDoorPlatform(defs.accessControl?.engine) : "genetec_synergis";
+    if (val !== defDoorPlat && val !== doorBuilderAcsPlatform) {
+      const defLbl = defs.accessControl?.engine || "Genetec";
+      const newLbl = typeof mapDoorPlatformToEngineLabel === "function" ? mapDoorPlatformToEngineLabel(val) : val;
+      confirmProjectDefaultChange({
+        title: "Change Access Control Host Platform?",
+        settingLabel: "Access Control System (ACS) Engine",
+        defaultLabel: defLbl,
+        newLabel: newLbl,
+        message: `Your Project Default ACS Engine is set to "${defLbl}". Are you sure you want to change the Door Schedule Builder to "${newLbl}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Override in Door Builder Only",
+        updateDefaultLabel: `Update Project Default to ${newLbl}`,
+        onLocalOverride: () => setDoorBuilderParam(key, val, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.accessControl) d.accessControl = {}; d.accessControl.engine = newLbl; }, true);
+          } else {
+            setDoorBuilderParam(key, val, true);
+          }
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  } else if (key === "controllerVendor" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const defCtrl = defs.accessControl?.controllerVendor || "mercury";
+    const ctrlLabels = {
+      mercury: "Mercury LP Series (LP1502 + Cloud Link + Trove2)",
+      mercury_mp: "Mercury MP Series (MP1502 Native SC 5.12.1+)",
+      axis_pbg: "Axis Powered by Genetec (A1610 Network Controller)",
+      axis: "Axis Network Controllers (A1001 / A1610 PoE+)",
+      scl312: "Synergis Cloud Link-312 (12x RS-485 Direct OSDP)"
+    };
+    if (val !== defCtrl && val !== doorBuilderControllerVendor) {
+      confirmProjectDefaultChange({
+        title: "Change Door Controller Hardware Architecture?",
+        settingLabel: "Access Control Door Controller Family",
+        defaultLabel: ctrlLabels[defCtrl] || defCtrl,
+        newLabel: ctrlLabels[val] || val,
+        message: `Your Project Default Door Controller Architecture is set to "${ctrlLabels[defCtrl] || defCtrl}". Are you sure you want to switch to "${ctrlLabels[val] || val}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Override in Door Builder Only",
+        updateDefaultLabel: "Update Project Default",
+        onLocalOverride: () => setDoorBuilderParam(key, val, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.accessControl) d.accessControl = {}; d.accessControl.controllerVendor = val; });
+          }
+          setDoorBuilderParam(key, val, true);
+        },
+        onCancel: () => { if (typeof buildCalculatorStrip === "function") buildCalculatorStrip(); }
+      });
+      return;
+    }
+  }
   if (key === "acsPlatform") {
     doorBuilderAcsPlatform = val;
     window.doorBuilderAcsPlatform = val;
@@ -6827,8 +7309,29 @@ function calculateDoorScheduleRollup() {
   };
 }
 
-function addFullDoorScheduleToBom() {
+function addFullDoorScheduleToBom(skipConfirm = false) {
   if (typeof addToBOM !== "function") return;
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && defs.accessControl?.enabled === false && typeof confirmProjectDefaultChange === "function") {
+    confirmProjectDefaultChange({
+      title: "Access Control Marked Out of Orion Scope",
+      settingLabel: "Orion Scope of Work • Access Control System (ACS)",
+      defaultLabel: "Excluded / Out of Scope",
+      newLabel: "Access Control In Scope",
+      message: "Your Project Scope & Defaults currently mark Access Control (ACS) as Excluded / Out of Scope. Are you sure you want to commit this Door Schedule to the BOM?",
+      allowLocalOverride: true,
+      localOverrideLabel: "Add Door Schedule Once",
+      updateDefaultLabel: "Enable Access Control in Project Scope",
+      onLocalOverride: () => { window._bypassAcsScopePromptOnce = true; try { addFullDoorScheduleToBom(true); } finally { window._bypassAcsScopePromptOnce = false; } },
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.accessControl) d.accessControl = {}; d.accessControl.enabled = true; });
+        }
+        addFullDoorScheduleToBom(true);
+      }
+    });
+    return;
+  }
   const rollup = calculateDoorScheduleRollup();
   Object.entries(rollup.partTotals).forEach(([partId, qty]) => {
     addToBOM(partId, qty);
@@ -7124,7 +7627,37 @@ function setAccSubCategory(catId) {
 }
 window.setAccSubCategory = setAccSubCategory;
 
-function toggleFilterItem(type, val) {
+function toggleFilterItem(type, val, skipConfirm = false) {
+  if (type === "camVendor" && !skipConfirm && !selectedCamVendors.includes(val) && typeof confirmProjectDefaultChange === "function") {
+    const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+    const defCamVendors = Array.isArray(defs?.vms?.cameraVendors) ? defs.vms.cameraVendors : [];
+    const canonVal = typeof canonicalWizardCameraVendorName === "function" ? canonicalWizardCameraVendorName(val) : val;
+    if (defCamVendors.length > 0 && !defCamVendors.some(v => (typeof canonicalWizardCameraVendorName === "function" ? canonicalWizardCameraVendorName(v) : v) === canonVal)) {
+      confirmProjectDefaultChange({
+        title: "Include Non-Default Camera Manufacturer?",
+        settingLabel: "Preferred Camera Manufacturers",
+        defaultLabel: defCamVendors.join(", "),
+        newLabel: `${defCamVendors.join(", ")} + ${canonVal}`,
+        message: `Your Project Defaults specify [${defCamVendors.join(", ")}] as Preferred Camera Manufacturers. Do you want to include "${canonVal}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: `Filter ${canonVal} Temporarily`,
+        updateDefaultLabel: `Add ${canonVal} to Project Defaults`,
+        onLocalOverride: () => toggleFilterItem(type, val, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => {
+              if (!d.vms) d.vms = {};
+              const cur = Array.isArray(d.vms.cameraVendors) ? d.vms.cameraVendors : [];
+              if (!cur.includes(canonVal)) d.vms.cameraVendors = [...cur, canonVal];
+            });
+          }
+          toggleFilterItem(type, val, true);
+        },
+        onCancel: () => { if (typeof buildSidebarFilters === "function") buildSidebarFilters(); }
+      });
+      return;
+    }
+  }
   if (type === "vendor") {
     selectedVendors = selectedVendors.includes(val) ? selectedVendors.filter(v => v !== val) : [...selectedVendors, val];
   } else if (type === "switchLayer") {

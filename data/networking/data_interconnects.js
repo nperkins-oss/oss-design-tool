@@ -1289,7 +1289,58 @@ const OPTICS_LIST = [
   { vendor: "Cisco", sku: "SFP-10G-ZR", name: "Cisco 10GBASE-ZR Single-Mode SFP+ (80km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 3800, industrial: false, reach: "80km" },
   { vendor: "Juniper", sku: "EX-SFP-10GE-ER", name: "Juniper 10G Single-Mode SFP+ (ER, 40km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 2250, industrial: false, reach: "40km" },
   { vendor: "Ruckus", sku: "10G-SFPP-ER", name: "Ruckus 10G Single-Mode SFP+ (ER, 40km)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 1950, industrial: false, reach: "40km" },
-  { vendor: "AMG", sku: "SFP-SM-10G-ER", name: "AMG Industrial 10G SMF SFP+ ER (40km, -40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 680, industrial: true, reach: "40km" }
+  { vendor: "AMG", sku: "SFP-SM-10G-ER", name: "AMG Industrial 10G SMF SFP+ ER (40km, -40°C to +85°C)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 680, industrial: true, reach: "40km" },
+
+  // ----------------------------------------
+  // G. 3rd-Party Coded Optics & DACs (IronLink MSA & FS.com)
+  // ----------------------------------------
+  // IronLink 3rd-Party Coded Transceivers & DACs
+  { vendor: "IronLink", sku: "IL-SFP-1G-SX", name: "IronLink 1G Multi-Mode SFP Transceiver (850nm, 550m, MSA Coded)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "mmf", msrp: 16, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP-1G-LX", name: "IronLink 1G Single-Mode SFP Transceiver (1310nm, 10km, MSA Coded)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 22, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP-1G-T", name: "IronLink 1000BASE-T RJ45 Copper SFP Transceiver (100m, MSA Coded)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "copper", msrp: 28, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP10G-SR", name: "IronLink 10GBASE-SR Multi-Mode SFP+ Transceiver (850nm, 300m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "mmf", msrp: 26, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP10G-LR", name: "IronLink 10GBASE-LR Single-Mode SFP+ Transceiver (1310nm, 10km, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 36, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP10G-T", name: "IronLink 10GBASE-T RJ45 Copper SFP+ Transceiver (30m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "copper", msrp: 65, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP28-25G-SR", name: "IronLink 25GBASE-SR Multi-Mode SFP28 Transceiver (850nm, 100m, MSA Coded)", speed: "25G", speedRank: 25, formFactor: "SFP28", medium: "mmf", msrp: 48, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-SFP28-25G-LR", name: "IronLink 25GBASE-LR Single-Mode SFP28 Transceiver (1310nm, 10km, MSA Coded)", speed: "25G", speedRank: 25, formFactor: "SFP28", medium: "smf", msrp: 78, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-QSFP-40G-SR4", name: "IronLink 40GBASE-SR4 Multi-Mode QSFP+ Transceiver (MSA Coded)", speed: "40G", speedRank: 40, formFactor: "QSFP+", medium: "mmf", msrp: 69, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-QSFP-40G-LR4", name: "IronLink 40GBASE-LR4 Single-Mode QSFP+ Transceiver (10km, MSA Coded)", speed: "40G", speedRank: 40, formFactor: "QSFP+", medium: "smf", msrp: 145, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-QSFP28-100G-SR4", name: "IronLink 100GBASE-SR4 Multi-Mode QSFP28 Transceiver (100m, MSA Coded)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "mmf", msrp: 115, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-QSFP28-100G-LR4", name: "IronLink 100GBASE-LR4 Single-Mode QSFP28 Transceiver (10km, MSA Coded)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "smf", msrp: 245, industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-10G-0.5M", name: "IronLink 10G SFP+ Passive Direct Attach Copper Twinax Cable (0.5m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 16, lengthMeters: 0.5, reach: "0.5m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-10G-1M", name: "IronLink 10G SFP+ Passive Direct Attach Copper Twinax Cable (1m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 19, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-10G-2M", name: "IronLink 10G SFP+ Passive Direct Attach Copper Twinax Cable (2m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 24, lengthMeters: 2, reach: "2m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-10G-3M", name: "IronLink 10G SFP+ Passive Direct Attach Copper Twinax Cable (3m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 28, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-10G-5M", name: "IronLink 10G SFP+ Passive Direct Attach Copper Twinax Cable (5m, MSA Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 36, lengthMeters: 5, reach: "5m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-25G-1M", name: "IronLink 25G SFP28 Passive Direct Attach Copper Twinax Cable (1m, MSA Coded)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 32, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-25G-3M", name: "IronLink 25G SFP28 Passive Direct Attach Copper Twinax Cable (3m, MSA Coded)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 45, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-40G-1M", name: "IronLink 40G QSFP+ Passive Direct Attach Copper Twinax Cable (1m, MSA Coded)", speed: "40G", speedRank: 40, formFactor: "DAC", medium: "dac", msrp: 49, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-100G-1M", name: "IronLink 100G QSFP28 Passive Direct Attach Copper Twinax Cable (1m, MSA Coded)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 69, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "IronLink", sku: "IL-DAC-100G-3M", name: "IronLink 100G QSFP28 Passive Direct Attach Copper Twinax Cable (3m, MSA Coded)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 95, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true },
+
+  // FS.com 3rd-Party Coded Transceivers & DACs
+  { vendor: "FS.com", sku: "FS-SFP-1G-SX", name: "FS.com 1000BASE-SX Multi-Mode SFP Transceiver (850nm, 550m, Coded)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "mmf", msrp: 14, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP-1G-LX", name: "FS.com 1000BASE-LX Single-Mode SFP Transceiver (1310nm, 10km, Coded)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "smf", msrp: 20, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP-1G-T", name: "FS.com 1000BASE-T RJ45 Copper SFP Transceiver (100m, Coded)", speed: "1G", speedRank: 1, formFactor: "SFP", medium: "copper", msrp: 26, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP-10GSR-85", name: "FS.com 10GBASE-SR Multi-Mode SFP+ Transceiver (850nm, 300m, Coded)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "mmf", msrp: 24, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP-10GLR-31", name: "FS.com 10GBASE-LR Single-Mode SFP+ Transceiver (1310nm, 10km, Coded)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "smf", msrp: 34, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP-10G-T", name: "FS.com 10GBASE-T RJ45 Copper SFP+ Transceiver (30m, Coded)", speed: "10G", speedRank: 10, formFactor: "SFP+", medium: "copper", msrp: 62, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP28-25GSR-85", name: "FS.com 25GBASE-SR Multi-Mode SFP28 Transceiver (850nm, 100m, Coded)", speed: "25G", speedRank: 25, formFactor: "SFP28", medium: "mmf", msrp: 45, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFP28-25GLR-31", name: "FS.com 25GBASE-LR Single-Mode SFP28 Transceiver (1310nm, 10km, Coded)", speed: "25G", speedRank: 25, formFactor: "SFP28", medium: "smf", msrp: 75, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-QSFP-40GSR4", name: "FS.com 40GBASE-SR4 Multi-Mode QSFP+ Transceiver (Coded)", speed: "40G", speedRank: 40, formFactor: "QSFP+", medium: "mmf", msrp: 65, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-QSFP-40GLR4", name: "FS.com 40GBASE-LR4 Single-Mode QSFP+ Transceiver (10km, Coded)", speed: "40G", speedRank: 40, formFactor: "QSFP+", medium: "smf", msrp: 139, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-QSFP28-100GSR4", name: "FS.com 100GBASE-SR4 Multi-Mode QSFP28 Transceiver (100m, Coded)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "mmf", msrp: 110, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-QSFP28-100GLR4", name: "FS.com 100GBASE-LR4 Single-Mode QSFP28 Transceiver (10km, Coded)", speed: "100G", speedRank: 100, formFactor: "QSFP28", medium: "smf", msrp: 235, industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFPP-PC005", name: "FS.com 10G SFP+ Passive Direct Attach Copper Twinax Cable (0.5m, Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 15, lengthMeters: 0.5, reach: "0.5m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFPP-PC01", name: "FS.com 10G SFP+ Passive Direct Attach Copper Twinax Cable (1m, Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 18, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFPP-PC02", name: "FS.com 10G SFP+ Passive Direct Attach Copper Twinax Cable (2m, Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 22, lengthMeters: 2, reach: "2m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFPP-PC03", name: "FS.com 10G SFP+ Passive Direct Attach Copper Twinax Cable (3m, Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 26, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-SFPP-PC05", name: "FS.com 10G SFP+ Passive Direct Attach Copper Twinax Cable (5m, Coded)", speed: "10G", speedRank: 10, formFactor: "DAC", medium: "dac", msrp: 34, lengthMeters: 5, reach: "5m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-S28-PC01", name: "FS.com 25G SFP28 Passive Direct Attach Copper Twinax Cable (1m, Coded)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 29, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-S28-PC03", name: "FS.com 25G SFP28 Passive Direct Attach Copper Twinax Cable (3m, Coded)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 42, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-Q-PC01", name: "FS.com 40G QSFP+ Passive Direct Attach Copper Twinax Cable (1m, Coded)", speed: "40G", speedRank: 40, formFactor: "DAC", medium: "dac", msrp: 45, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-Q28-PC01", name: "FS.com 100G QSFP28 Passive Direct Attach Copper Twinax Cable (1m, Coded)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 65, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "FS.com", sku: "FS-Q28-PC03", name: "FS.com 100G QSFP28 Passive Direct Attach Copper Twinax Cable (3m, Coded)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 89, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true }
 ];
 
 // ==========================================
@@ -1488,6 +1539,87 @@ const OPTICS_CATALOG = {
       "mmf": { sku: "PAN-QSFP28-100GBASE-SR4", name: "Palo Alto 100G Multi-Mode QSFP28", msrp: 2500 },
       "smf": null,
       "dac": { sku: "PAN-QSFP28-CU-1M", name: "Palo Alto 100G Direct Attach Copper (1m)", msrp: 320 }
+    }
+  },
+  "Cisco": {
+    "1G": {
+      "mmf": { sku: "GLC-SX-MMD", name: "Cisco 1000BASE-SX Multi-Mode SFP", msrp: 230 },
+      "smf": { sku: "GLC-LH-SMD", name: "Cisco 1000BASE-LX/LH Single-Mode SFP", msrp: 450 },
+      "dac": null
+    },
+    "10G": {
+      "mmf": { sku: "SFP-10G-SR", name: "Cisco 10GBASE-SR Multi-Mode SFP+", msrp: 750 },
+      "smf": { sku: "SFP-10G-LR", name: "Cisco 10GBASE-LR Single-Mode SFP+", msrp: 1400 },
+      "dac": { sku: "SFP-H10GB-CU1M", name: "Cisco 10GBASE-CU SFP+ Direct Attach Copper (1m)", msrp: 115 }
+    },
+    "25G": {
+      "mmf": { sku: "SFP-25G-SR-S", name: "Cisco 25GBASE-SR Multi-Mode SFP28", msrp: 1100 },
+      "smf": { sku: "SFP-25G-LR-S", name: "Cisco 25GBASE-LR Single-Mode SFP28", msrp: 2200 },
+      "dac": { sku: "SFP-H25G-CU1M", name: "Cisco 25G SFP28 Direct Attach Copper (1m)", msrp: 195 }
+    },
+    "40G": {
+      "mmf": { sku: "QSFP-40G-SR4", name: "Cisco 40GBASE-SR4 Multi-Mode QSFP+", msrp: 1900 },
+      "smf": { sku: "QSFP-40G-LR4", name: "Cisco 40GBASE-LR4 Single-Mode QSFP+", msrp: 3400 },
+      "dac": { sku: "QSFP-H40G-CU1M", name: "Cisco 40G QSFP+ Direct Attach Copper (1m)", msrp: 280 }
+    },
+    "100G": {
+      "mmf": { sku: "QSFP-100G-SR4-S", name: "Cisco 100GBASE-SR4 Multi-Mode QSFP28", msrp: 2900 },
+      "smf": { sku: "QSFP-100G-LR4-S", name: "Cisco 100GBASE-LR4 Single-Mode QSFP28", msrp: 4800 },
+      "dac": { sku: "QSFP-100G-CU1M", name: "Cisco 100G QSFP28 Direct Attach Copper (1m)", msrp: 340 }
+    }
+  },
+  "IronLink": {
+    "1G": {
+      "mmf": { sku: "IL-SFP-1G-SX", name: "IronLink 1G Multi-Mode SFP (850nm, 550m)", msrp: 16 },
+      "smf": { sku: "IL-SFP-1G-LX", name: "IronLink 1G Single-Mode SFP (1310nm, 10km)", msrp: 22 },
+      "dac": null
+    },
+    "10G": {
+      "mmf": { sku: "IL-SFP10G-SR", name: "IronLink 10GBASE-SR Multi-Mode SFP+ (300m)", msrp: 26 },
+      "smf": { sku: "IL-SFP10G-LR", name: "IronLink 10GBASE-LR Single-Mode SFP+ (10km)", msrp: 36 },
+      "dac": { sku: "IL-DAC-10G-1M", name: "IronLink 10G SFP+ Direct Attach Copper (1m)", msrp: 19 }
+    },
+    "25G": {
+      "mmf": { sku: "IL-SFP28-25G-SR", name: "IronLink 25GBASE-SR Multi-Mode SFP28 (100m)", msrp: 48 },
+      "smf": { sku: "IL-SFP28-25G-LR", name: "IronLink 25GBASE-LR Single-Mode SFP28 (10km)", msrp: 78 },
+      "dac": { sku: "IL-DAC-25G-1M", name: "IronLink 25G SFP28 Direct Attach Copper (1m)", msrp: 32 }
+    },
+    "40G": {
+      "mmf": { sku: "IL-QSFP-40G-SR4", name: "IronLink 40GBASE-SR4 Multi-Mode QSFP+", msrp: 69 },
+      "smf": { sku: "IL-QSFP-40G-LR4", name: "IronLink 40GBASE-LR4 Single-Mode QSFP+ (10km)", msrp: 145 },
+      "dac": { sku: "IL-DAC-40G-1M", name: "IronLink 40G QSFP+ Direct Attach Copper (1m)", msrp: 49 }
+    },
+    "100G": {
+      "mmf": { sku: "IL-QSFP28-100G-SR4", name: "IronLink 100GBASE-SR4 Multi-Mode QSFP28 (100m)", msrp: 115 },
+      "smf": { sku: "IL-QSFP28-100G-LR4", name: "IronLink 100GBASE-LR4 Single-Mode QSFP28 (10km)", msrp: 245 },
+      "dac": { sku: "IL-DAC-100G-1M", name: "IronLink 100G QSFP28 Direct Attach Copper (1m)", msrp: 69 }
+    }
+  },
+  "FS.com": {
+    "1G": {
+      "mmf": { sku: "FS-SFP-1G-SX", name: "FS.com 1000BASE-SX Multi-Mode SFP (850nm, 550m)", msrp: 14 },
+      "smf": { sku: "FS-SFP-1G-LX", name: "FS.com 1000BASE-LX Single-Mode SFP (1310nm, 10km)", msrp: 20 },
+      "dac": null
+    },
+    "10G": {
+      "mmf": { sku: "FS-SFP-10GSR-85", name: "FS.com 10GBASE-SR Multi-Mode SFP+ (300m)", msrp: 24 },
+      "smf": { sku: "FS-SFP-10GLR-31", name: "FS.com 10GBASE-LR Single-Mode SFP+ (10km)", msrp: 34 },
+      "dac": { sku: "FS-SFPP-PC01", name: "FS.com 10G SFP+ Direct Attach Copper (1m)", msrp: 18 }
+    },
+    "25G": {
+      "mmf": { sku: "FS-SFP28-25GSR-85", name: "FS.com 25GBASE-SR Multi-Mode SFP28 (100m)", msrp: 45 },
+      "smf": { sku: "FS-SFP28-25GLR-31", name: "FS.com 25GBASE-LR Single-Mode SFP28 (10km)", msrp: 75 },
+      "dac": { sku: "FS-S28-PC01", name: "FS.com 25G SFP28 Direct Attach Copper (1m)", msrp: 29 }
+    },
+    "40G": {
+      "mmf": { sku: "FS-QSFP-40GSR4", name: "FS.com 40GBASE-SR4 Multi-Mode QSFP+", msrp: 65 },
+      "smf": { sku: "FS-QSFP-40GLR4", name: "FS.com 40GBASE-LR4 Single-Mode QSFP+ (10km)", msrp: 139 },
+      "dac": { sku: "FS-Q-PC01", name: "FS.com 40G QSFP+ Direct Attach Copper (1m)", msrp: 45 }
+    },
+    "100G": {
+      "mmf": { sku: "FS-QSFP28-100GSR4", name: "FS.com 100GBASE-SR4 Multi-Mode QSFP28 (100m)", msrp: 110 },
+      "smf": { sku: "FS-QSFP28-100GLR4", name: "FS.com 100GBASE-LR4 Single-Mode QSFP28 (10km)", msrp: 235 },
+      "dac": { sku: "FS-Q28-PC01", name: "FS.com 100G QSFP28 Direct Attach Copper (1m)", msrp: 65 }
     }
   }
 };

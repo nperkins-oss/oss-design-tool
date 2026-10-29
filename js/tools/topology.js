@@ -182,7 +182,34 @@ function getProjectFiberType() {
   return "mmf";
 }
 
-function setProjectFiberType(type) {
+function setProjectFiberType(type, skipConfirm = false, silentLoad = false) {
+  const targetFiber = (type === "smf") ? "smf" : "mmf";
+  const currentFiber = getProjectFiberType();
+  const labelForFiber = (f) => f === "smf" ? "OS2 Single-Mode (LR, 1310nm)" : "OM4 Multi-Mode (SR, 850nm)";
+  if (!skipConfirm && targetFiber !== currentFiber && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    const s1 = document.getElementById("topoProjectFiberSelect"); if (s1) s1.value = currentFiber;
+    const s2 = document.getElementById("projectFiberSelect"); if (s2) s2.value = currentFiber;
+    confirmProjectDefaultChange({
+      title: "Change Inter-Rack Fiber Optic Standard?",
+      settingLabel: "Inter-Closet Fiber Backbone & Optics Medium",
+      defaultLabel: labelForFiber(currentFiber),
+      newLabel: labelForFiber(targetFiber),
+      message: `Your Project Default Inter-Rack Fiber Standard is set to "${labelForFiber(currentFiber)}". Are you sure you want to change it to "${labelForFiber(targetFiber)}"?`,
+      allowLocalOverride: false,
+      updateDefaultLabel: `Update Project Fiber to ${targetFiber === "smf" ? "OS2 Single-Mode" : "OM4 Multi-Mode"}`,
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.cabling) d.cabling = {}; d.cabling.fiberType = targetFiber; });
+        }
+        setProjectFiberType(targetFiber, true);
+      },
+      onCancel: () => {
+        if (s1) s1.value = currentFiber;
+        if (s2) s2.value = currentFiber;
+      }
+    });
+    return;
+  }
   projectDefaultFiberType = (type === "smf") ? "smf" : "mmf";
   const projKey = (typeof FacilityStore !== "undefined" && typeof FacilityStore.getProjectId === "function") 
     ? FacilityStore.getProjectId() 
@@ -197,6 +224,7 @@ function setProjectFiberType(type) {
   if (sel2) sel2.value = projectDefaultFiberType;
 
   // Real-time synchronization to Physical Layout fiber backbones that use project default
+  if (silentLoad) return;
   if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
     let changedAny = false;
     facilityFloors.forEach(fl => {
@@ -386,12 +414,14 @@ function calculateUDistance(nodeA, nodeB) {
   return Math.max(1, Math.round(Math.abs(centerA - centerB)));
 }
 
-function getDacLengthForUDiff(uDiff) {
+function getDacLengthForUDiff(uDiff, speed = "10G") {
   if (uDiff === null || uDiff === undefined) return "1m";
   if (uDiff <= 2) return "0.5m";
   if (uDiff <= 6) return "1m";
   if (uDiff <= 15) return "2m";
   if (uDiff <= 28) return "3m";
+  // IEEE 802.3by / vendor passive twinax DACs at 25G/40G/100G max out at 3m
+  if (speed === "25G" || speed === "40G" || speed === "100G") return "3m";
   return "5m";
 }
 
@@ -2388,6 +2418,8 @@ function autoSynthesizeInterconnects(silent = false) {
     let synthesizedPatchCords = 0;
     let synthesizedTransceivers = 0;
     let synthesizedFiberPatchCords = 0;
+    let synthesizedFiberLIUs = 0;
+    const interRackFiberPortsByLoc = {};
     const newInterconnectItems = [];
 
     // Helper to normalize vendor
@@ -2425,7 +2457,14 @@ function autoSynthesizeInterconnects(silent = false) {
       const override = getLinkInterconnectOverride(link.id);
       const vendorA = detectVendor(nodeA);
       const vendorB = detectVendor(nodeB);
-      const preferredVendor = (vendorA === vendorB) ? vendorA : vendorA;
+      const isCrossVendor = vendorA !== vendorB;
+      const exceedsPassiveDacReach = (speed === "25G" || speed === "40G" || speed === "100G") && uDiff > 28;
+      const infraScope = (typeof getProjectInfrastructureScope === "function")
+        ? getProjectInfrastructureScope()
+        : { horizontalCabling: true, rackPatchPanels: true, patchCords: true, fiberBackbone: true, sfpAndDac: true };
+      const opticsVendorMode = (typeof getProjectOpticsVendorMode === "function") ? getProjectOpticsVendorMode() : "oem";
+      const thirdPartyVendorName = opticsVendorMode === "ironlink" ? "IronLink" : (opticsVendorMode === "fs" ? "FS.com" : null);
+      const preferredVendor = vendorA;
 
       const hasOpticsA = deviceHasOpticalCages(nodeA);
       const hasOpticsB = deviceHasOpticalCages(nodeB);
@@ -2441,7 +2480,7 @@ function autoSynthesizeInterconnects(silent = false) {
       } else if (!canUseOpticalOrDac) {
         chosenMedium = "patch";
       } else {
-        chosenMedium = isSameRack ? "dac" : getProjectFiberType(); // "dac", "mmf", or "smf"
+        chosenMedium = (isSameRack && !isCrossVendor && !exceedsPassiveDacReach) ? "dac" : getProjectFiberType(); // "dac", "mmf", or "smf"
       }
 
       if (chosenMedium === "dac") {
@@ -2451,9 +2490,13 @@ function autoSynthesizeInterconnects(silent = false) {
         // ----------------------------------------------------
         const dacLength = (override.dacLength && override.dacLength !== "auto")
           ? override.dacLength
-          : getDacLengthForUDiff(uDiff);
+          : getDacLengthForUDiff(uDiff, speed);
 
-        let dacItem = findDacItem(speed, preferredVendor, dacLength);
+        const dacVendor = thirdPartyVendorName || preferredVendor;
+        let dacItem = findDacItem(speed, dacVendor, dacLength);
+        if (!dacItem && typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[dacVendor]?.[speed]?.dac) {
+          dacItem = OPTICS_CATALOG[dacVendor][speed].dac;
+        }
         if (!dacItem && typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[preferredVendor]?.[speed]?.dac) {
           dacItem = OPTICS_CATALOG[preferredVendor][speed].dac;
         }
@@ -2462,12 +2505,20 @@ function autoSynthesizeInterconnects(silent = false) {
         const baseName = dacItem?.name || `${preferredVendor} ${speed} SFP+ Direct Attach Copper Cable (1m)`;
         const baseMsrp = dacItem?.msrp || (speed === "25G" ? 55 : (speed === "100G" ? 120 : 35));
 
-        const formattedDac = formatDacItem(baseSku, baseName, baseMsrp, dacLength, speed, preferredVendor);
+        const formattedDac = formatDacItem(baseSku, baseName, baseMsrp, dacLength, speed, dacVendor);
+        if (thirdPartyVendorName) {
+          const codeA = (typeof getVendorEepromCode === "function") ? getVendorEepromCode(vendorA) : "MSA";
+          const codeB = (typeof getVendorEepromCode === "function") ? getVendorEepromCode(vendorB) : "MSA";
+          formattedDac.sku = isCrossVendor ? `${formattedDac.sku}-${codeA}-${codeB}` : `${formattedDac.sku}-${codeA}`;
+          formattedDac.name = `${formattedDac.name} [${isCrossVendor ? `${vendorA}<->${vendorB} Dual-Coded` : `${preferredVendor} Coded`}]`;
+        }
 
         newInterconnectItems.push({
           instanceId: `dac-${link.id}-${idx}-${Date.now()}`,
+          _skipByScope: (infraScope.sfpAndDac === false),
+          vendorOverride: dacVendor,
           id: formattedDac.sku,
-          model: `${formattedDac.name} (${nodeA.model} <-> ${nodeB.model}${isSameRack ? ` • ${uDiff}U Separation` : ''})`,
+          model: `${formattedDac.name}${isCrossVendor ? ` [Multi-Vendor MSA: ${vendorA} <-> ${vendorB}]` : ''} (${nodeA.model} <-> ${nodeB.model}${isSameRack ? ` • ${uDiff}U Separation` : ''})`,
           sku: formattedDac.sku,
           role: "Optics & DAC",
           vendor: preferredVendor,
@@ -2484,7 +2535,7 @@ function autoSynthesizeInterconnects(silent = false) {
           dacLength,
           uDiff: isSameRack ? uDiff : null
         });
-        synthesizedDACCables += multiplier;
+        if (infraScope.sfpAndDac !== false) synthesizedDACCables += multiplier;
 
       } else if (chosenMedium === "patch" || chosenMedium === "cat6a") {
         // ----------------------------------------------------
@@ -2502,6 +2553,7 @@ function autoSynthesizeInterconnects(silent = false) {
 
         newInterconnectItems.push({
           instanceId: `patch-${link.id}-${idx}-${Date.now()}`,
+          _skipByScope: (infraScope.patchCords === false),
           id: cordSku,
           model: `${cordName} (${nodeA.model} <-> ${nodeB.model}${isSameRack ? ` • ${uDiff}U Separation` : ''})`,
           sku: cordSku,
@@ -2522,7 +2574,7 @@ function autoSynthesizeInterconnects(silent = false) {
           lengthMeters: cordSpec.lengthMeters,
           uDiff: isSameRack ? uDiff : null
         });
-        synthesizedPatchCords += multiplier;
+        if (infraScope.patchCords !== false) synthesizedPatchCords += multiplier;
 
       } else {
         // ----------------------------------------------------
@@ -2535,17 +2587,23 @@ function autoSynthesizeInterconnects(silent = false) {
         const isSMF = (fiberType === "smf");
 
         // Transceiver for End A
-        let transA = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[vendorA]?.[speed]?.[isSMF ? 'smf' : 'mmf']) || null;
+        const transAVendor = thirdPartyVendorName || vendorA;
+        const eepromCodeA = (typeof getVendorEepromCode === "function") ? getVendorEepromCode(vendorA) : "MSA";
+        let transA = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[transAVendor]?.[speed]?.[isSMF ? 'smf' : 'mmf']) || null;
         if (!transA && typeof OPTICS_LIST !== "undefined") {
           transA = OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed && o.vendor === vendorA) ||
                    OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed);
         }
-        const transASku = transA?.sku || `${vendorA}-${speed}-${isSMF ? 'SMF-LR' : 'MMF-SR'}`;
-        const transAName = transA?.name || `${vendorA} ${speed} ${isSMF ? 'Single-Mode SFP+ Transceiver (LR, 10km)' : 'Multi-Mode SFP+ Transceiver (SR, 300m)'}`;
+        const rawTransASku = transA?.sku || `${transAVendor}-${speed}-${isSMF ? 'SMF-LR' : 'MMF-SR'}`;
+        const transASku = thirdPartyVendorName ? `${rawTransASku}-${eepromCodeA}` : rawTransASku;
+        const rawTransAName = transA?.name || `${transAVendor} ${speed} ${isSMF ? 'Single-Mode SFP+ Transceiver (LR, 10km)' : 'Multi-Mode SFP+ Transceiver (SR, 300m)'}`;
+        const transAName = thirdPartyVendorName ? `${rawTransAName} [${vendorA} Coded]` : rawTransAName;
         const transAMsrp = transA?.msrp || (speed === "25G" ? (isSMF ? 450 : 220) : (speed === "100G" ? (isSMF ? 850 : 450) : (isSMF ? 180 : 95)));
 
         newInterconnectItems.push({
           instanceId: `transA-${link.id}-${idx}-${Date.now()}`,
+          _skipByScope: (infraScope.sfpAndDac === false),
+          vendorOverride: transAVendor,
           id: transASku,
           model: `${transAName} (for ${nodeA.model} at ${locA})`,
           sku: transASku,
@@ -2566,17 +2624,23 @@ function autoSynthesizeInterconnects(silent = false) {
         synthesizedTransceivers += multiplier;
 
         // Transceiver for End B
-        let transB = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[vendorB]?.[speed]?.[isSMF ? 'smf' : 'mmf']) || null;
+        const transBVendor = thirdPartyVendorName || vendorB;
+        const eepromCodeB = (typeof getVendorEepromCode === "function") ? getVendorEepromCode(vendorB) : "MSA";
+        let transB = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[transBVendor]?.[speed]?.[isSMF ? 'smf' : 'mmf']) || null;
         if (!transB && typeof OPTICS_LIST !== "undefined") {
           transB = OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed && o.vendor === vendorB) ||
                    OPTICS_LIST.find(o => o.medium === (isSMF ? 'smf' : 'mmf') && o.speed === speed);
         }
-        const transBSku = transB?.sku || `${vendorB}-${speed}-${isSMF ? 'SMF-LR' : 'MMF-SR'}`;
-        const transBName = transB?.name || `${vendorB} ${speed} ${isSMF ? 'Single-Mode SFP+ Transceiver (LR, 10km)' : 'Multi-Mode SFP+ Transceiver (SR, 300m)'}`;
+        const rawTransBSku = transB?.sku || `${transBVendor}-${speed}-${isSMF ? 'SMF-LR' : 'MMF-SR'}`;
+        const transBSku = thirdPartyVendorName ? `${rawTransBSku}-${eepromCodeB}` : rawTransBSku;
+        const rawTransBName = transB?.name || `${transBVendor} ${speed} ${isSMF ? 'Single-Mode SFP+ Transceiver (LR, 10km)' : 'Multi-Mode SFP+ Transceiver (SR, 300m)'}`;
+        const transBName = thirdPartyVendorName ? `${rawTransBName} [${vendorB} Coded]` : rawTransBName;
         const transBMsrp = transB?.msrp || (speed === "25G" ? (isSMF ? 450 : 220) : (speed === "100G" ? (isSMF ? 850 : 450) : (isSMF ? 180 : 95)));
 
         newInterconnectItems.push({
           instanceId: `transB-${link.id}-${idx}-${Date.now()}`,
+          _skipByScope: (infraScope.sfpAndDac === false),
+          vendorOverride: transBVendor,
           id: transBSku,
           model: `${transBName} (for ${nodeB.model} at ${locB})`,
           sku: transBSku,
@@ -2603,8 +2667,9 @@ function autoSynthesizeInterconnects(silent = false) {
 
         newInterconnectItems.push({
           instanceId: `fiberpatchA-${link.id}-${idx}-${Date.now()}`,
+          _skipByScope: (infraScope.sfpAndDac === false),
           id: patchSku,
-          model: `${patchName} (${locA} Patch Panel)`,
+          model: isSameRack ? `${patchName} (Intra-Rack Optical Jumper: ${nodeA.model} <-> ${nodeB.model})` : `${patchName} (${locA} Fiber LIU)`,
           sku: patchSku,
           role: "Optics & DAC",
           vendor: "Corning",
@@ -2623,8 +2688,10 @@ function autoSynthesizeInterconnects(silent = false) {
 
         newInterconnectItems.push({
           instanceId: `fiberpatchB-${link.id}-${idx}-${Date.now()}`,
+          _skipByScope: (infraScope.sfpAndDac === false),
           id: patchSku,
-          model: `${patchName} (${locB} Patch Panel)`,
+          model: `${patchName} (${locB} Fiber LIU)`,
+          _skipIntraRack: isSameRack,
           sku: patchSku,
           role: "Optics & DAC",
           vendor: "Corning",
@@ -2640,18 +2707,100 @@ function autoSynthesizeInterconnects(silent = false) {
           medium: isSMF ? "smf" : "mmf",
           fiberType
         });
-        synthesizedFiberPatchCords += (multiplier * 2);
+        if (isSameRack) {
+          synthesizedFiberPatchCords += multiplier;
+        } else {
+          synthesizedFiberPatchCords += (multiplier * 2);
+          interRackFiberPortsByLoc[locA] = (interRackFiberPortsByLoc[locA] || 0) + multiplier;
+          interRackFiberPortsByLoc[locB] = (interRackFiberPortsByLoc[locB] || 0) + multiplier;
+        }
+      }
+    });
+
+    // Preserve existing mounted Fiber LIU slots so re-synthesizing retains rack positions
+    const existingMountedLiuByLoc = {};
+    projectBOM.forEach(item => {
+      if (item.source === "topology_auto_sync" && (item.sku === "LIU-1U-24LC" || (item.model || "").includes("Fiber LIU")) && item.rackSlot) {
+        const loc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(item.closetName || item.rackId || "MDF") : (item.closetName || "MDF");
+        if (!existingMountedLiuByLoc[loc]) existingMountedLiuByLoc[loc] = [];
+        existingMountedLiuByLoc[loc].push(item.rackSlot);
       }
     });
 
     // In-place update to projectBOM: remove previously auto-synthesized interconnects
     for (let i = projectBOM.length - 1; i >= 0; i--) {
-      if (projectBOM[i].source === "topology_auto_sync") {
+      if (projectBOM[i].source === "topology_auto_sync" || projectBOM[i].role === "Uplink Interconnect") {
         projectBOM.splice(i, 1);
       }
     }
 
-    projectBOM.push(...newInterconnectItems);
+    // Also account for floorplan fiber backbones so closets with drawn fiber trunks receive a 1U Fiber LIU
+    if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+      facilityFloors.forEach(fl => {
+        (fl.fiberBackbones || []).forEach(fb => {
+          const fromLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(fb.fromClosetName || "MDF") : (fb.fromClosetName || "MDF");
+          const toLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(fb.toClosetName || "IDF-1") : (fb.toClosetName || "IDF-1");
+          const duplexPorts = Math.ceil((parseInt(fb.strandCount, 10) || 12) / 2);
+          interRackFiberPortsByLoc[fromLoc] = Math.max(interRackFiberPortsByLoc[fromLoc] || 0, duplexPorts);
+          interRackFiberPortsByLoc[toLoc] = Math.max(interRackFiberPortsByLoc[toLoc] || 0, duplexPorts);
+        });
+      });
+    }
+
+    // Auto-provision 1U 24-Fiber (12-Port Duplex LC) Rack-Mount Fiber LIU Enclosures per closet
+    const liuCatalogItem = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.sku === "LIU-1U-24LC")) || {
+      sku: "LIU-1U-24LC",
+      name: "1U 24-Fiber (12-Port Duplex LC) Rack-Mount Fiber LIU Patch Enclosure",
+      vendor: "Corning",
+      msrp: 245,
+      ports: 12,
+      rackUnits: 1
+    };
+
+    Object.entries(interRackFiberPortsByLoc).forEach(([loc, duplexPortCount]) => {
+      if (!loc || loc.endsWith("• Field") || duplexPortCount <= 0) return;
+
+      // Deduct any manual Fiber LIU enclosures already present in this closet
+      let existingManualLiuPorts = 0;
+      projectBOM.forEach(item => {
+        const itemLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.normalize(item.closetName || item.rackId || "MDF") : (item.closetName || "MDF");
+        if (itemLoc === loc && (item.sku === "LIU-1U-24LC" || (item.model || "").includes("Fiber LIU"))) {
+          existingManualLiuPorts += (Number(item.ports) || 12) * (item.qty || 1);
+        }
+      });
+
+      const netDuplexNeeded = Math.max(0, duplexPortCount - existingManualLiuPorts);
+      const liuQty = Math.ceil(netDuplexNeeded / 12);
+      const scopeForLiu = (typeof getProjectInfrastructureScope === "function") ? getProjectInfrastructureScope() : { fiberBackbone: true };
+      if (liuQty > 0 && scopeForLiu.fiberBackbone !== false) {
+        newInterconnectItems.push({
+          instanceId: `liu-${loc.replace(/\W+/g, '_')}-${Date.now()}`,
+          id: liuCatalogItem.sku,
+          model: `${liuCatalogItem.name} (${loc})`,
+          sku: liuCatalogItem.sku,
+          role: "Structured Cabling",
+          vendor: liuCatalogItem.vendor || "Corning",
+          msrp: liuCatalogItem.msrp || 245,
+          ports: 12,
+          poeBudget: 0,
+          baseWatts: 0,
+          rackUnits: 1,
+          weightLbs: 6.5,
+          qty: liuQty,
+          closetName: loc,
+          rackId: loc,
+          rackSlot: (existingMountedLiuByLoc[loc]?.length > 0) ? existingMountedLiuByLoc[loc].shift() : null,
+          isPassive: true,
+          source: "topology_auto_sync"
+        });
+        synthesizedFiberLIUs += liuQty;
+      }
+    });
+
+    projectBOM.push(...newInterconnectItems.filter(item => !item._skipIntraRack && !item._skipByScope).map(item => {
+      if (item.vendorOverride) item.vendor = item.vendorOverride;
+      return item;
+    }));
 
     if (typeof FacilityStore !== "undefined" && typeof FacilityStore.notifyWorkspaceChange === "function") {
       FacilityStore.notifyWorkspaceChange();
@@ -2662,13 +2811,14 @@ function autoSynthesizeInterconnects(silent = false) {
       StorageService.queueAutoSave();
     }
 
-    const totalAdded = synthesizedDACCables + synthesizedPatchCords + synthesizedTransceivers + synthesizedFiberPatchCords;
+    const totalAdded = synthesizedDACCables + synthesizedPatchCords + synthesizedTransceivers + synthesizedFiberPatchCords + synthesizedFiberLIUs;
     if (!silent && typeof showToast === "function") {
       const parts = [];
       if (synthesizedDACCables > 0) parts.push(`${synthesizedDACCables} DACs`);
       if (synthesizedPatchCords > 0) parts.push(`${synthesizedPatchCords} Patch Cords`);
       if (synthesizedTransceivers > 0) parts.push(`${synthesizedTransceivers} Transceivers`);
       if (synthesizedFiberPatchCords > 0) parts.push(`${synthesizedFiberPatchCords} Fiber Patches`);
+      if (synthesizedFiberLIUs > 0) parts.push(`${synthesizedFiberLIUs} Fiber LIUs`);
       showToast(`Synthesized ${totalAdded} interconnect items (${parts.join(", ")}) into Quote BOM!`);
     }
   } finally {

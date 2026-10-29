@@ -463,12 +463,41 @@ function enrichBOMItemFromCatalog(item) {
 }
 window.enrichBOMItemFromCatalog = enrichBOMItemFromCatalog;
 
-function addToProjectBOM(id, targetLocation = null) {
+function addToProjectBOM(id, targetLocation = null, batchCount = 1, skipConfirm = false) {
   const sw = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.getSwitch === "function" ? CatalogRegistry.getSwitch(id) : null) ||
              (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(id) : null) ||
              (typeof SWITCH_DATABASE !== "undefined" ? SWITCH_DATABASE.find(s => s.id === id || s.sku === id) : null);
   if (!sw) {
     console.error("addToProjectBOM: Switch not found in catalog for id:", id);
+    return;
+  }
+
+  const totalUnitsToAdd = Math.max(1, parseInt(batchCount, 10) || 1);
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && defs.network?.switchesInScope === false && typeof confirmProjectDefaultChange === "function") {
+    confirmProjectDefaultChange({
+      title: "Network Switching Marked Out of Orion Scope",
+      settingLabel: "Orion Scope of Work • Active Network Switching",
+      defaultLabel: "Customer-Furnished / Out of Scope",
+      newLabel: `Include ${sw.vendor} ${sw.model}`,
+      message: `Your Project Scope & Defaults specify that Active Network Switching is Customer-Furnished / Out of Scope. Are you sure you want to add ${totalUnitsToAdd > 1 ? `${totalUnitsToAdd}x ` : ""}${sw.vendor} ${sw.model} to Orion's BOM?`,
+      allowLocalOverride: true,
+      localOverrideLabel: "Add Switch as One-Time Exception",
+      updateDefaultLabel: "Enable Network Switching in Project Scope",
+      onLocalOverride: () => addToProjectBOM(id, targetLocation, totalUnitsToAdd, true),
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.network) d.network = {}; d.network.switchesInScope = true; });
+        }
+        addToProjectBOM(id, targetLocation, totalUnitsToAdd, true);
+      }
+    });
+    return;
+  }
+  if (totalUnitsToAdd > 1) {
+    for (let k = 0; k < totalUnitsToAdd; k++) {
+      addToProjectBOM(id, targetLocation, 1, true);
+    }
     return;
   }
 
@@ -1066,7 +1095,6 @@ function updateStackedCount(instanceId, count) {
 }
 
 function applyStackCabling(item) {
-  const baseCableSku = item.stackCableSku || "STACK-DAC-1M";
   projectBOM = projectBOM.filter(i => !(i.role === "Stacking Cable" && i.parentInstanceId === item.instanceId));
   projectBOM = projectBOM.filter(i => !(i.source === "stack_patch_panel" && i.parentInstanceId === item.instanceId));
   projectBOM = projectBOM.filter(i => !(i.source === "stack_cable_manager" && i.parentInstanceId === item.instanceId));
@@ -1081,35 +1109,80 @@ function applyStackCabling(item) {
     if (stackSpanU >= 7) stackCableLen = "2m";
     else if (stackSpanU >= 3) stackCableLen = "1m";
 
-    let resolvedSku = baseCableSku;
+    const hasDedicatedStack = Boolean(item.stackCableSku) ||
+      (typeof PortEngine !== "undefined" && typeof PortEngine.hasDedicatedStackPorts === "function" && PortEngine.hasDedicatedStackPorts(item));
+
+    let resolvedSku = item.stackCableSku || "STACK-DAC-1M";
     let resolvedName = `${item.vendor} Dedicated Hardware Stacking Cable (${stackCableLen} • ${stackSpanU}U Stack Span)`;
     let resolvedMsrp = 180;
-    if (typeof formatDacItem === "function") {
-      const fmt = formatDacItem(baseCableSku, `${item.vendor} Dedicated Hardware Stacking Cable`, 180, stackCableLen, "40G", item.vendor);
-      resolvedSku = fmt.sku;
-      resolvedName = `${fmt.name} (${item.closetName || 'Rack'} • ${stackSpanU}U Stack Span)`;
-      resolvedMsrp = fmt.msrp;
+
+    if (hasDedicatedStack) {
+      const catStack = (typeof POWER_SUPPLY_CATALOG !== "undefined" && item.stackCableSku && POWER_SUPPLY_CATALOG[item.stackCableSku]) ||
+        (typeof CatalogRegistry !== "undefined" && item.stackCableSku && CatalogRegistry.get(item.stackCableSku)) || null;
+      const baseMsrp = catStack?.msrp || 180;
+      const baseTitle = catStack?.name || `${item.vendor} Dedicated Hardware Stacking Cable`;
+      if (typeof formatDacItem === "function") {
+        const fmt = formatDacItem(resolvedSku, baseTitle, baseMsrp, stackCableLen, "40G", item.vendor);
+        resolvedSku = fmt.sku;
+        resolvedName = `${fmt.name} (${item.closetName || 'Rack'} • ${stackSpanU}U Stack Span)`;
+        resolvedMsrp = fmt.msrp;
+      }
+    } else {
+      // Front-panel SFP+ / SFP28 / QSFP28 DAC Stack Ring (respects 1st-Party OEM vs 3rd-Party IronLink / FS.com mode)
+      const upSummary = `${item.uplinksSummary || ""} ${item.portFormFactorSummary || ""} ${item.maxBackboneSpeed || ""}`.toUpperCase();
+      let stackSpeed = "10G";
+      if (upSummary.includes("100G") || upSummary.includes("QSFP28")) stackSpeed = "100G";
+      else if (upSummary.includes("40G") || upSummary.includes("QSFP+")) stackSpeed = "40G";
+      else if (upSummary.includes("25G") || upSummary.includes("SFP28")) stackSpeed = "25G";
+
+      const opticsMode = (typeof getProjectOpticsVendorMode === "function") ? getProjectOpticsVendorMode() : "oem";
+      const lookupVendor = opticsMode === "ironlink" ? "IronLink" : (opticsMode === "fs" ? "FS.com" : item.vendor);
+      const eepromCode = (typeof getVendorEepromCode === "function") ? getVendorEepromCode(item.vendor) : "MSA";
+
+      const dacMatch = (typeof findDacItem === "function") ? findDacItem(stackSpeed, lookupVendor, stackCableLen) : null;
+      const fallbackDac = (typeof OPTICS_CATALOG !== "undefined" && OPTICS_CATALOG[lookupVendor]?.[stackSpeed]?.dac) || null;
+      const chosenDac = dacMatch || fallbackDac;
+      const baseSku = chosenDac?.sku || `${lookupVendor || "MSA"}-${stackSpeed}-DAC-1M`;
+      const baseTitle = chosenDac?.name || `${lookupVendor || "MSA"} ${stackSpeed} Direct Attach Copper Stack Ring Cable`;
+      const baseMsrp = chosenDac?.msrp || (stackSpeed === "25G" ? 55 : (stackSpeed === "100G" ? 120 : 25));
+
+      if (typeof formatDacItem === "function") {
+        const fmt = formatDacItem(baseSku, baseTitle, baseMsrp, stackCableLen, stackSpeed, lookupVendor);
+        resolvedSku = opticsMode === "oem" ? fmt.sku : `${fmt.sku}-${eepromCode}`;
+        resolvedName = `${fmt.name}${opticsMode === "oem" ? "" : ` [${item.vendor} Coded]`} (Front-Panel Stack Ring • ${stackSpanU}U Span)`;
+        resolvedMsrp = fmt.msrp;
+      } else {
+        resolvedSku = opticsMode === "oem" ? baseSku : `${baseSku}-${eepromCode}`;
+        resolvedName = `${baseTitle} (${stackCableLen} • ${stackSpanU}U Stack Ring)`;
+        resolvedMsrp = baseMsrp;
+      }
     }
 
-    projectBOM.push({
-      instanceId: `cable-${item.instanceId}`,
-      parentInstanceId: item.instanceId,
-      id: `${item.id}-stack-cable`,
-      model: resolvedName,
-      sku: resolvedSku,
-      role: "Stacking Cable",
-      vendor: item.vendor,
-      msrp: resolvedMsrp,
-      poeBudget: 0,
-      baseWatts: 0,
-      stackCableLength: stackCableLen,
-      uDiff: stackSpanU,
-      closetName: item.closetName,
-      rackId: item.rackId,
-      qty: item.stackedUnits
-    });
+    const stackInfraScope = (typeof getProjectInfrastructureScope === "function")
+      ? getProjectInfrastructureScope()
+      : { sfpAndDac: true, rackPatchPanels: true };
 
-    if (item.patchPanelBetween) {
+    if (stackInfraScope.sfpAndDac !== false) {
+      projectBOM.push({
+        instanceId: `cable-${item.instanceId}`,
+        parentInstanceId: item.instanceId,
+        id: `${item.id}-stack-cable`,
+        model: resolvedName,
+        sku: resolvedSku,
+        role: "Stacking Cable",
+        vendor: item.vendor,
+        msrp: resolvedMsrp,
+        poeBudget: 0,
+        baseWatts: 0,
+        stackCableLength: stackCableLen,
+        uDiff: stackSpanU,
+        closetName: item.closetName,
+        rackId: item.rackId,
+        qty: item.stackedUnits
+      });
+    }
+
+    if (item.patchPanelBetween && stackInfraScope.rackPatchPanels !== false) {
       projectBOM.push({
         instanceId: `stack-pp-${item.instanceId}`,
         parentInstanceId: item.instanceId,
@@ -1168,53 +1241,126 @@ function applyStandardPodCabling(item) {
 
   if (!item.standardPod) return;
 
+  const infraScope = (typeof getProjectInfrastructureScope === "function")
+    ? getProjectInfrastructureScope()
+    : { rackPatchPanels: true, patchCords: true };
+
   const stackMultiplier = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
   const switchPorts = (parseInt(item.ports, 10) || 24);
-  const patchCordQty = switchPorts * stackMultiplier;
+  const totalCopperPorts = switchPorts * stackMultiplier;
   const panelQty = 2 * stackMultiplier; // 1 above + 1 below per switch unit
+  const keystonePackQty = Math.max(1, Math.ceil(totalCopperPorts / 24));
 
-  // 1. Add Upper and Lower 24-Port Modular Keystone Patch Panels
-  projectBOM.push({
-    instanceId: `pod-pp-${item.instanceId}`,
-    parentInstanceId: item.instanceId,
-    source: "switch_standard_pod",
-    id: `${item.id}-pod-pp`,
-    model: `1U 24-Port High-Density Modular Keystone Patch Panel (Standard Pod: Above & Below)`,
-    sku: "PP-1U-24P-MOD",
-    role: "Structured Cabling",
-    category: "Infrastructure",
-    vendor: "Panduit",
-    msrp: 68,
-    rackUnits: 1,
-    weightLbs: 1.8,
-    depthInches: 1.5,
-    ports: 24,
-    poeBudget: 0,
-    baseWatts: 0,
-    closetName: item.closetName,
-    rackId: item.rackId,
-    qty: panelQty
-  });
+  if (infraScope.rackPatchPanels !== false) {
+    // 1. Add Upper and Lower 24-Port Modular Keystone Patch Panels
+    projectBOM.push({
+      instanceId: `pod-pp-${item.instanceId}`,
+      parentInstanceId: item.instanceId,
+      source: "switch_standard_pod",
+      id: `${item.id}-pod-pp`,
+      model: `1U 24-Port High-Density Modular Keystone Patch Panel (Standard Pod: Above & Below)`,
+      sku: "PP-1U-24P-MOD",
+      role: "Structured Cabling",
+      category: "Infrastructure",
+      vendor: "Panduit",
+      msrp: 68,
+      rackUnits: 1,
+      weightLbs: 1.8,
+      depthInches: 1.5,
+      ports: 24,
+      poeBudget: 0,
+      baseWatts: 0,
+      closetName: item.closetName,
+      rackId: item.rackId,
+      qty: panelQty
+    });
 
-  // 2. Add 6-Inch Cat6A Slim Patch Cords
-  projectBOM.push({
-    instanceId: `pod-patch-cables-${item.instanceId}`,
-    parentInstanceId: item.instanceId,
-    source: "switch_standard_pod",
-    id: `${item.id}-pod-patch-cables`,
-    model: `Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, Blue)`,
-    sku: "C6A-SLIM-6IN-BL",
-    role: "Structured Cabling",
-    category: "Infrastructure",
-    vendor: "Panduit",
-    msrp: 6.20,
-    rackUnits: 0,
-    lengthFt: 0.5,
-    poeBudget: 0,
-    baseWatts: 0,
-    closetName: item.closetName,
-    rackId: item.rackId,
-    qty: patchCordQty
+    // 2. Add Cat6A Shielded Toolless Keystone Jack 24-Packs to populate the modular patch panels
+    const defaultJack = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.connectors?.[0]) || {
+      sku: "C6A-KEY-SLD-24",
+      name: "Cat6A Shielded Toolless Keystone Jacks (Pack of 24)",
+      vendor: "Panduit",
+      msrp: 145
+    };
+    projectBOM.push({
+      instanceId: `pod-jacks-${item.instanceId}`,
+      parentInstanceId: item.instanceId,
+      source: "switch_standard_pod",
+      id: `${item.id}-pod-jacks`,
+      model: `${defaultJack.name} (Standard Pod Termination)`,
+      sku: defaultJack.sku,
+      role: "Structured Cabling",
+      category: "Infrastructure",
+      vendor: defaultJack.vendor || "Panduit",
+      msrp: defaultJack.msrp || 145,
+      rackUnits: 0,
+      packQty: 24,
+      poeBudget: 0,
+      baseWatts: 0,
+      closetName: item.closetName,
+      rackId: item.rackId,
+      qty: keystonePackQty
+    });
+  }
+
+  if (infraScope.patchCords === false) return;
+
+  // 3. Add 6-Inch (0.5-Foot) Cat6A Slim Patch Cords aligned with Project Cabling Standards & connected device colors
+  const colorCounts = {};
+  const ports = (typeof PortEngine !== "undefined" && typeof PortEngine.initSwitchPorts === "function")
+    ? PortEngine.initSwitchPorts(item)
+    : [];
+  const copperPorts = ports.filter(p => !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ"));
+
+  if (copperPorts.length > 0) {
+    copperPorts.forEach(p => {
+      const dev = (p.connectedDeviceId && Array.isArray(projectBOM))
+        ? projectBOM.find(b => b && b.instanceId === p.connectedDeviceId)
+        : null;
+      const patchStd = (typeof getProjectCablingStandard === "function")
+        ? getProjectCablingStandard(dev, "patch")
+        : { color: "Yellow" };
+      const col = patchStd?.color || "Yellow";
+      colorCounts[col] = (colorCounts[col] || 0) + 1;
+    });
+  } else {
+    const defStd = (typeof getProjectCablingStandard === "function")
+      ? getProjectCablingStandard(null, "patch")
+      : { color: "Yellow" };
+    const col = defStd?.color || "Yellow";
+    colorCounts[col] = totalCopperPorts;
+  }
+
+  Object.entries(colorCounts).forEach(([colorName, count]) => {
+    if (count <= 0) return;
+    const matchedCord = (typeof findPatchCordItem === "function")
+      ? findPatchCordItem(0.5, "Panduit", false, colorName)
+      : {
+          sku: colorName === "Blue" ? "C6A-SLIM-6IN-BL" : "C6A-SLIM-6IN-YL",
+          name: `Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, ${colorName})`,
+          vendor: "Panduit",
+          msrp: 6.20
+        };
+    projectBOM.push({
+      instanceId: `pod-patch-cables-${item.instanceId}-${colorName.toLowerCase()}`,
+      parentInstanceId: item.instanceId,
+      source: "switch_standard_pod",
+      id: `${item.id}-pod-patch-cables-${colorName.toLowerCase()}`,
+      model: matchedCord.name,
+      sku: matchedCord.sku,
+      role: "Structured Cabling",
+      category: "Infrastructure",
+      vendor: matchedCord.vendor || "Panduit",
+      msrp: matchedCord.msrp || 6.20,
+      rackUnits: 0,
+      lengthFt: 0.5,
+      color: colorName,
+      poeBudget: 0,
+      baseWatts: 0,
+      closetName: item.closetName,
+      rackId: item.rackId,
+      qty: count
+    });
   });
 }
 
@@ -1241,7 +1387,7 @@ function updateDeviceMountMethod(instanceId, method) {
 }
 
 // -----------------------------------------------------------
-// Dynamic Auto-Uplinks
+// Dynamic Auto-Uplinks (Unified with Topology Auto-Synthesizer)
 // -----------------------------------------------------------
 function autoResolveUplinks() {
   const coreSwitches = projectBOM.filter(i => (i.role === "Core" || i.role === "Aggregation") && !i.parentInstanceId);
@@ -1257,100 +1403,55 @@ function autoResolveUplinks() {
   }
 
   const core = coreSwitches[0];
+  // Remove any legacy Uplink Interconnect items so we never double-count with topology_auto_sync
   projectBOM = projectBOM.filter(i => i.role !== "Uplink Interconnect");
 
-  let dacCount = 0;
-  let opticPairsCount = 0;
-  let highestSpeedResolved = "10G";
-
   accessSwitches.forEach(sw => {
-    sw.uplinkTargetId = core.instanceId;
-
-    const isDual = sw.uplinkMode === "lag_dual" || sw.stackedUnits >= 2;
-    const linksNeeded = isDual ? 2 : 1;
-
-    let accessUplinkSpeed = "10G";
-    const attachedSled = projectBOM.find(i => i.parentInstanceId === sw.instanceId && i.role === "Uplink Module");
-    const sledData = attachedSled ? (MODULAR_UPLINK_CATALOG[attachedSled.id] || MODULAR_UPLINK_CATALOG[attachedSled.sku]) : null;
-
-    if (sledData) {
-      accessUplinkSpeed = sledData.speed;
-    } else if (sw.portSpeed === "25G" || (sw.uplinksSummary && sw.uplinksSummary.includes("25G"))) {
-      accessUplinkSpeed = "25G";
-    } else if (sw.portSpeed === "100G" || (sw.uplinksSummary && sw.uplinksSummary.includes("100G"))) {
-      accessUplinkSpeed = "100G";
-    } else if (sw.maxBackboneSpeed && sw.maxBackboneSpeed !== "100G") {
-      accessUplinkSpeed = sw.maxBackboneSpeed;
-    }
-
-    const coreSpeed = core.maxBackboneSpeed || "10G";
-
-    let linkSpeed = "10G";
-    if (accessUplinkSpeed === "100G" && coreSpeed === "100G") {
-      linkSpeed = "100G";
-    } else if ((accessUplinkSpeed === "25G" || accessUplinkSpeed === "100G") && (coreSpeed === "25G" || coreSpeed === "100G")) {
-      linkSpeed = "25G";
-    } else if (accessUplinkSpeed === "1G" || coreSpeed === "1G") {
-      linkSpeed = "1G";
-    }
-    highestSpeedResolved = linkSpeed;
-
-    const isSameCloset = (sw.closetName || "IDF-1 • Rack-1").trim().toUpperCase() === (core.closetName || "MDF • Rack-1").trim().toUpperCase();
-
-    if (isSameCloset) {
-      const dacData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.["dac"] || OPTICS_CATALOG["Meraki"]?.[linkSpeed]?.["dac"] || OPTICS_CATALOG["UniFi"]?.[linkSpeed]?.["dac"];
-      if (dacData) {
-        projectBOM.push({
-          instanceId: `uplink-dac-${sw.instanceId}`,
-          parentInstanceId: sw.instanceId,
-          id: dacData.sku,
-          model: `${sw.vendor} ${linkSpeed} Direct Attach Copper (DAC) Cable ${isDual ? '(2x LACP Bundle)' : '(Single Link)'}`,
-          sku: dacData.sku,
-          role: "Uplink Interconnect",
-          vendor: sw.vendor,
-          msrp: dacData.msrp,
-          poeBudget: 0,
-          baseWatts: 0,
-          closetName: sw.closetName,
-          rackId: sw.rackId,
-          qty: linksNeeded
-        });
-        dacCount += linksNeeded;
-      }
-    } else {
-      const medium = "smf";
-      let opticData = OPTICS_CATALOG[sw.vendor]?.[linkSpeed]?.[medium] || OPTICS_CATALOG["Meraki"]?.[linkSpeed]?.[medium] || OPTICS_CATALOG["UniFi"]?.[linkSpeed]?.[medium];
-
-      if (opticData) {
-        const transceiversQty = linksNeeded * 2;
-        projectBOM.push({
-          instanceId: `uplink-opt-${sw.instanceId}`,
-          parentInstanceId: sw.instanceId,
-          id: opticData.sku,
-          model: `${sw.vendor} ${linkSpeed} ${medium.toUpperCase()} Optical Transceiver Pair ${isDual ? '(2x LAG)' : ''} (${sw.closetName} -> ${core.closetName})`,
-          sku: opticData.sku,
-          role: "Uplink Interconnect",
-          vendor: sw.vendor,
-          msrp: opticData.msrp,
-          poeBudget: 0,
-          baseWatts: 2,
-          closetName: sw.closetName,
-          rackId: sw.rackId,
-          qty: transceiversQty
-        });
-        opticPairsCount += linksNeeded;
-      }
+    if (!sw.uplinkTargetId) {
+      sw.uplinkTargetId = core.instanceId;
     }
   });
 
-  FacilityStore.notifyWorkspaceChange();
-  showToast(`Auto Uplinks resolved at ${highestSpeedResolved}: Added ${dacCount}x DAC cables and ${opticPairsCount * 2}x transceivers.`);
+  if (typeof autoSynthesizeInterconnects === "function") {
+    autoSynthesizeInterconnects(false);
+    FacilityStore.notifyWorkspaceChange();
+    return;
+  }
 }
 
-function addFirewallToBOM(sku, targetLocation = null) {
+function addFirewallToBOM(sku, targetLocation = null, batchCount = 1, skipConfirm = false) {
   const fw = (typeof CatalogRegistry !== "undefined" && CatalogRegistry.get(sku)) ||
              (typeof FIREWALL_DATABASE !== "undefined" ? FIREWALL_DATABASE.find(f => f.sku === sku || f.id === sku) : null);
   if (!fw) return;
+
+  const totalUnitsToAdd = Math.max(1, parseInt(batchCount, 10) || 1);
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && defs.network?.switchesInScope === false && typeof confirmProjectDefaultChange === "function") {
+    confirmProjectDefaultChange({
+      title: "Network & Routing Marked Out of Orion Scope",
+      settingLabel: "Orion Scope of Work • Active Network & Firewalls",
+      defaultLabel: "Customer-Furnished / Out of Scope",
+      newLabel: `Include ${fw.vendor} ${fw.model}`,
+      message: `Your Project Scope & Defaults specify that Active Network Switching & Routing is Customer-Furnished / Out of Scope. Are you sure you want to add ${fw.vendor} ${fw.model} to Orion's BOM?`,
+      allowLocalOverride: true,
+      localOverrideLabel: "Add Firewall Once",
+      updateDefaultLabel: "Enable Networking in Project Scope",
+      onLocalOverride: () => addFirewallToBOM(sku, targetLocation, totalUnitsToAdd, true),
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.network) d.network = {}; d.network.switchesInScope = true; });
+        }
+        addFirewallToBOM(sku, targetLocation, totalUnitsToAdd, true);
+      }
+    });
+    return;
+  }
+  if (totalUnitsToAdd > 1) {
+    for (let k = 0; k < totalUnitsToAdd; k++) {
+      addFirewallToBOM(sku, targetLocation, 1, true);
+    }
+    return;
+  }
 
   const qtyToAdd = 1;
   const instanceId = `fw-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
@@ -1439,11 +1540,69 @@ function addOpticsToBOM(sku, name, msrp, qty, vendor) {
   showToast(`Added ${qty}x ${sku} to Project BOM.`);
 }
 
-function addServerToBOM(serverId, targetLocation = null, qty = 1) {
+function addServerToBOM(serverId, targetLocation = null, qty = 1, skipConfirm = false) {
   const srv = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(serverId) : null) ||
               (typeof SERVERS_DATABASE !== "undefined" ? SERVERS_DATABASE : []).find(s => s.id === serverId || s.sku === serverId) ||
               (typeof WORKSTATIONS_DATABASE !== "undefined" ? WORKSTATIONS_DATABASE : []).find(w => w.id === serverId || w.sku === serverId);
   if (!srv) return;
+
+  const isWorkstationItem = (typeof WORKSTATIONS_DATABASE !== "undefined" && WORKSTATIONS_DATABASE.some(w => w.id === srv.id || w.sku === srv.sku)) ||
+    /workstation/i.test(String(srv.role || "") + " " + String(srv.category || ""));
+  const isVmsSoftwareCheck = srv.category === "vms_software" ||
+    String(srv.role || "").includes("License") ||
+    String(srv.role || "").includes("Maintenance") ||
+    String(srv.role || "").includes("Database");
+
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && !isVmsSoftwareCheck && !isWorkstationItem && defs && typeof confirmProjectDefaultChange === "function") {
+    if (defs.vms?.enabled === false || defs.vms?.headEndInScope === false) {
+      const curScope = defs.vms?.enabled === false ? "VMS Out of Scope" : "Cameras Only (Existing Customer VMS)";
+      confirmProjectDefaultChange({
+        title: "VMS Head-End Servers Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • VMS Recording Servers",
+        defaultLabel: curScope,
+        newLabel: `Include ${srv.vendor} ${srv.model}`,
+        message: `Your Project Scope currently sets VMS Servers & Licensing to "${curScope}". Are you sure you want to add ${srv.vendor} ${srv.model} to Orion's BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Server Once",
+        updateDefaultLabel: "Enable VMS Servers in Project Scope",
+        onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; d.vms.headEndInScope = true; });
+          }
+          addServerToBOM(serverId, targetLocation, qty, true);
+        }
+      });
+      return;
+    }
+
+    const srvText = `${srv.vendor || ""} ${srv.model || ""} ${srv.sku || ""}`.toLowerCase();
+    const isStreamvault = srvText.includes("streamvault") || (srv.vendor || "").toLowerCase() === "genetec";
+    const isHusky = srvText.includes("husky") || (srv.vendor || "").toLowerCase().includes("milestone");
+    const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    if ((isStreamvault && defVms !== "genetec") || (isHusky && defVms !== "milestone")) {
+      const targetPlatform = isHusky ? "Milestone XProtect" : "Genetec";
+      confirmProjectDefaultChange({
+        title: "Server Appliance Differs from Project VMS Default",
+        settingLabel: "VMS Platform & Turnkey Appliance Ecosystem",
+        defaultLabel: defs.vms?.platform || "Project Default VMS",
+        newLabel: `${targetPlatform} (${srv.model})`,
+        message: `Your Project Default VMS Platform is set to "${defs.vms?.platform || 'Milestone XProtect'}", while "${srv.model}" is a ${targetPlatform} turnkey appliance. Are you sure you want to add it?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Appliance Only",
+        updateDefaultLabel: `Switch Project VMS to ${targetPlatform} & Add`,
+        onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = targetPlatform; }, true);
+          }
+          addServerToBOM(serverId, targetLocation, qty, true);
+        }
+      });
+      return;
+    }
+  }
 
   const count = Math.max(1, parseInt(qty, 10) || 1);
   let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
@@ -1565,25 +1724,19 @@ function addToBOM(idOrSku, qty = 1, targetLocation = null) {
 
   const isAcc = typeof ACCESS_CONTROL_DATABASE !== "undefined" && ACCESS_CONTROL_DATABASE.some(a => a.id === idOrSku || a.sku === idOrSku);
   if (isAcc) {
-    for (let i = 0; i < count; i++) {
-      addAccessDeviceToBOM(idOrSku, targetLocation);
-    }
+    addAccessDeviceToBOM(idOrSku, targetLocation, null, count);
     return;
   }
 
   const isSw = typeof SWITCH_DATABASE !== "undefined" && SWITCH_DATABASE.some(s => s.id === idOrSku || s.sku === idOrSku);
   if (isSw) {
-    for (let i = 0; i < count; i++) {
-      addToProjectBOM(idOrSku, targetLocation);
-    }
+    addToProjectBOM(idOrSku, targetLocation, count);
     return;
   }
 
   const isFw = typeof FIREWALL_DATABASE !== "undefined" && FIREWALL_DATABASE.some(f => f.id === idOrSku || f.sku === idOrSku);
   if (isFw) {
-    for (let i = 0; i < count; i++) {
-      addFirewallToBOM(idOrSku, targetLocation);
-    }
+    addFirewallToBOM(idOrSku, targetLocation, count);
     return;
   }
 
@@ -1621,11 +1774,63 @@ function addToBOM(idOrSku, qty = 1, targetLocation = null) {
   }
 }
 
-function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null, qty = 1) {
+function addCameraToBOM(cameraId, targetLocation = null, uplinkTargetId = null, qty = 1, skipConfirm = false) {
   const cam = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(cameraId) : null) ||
               (typeof GENERIC_CAMERA_TYPES !== "undefined" ? GENERIC_CAMERA_TYPES : []).find(c => c.id === cameraId || c.sku === cameraId) ||
               (typeof CAMERAS_DATABASE !== "undefined" ? CAMERAS_DATABASE : []).find(c => c.id === cameraId || c.sku === cameraId);
   if (!cam) return;
+
+  const preCheckDefs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && preCheckDefs && typeof confirmProjectDefaultChange === "function") {
+    if (preCheckDefs.vms?.enabled === false) {
+      confirmProjectDefaultChange({
+        title: "Video Surveillance Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • Video Surveillance (VMS / CCTV)",
+        defaultLabel: "Excluded / Out of Scope",
+        newLabel: `Include ${cam.model}`,
+        message: `Your Project Scope & Defaults currently mark Video Surveillance (VMS / CCTV) as Excluded / Out of Scope. Are you sure you want to add ${cam.model} to Orion's BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Camera Once",
+        updateDefaultLabel: "Enable Video Surveillance in Project Scope",
+        onLocalOverride: () => addCameraToBOM(cameraId, targetLocation, uplinkTargetId, qty, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; });
+          }
+          addCameraToBOM(cameraId, targetLocation, uplinkTargetId, qty, true);
+        }
+      });
+      return;
+    }
+
+    const prefVendors = Array.isArray(preCheckDefs.vms?.cameraVendors) ? preCheckDefs.vms.cameraVendors : [];
+    const canonCamVendor = typeof canonicalWizardCameraVendorName === "function" ? canonicalWizardCameraVendorName(cam.vendor) : cam.vendor;
+    const isGenericCam = Boolean(cam.isGenericCamera) || /generic/i.test(String(cam.vendor || ""));
+    if (!isGenericCam && prefVendors.length > 0 && !prefVendors.some(v => (typeof canonicalWizardCameraVendorName === "function" ? canonicalWizardCameraVendorName(v) : v) === canonCamVendor)) {
+      confirmProjectDefaultChange({
+        title: "Non-Default Camera Manufacturer Selected",
+        settingLabel: "Preferred Camera Manufacturers",
+        defaultLabel: prefVendors.join(", "),
+        newLabel: `${cam.vendor} (${cam.model})`,
+        message: `Your Project Defaults specify [${prefVendors.join(", ")}] as Preferred Camera Manufacturers. Are you sure you want to add "${cam.vendor} ${cam.model}"?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add as One-Time Exception",
+        updateDefaultLabel: `Add ${canonCamVendor} to Project Defaults & Quote`,
+        onLocalOverride: () => addCameraToBOM(cameraId, targetLocation, uplinkTargetId, qty, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => {
+              if (!d.vms) d.vms = {};
+              const cur = Array.isArray(d.vms.cameraVendors) ? d.vms.cameraVendors : [];
+              if (!cur.includes(canonCamVendor)) d.vms.cameraVendors = [...cur, canonCamVendor];
+            }, true);
+          }
+          addCameraToBOM(cameraId, targetLocation, uplinkTargetId, qty, true);
+        }
+      });
+      return;
+    }
+  }
 
   const count = Math.max(1, Math.min(500, parseInt(qty, 10) || 1));
 
@@ -1967,10 +2172,39 @@ function upgradeSingleCameraInstance(instanceId, targetSkuOrId) {
 }
 window.upgradeSingleCameraInstance = upgradeSingleCameraInstance;
 
-function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = null) {
+function addAccessDeviceToBOM(accessId, targetLocation = null, uplinkTargetId = null, batchCount = 1, skipConfirm = false) {
   const dev = (typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(accessId) : null) ||
               (typeof ACCESS_CONTROL_DATABASE !== "undefined" ? ACCESS_CONTROL_DATABASE : []).find(a => a.id === accessId || a.sku === accessId);
   if (!dev) return;
+
+  const totalUnitsToAdd = Math.max(1, parseInt(batchCount, 10) || 1);
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && !window._bypassAcsScopePromptOnce && defs && defs.accessControl?.enabled === false && typeof confirmProjectDefaultChange === "function") {
+    confirmProjectDefaultChange({
+      title: "Access Control Marked Out of Orion Scope",
+      settingLabel: "Orion Scope of Work • Access Control System (ACS)",
+      defaultLabel: "Excluded / Out of Scope",
+      newLabel: `Include ${dev.vendor} ${dev.model}`,
+      message: `Your Project Scope & Defaults currently mark Access Control (ACS) as Excluded / Out of Scope. Are you sure you want to add ${totalUnitsToAdd > 1 ? `${totalUnitsToAdd}x ` : ""}${dev.vendor} ${dev.model} to Orion's BOM?`,
+      allowLocalOverride: true,
+      localOverrideLabel: "Add Device Once",
+      updateDefaultLabel: "Enable Access Control in Project Scope",
+      onLocalOverride: () => addAccessDeviceToBOM(accessId, targetLocation, uplinkTargetId, totalUnitsToAdd, true),
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.accessControl) d.accessControl = {}; d.accessControl.enabled = true; });
+        }
+        addAccessDeviceToBOM(accessId, targetLocation, uplinkTargetId, totalUnitsToAdd, true);
+      }
+    });
+    return;
+  }
+  if (totalUnitsToAdd > 1) {
+    for (let k = 0; k < totalUnitsToAdd; k++) {
+      addAccessDeviceToBOM(accessId, targetLocation, uplinkTargetId, 1, true);
+    }
+    return;
+  }
 
   const instanceId = `acc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   let assignedLoc = (typeof FacilityStore !== "undefined") ? FacilityStore.UNASSIGNED : "Unassigned";
@@ -2626,6 +2860,12 @@ function updateBOMView() {
   const totalMSRPEl = document.getElementById("bomTotalMSRP");
   if (totalMSRPEl) totalMSRPEl.innerText = `$${Math.round(totalMSRP).toLocaleString()}`;
 
+  // Skip heavy table DOM rendering and icon replacement when the BOM modal is hidden
+  const bomModalEl = document.getElementById("bomModal");
+  if (bomModalEl && bomModalEl.classList.contains("hidden")) {
+    return;
+  }
+
   // Populate dynamic Location filter dropdown
   const locSelect = document.getElementById("bomLocationFilter");
   if (locSelect) {
@@ -2662,7 +2902,7 @@ function updateBOMView() {
         <p class="text-xs text-slate-400 max-w-sm mb-4">Add switches, cameras, wireless access points, or rack hardware from the catalog to populate your equipment schedule.</p>
       </div>
     `;
-    if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
+    if (typeof safeCreateIcons === "function") safeCreateIcons(listContainer);
     return;
   }
 
@@ -2715,7 +2955,7 @@ function updateBOMView() {
         </button>
       </div>
     `;
-    if (window.lucide) { try { lucide.createIcons(); } catch(e) {} }
+    if (typeof safeCreateIcons === "function") safeCreateIcons(listContainer);
     return;
   }
 
@@ -2826,7 +3066,9 @@ function updateBOMView() {
     listContainer.innerHTML = groupedHtml;
   }
 
-  if (window.lucide) {
+  if (typeof safeCreateIcons === "function") {
+    safeCreateIcons(listContainer);
+  } else if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
 }
@@ -3696,12 +3938,36 @@ function renderLicenseManagerContent() {
     </div>
   `;
 
-  if (window.lucide) {
+  if (typeof safeCreateIcons === "function") {
+    safeCreateIcons(container);
+  } else if (window.lucide) {
     try { lucide.createIcons(); } catch(e) {}
   }
 }
 
-function setGlobalTerm(term) {
+function setGlobalTerm(term, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  const defTerm = defs?.licensing?.globalSelectedTerm || "1YR";
+  if (!skipConfirm && defs && term !== defTerm && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
+    confirmProjectDefaultChange({
+      title: "Change Project Licensing & Subscription Term?",
+      settingLabel: "Software Licensing & Warranty Term",
+      defaultLabel: defTerm,
+      newLabel: term,
+      message: `Your Project Default Software Licensing Term is set to "${defTerm}". Are you sure you want to change it to "${term}"?`,
+      allowLocalOverride: true,
+      localOverrideLabel: `Apply ${term} to Cloud Hardware Only`,
+      updateDefaultLabel: `Update Project Default to ${term}`,
+      onLocalOverride: () => setGlobalTerm(term, true),
+      onUpdateDefault: () => {
+        if (typeof updateSingleProjectDefault === "function") {
+          updateSingleProjectDefault(d => { if (!d.licensing) d.licensing = {}; d.licensing.globalSelectedTerm = term; }, true);
+        }
+        setGlobalTerm(term, true);
+      }
+    });
+    return;
+  }
   globalSelectedTerm = term;
   const parentDevices = projectBOM.filter(i => !i.parentInstanceId && (i.role === "Access" || i.role === "Core" || i.role === "Aggregation" || i.role === "Security WAN"));
 
