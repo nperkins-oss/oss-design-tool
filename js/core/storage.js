@@ -436,10 +436,17 @@ const StorageService = {
       },
       vms: {
         enabled: true,
-        platform: "Milestone XProtect",
+        platform: "Genetec",
         cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"],
         retentionDays: 30,
-        promptAnalytics: true
+        promptAnalytics: true,
+        serversInScope: true,
+        licensingInScope: true,
+        headEndInScope: true
+      },
+      infrastructure: {
+        racksInScope: true,
+        powerInScope: true
       },
       cabling: {
         horizontalCategories: ["C6A-CMP-1K-BL"],
@@ -705,10 +712,17 @@ const StorageService = {
       },
       vms: {
         enabled: true,
-        platform: "Milestone XProtect",
+        platform: "Genetec",
         cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"],
         retentionDays: 30,
-        promptAnalytics: true
+        promptAnalytics: true,
+        serversInScope: true,
+        licensingInScope: true,
+        headEndInScope: true
+      },
+      infrastructure: {
+        racksInScope: true,
+        powerInScope: true
       },
       cabling: (typeof DEFAULT_PROJECT_STANDARDS !== "undefined")
         ? JSON.parse(JSON.stringify(DEFAULT_PROJECT_STANDARDS.cabling))
@@ -943,9 +957,10 @@ const StorageService = {
           metadata: { projectName: defaultName, jobOpportunityNumber: "", clientName: "", siteAddress: "", leadDesigner: "" },
           licensing: { globalSelectedTerm: "1YR" },
           accessControl: { enabled: true, engine: "Genetec", readerProtocol: "osdp" },
-          vms: { enabled: true, platform: "Milestone XProtect", cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"], retentionDays: 30, promptAnalytics: true, headEndInScope: true },
-          cabling: { horizontalCategories: ["C6A-CMP-1K-BL"], compositeType: "AC-COMP-CMP-500", rackTermination: "patch_panels", patchCordLength: 0.5, patchCordColors: { security: "Yellow", data: "Blue" }, fiberType: "mmf" },
-          network: { switchesInScope: true, vlanMode: "none" }
+          vms: { enabled: true, platform: "Genetec", cameraVendors: ["Axis Communications", "Hanwha Vision", "Avigilon"], retentionDays: 30, promptAnalytics: true, serversInScope: true, licensingInScope: true, headEndInScope: true },
+          cabling: { horizontalCategories: ["C6A-CMP-1K-YL"], compositeType: "AC-COMP-CMP-500", rackTermination: "patch_panels", patchCordLength: 0.5, patchCordColors: { security: "Yellow", data: "Yellow" }, fiberType: "mmf" },
+          network: { switchesInScope: true, vlanMode: "none" },
+          infrastructure: { racksInScope: true, powerInScope: true }
         };
 
     const mergedDefaults = JSON.parse(JSON.stringify(baseStandards));
@@ -956,6 +971,7 @@ const StorageService = {
       if (customDefaults.vms) Object.assign(mergedDefaults.vms, customDefaults.vms);
       if (customDefaults.cabling) Object.assign(mergedDefaults.cabling, customDefaults.cabling);
       if (customDefaults.network) mergedDefaults.network = Object.assign(mergedDefaults.network || {}, customDefaults.network);
+      if (customDefaults.infrastructure) mergedDefaults.infrastructure = Object.assign(mergedDefaults.infrastructure || {}, customDefaults.infrastructure);
     } else {
       mergedDefaults.metadata.projectName = defaultName;
     }
@@ -1152,6 +1168,134 @@ const StorageService = {
     this.renderSavedProjectsList();
     if (typeof showToast === "function") showToast(`Created blank project: ${blankBundle.projectName}`);
     return blankBundle;
+  },
+
+  /**
+   * Lists all available projects (saved snapshots + active project if unsaved) for cloning/revisioning
+   */
+  getAvailableProjectsForCloning() {
+    const activeId = this.getActiveProjectId();
+    const activeName = this.getActiveProjectName();
+    const saved = this._getSavedProjectsIndex();
+    const list = saved.map(p => {
+      const defs = this.getProjectDefaults(p.id);
+      return {
+        id: p.id,
+        name: p.name || "Untitled Project",
+        updatedAt: p.updatedAt || 0,
+        isActive: p.id === activeId,
+        jobNumber: defs?.metadata?.jobOpportunityNumber || "",
+        itemCount: p.id === activeId && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)
+          ? projectBOM.length
+          : (p.itemsCount ?? p.itemCount ?? (Array.isArray(p.bom) ? p.bom.length : 0))
+      };
+    });
+    const hasActiveWork = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && projectBOM.length > 0);
+    if (activeId && !list.some(p => p.id === activeId) && hasActiveWork) {
+      const activeDefs = this.getProjectDefaults(activeId);
+      list.unshift({
+        id: activeId,
+        name: `${activeName} (Active Workspace)`,
+        updatedAt: Date.now(),
+        isActive: true,
+        jobNumber: activeDefs?.metadata?.jobOpportunityNumber || "",
+        itemCount: projectBOM.length
+      });
+    }
+    return list;
+  },
+
+  /**
+   * Retrieves the full bundle for any project ID (active workspace or saved library snapshot)
+   */
+  getProjectBundleById(projId) {
+    if (!projId) return null;
+    if (projId === this.getActiveProjectId()) {
+      return JSON.parse(JSON.stringify(this.bundleCurrentProject(this.getActiveProjectName())));
+    }
+    const saved = this._getSavedProjectsIndex();
+    const entry = saved.find(p => p.id === projId);
+    if (!entry) return null;
+    const bundle = this._getStoredBundleForEntry(entry);
+    return bundle ? JSON.parse(JSON.stringify(bundle)) : null;
+  },
+
+  /**
+   * Creates a new project branched as a Revision / Change Order / Option from an existing project,
+   * applies updated Scope & Technical Defaults, and automatically records the source project as Rev 0 baseline.
+   */
+  createProjectRevisionFromSource(sourceProjId, customDefaults = null, baselineCode = "Rev 0") {
+    // 1. Auto-save outgoing workspace if needed
+    const hasOutgoingWork = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && projectBOM.length > 0) ||
+      this._getSavedProjectsIndex().some(p => p.id === this.getActiveProjectId());
+    if (hasOutgoingWork) {
+      this.saveCurrentProject(false);
+    }
+
+    const sourceBundle = this.getProjectBundleById(sourceProjId);
+    if (!sourceBundle) {
+      return this.createNewBlankProject(customDefaults);
+    }
+
+    const sourceName = sourceBundle.projectName || "Source Project";
+    const mergedDefaults = customDefaults
+      ? JSON.parse(JSON.stringify(customDefaults))
+      : JSON.parse(JSON.stringify(sourceBundle.projectDefaults || this.getProjectDefaults(sourceProjId)));
+
+    const safeName = ((mergedDefaults.metadata && mergedDefaults.metadata.projectName) || `${sourceName} - Revision`)
+      .replace(/[<>"'/]/g, '').trim().slice(0, 80) || `${sourceName} - Revision`;
+    if (!mergedDefaults.metadata) mergedDefaults.metadata = {};
+    mergedDefaults.metadata.projectName = safeName;
+    mergedDefaults.metadata.parentProjectId = sourceProjId;
+    mergedDefaults.metadata.parentProjectName = sourceName;
+
+    const newProjId = `proj-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const newBundle = JSON.parse(JSON.stringify(sourceBundle));
+    newBundle.projectId = newProjId;
+    newBundle.projectName = safeName;
+    newBundle.createdAt = new Date().toISOString();
+    newBundle.updatedAt = Date.now();
+    newBundle.projectDefaults = mergedDefaults;
+    newBundle.globalSelectedTerm = mergedDefaults.licensing?.globalSelectedTerm || newBundle.globalSelectedTerm || "1YR";
+    newBundle.projectFiberType = mergedDefaults.cabling?.fiberType || newBundle.projectFiberType || "mmf";
+    if (!newBundle.calculator) newBundle.calculator = { demandCounts: { af: 0, at: 0, bt60: 0, bt90: 0 }, extraHeadroomPercent: 20 };
+    if (mergedDefaults.network?.poeHeadroomPercent) {
+      newBundle.calculator.extraHeadroomPercent = parseInt(mergedDefaults.network.poeHeadroomPercent, 10) || 20;
+    }
+
+    // Carry over historical milestones from source project and freeze source state as baseline snapshot
+    if (typeof RevisionEngine !== "undefined") {
+      const sourceRevs = typeof RevisionEngine.getRevisions === "function"
+        ? JSON.parse(JSON.stringify(RevisionEngine.getRevisions(sourceProjId)))
+        : [];
+      const priorRevs = JSON.parse(JSON.stringify(sourceRevs));
+      if (typeof RevisionEngine.buildSnapshotFromBundle === "function") {
+        const cleanCode = (baselineCode || "Rev 0").trim() || "Rev 0";
+        const author = mergedDefaults.metadata?.leadDesigner || "Lead Systems Engineer";
+        const baseSnap = RevisionEngine.buildSnapshotFromBundle(
+          sourceBundle,
+          cleanCode,
+          `Baseline from ${sourceName}`,
+          `Original baseline frozen when branching "${safeName}" from "${sourceName}".`,
+          author
+        );
+        priorRevs.unshift(baseSnap);
+        if (sourceRevs.length === 0 && typeof RevisionEngine.saveRevisions === "function") {
+          RevisionEngine.saveRevisions([JSON.parse(JSON.stringify(baseSnap))], sourceProjId);
+        }
+      }
+      if (typeof RevisionEngine.saveRevisions === "function") {
+        RevisionEngine.saveRevisions(priorRevs, newProjId);
+      }
+    }
+
+    this.applyProjectBundle(newBundle);
+    this._upsertSavedQuote(newProjId, safeName, newBundle);
+    this.renderSavedProjectsList();
+    if (typeof showToast === "function") {
+      showToast(`Created revision "${safeName}" with baseline frozen from "${sourceName}".`);
+    }
+    return newBundle;
   },
 
   /**

@@ -35,26 +35,25 @@ const RevisionEngine = {
     }
   },
 
-  captureCurrentSnapshot(code, name, notes, author = "Lead Designer") {
-    const projId = typeof StorageService !== "undefined" ? StorageService.getActiveProjectId() : "default";
-    const projName = typeof StorageService !== "undefined" ? StorageService.getActiveProjectName() : "Project";
+  buildSnapshotFromBundle(bundle, code, name, notes, author = "Lead Designer") {
+    const safeBundle = bundle || {};
+    const projName = safeBundle.projectDefaults?.projectName || "Project";
 
-    const bomCopy = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
-      ? JSON.parse(JSON.stringify(projectBOM))
+    const bomCopy = Array.isArray(safeBundle.projectBOM)
+      ? JSON.parse(JSON.stringify(safeBundle.projectBOM))
       : [];
 
-    const rawFloors = (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors))
-      ? JSON.parse(JSON.stringify(facilityFloors))
+    const rawFloors = Array.isArray(safeBundle.physicalCanvas?.facilityFloors)
+      ? JSON.parse(JSON.stringify(safeBundle.physicalCanvas.facilityFloors))
       : [];
     const floorsCopy = (typeof StorageService !== "undefined" && typeof StorageService.offloadFloorBlueprints === "function")
       ? StorageService.offloadFloorBlueprints(rawFloors)
       : rawFloors;
 
-    const linksCopy = (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks))
-      ? JSON.parse(JSON.stringify(topologyLinks))
+    const linksCopy = Array.isArray(safeBundle.topologyLinks)
+      ? JSON.parse(JSON.stringify(safeBundle.topologyLinks))
       : [];
 
-    // Compute key metrics at snapshot time
     let totalMSRP = 0;
     let cameraCount = 0;
     let readerCount = 0;
@@ -85,9 +84,9 @@ const RevisionEngine = {
       });
     });
 
-    const rev = {
+    return {
       id: `rev-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      code: code || `Rev ${this.getRevisions(projId).length}`,
+      code: code || "Rev 0",
       name: name || `Milestone ${new Date().toLocaleDateString()}`,
       notes: notes || "",
       author: author || "Lead Designer",
@@ -108,6 +107,26 @@ const RevisionEngine = {
         topologyLinks: linksCopy
       }
     };
+  },
+
+  captureCurrentSnapshot(code, name, notes, author = "Lead Designer") {
+    const projId = typeof StorageService !== "undefined" ? StorageService.getActiveProjectId() : "default";
+    const projName = typeof StorageService !== "undefined" ? StorageService.getActiveProjectName() : "Project";
+
+    const rev = this.buildSnapshotFromBundle(
+      {
+        projectDefaults: { projectName: projName },
+        projectBOM: (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) ? projectBOM : [],
+        physicalCanvas: {
+          facilityFloors: (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) ? facilityFloors : []
+        },
+        topologyLinks: (typeof topologyLinks !== "undefined" && Array.isArray(topologyLinks)) ? topologyLinks : []
+      },
+      code || `Rev ${this.getRevisions(projId).length}`,
+      name || `Milestone ${new Date().toLocaleDateString()}`,
+      notes,
+      author
+    );
 
     const revisions = this.getRevisions(projId);
     revisions.unshift(rev); // newest first
@@ -376,6 +395,10 @@ function createRevisionModalDOM() {
             <i data-lucide="shopping-bag" class="w-3.5 h-3.5 text-brand-400"></i>
             <span>Quote BOM</span>
           </button>
+          <button onclick="if(typeof openNewProjectWizardModal==='function'){ const activeId = (typeof StorageService!=='undefined') ? StorageService.getActiveProjectId() : null; openNewProjectWizardModal('revision', activeId); }" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-purple-300 hover:text-white border border-purple-500/30 font-semibold text-xs flex items-center gap-1.5 transition-colors cursor-pointer" title="Clone this project into a separate Revision / Option project while freezing Rev 0 here">
+            <i data-lucide="copy-plus" class="w-3.5 h-3.5 text-purple-400"></i>
+            <span>Branch as New Project Revision</span>
+          </button>
           <button onclick="promptCreateRevisionSnapshot()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all cursor-pointer">
             <i data-lucide="camera" class="w-4 h-4"></i>
             <span>Create Milestone Snapshot</span>
@@ -613,21 +636,50 @@ function initRevisionDiffDropdowns() {
   const compSelect = document.getElementById("revCompareSelect");
   if (!baseSelect || !compSelect) return;
 
+  const prevBase = baseSelect.value;
+  const prevComp = compSelect.value;
+
   const revisions = RevisionEngine.getRevisions();
+  const activeProjId = typeof StorageService !== "undefined" ? StorageService.getActiveProjectId() : "default";
+  const otherProjects = (typeof StorageService !== "undefined" && typeof StorageService.getAvailableProjectsForCloning === "function")
+    ? StorageService.getAvailableProjectsForCloning().filter(p => p.id !== activeProjId)
+    : [];
 
   let optionsHTML = `
     <option value="working-draft">★ Working Draft (Current Canvas)</option>
   `;
-  revisions.forEach(r => {
-    optionsHTML += `<option value="${r.id}">${escapeHTML(r.code)} • ${escapeHTML(r.name)}</option>`;
-  });
+  if (revisions.length > 0) {
+    optionsHTML += `<optgroup label="Project Milestone Snapshots">`;
+    revisions.forEach(r => {
+      optionsHTML += `<option value="${r.id}">${escapeHTML(r.code)} • ${escapeHTML(r.name)}</option>`;
+    });
+    optionsHTML += `</optgroup>`;
+  }
+  if (otherProjects.length > 0) {
+    optionsHTML += `<optgroup label="Other Saved Projects in Library">`;
+    otherProjects.forEach(p => {
+      const label = p.jobNumber ? `${p.name} (${p.jobNumber})` : p.name;
+      optionsHTML += `<option value="proj::${escapeHTML(p.id)}">📁 ${escapeHTML(label)} — ${p.itemCount || 0} items</option>`;
+    });
+    optionsHTML += `</optgroup>`;
+  }
 
   baseSelect.innerHTML = optionsHTML;
   compSelect.innerHTML = optionsHTML;
 
-  // Defaults: base is oldest snapshot, comp is working draft
-  if (revisions.length > 0) {
+  const hasOption = (sel, val) => val && Array.from(sel.options).some(o => o.value === val);
+
+  if (hasOption(baseSelect, prevBase)) {
+    baseSelect.value = prevBase;
+  } else if (revisions.length > 0) {
     baseSelect.value = revisions[revisions.length - 1].id;
+  } else if (otherProjects.length > 0) {
+    baseSelect.value = `proj::${otherProjects[0].id}`;
+  }
+
+  if (hasOption(compSelect, prevComp)) {
+    compSelect.value = prevComp;
+  } else {
     compSelect.value = "working-draft";
   }
 }
@@ -647,6 +699,16 @@ function runRevisionDiff() {
   const revisions = RevisionEngine.getRevisions();
   const getRev = (id) => {
     if (id === "working-draft") return RevisionEngine.getCurrentWorkingStateAsRevision();
+    if (typeof id === "string" && id.startsWith("proj::") && typeof StorageService !== "undefined") {
+      const targetProjId = id.slice(6);
+      const bundle = typeof StorageService.getProjectBundleById === "function"
+        ? StorageService.getProjectBundleById(targetProjId)
+        : null;
+      if (bundle) {
+        const pName = bundle.projectDefaults?.projectName || "Saved Project";
+        return RevisionEngine.buildSnapshotFromBundle(bundle, pName, "Saved Project Baseline", `Cross-project comparison against ${pName}`);
+      }
+    }
     return revisions.find(r => r.id === id) || RevisionEngine.getCurrentWorkingStateAsRevision();
   };
 
@@ -899,6 +961,7 @@ if (typeof window !== "undefined") {
   window.deleteRevisionItem = deleteRevisionItem;
   window.confirmRestoreRevision = confirmRestoreRevision;
   window.compareWithWorkingDraft = compareWithWorkingDraft;
+  window.initRevisionDiffDropdowns = initRevisionDiffDropdowns;
   window.runRevisionDiff = runRevisionDiff;
   window.exportChangeOrderCSV = exportChangeOrderCSV;
   window.printChangeOrderReport = printChangeOrderReport;

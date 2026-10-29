@@ -959,7 +959,71 @@ function renderAccessoryCard(acc) {
   `;
 }
 
-function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor) {
+function handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, skipConfirm = false) {
+  const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+  if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
+    if ((mode === "racks" || mode === "enclosures") && defs.infrastructure?.racksInScope === false) {
+      confirmProjectDefaultChange({
+        title: "Racks & Enclosures Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • Racks & Enclosures",
+        defaultLabel: "Excluded / Out of Scope",
+        newLabel: `Include ${safeVendor} ${safeModel}`,
+        message: `Your Project Scope & Defaults currently mark Racks & Enclosures as Out of Scope. Are you sure you want to add ${safeVendor} ${safeModel} to Orion's BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Rack / Enclosure Once",
+        updateDefaultLabel: "Enable Racks & Enclosures in Project Scope",
+        onLocalOverride: () => handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.infrastructure) d.infrastructure = {}; d.infrastructure.racksInScope = true; });
+          }
+          handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, true);
+        }
+      });
+      return;
+    }
+    if ((mode === "ups" || mode === "pdus") && defs.infrastructure?.powerInScope === false) {
+      confirmProjectDefaultChange({
+        title: "Rack Power (UPS / PDU) Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • Rack Power (UPS / PDU)",
+        defaultLabel: "Excluded / Out of Scope",
+        newLabel: `Include ${safeVendor} ${safeModel}`,
+        message: `Your Project Scope & Defaults currently mark Rack Power (UPS / PDU) as Out of Scope. Are you sure you want to add ${safeVendor} ${safeModel} to Orion's BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add Power Unit Once",
+        updateDefaultLabel: "Enable Rack Power in Project Scope",
+        onLocalOverride: () => handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.infrastructure) d.infrastructure = {}; d.infrastructure.powerInScope = true; });
+          }
+          handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, true);
+        }
+      });
+      return;
+    }
+    if ((mode === "vms_software" || mode === "os_virtualization" || mode === "access_software") && (defs.vms?.licensingInScope ?? defs.vms?.headEndInScope) === false) {
+      confirmProjectDefaultChange({
+        title: "Software Licensing Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • Software Licensing",
+        defaultLabel: "Excluded / Out of Scope",
+        newLabel: `Include ${safeVendor} ${safeModel}`,
+        message: `Your Project Scope & Defaults currently mark Software Licensing as Out of Scope. Are you sure you want to add ${safeVendor} ${safeModel} to Orion's BOM?`,
+        allowLocalOverride: true,
+        localOverrideLabel: "Add License Once",
+        updateDefaultLabel: "Enable Software Licensing in Project Scope",
+        onLocalOverride: () => handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, true),
+        onUpdateDefault: () => {
+          if (typeof updateSingleProjectDefault === "function") {
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.licensingInScope = true; d.vms.headEndInScope = true; });
+          }
+          handleAddCatalogCardToBOM(mode, safeId, safeSku, safeModel, msrp, safeVendor, true);
+        }
+      });
+      return;
+    }
+  }
+
   const selectEl = document.getElementById(`targetLocSelect-${safeId}`) || document.getElementById(`targetAccLocSelect-${safeSku}`);
   const targetLoc = selectEl ? selectEl.value : null;
   const qtyEl = document.getElementById(`targetQtyInput-${safeId}`);

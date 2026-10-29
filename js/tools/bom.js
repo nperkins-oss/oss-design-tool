@@ -1554,53 +1554,78 @@ function addServerToBOM(serverId, targetLocation = null, qty = 1, skipConfirm = 
     String(srv.role || "").includes("Database");
 
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
-  if (!skipConfirm && !isVmsSoftwareCheck && !isWorkstationItem && defs && typeof confirmProjectDefaultChange === "function") {
-    if (defs.vms?.enabled === false || defs.vms?.headEndInScope === false) {
-      const curScope = defs.vms?.enabled === false ? "VMS Out of Scope" : "Cameras Only (Existing Customer VMS)";
-      confirmProjectDefaultChange({
-        title: "VMS Head-End Servers Marked Out of Orion Scope",
-        settingLabel: "Orion Scope of Work • VMS Recording Servers",
-        defaultLabel: curScope,
-        newLabel: `Include ${srv.vendor} ${srv.model}`,
-        message: `Your Project Scope currently sets VMS Servers & Licensing to "${curScope}". Are you sure you want to add ${srv.vendor} ${srv.model} to Orion's BOM?`,
-        allowLocalOverride: true,
-        localOverrideLabel: "Add Server Once",
-        updateDefaultLabel: "Enable VMS Servers in Project Scope",
-        onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
-        onUpdateDefault: () => {
-          if (typeof updateSingleProjectDefault === "function") {
-            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; d.vms.headEndInScope = true; });
+  if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
+    if (isVmsSoftwareCheck && !window._bypassLicScopePromptOnce) {
+      if ((defs.vms?.licensingInScope ?? defs.vms?.headEndInScope) === false) {
+        confirmProjectDefaultChange({
+          title: "Software Licensing Marked Out of Orion Scope",
+          settingLabel: "Orion Scope of Work • Software Licensing",
+          defaultLabel: "Excluded / Out of Scope",
+          newLabel: `Include ${srv.vendor} ${srv.model}`,
+          message: `Your Project Scope & Defaults currently mark Software Licensing as Out of Scope. Are you sure you want to add ${srv.vendor} ${srv.model} to Orion's BOM?`,
+          allowLocalOverride: true,
+          localOverrideLabel: "Add License Once",
+          updateDefaultLabel: "Enable Software Licensing in Project Scope",
+          onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.licensingInScope = true; d.vms.headEndInScope = true; });
+            }
+            addServerToBOM(serverId, targetLocation, qty, true);
           }
-          addServerToBOM(serverId, targetLocation, qty, true);
-        }
-      });
-      return;
-    }
+        });
+        return;
+      }
+    } else if (!isVmsSoftwareCheck) {
+      if ((defs.vms?.serversInScope ?? defs.vms?.headEndInScope) === false) {
+        const hwLabel = isWorkstationItem ? "Workstation" : "Server";
+        confirmProjectDefaultChange({
+          title: "Servers / Workstations Marked Out of Orion Scope",
+          settingLabel: "Orion Scope of Work • Servers / Workstations",
+          defaultLabel: "Excluded / Out of Scope",
+          newLabel: `Include ${srv.vendor} ${srv.model}`,
+          message: `Your Project Scope & Defaults currently mark Servers / Workstations as Out of Scope. Are you sure you want to add ${srv.vendor} ${srv.model} to Orion's BOM?`,
+          allowLocalOverride: true,
+          localOverrideLabel: `Add ${hwLabel} Once`,
+          updateDefaultLabel: "Enable Servers / Workstations in Project Scope",
+          onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.serversInScope = true; d.vms.headEndInScope = true; });
+            }
+            addServerToBOM(serverId, targetLocation, qty, true);
+          }
+        });
+        return;
+      }
 
-    const srvText = `${srv.vendor || ""} ${srv.model || ""} ${srv.sku || ""}`.toLowerCase();
-    const isStreamvault = srvText.includes("streamvault") || (srv.vendor || "").toLowerCase() === "genetec";
-    const isHusky = srvText.includes("husky") || (srv.vendor || "").toLowerCase().includes("milestone");
-    const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
-    if ((isStreamvault && defVms !== "genetec") || (isHusky && defVms !== "milestone")) {
-      const targetPlatform = isHusky ? "Milestone XProtect" : "Genetec";
-      confirmProjectDefaultChange({
-        title: "Server Appliance Differs from Project VMS Default",
-        settingLabel: "VMS Platform & Turnkey Appliance Ecosystem",
-        defaultLabel: defs.vms?.platform || "Project Default VMS",
-        newLabel: `${targetPlatform} (${srv.model})`,
-        message: `Your Project Default VMS Platform is set to "${defs.vms?.platform || 'Milestone XProtect'}", while "${srv.model}" is a ${targetPlatform} turnkey appliance. Are you sure you want to add it?`,
-        allowLocalOverride: true,
-        localOverrideLabel: "Add Appliance Only",
-        updateDefaultLabel: `Switch Project VMS to ${targetPlatform} & Add`,
-        onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
-        onUpdateDefault: () => {
-          if (typeof updateSingleProjectDefault === "function") {
-            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = targetPlatform; }, true);
-          }
-          addServerToBOM(serverId, targetLocation, qty, true);
+      if (!isWorkstationItem) {
+        const srvText = `${srv.vendor || ""} ${srv.model || ""} ${srv.sku || ""}`.toLowerCase();
+        const isStreamvault = srvText.includes("streamvault") || (srv.vendor || "").toLowerCase() === "genetec";
+        const isHusky = srvText.includes("husky") || (srv.vendor || "").toLowerCase().includes("milestone");
+        const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "genetec";
+        if ((isStreamvault && defVms !== "genetec") || (isHusky && defVms !== "milestone")) {
+          const targetPlatform = isHusky ? "Milestone XProtect" : "Genetec";
+          confirmProjectDefaultChange({
+            title: "Server Appliance Differs from Project VMS Default",
+            settingLabel: "VMS Platform & Turnkey Appliance Ecosystem",
+            defaultLabel: defs.vms?.platform || "Genetec",
+            newLabel: `${targetPlatform} (${srv.model})`,
+            message: `Your Project Default VMS Platform is set to "${defs.vms?.platform || 'Genetec'}", while "${srv.model}" is a ${targetPlatform} turnkey appliance. Are you sure you want to add it?`,
+            allowLocalOverride: true,
+            localOverrideLabel: "Add Appliance Only",
+            updateDefaultLabel: `Switch Project VMS to ${targetPlatform} & Add`,
+            onLocalOverride: () => addServerToBOM(serverId, targetLocation, qty, true),
+            onUpdateDefault: () => {
+              if (typeof updateSingleProjectDefault === "function") {
+                updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.platform = targetPlatform; }, true);
+              }
+              addServerToBOM(serverId, targetLocation, qty, true);
+            }
+          });
+          return;
         }
-      });
-      return;
+      }
     }
   }
 
@@ -1704,44 +1729,91 @@ function addServerToBOM(serverId, targetLocation = null, qty = 1, skipConfirm = 
   showToast(`Added ${count > 1 ? `${count}x ` : ''}${srv.model} to ${assignedLoc}`);
 }
 
-function addToBOM(idOrSku, qty = 1, targetLocation = null) {
+function addToBOM(idOrSku, qty = 1, targetLocation = null, skipConfirm = false) {
   if (!idOrSku) return;
   const count = Math.max(1, parseInt(qty, 10) || 1);
 
   const isSrvOrLic = (typeof SERVERS_DATABASE !== "undefined" && SERVERS_DATABASE.some(s => s.id === idOrSku || s.sku === idOrSku)) ||
                      (typeof WORKSTATIONS_DATABASE !== "undefined" && WORKSTATIONS_DATABASE.some(w => w.id === idOrSku || w.sku === idOrSku));
   if (isSrvOrLic) {
-    addServerToBOM(idOrSku, targetLocation, count);
+    addServerToBOM(idOrSku, targetLocation, count, skipConfirm);
     return;
   }
 
   const isCam = (typeof CAMERAS_DATABASE !== "undefined" && CAMERAS_DATABASE.some(c => c.id === idOrSku || c.sku === idOrSku)) ||
                 (typeof GENERIC_CAMERA_TYPES !== "undefined" && GENERIC_CAMERA_TYPES.some(c => c.id === idOrSku || c.sku === idOrSku));
   if (isCam) {
-    addCameraToBOM(idOrSku, targetLocation, null, count);
+    addCameraToBOM(idOrSku, targetLocation, null, count, skipConfirm);
     return;
   }
 
   const isAcc = typeof ACCESS_CONTROL_DATABASE !== "undefined" && ACCESS_CONTROL_DATABASE.some(a => a.id === idOrSku || a.sku === idOrSku);
   if (isAcc) {
-    addAccessDeviceToBOM(idOrSku, targetLocation, null, count);
+    addAccessDeviceToBOM(idOrSku, targetLocation, null, count, skipConfirm);
     return;
   }
 
   const isSw = typeof SWITCH_DATABASE !== "undefined" && SWITCH_DATABASE.some(s => s.id === idOrSku || s.sku === idOrSku);
   if (isSw) {
-    addToProjectBOM(idOrSku, targetLocation, count);
+    addToProjectBOM(idOrSku, targetLocation, count, skipConfirm);
     return;
   }
 
   const isFw = typeof FIREWALL_DATABASE !== "undefined" && FIREWALL_DATABASE.some(f => f.id === idOrSku || f.sku === idOrSku);
   if (isFw) {
-    addFirewallToBOM(idOrSku, targetLocation, count);
+    addFirewallToBOM(idOrSku, targetLocation, count, skipConfirm);
     return;
   }
 
   const catItem = typeof CatalogRegistry !== "undefined" && typeof CatalogRegistry.get === "function" ? CatalogRegistry.get(idOrSku) : null;
   if (catItem) {
+    const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
+    const catKey = String(catItem.category || "").toLowerCase();
+    const roleKey = String(catItem.role || "").toLowerCase();
+    const isRackOrEnc = catKey === "racks" || catKey === "enclosures" || roleKey.includes("equipment rack");
+    const isUpsOrPdu = catKey === "ups" || catKey === "pdus" || roleKey === "ups" || roleKey.includes("rack ups") || roleKey.includes("pdu");
+    if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
+      if (isRackOrEnc && defs.infrastructure?.racksInScope === false) {
+        confirmProjectDefaultChange({
+          title: "Racks & Enclosures Marked Out of Orion Scope",
+          settingLabel: "Orion Scope of Work • Racks & Enclosures",
+          defaultLabel: "Excluded / Out of Scope",
+          newLabel: `Include ${catItem.vendor || "Generic"} ${catItem.model || idOrSku}`,
+          message: `Your Project Scope & Defaults currently mark Racks & Enclosures as Out of Scope. Are you sure you want to add ${catItem.model || idOrSku} to Orion's BOM?`,
+          allowLocalOverride: true,
+          localOverrideLabel: "Add Rack / Enclosure Once",
+          updateDefaultLabel: "Enable Racks & Enclosures in Project Scope",
+          onLocalOverride: () => addToBOM(idOrSku, count, targetLocation, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.infrastructure) d.infrastructure = {}; d.infrastructure.racksInScope = true; });
+            }
+            addToBOM(idOrSku, count, targetLocation, true);
+          }
+        });
+        return;
+      }
+      if (isUpsOrPdu && defs.infrastructure?.powerInScope === false) {
+        confirmProjectDefaultChange({
+          title: "Rack Power (UPS / PDU) Marked Out of Orion Scope",
+          settingLabel: "Orion Scope of Work • Rack Power (UPS / PDU)",
+          defaultLabel: "Excluded / Out of Scope",
+          newLabel: `Include ${catItem.vendor || "Generic"} ${catItem.model || idOrSku}`,
+          message: `Your Project Scope & Defaults currently mark Rack Power (UPS / PDU) as Out of Scope. Are you sure you want to add ${catItem.model || idOrSku} to Orion's BOM?`,
+          allowLocalOverride: true,
+          localOverrideLabel: "Add Power Unit Once",
+          updateDefaultLabel: "Enable Rack Power in Project Scope",
+          onLocalOverride: () => addToBOM(idOrSku, count, targetLocation, true),
+          onUpdateDefault: () => {
+            if (typeof updateSingleProjectDefault === "function") {
+              updateSingleProjectDefault(d => { if (!d.infrastructure) d.infrastructure = {}; d.infrastructure.powerInScope = true; });
+            }
+            addToBOM(idOrSku, count, targetLocation, true);
+          }
+        });
+        return;
+      }
+    }
     const existing = projectBOM.find(i => !i.parentInstanceId && (i.id === catItem.id || i.sku === catItem.sku));
     if (existing) {
       existing.qty = (parseInt(existing.qty, 10) || 1) + count;

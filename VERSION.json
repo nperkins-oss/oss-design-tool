@@ -1,6 +1,6 @@
 {
-  "version": "0.11.0-beta.2",
-  "build": "2026.10.29.1413",
+  "version": "0.11.0-beta.3",
+  "build": "2026.10.29.1610",
   "schemaVersion": "2.1.0",
   "channel": "staging",
   "entraidTenantId": "222c6535-b279-4f54-b835-30d1a15e8c05"

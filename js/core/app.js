@@ -5,8 +5,8 @@
 // =========================================================================
 
 // Version & Build Information (Single Source of Truth — synced via scripts/bump_version.py)
-const APP_VERSION = "0.11.0-beta.2";
-const BUILD_NUMBER = "2026.10.29.1413";
+const APP_VERSION = "0.11.0-beta.3";
+const BUILD_NUMBER = "2026.10.29.1610";
 const SCHEMA_VERSION = "2.1.0";
 
 function getAppEnvironment() {
@@ -78,10 +78,10 @@ function renderGlobalDesignModeToggle() {
         type="button"
         onclick="setCameraDesignMode('generic')"
         class="px-2 py-1 rounded-md font-bold flex items-center gap-1 transition-all cursor-pointer ${isGeneric ? 'bg-emerald-600 text-white shadow' : 'text-slate-400 hover:text-white'}"
-        title="Initial Design Mode: Size PoE & Video Storage using Generic Camera Types (2MP, 4MP, 5MP, 8MP 4K, 360°, Dual/Quad/5-Sensor, PTZ, 60W LPR)"
+        title="Initial/Quick Design Mode: Size PoE & Video Storage using Generic Camera Types (2MP, 4MP, 5MP, 8MP 4K, 360°, Dual/Quad/5-Sensor, PTZ, 60W LPR)"
       >
         <i data-lucide="layers" class="w-3 h-3"></i>
-        <span>Initial Design</span>
+        <span>Initial/Quick Design</span>
       </button>
       <button
         type="button"
@@ -120,7 +120,7 @@ function setCameraDesignMode(mode, skipConfirm = false) {
   const defCamMode = defs?.vms?.cameraDesignMode === "specific" ? "specific" : "generic";
   const labelForMode = (m) => m === "specific"
     ? "Full Engineering Design (Exact Catalog SKUs)"
-    : "Initial Design / ROM (Generic Camera Types)";
+    : "Initial/Quick Design (Generic Camera Types)";
 
   if (!skipConfirm && defs && normalized !== cameraDesignMode && normalized !== defCamMode && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
     confirmProjectDefaultChange({
@@ -172,7 +172,7 @@ function setCameraDesignMode(mode, skipConfirm = false) {
   if (typeof showToast === "function") {
     showToast(
       normalized === "generic"
-        ? "Switched to Initial Design Mode (Generic Camera Types & Default PoE/Bitrate)."
+        ? "Switched to Initial/Quick Design Mode (Generic Camera Types & Default PoE/Bitrate)."
         : "Switched to Full Design Mode (Actual Manufacturer Parts & Bulk SKU Assignment)."
     );
   }
@@ -2059,7 +2059,7 @@ function buildCalculatorStrip() {
                 <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-950 border border-slate-800">
                   <button onclick="setCameraDesignMode('generic')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${isGenericMode ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}" title="Specify cameras by generic type and resolution (2MP, 4MP, 5MP, 8MP 4K, 360 Fisheye, Dual/Quad/5-Sensor, PTZ, 60W LPR). Automatically drives PoE and Storage calculations.">
                     <i data-lucide="layers" class="w-3.5 h-3.5"></i>
-                    <span>Initial Design (Generic Types)</span>
+                    <span>Initial/Quick Design (Generic Types)</span>
                   </button>
                   <button onclick="setCameraDesignMode('specific')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${!isGenericMode ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'}" title="Switch to actual manufacturer catalog parts and bulk-upgrade generic cameras to real SKUs.">
                     <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
@@ -3423,7 +3423,7 @@ function setVideoSizerParam(key, val, skipConfirm = false) {
       }
     } else if (key === "vmsVendor") {
       const cleanVal = ["genetec", "milestone", "generic"].includes(val) ? val : "genetec";
-      const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+      const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "genetec";
       if (cleanVal !== defVendor && cleanVal !== videoVmsVendor) {
         const defLbl = defs.vms?.platform || (typeof mapVmsVendorToPlatformLabel === "function" ? mapVmsVendorToPlatformLabel(defVendor) : defVendor);
         const newLbl = typeof mapVmsVendorToPlatformLabel === "function" ? mapVmsVendorToPlatformLabel(cleanVal) : cleanVal;
@@ -4129,21 +4129,20 @@ function addGenetecLicensesToBom(skipConfirm = false) {
   if (typeof GenetecLicensingSizer === "undefined" || typeof addToBOM !== "function") return;
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
   if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
-    if (defs.vms?.enabled === false || defs.vms?.headEndInScope === false) {
-      const curState = defs.vms?.enabled === false ? "VMS Out of Scope" : "Cameras Only (Existing Customer VMS)";
+    if ((defs.vms?.licensingInScope ?? defs.vms?.headEndInScope) === false) {
       confirmProjectDefaultChange({
-        title: "VMS Licensing Marked Out of Orion Scope",
-        settingLabel: "Orion Scope of Work • VMS Software Licensing",
-        defaultLabel: curState,
+        title: "Software Licensing Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • Software Licensing",
+        defaultLabel: "Excluded / Out of Scope",
         newLabel: "Genetec 5.14 Software Licensing In Scope",
-        message: `Your Project Scope currently has VMS Servers & Software Licensing set to "${curState}". Are you sure you want to quote Genetec software licenses in this BOM?`,
+        message: `Your Project Scope currently marks Software Licensing as Out of Scope. Are you sure you want to quote Genetec software licenses in this BOM?`,
         allowLocalOverride: true,
         localOverrideLabel: "Add Licenses Once",
-        updateDefaultLabel: "Enable VMS Licensing in Project Scope",
+        updateDefaultLabel: "Enable Software Licensing in Project Scope",
         onLocalOverride: () => addGenetecLicensesToBom(true),
         onUpdateDefault: () => {
           if (typeof updateSingleProjectDefault === "function") {
-            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; d.vms.headEndInScope = true; d.vms.platform = "Genetec"; }, true);
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.licensingInScope = true; d.vms.headEndInScope = true; d.vms.platform = "Genetec"; }, true);
           }
           addGenetecLicensesToBom(true);
         }
@@ -4251,11 +4250,16 @@ function addGenetecLicensesToBom(skipConfirm = false) {
     }
   }
 
-  items.forEach(li => {
-    if (li.catalogId && li.qty > 0) {
-      addToBOM(li.catalogId, li.qty);
-    }
-  });
+  window._bypassLicScopePromptOnce = true;
+  try {
+    items.forEach(li => {
+      if (li.catalogId && li.qty > 0) {
+        addToBOM(li.catalogId, li.qty, null, true);
+      }
+    });
+  } finally {
+    window._bypassLicScopePromptOnce = false;
+  }
 
   if (typeof updateBOMView === "function") updateBOMView();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
@@ -5226,7 +5230,7 @@ function renderGenetecLicensingBuilderHtml(licRes, isEmbeddedInServers = false) 
           </div>
         ` : `
           <div class="p-4 text-center text-xs text-slate-400">
-            No camera, reader, or client licenses calculated yet. Add cameras in Initial Design, Power over Ethernet Calculator, or Physical Security, or enter reader/panel/plugin counts above.
+            No camera, reader, or client licenses calculated yet. Add cameras in Initial/Quick Design, Power over Ethernet Calculator, or Physical Security, or enter reader/panel/plugin counts above.
           </div>
         `}
       </div>
@@ -5438,7 +5442,7 @@ function setVmsLicensingVendor(vendor, skipConfirm = false) {
   const cleanVendor = vendor === "milestone" ? "milestone" : "genetec";
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
   if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
-    const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "genetec";
     const defLicVendor = defVendor === "milestone" ? "milestone" : "genetec";
     if (cleanVendor !== defLicVendor && cleanVendor !== activeVmsLicensingVendor) {
       const defLbl = defs.vms?.platform || (defLicVendor === "milestone" ? "Milestone XProtect" : "Genetec");
@@ -5633,28 +5637,27 @@ function addMilestoneLicensesToBom(skipConfirm = false) {
   if (typeof MilestoneLicensingSizer === "undefined" || typeof addToBOM !== "function") return;
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
   if (!skipConfirm && defs && typeof confirmProjectDefaultChange === "function") {
-    if (defs.vms?.enabled === false || defs.vms?.headEndInScope === false) {
-      const curState = defs.vms?.enabled === false ? "VMS Out of Scope" : "Cameras Only (Existing Customer VMS)";
+    if ((defs.vms?.licensingInScope ?? defs.vms?.headEndInScope) === false) {
       confirmProjectDefaultChange({
-        title: "VMS Licensing Marked Out of Orion Scope",
-        settingLabel: "Orion Scope of Work • VMS Software Licensing",
-        defaultLabel: curState,
+        title: "Software Licensing Marked Out of Orion Scope",
+        settingLabel: "Orion Scope of Work • Software Licensing",
+        defaultLabel: "Excluded / Out of Scope",
         newLabel: "Milestone XProtect Licensing In Scope",
-        message: `Your Project Scope currently has VMS Servers & Software Licensing set to "${curState}". Are you sure you want to quote Milestone XProtect licenses in this BOM?`,
+        message: `Your Project Scope currently marks Software Licensing as Out of Scope. Are you sure you want to quote Milestone XProtect licenses in this BOM?`,
         allowLocalOverride: true,
         localOverrideLabel: "Add Licenses Once",
-        updateDefaultLabel: "Enable VMS Licensing in Project Scope",
+        updateDefaultLabel: "Enable Software Licensing in Project Scope",
         onLocalOverride: () => addMilestoneLicensesToBom(true),
         onUpdateDefault: () => {
           if (typeof updateSingleProjectDefault === "function") {
-            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.enabled = true; d.vms.headEndInScope = true; d.vms.platform = "Milestone XProtect"; }, true);
+            updateSingleProjectDefault(d => { if (!d.vms) d.vms = {}; d.vms.licensingInScope = true; d.vms.headEndInScope = true; d.vms.platform = "Milestone XProtect"; }, true);
           }
           addMilestoneLicensesToBom(true);
         }
       });
       return;
     }
-    const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    const defVms = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "genetec";
     if (defVms !== "milestone") {
       confirmProjectDefaultChange({
         title: "Project Default VMS is Not Milestone XProtect",
@@ -5695,12 +5698,17 @@ function addMilestoneLicensesToBom(skipConfirm = false) {
   }
 
   let count = 0;
-  res.lineItems.forEach(li => {
-    if (li.qty > 0 && !li.isIncludedZeroCost && (li.unitMsrp || 0) > 0) {
-      addToBOM(li.catalogId || li.id || li.sku, li.qty);
-      count++;
-    }
-  });
+  window._bypassLicScopePromptOnce = true;
+  try {
+    res.lineItems.forEach(li => {
+      if (li.qty > 0 && !li.isIncludedZeroCost && (li.unitMsrp || 0) > 0) {
+        addToBOM(li.catalogId || li.id || li.sku, li.qty, null, true);
+        count++;
+      }
+    });
+  } finally {
+    window._bypassLicScopePromptOnce = false;
+  }
 
   if (typeof showToast === "function") {
     showToast(`Added ${count} Milestone XProtect 2026 R2 license SKU(s) ($${res.totalSoftwareMsrp.toLocaleString()} MSRP) to BOM.`, "success");
@@ -6074,7 +6082,7 @@ function renderMilestoneLicensingBuilderHtml(licRes, isCompactDrawer = false) {
           </div>
         ` : `
           <div class="p-4 text-center text-xs text-slate-400">
-            No Milestone XProtect device licenses calculated yet. Add cameras in Initial Design, Power over Ethernet Calculator, or Physical Security.
+            No Milestone XProtect device licenses calculated yet. Add cameras in Initial/Quick Design, Power over Ethernet Calculator, or Physical Security.
           </div>
         `}
       </div>
@@ -6294,7 +6302,7 @@ function setWorkstationSizerParam(key, val, skipConfirm = false) {
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
   if (key === "vmsPlatform" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
     const cleanPlat = val === "milestone" ? "milestone" : "genetec";
-    const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "milestone";
+    const defVendor = typeof mapProjectPlatformToVmsVendor === "function" ? mapProjectPlatformToVmsVendor(defs.vms?.platform) : "genetec";
     const defPlat = defVendor === "milestone" ? "milestone" : "genetec";
     if (cleanPlat !== defPlat && cleanPlat !== st.vmsPlatform) {
       const defLbl = defs.vms?.platform || (defPlat === "milestone" ? "Milestone XProtect" : "Genetec");
@@ -7068,6 +7076,62 @@ const DOOR_BUILDER_PRESETS = {
   }
 };
 
+const DOOR_PLATFORM_COMPATIBLE_CONTROLLERS = {
+  genetec_synergis: [
+    { value: "mercury", label: "Mercury LP Series (LP1502 + Cloud Link + Trove2)" },
+    { value: "mercury_mp", label: "Mercury MP Series (MP1502 SC 5.12.1+ Native)" },
+    { value: "axis_pbg", label: "Axis Powered by Genetec (A1610 — 0 Cloud Links!)" },
+    { value: "axis", label: "Axis Network Controllers (A1001 PoE+)" },
+    { value: "scl312", label: "Synergis Cloud Link-312 (12x RS-485 Direct OSDP)" }
+  ],
+  milestone_xpaccess: [
+    { value: "mercury", label: "Mercury LP Series (LP1502 + Trove2 Enclosure)" },
+    { value: "mercury_mp", label: "Mercury MP Series (MP1502 Intelligent Controller)" },
+    { value: "axis", label: "Axis Network Controllers (A1001 / A1610 PoE+)" }
+  ],
+  milestone_axis_secure_entry: [
+    { value: "axis", label: "Axis Network Controllers (A1001 / A1610 PoE+ Required)" }
+  ],
+  standalone: [
+    { value: "mercury", label: "Mercury LP Series (LP1502 + Trove2 Enclosure)" },
+    { value: "mercury_mp", label: "Mercury MP Series (MP1502 Intelligent Controller)" },
+    { value: "axis", label: "Axis Network Controllers (A1001 / A1610 PoE+)" },
+    { value: "swh_istar", label: "Software House iSTAR Ultra / Edge G2" },
+    { value: "alta_cloud", label: "Avigilon Alta Smart Hub / Cloud ACU" }
+  ]
+};
+
+function getDoorBuilderCompatibleControllers(platformKey) {
+  if (platformKey === "standalone" && typeof StorageService !== "undefined" && typeof getCompatibleAcsControllersForHost === "function") {
+    const defs = StorageService.getProjectDefaults?.();
+    const eng = defs?.accessControl?.engine;
+    if (eng && !["Genetec", "Milestone XProtect Access", "Milestone AXIS Secure Entry"].includes(eng)) {
+      const hostList = getCompatibleAcsControllersForHost(eng);
+      if (Array.isArray(hostList) && hostList.length > 0) return hostList;
+    }
+  }
+  return DOOR_PLATFORM_COMPATIBLE_CONTROLLERS[platformKey] || DOOR_PLATFORM_COMPATIBLE_CONTROLLERS.genetec_synergis;
+}
+window.getDoorBuilderCompatibleControllers = getDoorBuilderCompatibleControllers;
+
+function applyDoorBuilderControllerPreset(ctrlVal) {
+  doorBuilderControllerVendor = ctrlVal;
+  window.doorBuilderControllerVendor = ctrlVal;
+  const defaultPresetMap = {
+    mercury: "standard_strike",
+    mercury_mp: "mercury_mp1502_strike",
+    axis_pbg: "axis_pbg_a1610",
+    axis: "ip_edge_door",
+    scl312: "scl312_osdp_direct",
+    swh_istar: "standard_strike",
+    alta_cloud: "ip_edge_door"
+  };
+  const targetPreset = defaultPresetMap[ctrlVal] || "standard_strike";
+  doorScheduleGroups.forEach(g => {
+    g.preset = targetPreset;
+  });
+}
+
 function setDoorBuilderParam(key, val, skipConfirm = false) {
   const defs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function") ? StorageService.getProjectDefaults() : null;
   if (key === "acsPlatform" && !skipConfirm && defs && typeof confirmProjectDefaultChange === "function" && !(typeof isProjectWizardOpen === "function" && isProjectWizardOpen())) {
@@ -7087,7 +7151,14 @@ function setDoorBuilderParam(key, val, skipConfirm = false) {
         onLocalOverride: () => setDoorBuilderParam(key, val, true),
         onUpdateDefault: () => {
           if (typeof updateSingleProjectDefault === "function") {
-            updateSingleProjectDefault(d => { if (!d.accessControl) d.accessControl = {}; d.accessControl.engine = newLbl; }, true);
+            updateSingleProjectDefault(d => {
+              if (!d.accessControl) d.accessControl = {};
+              d.accessControl.engine = newLbl;
+              const compat = getDoorBuilderCompatibleControllers(val);
+              if (compat.length > 0 && !compat.some(c => c.value === d.accessControl.controllerVendor)) {
+                d.accessControl.controllerVendor = compat[0].value;
+              }
+            }, true);
           } else {
             setDoorBuilderParam(key, val, true);
           }
@@ -7103,7 +7174,9 @@ function setDoorBuilderParam(key, val, skipConfirm = false) {
       mercury_mp: "Mercury MP Series (MP1502 Native SC 5.12.1+)",
       axis_pbg: "Axis Powered by Genetec (A1610 Network Controller)",
       axis: "Axis Network Controllers (A1001 / A1610 PoE+)",
-      scl312: "Synergis Cloud Link-312 (12x RS-485 Direct OSDP)"
+      scl312: "Synergis Cloud Link-312 (12x RS-485 Direct OSDP)",
+      swh_istar: "Software House iSTAR Ultra / Edge G2",
+      alta_cloud: "Avigilon Alta Smart Hub / Cloud ACU"
     };
     if (val !== defCtrl && val !== doorBuilderControllerVendor) {
       confirmProjectDefaultChange({
@@ -7130,20 +7203,14 @@ function setDoorBuilderParam(key, val, skipConfirm = false) {
   if (key === "acsPlatform") {
     doorBuilderAcsPlatform = val;
     window.doorBuilderAcsPlatform = val;
+    const compat = getDoorBuilderCompatibleControllers(val);
+    if (compat.length > 0 && !compat.some(c => c.value === doorBuilderControllerVendor)) {
+      applyDoorBuilderControllerPreset(compat[0].value);
+    }
   } else if (key === "controllerVendor") {
-    doorBuilderControllerVendor = val;
-    window.doorBuilderControllerVendor = val;
-    const defaultPresetMap = {
-      mercury: "standard_strike",
-      mercury_mp: "mercury_mp1502_strike",
-      axis_pbg: "axis_pbg_a1610",
-      axis: "ip_edge_door",
-      scl312: "scl312_osdp_direct"
-    };
-    const targetPreset = defaultPresetMap[val] || "standard_strike";
-    doorScheduleGroups.forEach(g => {
-      g.preset = targetPreset;
-    });
+    const compat = getDoorBuilderCompatibleControllers(doorBuilderAcsPlatform);
+    const validCtrl = compat.some(c => c.value === val) ? val : (compat[0]?.value || "mercury");
+    applyDoorBuilderControllerPreset(validCtrl);
   }
   if (typeof buildCalculatorStrip === "function") buildCalculatorStrip();
   if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
@@ -7355,6 +7422,10 @@ function addFullDoorScheduleToBom(skipConfirm = false) {
 window.addFullDoorScheduleToBom = addFullDoorScheduleToBom;
 
 function renderDoorBuilderStudioHtml(isFullStudio = true) {
+  const compatCtrls = getDoorBuilderCompatibleControllers(doorBuilderAcsPlatform);
+  if (compatCtrls.length > 0 && !compatCtrls.some(c => c.value === doorBuilderControllerVendor)) {
+    applyDoorBuilderControllerPreset(compatCtrls[0].value);
+  }
   const rollup = calculateDoorScheduleRollup();
   return `
     <div class="bg-slate-900/95 border border-slate-800 rounded-2xl p-3.5 sm:p-4 flex flex-col gap-3.5 shadow-lg">
@@ -7378,32 +7449,28 @@ function renderDoorBuilderStudioHtml(isFullStudio = true) {
               </a>
             </div>
             <p class="text-[11px] text-slate-400 mt-0.5">
-              Build multi-zone door schedules across <strong class="text-white">Mercury LP/MP Series (LP1502 / MP1502)</strong>, <strong class="text-emerald-300">Axis Powered by Genetec (A1610/A1210 — 0 Cloud Links!)</strong>, <strong class="text-sky-300">Axis A1001</strong>, and <strong class="text-purple-300">Synergis Cloud Link-312 (12x RS-485 OSDP)</strong> with live <strong class="text-indigo-300">Genetec Synergis</strong> / <strong class="text-sky-300">Milestone XProtect Access</strong> licensing sync.
+              Controller architectures are automatically filtered by the selected <strong class="text-sky-300">ACS Host Software</strong> across <strong class="text-white">Mercury LP/MP</strong>, <strong class="text-emerald-300">Axis Powered by Genetec (0 Cloud Links)</strong>, <strong class="text-sky-300">Axis PoE+</strong>, and <strong class="text-purple-300">Synergis Cloud Link-312</strong>.
             </p>
           </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-2.5 shrink-0">
-          <!-- Controller Ecosystem Quick Switcher -->
+          <!-- ACS Head-End Software Platform Selector (Drives Compatible Controller Architectures) -->
           <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">Controller Architecture:</span>
-            <select onchange="setDoorBuilderParam('controllerVendor', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
-              <option value="mercury" class="bg-slate-900" ${doorBuilderControllerVendor === 'mercury' ? 'selected' : ''}>Mercury LP Series (LP1502 + Cloud Link + Trove2)</option>
-              <option value="mercury_mp" class="bg-slate-900" ${doorBuilderControllerVendor === 'mercury_mp' ? 'selected' : ''}>Mercury MP Series (MP1502 SC 5.12.1+ Native)</option>
-              <option value="axis_pbg" class="bg-slate-900" ${doorBuilderControllerVendor === 'axis_pbg' ? 'selected' : ''}>Axis Powered by Genetec (A1610 — 0 Cloud Links!)</option>
-              <option value="axis" class="bg-slate-900" ${doorBuilderControllerVendor === 'axis' ? 'selected' : ''}>Axis Network Controllers (A1001 PoE+)</option>
-              <option value="scl312" class="bg-slate-900" ${doorBuilderControllerVendor === 'scl312' ? 'selected' : ''}>Synergis Cloud Link-312 (12x RS-485 Direct OSDP)</option>
-            </select>
-          </div>
-
-          <!-- ACS Head-End Software Platform Selector -->
-          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
-            <span class="text-[9px] font-bold uppercase text-slate-400">ACS Platform:</span>
+            <span class="text-[9px] font-bold uppercase text-slate-400">ACS Host Software:</span>
             <select onchange="setDoorBuilderParam('acsPlatform', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-sky-300 font-bold text-xs focus:outline-none cursor-pointer">
               <option value="genetec_synergis" class="bg-slate-900" ${doorBuilderAcsPlatform === 'genetec_synergis' ? 'selected' : ''}>Genetec Synergis (Security Center 5.14)</option>
               <option value="milestone_xpaccess" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_xpaccess' ? 'selected' : ''}>Milestone XProtect Access ($129 + $39 per Reader)</option>
               <option value="milestone_axis_secure_entry" class="bg-slate-900" ${doorBuilderAcsPlatform === 'milestone_axis_secure_entry' ? 'selected' : ''}>Milestone AXIS Secure Entry ($89 per Door)</option>
               <option value="standalone" class="bg-slate-900" ${doorBuilderAcsPlatform === 'standalone' ? 'selected' : ''}>Standalone / Other ACS Head-End</option>
+            </select>
+          </div>
+
+          <!-- Controller Ecosystem Quick Switcher (Filtered by ACS Host Software) -->
+          <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-[9px] font-bold uppercase text-slate-400">Controller Architecture:</span>
+            <select onchange="setDoorBuilderParam('controllerVendor', this.value)" class="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-amber-300 font-bold text-xs focus:outline-none cursor-pointer">
+              ${compatCtrls.map(opt => `<option value="${opt.value}" class="bg-slate-900" ${doorBuilderControllerVendor === opt.value ? 'selected' : ''}>${opt.label}</option>`).join("")}
             </select>
           </div>
 

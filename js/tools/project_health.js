@@ -52,7 +52,11 @@ function auditProjectHealth() {
   const drcPanelsInScope = drcInfraScope.rackPatchPanels !== false && projDefaults?.cabling?.rackTermination !== "direct_rj45";
   const drcSfpDacInScope = drcInfraScope.sfpAndDac !== false;
   const drcVmsEnabled = projDefaults?.vms?.enabled !== false;
-  const drcVmsHeadEndInScope = drcVmsEnabled && (projDefaults?.vms?.headEndInScope !== false);
+  const drcLegacyHeadEnd = projDefaults?.vms?.headEndInScope !== false;
+  const drcServersInScope = (projDefaults?.vms?.serversInScope ?? drcLegacyHeadEnd) !== false;
+  const drcLicensingInScope = (projDefaults?.vms?.licensingInScope ?? drcLegacyHeadEnd) !== false;
+  const drcRacksInScope = projDefaults?.infrastructure?.racksInScope !== false;
+  const drcPowerInScope = projDefaults?.infrastructure?.powerInScope !== false;
 
   const safeJsArg = (val) => {
     if (typeof window.escapeJSAttr === "function") return window.escapeJSAttr(val);
@@ -414,7 +418,7 @@ function auditProjectHealth() {
   const totalLicenses = licenseItems.reduce((acc, i) => acc + (i.qty || 1), 0);
   stats.totalLicenses = totalLicenses;
 
-  if (drcVmsHeadEndInScope && totalCameras > 0 && totalLicenses < totalCameras) {
+  if (drcLicensingInScope && totalCameras > 0 && totalLicenses < totalCameras) {
     const missingLic = totalCameras - totalLicenses;
     issues.push({
       id: "missing_licenses",
@@ -444,10 +448,10 @@ function auditProjectHealth() {
   if (typeof StorageService !== "undefined") {
     const defaults = StorageService.getProjectDefaults();
     if (defaults) {
-      const vmsEnabled = defaults.vms?.enabled !== false && defaults.vms?.headEndInScope !== false;
+      const vmsServersActive = defaults.vms?.enabled !== false && ((defaults.vms?.serversInScope ?? defaults.vms?.headEndInScope) !== false);
       const acsEnabled = defaults.accessControl?.enabled !== false;
 
-      if (vmsEnabled && totalCameras > 0) {
+      if (vmsServersActive && totalCameras > 0) {
         const hasVmsServer = projectBOM.some(i =>
           !i.parentInstanceId &&
           i.category !== "vms_software" &&
@@ -565,7 +569,7 @@ function auditProjectHealth() {
               badgeText: "THERMAL/GAS HAZARD"
             });
           }
-        } else {
+        } else if (drcPowerInScope) {
           // Unbacked outdoor NEMA box: Provide non-blocking engineering advisory
           issues.push({
             id: `nema_unbacked_advisory_${normLoc.replace(/[^a-zA-Z0-9]/g, '_')}`,
@@ -579,7 +583,7 @@ function auditProjectHealth() {
             badgeText: "NEMA STANDBY ADVISORY"
           });
         }
-      } else {
+      } else if (drcPowerInScope) {
         // STANDARD TELECOM ROOM / EQUIPMENT RACK POWER RULES
         if (!hasUps) {
           issues.push({
@@ -1161,7 +1165,7 @@ function auditProjectHealth() {
       }
     });
 
-    if (totalCameras > 0 && missingMilestoneSkus.length > 0) {
+    if (drcLicensingInScope && totalCameras > 0 && missingMilestoneSkus.length > 0) {
       issues.push({
         id: "milestone_unsynced_bom_licenses",
         category: "scope",
@@ -1241,7 +1245,7 @@ function auditProjectHealth() {
         }
       });
 
-      if (missingOrUnderQuotedSkus.length > 0) {
+      if (drcLicensingInScope && missingOrUnderQuotedSkus.length > 0) {
         issues.push({
           id: "genetec_unsynced_bom_licenses",
           category: "scope",
