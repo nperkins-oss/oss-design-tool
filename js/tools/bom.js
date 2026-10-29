@@ -1161,6 +1161,9 @@ function applyStackCabling(item) {
     const stackInfraScope = (typeof getProjectInfrastructureScope === "function")
       ? getProjectInfrastructureScope()
       : { sfpAndDac: true, rackPatchPanels: true };
+    const stackDirectRj45 = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+      ? (StorageService.getProjectDefaults()?.cabling?.rackTermination === "direct_rj45")
+      : false;
 
     if (stackInfraScope.sfpAndDac !== false) {
       projectBOM.push({
@@ -1182,7 +1185,7 @@ function applyStackCabling(item) {
       });
     }
 
-    if (item.patchPanelBetween && stackInfraScope.rackPatchPanels !== false) {
+    if (item.patchPanelBetween && stackInfraScope.rackPatchPanels !== false && !stackDirectRj45) {
       projectBOM.push({
         instanceId: `stack-pp-${item.instanceId}`,
         parentInstanceId: item.instanceId,
@@ -1244,6 +1247,9 @@ function applyStandardPodCabling(item) {
   const infraScope = (typeof getProjectInfrastructureScope === "function")
     ? getProjectInfrastructureScope()
     : { rackPatchPanels: true, patchCords: true };
+  const isDirectRj45 = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? (StorageService.getProjectDefaults()?.cabling?.rackTermination === "direct_rj45")
+    : false;
 
   const stackMultiplier = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
   const switchPorts = (parseInt(item.ports, 10) || 24);
@@ -1251,7 +1257,7 @@ function applyStandardPodCabling(item) {
   const panelQty = 2 * stackMultiplier; // 1 above + 1 below per switch unit
   const keystonePackQty = Math.max(1, Math.ceil(totalCopperPorts / 24));
 
-  if (infraScope.rackPatchPanels !== false) {
+  if (infraScope.rackPatchPanels !== false && !isDirectRj45) {
     // 1. Add Upper and Lower 24-Port Modular Keystone Patch Panels
     projectBOM.push({
       instanceId: `pod-pp-${item.instanceId}`,

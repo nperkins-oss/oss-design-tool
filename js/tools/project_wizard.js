@@ -421,13 +421,15 @@ function setProjectOpticsVendorMode(mode, syncNow = true, skipConfirm = false) {
   if (syncNow) {
     // Re-evaluate switch stack cables and topology interconnects
     if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM) && typeof applyStackCabling === "function") {
-      projectBOM.filter(i => i.stackedUnits && i.stackedUnits >= 2).forEach(sw => applyStackCabling(sw));
+      projectBOM.filter(i => !i.parentInstanceId && i.stackedUnits && i.stackedUnits >= 2).forEach(sw => applyStackCabling(sw));
     }
     if (typeof autoSynthesizeInterconnects === "function") {
       autoSynthesizeInterconnects(true);
     }
     if (typeof renderBOM === "function") renderBOM();
     if (typeof updateBOMView === "function") updateBOMView();
+    if (typeof updateBOMBadge === "function") updateBOMBadge();
+    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
     if (typeof showToast === "function") {
       const label = cleanMode === "ironlink" ? "3rd-Party Coded (IronLink MSA)" : (cleanMode === "fs" ? "3rd-Party Coded (FS.com MSA)" : "1st-Party Native OEM");
       showToast(`Optics & DAC Sourcing updated to: ${label}`);
@@ -528,12 +530,26 @@ function updateWizardInfraScopeBadge() {
 
 function reconcileBOMForInfrastructureScope(silent = true) {
   const scope = getProjectInfrastructureScope();
+  const isDirectRj45 = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+    ? (StorageService.getProjectDefaults()?.cabling?.rackTermination === "direct_rj45")
+    : false;
+
   if (typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
-    // Re-apply standard pod cabling on switches so panels/cords reflect current scope
-    if (typeof applyStandardPodCabling === "function") {
-      projectBOM.filter(i => i.standardPod).forEach(sw => applyStandardPodCabling(sw));
+    // 1. Re-apply stacking DAC cables & in-stack patch panels on stacked switches (bidirectional OFF <-> ON & OEM <-> 3rd-Party)
+    if (typeof applyStackCabling === "function") {
+      projectBOM
+        .filter(i => !i.parentInstanceId && i.stackedUnits && i.stackedUnits >= 2)
+        .forEach(sw => applyStackCabling(sw));
     }
-    // Re-sync floorplan cabling if horizontal drops or fiber trunks exist
+
+    // 2. Re-apply standard pod cabling on standalone standard-pod switches (stacked standard-pod switches were handled inside applyStackCabling)
+    if (typeof applyStandardPodCabling === "function") {
+      projectBOM
+        .filter(i => !i.parentInstanceId && i.standardPod && !(i.stackedUnits && i.stackedUnits >= 2))
+        .forEach(sw => applyStandardPodCabling(sw));
+    }
+
+    // 3. Re-sync floorplan cabling if horizontal drops or fiber trunks exist
     if (typeof commitCablingToBOM === "function") {
       const hasFloorItems = typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors) &&
         facilityFloors.some(f => (f.nodes || []).some(n => n.type === "device") || (f.fiberBackbones || []).length > 0);
@@ -546,18 +562,26 @@ function reconcileBOMForInfrastructureScope(silent = true) {
           if (it.source !== "cabling_sync") continue;
           const sku = (it.sku || "").toUpperCase();
           if (!scope.horizontalCabling && (sku.includes("-1K") || sku.includes("-500"))) projectBOM.splice(i, 1);
-          else if (!scope.rackPatchPanels && (sku.startsWith("PP-") || sku.includes("KEY"))) projectBOM.splice(i, 1);
+          else if ((!scope.rackPatchPanels || isDirectRj45) && (sku.startsWith("PP-") || sku.includes("KEY"))) projectBOM.splice(i, 1);
           else if (!scope.patchCords && (sku.includes("SLIM") || sku.includes("PATCH"))) projectBOM.splice(i, 1);
           else if (!scope.fiberBackbone && sku.startsWith("FIBER-O")) projectBOM.splice(i, 1);
         }
       }
     }
-    // Re-synthesize topology interconnects & Fiber LIUs
+
+    // 4. Re-synthesize topology interconnects (DACs, SFPs, LC-LC fiber patches, RJ45 uplink cords) & 1U Fiber LIUs
     if (typeof autoSynthesizeInterconnects === "function") {
       autoSynthesizeInterconnects(true);
     }
   }
+
+  if (typeof updateBOMView === "function") updateBOMView();
+  if (typeof updateBOMBadge === "function") updateBOMBadge();
   if (!silent && typeof renderBOM === "function") renderBOM();
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
+  if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
+    StorageService.queueAutoSave();
+  }
 }
 
 function getProjectVlanDetailsForDevice(item, portObj = null, isUplink = false) {
@@ -2345,6 +2369,9 @@ function updateSingleProjectDefault(mutatorFn, syncEngines = false) {
   StorageService.saveCurrentProject(false);
   if (typeof renderProjectDefaultsSummary === "function") renderProjectDefaultsSummary();
   if (typeof applyProjectFocusMode === "function") applyProjectFocusMode();
+  if (typeof syncAllOpticsAndScopeUI === "function") syncAllOpticsAndScopeUI();
+  if (typeof reconcileBOMForInfrastructureScope === "function") reconcileBOMForInfrastructureScope(true);
+  if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
   return defs;
 }
 

@@ -2409,7 +2409,11 @@ function autoSynthesizeInterconnects(silent = false) {
       generateTopologyLinks(nodes);
     }
 
-    if (!topologyLinks || topologyLinks.length === 0) {
+    const hasFloorFiberBackbones = (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) &&
+      facilityFloors.some(fl => Array.isArray(fl.fiberBackbones) && fl.fiberBackbones.length > 0);
+    const hasStaleAutoSync = projectBOM.some(it => it && (it.source === "topology_auto_sync" || it.role === "Uplink Interconnect"));
+
+    if ((!topologyLinks || topologyLinks.length === 0) && !hasFloorFiberBackbones && !hasStaleAutoSync) {
       if (!silent && typeof showToast === "function") showToast("No inter-switch or core topology links found to synthesize.");
       return;
     }
@@ -2437,7 +2441,7 @@ function autoSynthesizeInterconnects(silent = false) {
       return "Cisco";
     };
 
-    topologyLinks.forEach((link, idx) => {
+    (Array.isArray(topologyLinks) ? topologyLinks : []).forEach((link, idx) => {
       if (link.isWireless) return; // Skip wireless PtP links
       if (link.category === "wireless_handoff" && link.isPoEDelivery) return; // Skip copper PoE drops to radios
 
@@ -2621,7 +2625,7 @@ function autoSynthesizeInterconnects(silent = false) {
           medium: isSMF ? "smf" : "mmf",
           fiberType
         });
-        synthesizedTransceivers += multiplier;
+        if (infraScope.sfpAndDac !== false) synthesizedTransceivers += multiplier;
 
         // Transceiver for End B
         const transBVendor = thirdPartyVendorName || vendorB;
@@ -2658,7 +2662,7 @@ function autoSynthesizeInterconnects(silent = false) {
           medium: isSMF ? "smf" : "mmf",
           fiberType
         });
-        synthesizedTransceivers += multiplier;
+        if (infraScope.sfpAndDac !== false) synthesizedTransceivers += multiplier;
 
         // Duplex Fiber Patch Cords (1 for Side A, 1 for Side B)
         const patchSku = isSMF ? "FIBER-LC-OS2-2M" : "FIBER-LC-OM4-2M";
@@ -2708,9 +2712,9 @@ function autoSynthesizeInterconnects(silent = false) {
           fiberType
         });
         if (isSameRack) {
-          synthesizedFiberPatchCords += multiplier;
+          if (infraScope.sfpAndDac !== false) synthesizedFiberPatchCords += multiplier;
         } else {
-          synthesizedFiberPatchCords += (multiplier * 2);
+          if (infraScope.sfpAndDac !== false) synthesizedFiberPatchCords += (multiplier * 2);
           interRackFiberPortsByLoc[locA] = (interRackFiberPortsByLoc[locA] || 0) + multiplier;
           interRackFiberPortsByLoc[locB] = (interRackFiberPortsByLoc[locB] || 0) + multiplier;
         }
@@ -2806,20 +2810,26 @@ function autoSynthesizeInterconnects(silent = false) {
       FacilityStore.notifyWorkspaceChange();
     }
     if (typeof renderBOM === "function") renderBOM();
+    if (typeof updateBOMView === "function") updateBOMView();
     if (typeof updateBOMBadge === "function") updateBOMBadge();
+    if (typeof updateProjectHealthUI === "function") updateProjectHealthUI();
     if (typeof StorageService !== "undefined" && typeof StorageService.queueAutoSave === "function") {
       StorageService.queueAutoSave();
     }
 
     const totalAdded = synthesizedDACCables + synthesizedPatchCords + synthesizedTransceivers + synthesizedFiberPatchCords + synthesizedFiberLIUs;
     if (!silent && typeof showToast === "function") {
-      const parts = [];
-      if (synthesizedDACCables > 0) parts.push(`${synthesizedDACCables} DACs`);
-      if (synthesizedPatchCords > 0) parts.push(`${synthesizedPatchCords} Patch Cords`);
-      if (synthesizedTransceivers > 0) parts.push(`${synthesizedTransceivers} Transceivers`);
-      if (synthesizedFiberPatchCords > 0) parts.push(`${synthesizedFiberPatchCords} Fiber Patches`);
-      if (synthesizedFiberLIUs > 0) parts.push(`${synthesizedFiberLIUs} Fiber LIUs`);
-      showToast(`Synthesized ${totalAdded} interconnect items (${parts.join(", ")}) into Quote BOM!`);
+      if (totalAdded > 0) {
+        const parts = [];
+        if (synthesizedDACCables > 0) parts.push(`${synthesizedDACCables} DACs`);
+        if (synthesizedPatchCords > 0) parts.push(`${synthesizedPatchCords} Patch Cords`);
+        if (synthesizedTransceivers > 0) parts.push(`${synthesizedTransceivers} Transceivers`);
+        if (synthesizedFiberPatchCords > 0) parts.push(`${synthesizedFiberPatchCords} Fiber Patches`);
+        if (synthesizedFiberLIUs > 0) parts.push(`${synthesizedFiberLIUs} Fiber LIUs`);
+        showToast(`Synthesized ${totalAdded} interconnect items (${parts.join(", ")}) into Quote BOM!`);
+      } else {
+        showToast("Reconciled interconnects against active Project Scope (excluded items suppressed).");
+      }
     }
   } finally {
     isSynthesizingInterconnects = false;

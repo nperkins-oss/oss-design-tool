@@ -6366,6 +6366,9 @@ function commitCablingToBOM(options = {}) {
     const infraScope = (typeof getProjectInfrastructureScope === "function")
       ? getProjectInfrastructureScope()
       : { horizontalCabling: true, rackPatchPanels: true, patchCords: true, fiberBackbone: true, sfpAndDac: true };
+    const isDirectRj45 = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+      ? (StorageService.getProjectDefaults()?.cabling?.rackTermination === "direct_rj45")
+      : false;
 
     // Determine primary closet for bulk spools
     const closetKeys = Object.keys(dropsByCloset);
@@ -6432,7 +6435,7 @@ function commitCablingToBOM(options = {}) {
       const rem = netPanelDropsNeeded % 48;
       const p24 = rem > 0 ? (rem <= 24 ? 1 : 2) : 0;
 
-      if (infraScope.rackPatchPanels !== false) {
+      if (infraScope.rackPatchPanels !== false && !isDirectRj45) {
         if (p48 > 0) {
           projectBOM.push({
             instanceId: `pp48-${cd.name.replace(/\W+/g, '_')}-${Date.now()}-${idx}`,
@@ -6564,39 +6567,41 @@ function commitCablingToBOM(options = {}) {
       });
 
       if (infraScope.patchCords !== false) {
-        // Deduct headend patch cords already provided by Standard Switch Pods in this closet
+        // Deduct headend patch cords already provided by Standard Switch Pods in this closet (skip headend cords when Direct RJ45 Field Plugs terminate directly into switches)
         let remainingPodDeduct = existingPodPatchCordsCount;
-        Object.entries(headendColorCounts).forEach(([colorName, count]) => {
-          const deduct = Math.min(count, remainingPodDeduct);
-          remainingPodDeduct -= deduct;
-          const netCount = count - deduct;
-          if (netCount <= 0) return;
+        if (!isDirectRj45) {
+          Object.entries(headendColorCounts).forEach(([colorName, count]) => {
+            const deduct = Math.min(count, remainingPodDeduct);
+            remainingPodDeduct -= deduct;
+            const netCount = count - deduct;
+            if (netCount <= 0) return;
 
-          const matchedHeadend = (typeof findPatchCordItem === "function")
-            ? findPatchCordItem(targetHeadendLengthFt, "Panduit", false, colorName)
-            : defaultCord1ft;
-          const cordObj = matchedHeadend || defaultCord1ft;
+            const matchedHeadend = (typeof findPatchCordItem === "function")
+              ? findPatchCordItem(targetHeadendLengthFt, "Panduit", false, colorName)
+              : defaultCord1ft;
+            const cordObj = matchedHeadend || defaultCord1ft;
 
-          projectBOM.push({
-            instanceId: `patch-headend-${cd.name.replace(/\W+/g, '_')}-${colorName.replace(/\W+/g, '')}-${Date.now()}-${idx}`,
-            id: cordObj.sku,
-            model: `${cordObj.name} (${colorName} — Headend Switch-to-Panel, ${closetUDiff}U Separation)`,
-            sku: cordObj.sku,
-            role: "Structured Cabling",
-            vendor: cordObj.vendor || "Panduit",
-            msrp: cordObj.msrp,
-            poeBudget: 0,
-            baseWatts: 0,
-            qty: netCount,
-            closetName: cd.name,
-            rackId: cd.name,
-            rackSlot: null,
-            source: "cabling_sync",
-            lengthFt: targetHeadendLengthFt,
-            lengthMeters: targetHeadendLengthMeters,
-            uDiff: closetUDiff
+            projectBOM.push({
+              instanceId: `patch-headend-${cd.name.replace(/\W+/g, '_')}-${colorName.replace(/\W+/g, '')}-${Date.now()}-${idx}`,
+              id: cordObj.sku,
+              model: `${cordObj.name} (${colorName} — Headend Switch-to-Panel, ${closetUDiff}U Separation)`,
+              sku: cordObj.sku,
+              role: "Structured Cabling",
+              vendor: cordObj.vendor || "Panduit",
+              msrp: cordObj.msrp,
+              poeBudget: 0,
+              baseWatts: 0,
+              qty: netCount,
+              closetName: cd.name,
+              rackId: cd.name,
+              rackSlot: null,
+              source: "cabling_sync",
+              lengthFt: targetHeadendLengthFt,
+              lengthMeters: targetHeadendLengthMeters,
+              uDiff: closetUDiff
+            });
           });
-        });
+        }
 
         // Add Field-End Equipment Patch Cords (3ft for cameras/readers/APs/intercoms, 7ft for workstations), color-coded
         Object.values(fieldCordBuckets).forEach(bucket => {

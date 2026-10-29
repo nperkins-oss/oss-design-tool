@@ -41,20 +41,23 @@ function auditProjectHealth() {
   const drcInfraScope = (typeof getProjectInfrastructureScope === "function")
     ? getProjectInfrastructureScope()
     : {
-        horizontalCopper: true,
+        horizontalCabling: true,
         rackPatchPanels: true,
         patchCords: true,
         fiberBackbone: true,
-        sfpAndDac: true,
-        wirelessBackhaul: true
+        sfpAndDac: true
       };
+  const drcHorizontalInScope = drcInfraScope.horizontalCabling !== false;
+  const drcPatchCordsInScope = drcInfraScope.patchCords !== false;
+  const drcFiberBackboneInScope = drcInfraScope.fiberBackbone !== false;
   const drcSwitchesInScope = projDefaults?.network?.switchesInScope !== false;
   const drcPanelsInScope = drcInfraScope.rackPatchPanels !== false && projDefaults?.cabling?.rackTermination !== "direct_rj45";
   const drcSfpDacInScope = drcInfraScope.sfpAndDac !== false;
   const drcVmsEnabled = projDefaults?.vms?.enabled !== false;
+  const drcAcsEnabled = projDefaults?.accessControl?.enabled !== false;
   const drcLegacyHeadEnd = projDefaults?.vms?.headEndInScope !== false;
-  const drcServersInScope = (projDefaults?.vms?.serversInScope ?? drcLegacyHeadEnd) !== false;
-  const drcLicensingInScope = (projDefaults?.vms?.licensingInScope ?? drcLegacyHeadEnd) !== false;
+  const drcServersInScope = drcVmsEnabled && ((projDefaults?.vms?.serversInScope ?? drcLegacyHeadEnd) !== false);
+  const drcLicensingInScope = (drcVmsEnabled || drcAcsEnabled) && ((projDefaults?.vms?.licensingInScope ?? drcLegacyHeadEnd) !== false);
   const drcRacksInScope = projDefaults?.infrastructure?.racksInScope !== false;
   const drcPowerInScope = projDefaults?.infrastructure?.powerInScope !== false;
 
@@ -735,7 +738,7 @@ function auditProjectHealth() {
   // Prohibits indoor Plenum (CMP) or Riser (CMR) in outdoor or underground conduit
   // Highlights Conflict: Industry shortcut of using CMP everywhere vs National Code & Orion Standards
   // =========================================================================
-  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+  if (drcHorizontalInScope && typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
     facilityFloors.forEach(fl => {
       if (!fl.nodes || !Array.isArray(fl.nodes)) return;
       const flLower = (fl.name || "").toLowerCase();
@@ -794,7 +797,7 @@ function auditProjectHealth() {
   // Priority 1: NEC 800.48 / 800.100 & Priority 2: TOW Structured Cabling Standards p. 2, 8
   // Outside cabling must terminate within 50' of building entry or transition to indoor fire-rated cable
   // =========================================================================
-  if (typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
+  if (drcHorizontalInScope && typeof facilityFloors !== "undefined" && Array.isArray(facilityFloors)) {
     facilityFloors.forEach(fl => {
       if (!fl.nodes || !Array.isArray(fl.nodes)) return;
       const outdoorDrops = fl.nodes.filter(n => {
@@ -1023,37 +1026,39 @@ function auditProjectHealth() {
   // Priority 2: TOW Switch Install & Configuration Guide p. 2
   // Dual power supply switches must connect to separate independent power sources
   // =========================================================================
-  closetsToAudit.forEach(normLoc => {
-    const closetItems = projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === normLoc);
-    const dualPsuSwitches = closetItems.filter(i => {
-      const isSw = (i.role === "Access" || i.role === "Aggregation" || i.role === "Core / Spine" || (i.model || '').includes("Switch"));
-      return isSw && (i.dualPowerSupply || i.dualPsu || (i.model || '').toLowerCase().includes("redundant"));
-    });
+  if (drcPowerInScope) {
+    closetsToAudit.forEach(normLoc => {
+      const closetItems = projectBOM.filter(i => !i.parentInstanceId && FacilityStore.normalize(i.closetName || i.rackId) === normLoc);
+      const dualPsuSwitches = closetItems.filter(i => {
+        const isSw = (i.role === "Access" || i.role === "Aggregation" || i.role === "Core / Spine" || (i.model || '').includes("Switch"));
+        return isSw && (i.dualPowerSupply || i.dualPsu || (i.model || '').toLowerCase().includes("redundant"));
+      });
 
-    if (dualPsuSwitches.length > 0) {
-      const pduCount = closetItems.filter(i => (i.role || '').toLowerCase().includes("pdu") || (i.category || '').toLowerCase().includes("pdu") || (i.model || '').toLowerCase().includes("pdu")).reduce((acc, p) => acc + (p.qty || 1), 0);
-      if (pduCount < 2) {
-        issues.push({
-          id: `switch_dual_psu_single_feed_${normLoc.replace(/[^a-zA-Z0-9]/g, '_')}`,
-          category: "power",
-          severity: "warning",
-          priority: 2,
-          isConflict: true,
-          conflictType: "ORION_REDUNDANCY_WARNING",
-          conflictBadge: "ORION REDUNDANCY WARNING",
-          standardsReference: "TOW Switch Guide p. 2",
-          closetName: normLoc,
-          title: `Redundant Power Warning: Dual-PSU Switches on Single Circuit (${normLoc})`,
-          summary: `${dualPsuSwitches.length} dual-power-supply switch(es) in ${normLoc} are fed by only a single PDU/circuit`,
-          details: `TOW - OSS Switch Install and Configuration Guide (p. 2) mandates: 'Equipped with optional redundant power supplies (dual AC or DC inputs). OSS Technical Standards: Connect each power supply to a separate, independent power source when available (Circuit A / UPS A and Circuit B / UPS B).' Connecting both power supplies to the same single PDU defeats hardware redundancy and creates a single point of failure.`,
-          conflictDetails: `Industry Shortcut: Installers routinely plug both power cords of redundant-supply switches into the same PDU strip. Adding a secondary PDU (Circuit B / UPS B) guarantees uninterrupted operation during branch circuit trips or PDU maintenance.`,
-          actionLabel: `+ Add Secondary PDU (Circuit B) to ${normLoc}`,
-          actionFn: `quickAddSecondaryPdu('${safeJsArg(normLoc)}')`,
-          badgeText: "A/B POWER REQ"
-        });
+      if (dualPsuSwitches.length > 0) {
+        const pduCount = closetItems.filter(i => (i.role || '').toLowerCase().includes("pdu") || (i.category || '').toLowerCase().includes("pdu") || (i.model || '').toLowerCase().includes("pdu")).reduce((acc, p) => acc + (p.qty || 1), 0);
+        if (pduCount < 2) {
+          issues.push({
+            id: `switch_dual_psu_single_feed_${normLoc.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            category: "power",
+            severity: "warning",
+            priority: 2,
+            isConflict: true,
+            conflictType: "ORION_REDUNDANCY_WARNING",
+            conflictBadge: "ORION REDUNDANCY WARNING",
+            standardsReference: "TOW Switch Guide p. 2",
+            closetName: normLoc,
+            title: `Redundant Power Warning: Dual-PSU Switches on Single Circuit (${normLoc})`,
+            summary: `${dualPsuSwitches.length} dual-power-supply switch(es) in ${normLoc} are fed by only a single PDU/circuit`,
+            details: `TOW - OSS Switch Install and Configuration Guide (p. 2) mandates: 'Equipped with optional redundant power supplies (dual AC or DC inputs). OSS Technical Standards: Connect each power supply to a separate, independent power source when available (Circuit A / UPS A and Circuit B / UPS B).' Connecting both power supplies to the same single PDU defeats hardware redundancy and creates a single point of failure.`,
+            conflictDetails: `Industry Shortcut: Installers routinely plug both power cords of redundant-supply switches into the same PDU strip. Adding a secondary PDU (Circuit B / UPS B) guarantees uninterrupted operation during branch circuit trips or PDU maintenance.`,
+            actionLabel: `+ Add Secondary PDU (Circuit B) to ${normLoc}`,
+            actionFn: `quickAddSecondaryPdu('${safeJsArg(normLoc)}')`,
+            badgeText: "A/B POWER REQ"
+          });
+        }
       }
-    }
-  });
+    });
+  }
 
   // =========================================================================
   // RULE 15: VIDEO RETENTION, BITRATE, RAID & GENETEC 5.14 ARCHIVER CAPACITY AUDIT
@@ -1080,7 +1085,7 @@ function auditProjectHealth() {
       const totalMaxThroughputMbps = Math.round(quotedNvrs.reduce((sum, nvr) => sum + ((Number(nvr.maxIngestBandwidthMbps ?? nvr.maxThroughputMbps ?? 600)) * (nvr.qty || 1)), 0));
       const gInfo = vAudit.genetec ? ` (Genetec 5.14: ${vAudit.genetec.minRequiredArchiverRoles} Archiver role(s) across ${vAudit.genetec.recommendedArchiverServers} server(s))` : "";
 
-      if (totalQuotedUsableTB < vAudit.requiredUsableTB) {
+      if ((drcServersInScope || quotedNvrs.length > 0) && totalQuotedUsableTB < vAudit.requiredUsableTB) {
         const deficitTB = Math.ceil((vAudit.requiredUsableTB - totalQuotedUsableTB) * 10) / 10;
         issues.push({
           id: "video_storage_retention_deficit",
@@ -1131,7 +1136,7 @@ function auditProjectHealth() {
   }, 0);
 
   const requiredControlledDoors = Math.max(totalReadersQuoted, totalLocksQuoted);
-  if (requiredControlledDoors > 0 && totalControllerDoorCap < requiredControlledDoors) {
+  if (drcAcsEnabled && requiredControlledDoors > 0 && totalControllerDoorCap < requiredControlledDoors) {
     const doorDeficit = requiredControlledDoors - totalControllerDoorCap;
     const controllersToAdd = Math.ceil(doorDeficit / 2);
     issues.push({
@@ -1262,7 +1267,7 @@ function auditProjectHealth() {
       }
 
       // 17B. Tier Compatibility & Entity Cap Violations (Standard vs Enterprise / AIO)
-      if (Array.isArray(licRes.compatibilityWarnings) && licRes.compatibilityWarnings.length > 0) {
+      if ((drcLicensingInScope || quotedGenetecLicItems.length > 0) && Array.isArray(licRes.compatibilityWarnings) && licRes.compatibilityWarnings.length > 0) {
         issues.push({
           id: "genetec_tier_compatibility_violation",
           category: "scope",
@@ -1282,7 +1287,7 @@ function auditProjectHealth() {
       }
 
       // 17C. Microsoft SQL Server 2025 Express 50 GB Database Cap Exceeded
-      if (licRes.coreFailover !== "full" && licRes.estimatedSqlDbGb > (licRes.sqlExpressMaxGb || 50)) {
+      if ((drcLicensingInScope || drcServersInScope || quotedHardwareServers.length > 0 || quotedGenetecLicItems.length > 0) && licRes.coreFailover !== "full" && licRes.estimatedSqlDbGb > (licRes.sqlExpressMaxGb || 50)) {
         issues.push({
           id: "genetec_sql_express_50gb_cap_exceeded",
           category: "capacity",
@@ -1419,7 +1424,7 @@ function auditProjectHealth() {
             badgeText: "MISSING GPU SERVER"
           });
         }
-      } else if (mrSpec.dedicatedAnalyticsServerRequired) {
+      } else if (drcServersInScope && mrSpec.dedicatedAnalyticsServerRequired) {
         issues.push({
           id: "genetec_gpu_analytics_isolation",
           category: "hardware",
@@ -1466,7 +1471,7 @@ function auditProjectHealth() {
 
       // 17G. Suprema Biometric Plugin v1.00 Door Reader License & Dedicated Synergis Cloud Link Rules
       if (licRes.supremaDevices > 0) {
-        if (licRes.totalSynergisReaders < licRes.supremaDevices) {
+        if (drcLicensingInScope && licRes.totalSynergisReaders < licRes.supremaDevices) {
           const missingRdrs = licRes.supremaDevices - licRes.totalSynergisReaders;
           issues.push({
             id: "genetec_suprema_reader_license_deficit",
@@ -1491,7 +1496,7 @@ function auditProjectHealth() {
           .filter(i => !i.parentInstanceId && (i.id === "genetec-synergis-cloudlink" || i.sku === "SY-CLOUDLINK" || String(i.model || "").toLowerCase().includes("cloud link")))
           .reduce((sum, i) => sum + (parseInt(i.qty, 10) || 1), 0);
 
-        if (quotedCloudLinks < requiredCloudLinks) {
+        if (drcAcsEnabled && quotedCloudLinks < requiredCloudLinks) {
           const missingCl = requiredCloudLinks - quotedCloudLinks;
           issues.push({
             id: "genetec_suprema_dedicated_cloudlink_deficit",
@@ -1542,7 +1547,7 @@ function auditProjectHealth() {
       // 17I. Mission Control 3.4.1.0 Incident Manager Directory Isolation & High-Performance Server Rule
       if (licRes.missionControlOps > 0) {
         const totalQuotedServersCount = quotedHardwareServers.reduce((s, srv) => s + (parseInt(srv.qty, 10) || 1), 0);
-        if (totalQuotedServersCount < 2) {
+        if ((drcServersInScope || totalQuotedServersCount > 0) && totalQuotedServersCount < 2) {
           issues.push({
             id: "genetec_mission_control_directory_isolation",
             category: "hardware",

@@ -4060,6 +4060,14 @@ function openQuickAddEnclosureModal() {
     nameInput.value = `Rack-${encCount + 1}`;
   }
 
+  const addToBomCheck = document.getElementById("quickAddAddToBOMCheckbox");
+  if (addToBomCheck) {
+    const projDefs = (typeof StorageService !== "undefined" && typeof StorageService.getProjectDefaults === "function")
+      ? StorageService.getProjectDefaults()
+      : null;
+    addToBomCheck.checked = projDefs?.infrastructure?.racksInScope !== false;
+  }
+
   const err = document.getElementById("quickAddHostError");
   if (err) err.classList.add("hidden");
 
