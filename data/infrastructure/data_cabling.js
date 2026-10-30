@@ -251,6 +251,16 @@ const CABLING_CATALOG = {
       msrp: 68
     },
     {
+      sku: "PP-1U-48P-MOD",
+      name: "1U 48-Port High-Density Modular Keystone Patch Panel",
+      vendor: "Panduit",
+      ports: 48,
+      rackUnits: 1,
+      weightLbs: 2.2,
+      depthInches: 1.5,
+      msrp: 108
+    },
+    {
       sku: "PP-2U-48P-MOD",
       name: "2U 48-Port High-Density Modular Keystone Patch Panel",
       vendor: "Panduit",

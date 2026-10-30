@@ -6311,11 +6311,12 @@ function commitCablingToBOM(options = {}) {
     msrp: 68
   };
 
-  const defaultPanel48 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.[1]) || {
-    sku: "PP-2U-48P-MOD",
-    name: "2U 48-Port Modular Keystone Patch Panel",
+  const defaultPanel48 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.ports === 48)) || {
+    sku: "PP-1U-48P-MOD",
+    name: "1U 48-Port High-Density Modular Keystone Patch Panel",
     vendor: "Panduit",
-    msrp: 115
+    msrp: 108,
+    rackUnits: 1
   };
 
   const defaultCord1ft = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords?.find(c => c.lengthFt === 1)) || {
@@ -6448,7 +6449,7 @@ function commitCablingToBOM(options = {}) {
             ports: 48,
             poeBudget: 0,
             baseWatts: 0,
-            rackUnits: 2,
+            rackUnits: defaultPanel48.rackUnits || 1,
             qty: p48,
             closetName: cd.name,
             rackId: cd.name,

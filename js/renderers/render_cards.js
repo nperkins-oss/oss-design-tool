@@ -289,6 +289,7 @@ function renderSwitchCard(sw) {
               ${isPoEPowered ? '<span class="badge-chip border border-sky-500/40 bg-sky-500/10 text-sky-300">PoE-Powered In</span>' : ''}
               ${(isDcPower && !sw.dualPsu) ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300">DC Terminal</span>' : ''}
               ${sw.stacking ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">Stackable</span>' : ''}
+              ${sw.stackPowerSupported ? '<span class="badge-chip border border-amber-500/40 bg-amber-500/10 text-amber-300 font-semibold">StackPower</span>' : ''}
               ${isShallow ? '<span class="badge-chip border border-sky-500/40 bg-sky-500/10 text-sky-300">Shallow &le;12"</span>' : ''}
               ${sw.dualPsu ? '<span class="badge-chip border border-indigo-500/40 bg-indigo-500/10 text-indigo-300">Dual PSU</span>' : ''}
               ${isMGig ? '<span class="badge-chip border border-teal-500/40 bg-teal-500/10 text-teal-300">Multi-Gig</span>' : ''}
@@ -430,15 +431,57 @@ function renderSwitchCard(sw) {
             `;
           })()}
 
-          ${sw.dualPsu && sw.psuSku && typeof POWER_SUPPLY_CATALOG !== "undefined" && POWER_SUPPLY_CATALOG[sw.psuSku] ? `
-            <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-              <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer hover:text-white">
-                <input type="checkbox" id="psuRedundant-${sw.id}" class="rounded border-slate-700 bg-slate-950 text-indigo-500 cursor-pointer">
-                <span class="font-medium text-[11px]">Add 2nd Hot-Swap PSU (${POWER_SUPPLY_CATALOG[sw.psuSku].wattage || 0}W)</span>
-              </label>
-              <span class="font-mono text-emerald-400 font-semibold">+$${POWER_SUPPLY_CATALOG[sw.psuSku].msrp.toLocaleString()}</span>
-            </div>
-          ` : ''}
+          ${(() => {
+            if (typeof POWER_SUPPLY_CATALOG === "undefined") return "";
+            const defPsuSku = sw.defaultPsuSku || sw.psuSku;
+            const priList = Array.isArray(sw.supportedPrimaryPsus) && sw.supportedPrimaryPsus.length > 1 ? sw.supportedPrimaryPsus.filter(k => POWER_SUPPLY_CATALOG[k]) : [];
+            const secList = Array.isArray(sw.supportedSecondaryPsus) && sw.supportedSecondaryPsus.length > 1 ? sw.supportedSecondaryPsus.filter(k => POWER_SUPPLY_CATALOG[k]) : [];
+            let html = "";
+            if (priList.length > 1) {
+              html += `
+                <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-xs">
+                  <span class="text-slate-400 font-medium flex items-center gap-1 shrink-0">
+                    <i data-lucide="zap" class="w-3 h-3 text-amber-400"></i> Primary PSU:
+                  </span>
+                  <select id="psuPrimarySelect-${sw.id}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[10px] font-mono rounded px-1.5 py-0.5 focus:outline-none focus:border-brand-500 max-w-[205px] truncate cursor-pointer" title="Select Default or Factory-Upgraded (-O) Primary Power Supply">
+                    ${priList.map(pSku => {
+                      const p = POWER_SUPPLY_CATALOG[pSku];
+                      const isDef = pSku === defPsuSku;
+                      const costLbl = isDef ? "Included" : `+${(p.msrp || 0).toLocaleString()}`;
+                      return `<option value="${escapeHTML(pSku)}" ${isDef ? "selected" : ""}>${p.wattage}W [${escapeHTML(p.sku)}] (${costLbl})</option>`;
+                    }).join("")}
+                  </select>
+                </div>
+              `;
+            }
+            if (sw.dualPsu && secList.length > 1) {
+              html += `
+                <div class="${priList.length > 1 ? "pt-1.5" : "pt-2 border-t border-slate-800/80"} flex items-center justify-between gap-2 text-xs">
+                  <span class="text-slate-400 font-medium flex items-center gap-1 shrink-0">
+                    <i data-lucide="shield-plus" class="w-3 h-3 text-indigo-400"></i> 2nd Redundant PSU:
+                  </span>
+                  <select id="psuSecondarySelect-${sw.id}" class="bg-slate-900 border border-slate-700 text-slate-200 text-[10px] font-mono rounded px-1.5 py-0.5 focus:outline-none focus:border-brand-500 max-w-[205px] truncate cursor-pointer" title="Optional Secondary Hot-Swap Power Supply for Redundancy or Expanded PoE">
+                    <option value="none">-- None (Single PSU) --</option>
+                    ${secList.map(pSku => {
+                      const p = POWER_SUPPLY_CATALOG[pSku];
+                      return `<option value="${escapeHTML(pSku)}">${p.wattage}W [${escapeHTML(p.sku)}] (+${(p.msrp || 0).toLocaleString()})</option>`;
+                    }).join("")}
+                  </select>
+                </div>
+              `;
+            } else if (sw.dualPsu && sw.psuSku && POWER_SUPPLY_CATALOG[sw.psuSku]) {
+              html += `
+                <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
+                  <label class="flex items-center gap-1.5 text-slate-300 cursor-pointer hover:text-white">
+                    <input type="checkbox" id="psuRedundant-${sw.id}" class="rounded border-slate-700 bg-slate-950 text-indigo-500 cursor-pointer">
+                    <span class="font-medium text-[11px]">Add 2nd Hot-Swap PSU (${POWER_SUPPLY_CATALOG[sw.psuSku].wattage || 0}W)</span>
+                  </label>
+                  <span class="font-mono text-emerald-400 font-semibold">+${POWER_SUPPLY_CATALOG[sw.psuSku].msrp.toLocaleString()}</span>
+                </div>
+              `;
+            }
+            return html;
+          })()}
         </div>
 
         ${(sw.role === 'Access' && (sw.poeBudget > 0 || (sw.poeAfPorts || sw.poeAtPorts || sw.poeBt60Ports || sw.poeBt90Ports))) ? `

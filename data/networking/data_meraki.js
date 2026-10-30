@@ -88,7 +88,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 110,
     "maxPowerWatts": 240,
     "rackUnits": 1,
-    "weightLbs": 14.0,
+    "weightLbs": 14,
     "depthInches": 17.5,
     "shallowDepth": false,
     "fanless": false,
@@ -217,7 +217,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 150,
     "rackUnits": 1,
     "weightLbs": 12.6,
-    "depthInches": 19.0,
+    "depthInches": 19,
     "shallowDepth": false,
     "fanless": false,
     "acousticNoiseDb": 42,
@@ -281,7 +281,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 120,
     "rackUnits": 1,
     "weightLbs": 11.8,
-    "depthInches": 19.0,
+    "depthInches": 19,
     "shallowDepth": false,
     "fanless": false,
     "acousticNoiseDb": 40,
@@ -386,6 +386,8 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300X-NM-8Y-M",
+        "C9300X-NM-2C-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -402,7 +404,25 @@ const MERAKI_SWITCHES = [
     "psuSku": "PWR-C1-1100WAC-P-M",
     "portsBreakdown": {
       "sfp28_25g": 28
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300x-12y-m",
@@ -466,6 +486,8 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300X-NM-8Y-M",
+        "C9300X-NM-2C-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -482,7 +504,25 @@ const MERAKI_SWITCHES = [
     "psuSku": "PWR-C1-1100WAC-P-M",
     "portsBreakdown": {
       "sfp28_25g": 16
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-24s-m",
@@ -544,6 +584,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -561,7 +604,27 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "sfp_1g": 24,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-350WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-48s-m",
@@ -623,6 +686,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -640,7 +706,27 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "sfp_1g": 48,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-350WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "meraki-ms120-8",
@@ -663,7 +749,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 10,
     "rackUnits": 0,
     "weightLbs": 2.36,
-    "depthInches": 6.0,
+    "depthInches": 6,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -729,7 +815,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 85,
     "rackUnits": 0,
     "weightLbs": 2.76,
-    "depthInches": 6.0,
+    "depthInches": 6,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -795,7 +881,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 145,
     "rackUnits": 0,
     "weightLbs": 3.42,
-    "depthInches": 6.0,
+    "depthInches": 6,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -858,7 +944,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 25,
     "rackUnits": 1,
     "weightLbs": 8.09,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -924,7 +1010,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 435,
     "rackUnits": 1,
     "weightLbs": 9.26,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": false,
     "acousticNoiseDb": 40,
@@ -987,7 +1073,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 40,
     "rackUnits": 1,
     "weightLbs": 8.97,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1015,7 +1101,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 1G SFP uplinks",
       "Energy efficient fanless silent design",
@@ -1081,7 +1167,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 1G SFP uplinks",
       "370W PoE+ power budget",
@@ -1147,7 +1233,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 1G SFP uplinks",
       "740W PoE+ power budget",
@@ -1182,7 +1268,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 30,
     "rackUnits": 1,
     "weightLbs": 8.16,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1248,7 +1334,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 445,
     "rackUnits": 1,
     "weightLbs": 9.26,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": false,
     "acousticNoiseDb": 40,
@@ -1311,7 +1397,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 50,
     "rackUnits": 1,
     "weightLbs": 9.26,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1339,7 +1425,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ dedicated uplinks",
       "Fanless silent operation (<25W)",
@@ -1405,7 +1491,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ dedicated uplinks",
       "370W PoE+ power budget",
@@ -1471,7 +1557,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ dedicated uplinks",
       "740W PoE+ power budget",
@@ -1506,7 +1592,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 10,
     "rackUnits": 0,
     "weightLbs": 1.94,
-    "depthInches": 6.0,
+    "depthInches": 6,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1572,7 +1658,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 128,
     "rackUnits": 0,
     "weightLbs": 1.94,
-    "depthInches": 6.0,
+    "depthInches": 6,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1638,7 +1724,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 135,
     "rackUnits": 0,
     "weightLbs": 2.12,
-    "depthInches": 6.0,
+    "depthInches": 6,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1732,7 +1818,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "100 Gbps",
     "throughputMpps": 74.4,
-    "packetBufferMb": 2.0,
+    "packetBufferMb": 2,
     "keyFeatures": [
       "12x 2.5G access ports + 2x 10G SFP+ optical cages",
       "240W PoE+ power budget",
@@ -1767,7 +1853,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 28,
     "rackUnits": 1,
     "weightLbs": 7.19,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1833,7 +1919,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 440,
     "rackUnits": 1,
     "weightLbs": 8.91,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": false,
     "acousticNoiseDb": 40,
@@ -1899,7 +1985,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 450,
     "rackUnits": 1,
     "weightLbs": 9.37,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": false,
     "acousticNoiseDb": 40,
@@ -1962,7 +2048,7 @@ const MERAKI_SWITCHES = [
     "maxPowerWatts": 45,
     "rackUnits": 1,
     "weightLbs": 8.14,
-    "depthInches": 10.0,
+    "depthInches": 10,
     "shallowDepth": true,
     "fanless": true,
     "acousticNoiseDb": 0,
@@ -1990,7 +2076,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP optical cages",
       "Fanless silent operation",
@@ -2056,7 +2142,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP optical cages",
       "370W PoE+ power budget",
@@ -2122,7 +2208,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP optical cages",
       "740W PoE+ power budget",
@@ -2188,7 +2274,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "keyFeatures": [
       "48x 1G access ports + 4x 10G SFP+ optical cages",
       "740W PoE+ power budget",
@@ -2317,7 +2403,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "56 Gbps",
     "throughputMpps": 41.67,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "24x 1G access ports + 4x 1G SFP optical cages",
@@ -2384,7 +2470,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "56 Gbps",
     "throughputMpps": 41.67,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "24x 1G access ports + 4x 1G SFP optical cages",
@@ -2448,7 +2534,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "24x 1G access ports + 4x 10G SFP+ optical cages",
@@ -2515,7 +2601,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "24x 1G access ports + 4x 10G SFP+ optical cages",
@@ -2584,7 +2670,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "192 Gbps",
     "throughputMpps": 142.86,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "24x 2.5G access ports + 4x 10G SFP+ optical cages",
@@ -2652,7 +2738,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP optical cages",
@@ -2719,7 +2805,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP optical cages",
@@ -2786,7 +2872,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "48x 1G access ports + 4x 10G SFP+ optical cages",
@@ -2853,7 +2939,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "48x 1G access ports + 4x 10G SFP+ optical cages",
@@ -2922,7 +3008,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "304 Gbps",
     "throughputMpps": 226.19,
-    "packetBufferMb": 8.0,
+    "packetBufferMb": 8,
     "stackCableSku": "MA-CBL-TA-1M",
     "keyFeatures": [
       "48x 5G access ports + 4x 10G SFP+ optical cages",
@@ -3057,7 +3143,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 1G SFP optical cages",
@@ -3124,7 +3210,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 1G SFP optical cages",
@@ -3319,7 +3405,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical cages",
@@ -3386,7 +3472,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical cages",
@@ -3453,7 +3539,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 3.0,
+    "packetBufferMb": 3,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical cages",
@@ -3517,7 +3603,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "24x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3531,7 +3617,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-250WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-250WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms250-24p",
@@ -3585,7 +3681,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "24x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3599,7 +3695,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-640WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-640WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms250-48",
@@ -3650,7 +3756,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3664,7 +3770,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-250WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-250WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms250-48lp",
@@ -3718,7 +3834,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3732,7 +3848,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-640WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-640WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms250-48fp",
@@ -3786,7 +3912,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3800,7 +3926,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-1025WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-1025WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms350-24",
@@ -3851,7 +3987,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "24x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3865,7 +4001,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-250WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-250WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms350-24p",
@@ -3919,7 +4065,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "24x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3933,7 +4079,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-640WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-640WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms350-48",
@@ -3984,7 +4140,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -3998,7 +4154,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-250WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-250WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms350-48lp",
@@ -4052,7 +4218,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -4066,7 +4232,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-640WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-640WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms350-48fp",
@@ -4120,7 +4296,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 12.0,
+    "packetBufferMb": 12,
     "stackCableSku": "MA-CBL-40G-1M",
     "keyFeatures": [
       "48x 1G RJ-45 access ports + 4x 10G SFP+ optical uplinks",
@@ -4134,7 +4310,17 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-1025WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-1025WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-250WAC",
+      "MA-PWR-640WAC",
+      "MA-PWR-1025WAC"
+    ]
   },
   {
     "id": "meraki-ms355-24x",
@@ -4190,7 +4376,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 4x 10G SFP+ fixed optical cages",
@@ -4204,7 +4390,16 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-1025WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-1025WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-1025WAC",
+      "MA-PWR-1100WAC"
+    ]
   },
   {
     "id": "meraki-ms355-24x2",
@@ -4231,7 +4426,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 80,
     "maxPowerWatts": 960,
     "rackUnits": 1,
-    "weightLbs": 16.0,
+    "weightLbs": 16,
     "depthInches": 18.5,
     "shallowDepth": false,
     "fanless": false,
@@ -4260,7 +4455,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 2x 40G QSFP+ fixed optical cages",
@@ -4274,7 +4469,16 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 24,
       "qsfp_plus_40g": 2
-    }
+    },
+    "defaultPsuSku": "MA-PWR-1025WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-1025WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-1025WAC",
+      "MA-PWR-1100WAC"
+    ]
   },
   {
     "id": "meraki-ms355-48x",
@@ -4330,7 +4534,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "880 Gbps",
     "throughputMpps": 654.76,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 4x 10G SFP+ fixed optical cages",
@@ -4345,7 +4549,16 @@ const MERAKI_SWITCHES = [
       "rj45_1g": 24,
       "rj45_10g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "MA-PWR-1100WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-1100WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-1025WAC",
+      "MA-PWR-1100WAC"
+    ]
   },
   {
     "id": "meraki-ms355-48x2",
@@ -4401,7 +4614,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "880 Gbps",
     "throughputMpps": 654.76,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "MA-CBL-100G-50CM",
     "keyFeatures": [
       "Multi-Gigabit (up to 10G) Ethernet access with 2x 40G QSFP+ fixed optical cages",
@@ -4416,7 +4629,16 @@ const MERAKI_SWITCHES = [
       "rj45_1g": 24,
       "rj45_10g": 24,
       "qsfp_plus_40g": 2
-    }
+    },
+    "defaultPsuSku": "MA-PWR-1100WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "MA-PWR-1100WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "MA-PWR-1025WAC",
+      "MA-PWR-1100WAC"
+    ]
   },
   {
     "id": "meraki-ms390-24p",
@@ -4441,7 +4663,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 50,
     "maxPowerWatts": 550,
     "rackUnits": 1,
-    "weightLbs": 16.0,
+    "weightLbs": 16,
     "depthInches": 17.5,
     "shallowDepth": false,
     "fanless": false,
@@ -4470,7 +4692,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4481,6 +4703,11 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -4498,7 +4725,25 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "MA-PWR-1100WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "meraki-ms390-24u",
@@ -4554,7 +4799,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.24,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4565,6 +4810,11 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -4582,7 +4832,23 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "meraki-ms390-24ux",
@@ -4638,7 +4904,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4652,6 +4918,11 @@ const MERAKI_SWITCHES = [
         "C9300X-NM-8Y",
         "C9300X-NM-2C",
         "C9300X-NM-4C",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -4669,7 +4940,23 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "meraki-ms390-48p",
@@ -4723,7 +5010,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4734,6 +5021,11 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -4751,7 +5043,25 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "MA-PWR-1100WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "meraki-ms390-48u",
@@ -4778,7 +5088,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 80,
     "maxPowerWatts": 1050,
     "rackUnits": 1,
-    "weightLbs": 18.0,
+    "weightLbs": 18,
     "depthInches": 17.5,
     "shallowDepth": false,
     "fanless": false,
@@ -4807,7 +5117,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4818,6 +5128,11 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -4835,7 +5150,23 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "meraki-ms390-48ux",
@@ -4891,7 +5222,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4905,6 +5236,11 @@ const MERAKI_SWITCHES = [
         "C9300X-NM-8Y",
         "C9300X-NM-2C",
         "C9300X-NM-4C",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -4923,7 +5259,23 @@ const MERAKI_SWITCHES = [
       "rj45_5g": 36,
       "rj45_10g": 12,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "meraki-ms390-48ux2",
@@ -4950,7 +5302,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 100,
     "maxPowerWatts": 1150,
     "rackUnits": 1,
-    "weightLbs": 19.0,
+    "weightLbs": 19,
     "depthInches": 17.5,
     "shallowDepth": false,
     "fanless": false,
@@ -4979,7 +5331,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -4993,6 +5345,11 @@ const MERAKI_SWITCHES = [
         "C9300X-NM-8Y",
         "C9300X-NM-2C",
         "C9300X-NM-4C",
+        "MA-MOD-4X10G",
+        "MA-MOD-8X10G",
+        "MA-MOD-2X40G",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -5010,7 +5367,23 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_5g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "MA-PWR-350WAC",
+      "MA-PWR-715WAC",
+      "MA-PWR-1100WAC"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "MA-CBL-SPWR-30CM",
+    "stackPowerLongSku": "MA-CBL-SPWR-150CM"
   },
   {
     "id": "cisco-c9200l-24p-4g-m",
@@ -5064,7 +5437,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "56 Gbps",
     "throughputMpps": 41.66,
-    "packetBufferMb": 6.0,
+    "packetBufferMb": 6,
     "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "24x 1G access ports + 4x 1G SFP fixed optical cages",
@@ -5078,7 +5451,19 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_1g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C5-600WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C5-600WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C5-600WAC-M",
+      "PWR-C5-1KWAC-M",
+      "PWR-C5-600WAC",
+      "PWR-C5-1KWAC"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9200l-24p-4x-m",
@@ -5132,7 +5517,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 6.0,
+    "packetBufferMb": 6,
     "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "24x 1G access ports + 4x 10G SFP+ fixed optical cages",
@@ -5146,7 +5531,19 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C5-600WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C5-600WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C5-600WAC-M",
+      "PWR-C5-1KWAC-M",
+      "PWR-C5-600WAC",
+      "PWR-C5-1KWAC"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9200l-24pxg-4x-m",
@@ -5200,7 +5597,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "272 Gbps",
     "throughputMpps": 202.38,
-    "packetBufferMb": 6.0,
+    "packetBufferMb": 6,
     "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "24x 10G access ports + 4x 10G SFP+ fixed optical cages",
@@ -5215,7 +5612,19 @@ const MERAKI_SWITCHES = [
       "rj45_1g": 16,
       "rj45_10g": 8,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C5-600WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C5-600WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C5-600WAC-M",
+      "PWR-C5-1KWAC-M",
+      "PWR-C5-600WAC",
+      "PWR-C5-1KWAC"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9200l-48p-4g-m",
@@ -5269,7 +5678,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "1G",
     "switchingCapacity": "104 Gbps",
     "throughputMpps": 77.38,
-    "packetBufferMb": 6.0,
+    "packetBufferMb": 6,
     "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "48x 1G access ports + 4x 1G SFP fixed optical cages",
@@ -5283,7 +5692,19 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_1g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C5-600WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C5-600WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C5-600WAC-M",
+      "PWR-C5-1KWAC-M",
+      "PWR-C5-600WAC",
+      "PWR-C5-1KWAC"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9200l-48p-4x-m",
@@ -5337,7 +5758,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 6.0,
+    "packetBufferMb": 6,
     "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "48x 1G access ports + 4x 10G SFP+ fixed optical cages",
@@ -5351,7 +5772,19 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C5-600WAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C5-600WAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C5-600WAC-M",
+      "PWR-C5-1KWAC-M",
+      "PWR-C5-600WAC",
+      "PWR-C5-1KWAC"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9200l-48pxg-4x-m",
@@ -5405,7 +5838,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "392 Gbps",
     "throughputMpps": 291.66,
-    "packetBufferMb": 6.0,
+    "packetBufferMb": 6,
     "stackCableSku": "STACK-T4-50CM-M",
     "keyFeatures": [
       "48x 10G access ports + 4x 10G SFP+ fixed optical cages",
@@ -5420,7 +5853,19 @@ const MERAKI_SWITCHES = [
       "rj45_1g": 36,
       "rj45_10g": 12,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C5-1KWAC",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C5-1KWAC"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C5-600WAC-M",
+      "PWR-C5-1KWAC-M",
+      "PWR-C5-600WAC",
+      "PWR-C5-1KWAC"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9300l-24p-4x-m",
@@ -5474,7 +5919,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T3A-50CM-M",
     "keyFeatures": [
       "24x 1G/mGig RJ-45 access ports + 4x 10G SFP+ fixed optical cages",
@@ -5490,7 +5935,20 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "PWR-C1-1100WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9300l-24uxg-4x-m",
@@ -5546,7 +6004,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "272 Gbps",
     "throughputMpps": 202.38,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T3A-50CM-M",
     "keyFeatures": [
       "24x 1G/mGig RJ-45 access ports + 4x 10G SFP+ fixed optical cages",
@@ -5563,7 +6021,18 @@ const MERAKI_SWITCHES = [
       "rj45_1g": 16,
       "rj45_10g": 8,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9300l-48p-4x-m",
@@ -5617,7 +6086,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T3A-50CM-M",
     "keyFeatures": [
       "48x 1G/mGig RJ-45 access ports + 4x 10G SFP+ fixed optical cages",
@@ -5633,7 +6102,20 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "PWR-C1-1100WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9300l-48pf-4x-m",
@@ -5658,7 +6140,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 75,
     "maxPowerWatts": 1120,
     "rackUnits": 1,
-    "weightLbs": 16.0,
+    "weightLbs": 16,
     "depthInches": 17.5,
     "shallowDepth": false,
     "fanless": false,
@@ -5687,7 +6169,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T3A-50CM-M",
     "keyFeatures": [
       "48x 1G/mGig RJ-45 access ports + 4x 10G SFP+ fixed optical cages",
@@ -5703,7 +6185,18 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9300l-48uxg-4x-m",
@@ -5759,7 +6252,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "10G",
     "switchingCapacity": "392 Gbps",
     "throughputMpps": 291.66,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T3A-50CM-M",
     "keyFeatures": [
       "48x 1G/mGig RJ-45 access ports + 4x 10G SFP+ fixed optical cages",
@@ -5776,7 +6269,18 @@ const MERAKI_SWITCHES = [
       "rj45_1g": 36,
       "rj45_10g": 12,
       "sfp_plus_10g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M"
+    ],
+    "stackPowerSupported": false
   },
   {
     "id": "cisco-c9300-24p-m",
@@ -5830,7 +6334,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -5841,6 +6345,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -5858,7 +6365,29 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1100WAC-P-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-24u-m",
@@ -5914,7 +6443,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "128 Gbps",
     "throughputMpps": 95.23,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -5925,6 +6454,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -5942,7 +6474,27 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 24,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-24ux-m",
@@ -5998,7 +6550,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6009,6 +6561,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6026,7 +6581,27 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 24,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-48p-m",
@@ -6080,7 +6655,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6091,6 +6666,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6108,7 +6686,29 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1100WAC-P-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-48u-m",
@@ -6164,7 +6764,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "176 Gbps",
     "throughputMpps": 130.95,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6175,6 +6775,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6192,7 +6795,27 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_1g": 48,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-48uxm-m",
@@ -6248,7 +6871,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6259,6 +6882,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6277,7 +6903,27 @@ const MERAKI_SWITCHES = [
       "rj45_5g": 36,
       "rj45_10g": 12,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300-48un-m",
@@ -6333,7 +6979,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "40G",
     "switchingCapacity": "640 Gbps",
     "throughputMpps": 476.19,
-    "packetBufferMb": 16.0,
+    "packetBufferMb": 16,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6344,6 +6990,9 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300-NM-8X-M",
+        "C9300-NM-2Q-M",
+        "C9300-NM-4M-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6361,7 +7010,27 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_5g": 48,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-350WAC-P-M",
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-350WAC-P",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300x-24hx-m",
@@ -6418,7 +7087,7 @@ const MERAKI_SWITCHES = [
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "1280 Gbps",
     "throughputMpps": 952.38,
-    "packetBufferMb": 32.0,
+    "packetBufferMb": 32,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6431,6 +7100,8 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300X-NM-8Y-M",
+        "C9300X-NM-2C-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6448,7 +7119,25 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 24,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300x-48tx-m",
@@ -6470,7 +7159,7 @@ const MERAKI_SWITCHES = [
     "baseWatts": 95,
     "maxPowerWatts": 250,
     "rackUnits": 1,
-    "weightLbs": 18.0,
+    "weightLbs": 18,
     "depthInches": 19.5,
     "shallowDepth": false,
     "fanless": false,
@@ -6498,8 +7187,8 @@ const MERAKI_SWITCHES = [
     "mgmtLicenseMsrp": 640,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "2000 Gbps",
-    "throughputMpps": 1488.0,
-    "packetBufferMb": 32.0,
+    "throughputMpps": 1488,
+    "packetBufferMb": 32,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6512,6 +7201,8 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300X-NM-8Y-M",
+        "C9300X-NM-2C-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6529,7 +7220,25 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 48,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-715WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M-O",
+      "PWR-C1-1900WAC-P-M-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300x-48hx-m",
@@ -6585,8 +7294,8 @@ const MERAKI_SWITCHES = [
     "mgmtLicenseMsrp": 640,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "2000 Gbps",
-    "throughputMpps": 1488.0,
-    "packetBufferMb": 32.0,
+    "throughputMpps": 1488,
+    "packetBufferMb": 32,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6599,6 +7308,8 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300X-NM-8Y-M",
+        "C9300X-NM-2C-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6616,7 +7327,25 @@ const MERAKI_SWITCHES = [
     "portsBreakdown": {
       "rj45_10g": 48,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   },
   {
     "id": "cisco-c9300x-48hxn-m",
@@ -6672,8 +7401,8 @@ const MERAKI_SWITCHES = [
     "mgmtLicenseMsrp": 640,
     "maxBackboneSpeed": "100G",
     "switchingCapacity": "2000 Gbps",
-    "throughputMpps": 1488.0,
-    "packetBufferMb": 32.0,
+    "throughputMpps": 1488,
+    "packetBufferMb": 32,
     "stackCableSku": "STACK-T1-50CM-M",
     "modularUplink": {
       "hasSlot": true,
@@ -6686,6 +7415,8 @@ const MERAKI_SWITCHES = [
         "C9300-NM-2Q",
         "C9300-NM-4M",
         "C9300-NM-2Y-M",
+        "C9300X-NM-8Y-M",
+        "C9300X-NM-2C-M",
         "C9300-NM-BLANK"
       ]
     },
@@ -6704,7 +7435,25 @@ const MERAKI_SWITCHES = [
       "rj45_5g": 40,
       "rj45_10g": 8,
       "sfp28_25g": 4
-    }
+    },
+    "defaultPsuSku": "PWR-C1-1100WAC-P-M",
+    "maxPsuBays": 2,
+    "supportedPrimaryPsus": [
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M-O",
+      "PWR-C1-1900WAC-P-O"
+    ],
+    "supportedSecondaryPsus": [
+      "PWR-C1-715WAC-P-M",
+      "PWR-C1-1100WAC-P-M",
+      "PWR-C1-1900WAC-P-M",
+      "PWR-C1-715WAC-P",
+      "PWR-C1-1100WAC-P",
+      "PWR-C1-1900WAC-P"
+    ],
+    "stackPowerSupported": true,
+    "stackPowerShortSku": "CAB-SPWR-30CM-M",
+    "stackPowerLongSku": "CAB-SPWR-150CM-M"
   }
 ];
 

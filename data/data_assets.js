@@ -7427,6 +7427,86 @@ const CATALOG_ASSETS = {
         "datasheetPath": null,
         "image": null
     },
+        "PP-1U-48P-MOD": {
+        "datasheetPath": null,
+        "image": null
+    },
+    "C9300-NM-2Q-M": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/ruckus_icx7650_2x40gq.webp"
+    },
+    "PWR-C1-1100WAC-P-M-O": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst 9300-M Datasheet.pdf",
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "PWR-C1-1900WAC-P-M-O": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "PWR-C1-1100WAC-P-O": {
+        "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "PWR-C1-1900WAC-P-O": {
+        "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "PWR-MS320-1025WAC": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "MA-PWR-150WAC-ADP": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+    "MA-PWR-300WAC-ADP": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+    "MA-PWR-300W-INDADP": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+    "MA-FAN-16K": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_fan_4020.webp"
+    },
+    "MA-MNT-MID-1": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+    },
+    "MA-RCKMNT": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+    },
+    "MA-WMNTBR-PWR-ADP": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+    },
+    "C9300L-STAK-KIT2-M": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
+    },
+    "MA-CBL-120G-50CM": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
+    },
+    "MA-CBL-120G-1M": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
+    },
+    "MA-CBL-120G-3M": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
+    },
+    "MA-CBL-SPWR-30CM": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "MA-CBL-SPWR-150CM": {
+        "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
     "PP-1U-24P-MOD": {
         "datasheetPath": null,
         "image": null
@@ -9703,7 +9783,16 @@ const CATALOG_ASSETS = {
     "CAB-SPWR-100CM=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_usp_cable.webp" },
     "SFP-50G-SR-S": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_om_sfp28_sr.webp" },
     "SFP-50G-LR-S": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_om_sfp28_lr.webp" },
-    "SFP-H50G-CU1M": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" }
+    "SFP-H50G-CU1M": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "4PT-KIT-T1-M": {"datasheetPath":"Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf","image":"assets/images/products/unifi_uacc_rack_rails_slide.webp"},
+    "4PT-KIT-T2": {"datasheetPath":"Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf","image":"assets/images/products/unifi_uacc_rack_rails_slide.webp"},
+    "CAB-CONSOLE-USB-M": {"datasheetPath":"Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf","image":"assets/images/products/unifi_usp_cable.webp"},
+    "CAB-CONSOLE-RJ45": {"datasheetPath":"Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf","image":"assets/images/products/unifi_usp_cable.webp"},
+    "CAB-SPWR-30CM": {"datasheetPath":"Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf","image":"assets/images/products/unifi_usp_cable.webp"},
+    "CAB-SPWR-150CM": {"datasheetPath":"Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf","image":"assets/images/products/unifi_usp_cable.webp"},
+    "CAB-SPWR-30CM-M": {"datasheetPath":"Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf","image":"assets/images/products/unifi_usp_cable.webp"},
+    "CAB-SPWR-150CM-M": {"datasheetPath":"Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf","image":"assets/images/products/unifi_usp_cable.webp"},
+    "C9200L-STACK-KIT": {"datasheetPath":"Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf","image":"assets/images/products/unifi_uacc_dac_qsfp28.webp"}
 };
 
 if (typeof window !== 'undefined') {

@@ -643,13 +643,13 @@ function filterAccessoriesStrategy(items, ctx) {
     });
   }
 
-  if (vendors.length > 0) results = results.filter(a => vendors.includes((a.vendor || '').trim()));
+  if (vendors.length > 0) results = results.filter(a => vendors.includes((a.vendor || '').trim()) || (Array.isArray(a.compatibleVendors) && a.compatibleVendors.some(cv => vendors.includes(cv))));
   if (types.length > 0) results = results.filter(a => types.includes(a.type) || types.includes(a.category));
   if (mounting !== "all") {
     results = results.filter(a => (a.mounting || "").toLowerCase().includes(mounting.toLowerCase()));
   }
   if (minWatts > 0) {
-    results = results.filter(a => (a.powerWatts || 0) >= minWatts);
+    results = results.filter(a => (a.powerWatts || a.wattage || 0) >= minWatts);
   }
 
   if (pwrCat !== "all") {

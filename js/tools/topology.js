@@ -6030,16 +6030,19 @@ function updateSwitchStackFromTopology(instanceId, count) {
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (!item) return;
 
+  const prevStacked = parseInt(item.stackedUnits, 10) || 0;
   const val = parseInt(count, 10) || 0;
   if (val >= 2) {
     item.canStack = true;
     item.stackedUnits = val;
-    item.qty = Math.max(item.qty || 1, val);
+    item.qty = (prevStacked >= 2 && item.qty === prevStacked) ? val : Math.max(item.qty || 1, val);
     item.uplinkMode = "lag_dual";
-    item.customLinkMultiplier = Math.max(item.customLinkMultiplier || 1, val);
+    item.customLinkMultiplier = Math.max(item.customLinkMultiplier || 1, 2);
   } else {
+    if (prevStacked >= 2 && item.qty === prevStacked) item.qty = 1;
     item.stackedUnits = 0;
   }
+  if (typeof syncPerChassisChildQuantities === "function") syncPerChassisChildQuantities(item);
 
   if (typeof PortEngine !== "undefined") {
     PortEngine.initSwitchPorts(item, true);

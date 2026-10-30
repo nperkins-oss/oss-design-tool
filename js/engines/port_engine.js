@@ -200,8 +200,9 @@ const PortEngine = {
     const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
     const modState = this.resolveModularUplinkSpec(item);
     const resolvedModKey = modState ? modState.resolvedKey : null;
+    const uplinkPolicy = (item.uplinkModuleStackPolicy === "all") ? "all" : "first_last";
 
-    if (!forceReinit && Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0 && item._lastStackUnits === stackUnits && item._lastUplinkModuleSku === resolvedModKey) {
+    if (!forceReinit && Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0 && item._lastStackUnits === stackUnits && item._lastUplinkModuleSku === resolvedModKey && item._lastUplinkPolicy === uplinkPolicy) {
       return item.physicalPorts;
     }
 
@@ -278,6 +279,7 @@ const PortEngine = {
     if (isAllOptical) {
       // Build exact optical cage list if portsBreakdown is available, else use primary speed
       const opticalCageDefs = [];
+      const modularOpticalDefs = [];
       if (pb && pbOpticalCount > 0) {
         const pushCages = (cnt, speed, media, connector, prefix) => {
           for (let k = 0; k < (parseInt(cnt, 10) || 0); k++) {
@@ -294,11 +296,12 @@ const PortEngine = {
       }
       if (modState && modState.activeSpec) {
         for (let k = 0; k < modState.activeSpec.count; k++) {
-          opticalCageDefs.push({
+          modularOpticalDefs.push({
             speed: modState.activeSpec.speed,
             media: modState.activeSpec.mediaType,
             connector: modState.activeSpec.connector,
-            prefix: modState.activeSpec.prefix
+            prefix: modState.activeSpec.prefix,
+            isModularSledPort: true
           });
         }
       }
@@ -332,10 +335,12 @@ const PortEngine = {
 
       let globalPortIdx = 1;
       for (let u = 1; u <= stackUnits; u++) {
-        for (let i = 1; i <= opticalCageDefs.length; i++) {
+        const unitHasMod = (stackUnits > 2 && uplinkPolicy === "first_last") ? (u === 1 || u === stackUnits) : true;
+        const unitOpticalDefs = unitHasMod ? [...opticalCageDefs, ...modularOpticalDefs] : [...opticalCageDefs];
+        for (let i = 1; i <= unitOpticalDefs.length; i++) {
           const portNum = globalPortIdx++;
           const conn = existingConnections[portNum] || {};
-          const cDef = opticalCageDefs[i - 1];
+          const cDef = unitOpticalDefs[i - 1];
           ports.push({
             portNumber: portNum,
             unitIndex: u,
@@ -345,6 +350,8 @@ const PortEngine = {
             mediaType: cDef.media,
             connector: cDef.connector,
             speed: cDef.speed,
+            isModular: Boolean(cDef.isModularSledPort),
+            isModularSledPort: Boolean(cDef.isModularSledPort),
             poeStandard: null,
             maxPoeWatts: 0,
             poeOutputWatts: conn.poeOutputWatts || 0,
@@ -361,7 +368,8 @@ const PortEngine = {
 
       item.physicalPorts = ports;
       item._lastStackUnits = stackUnits;
-    item._lastUplinkModuleSku = resolvedModKey;
+      item._lastUplinkModuleSku = resolvedModKey;
+      item._lastUplinkPolicy = uplinkPolicy;
       this.syncSwitchUplinks(item);
       this.syncSwitchEdgePorts(item);
       return ports;
@@ -374,6 +382,7 @@ const PortEngine = {
     // 1. Prefer structured item.portsBreakdown when available
     const copperTierMap = [];
     const parsedCages = [];
+    const modularCages = [];
 
     if (pb && (pbCopperCount > 0 || pbOpticalCount > 0)) {
       if (parseInt(pb.rj45_10g, 10) > 0) copperTierMap.push({ count: parseInt(pb.rj45_10g, 10), speed: "10G" });
@@ -397,10 +406,11 @@ const PortEngine = {
       addOptCages(pb.qsfp28_100g, "100G", "QSFP28", "qsfp28_100g");
       if (modState && modState.activeSpec) {
         for (let c = 0; c < modState.activeSpec.count; c++) {
-          parsedCages.push({
+          modularCages.push({
             speed: modState.activeSpec.speed,
             connector: modState.activeSpec.connector,
-            mediaType: modState.activeSpec.mediaType
+            mediaType: modState.activeSpec.mediaType,
+            isModularSledPort: true
           });
         }
       }
@@ -426,10 +436,20 @@ const PortEngine = {
         }
       }
 
-      // Parse optical uplink cages from uplinksSummary, portFormFactorSummary or interfaces
+      if (modState && modState.activeSpec) {
+        for (let c = 0; c < modState.activeSpec.count; c++) {
+          modularCages.push({
+            speed: modState.activeSpec.speed,
+            connector: modState.activeSpec.connector,
+            mediaType: modState.activeSpec.mediaType,
+            isModularSledPort: true
+          });
+        }
+      }
+      // Parse fixed optical uplink cages from uplinksSummary, portFormFactorSummary or interfaces (skip when modular bay governs uplinks)
       const uplinkRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(sfp28|qsfp28|sfp\+|qsfp\+|sfp|qsfp|cages?)/gi;
       let uMatch;
-      const allOpticalText = `${item.uplinksSummary || ''} ${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
+      const allOpticalText = modState ? '' : `${item.uplinksSummary || ''} ${item.portFormFactorSummary || ''} ${item.interfaces || ''}`;
       while ((uMatch = uplinkRegex.exec(allOpticalText)) !== null) {
         const count = parseInt(uMatch[1], 10);
         let spd = uMatch[2].toUpperCase();
@@ -472,7 +492,7 @@ const PortEngine = {
       /flex|ultra|lite-8|lite-16|flex-mini|gs910|fs708/i.test(item.sku || item.model || '')
     );
 
-    let uplinkPortCount = parsedCages.length;
+    let uplinkPortCount = parsedCages.length + modularCages.length;
     if (uplinkPortCount === 0 && !isPureCopperSwitch && !modState) {
       if (portDesc.includes("100g") || (item.maxBackboneSpeed === "100G")) {
         uplinkPortCount = 4;
@@ -606,12 +626,17 @@ const PortEngine = {
       }
 
       // 2. Generate Uplink / Backbone Optical Cages for Unit u
+      // When stacking > 2 switches, only 1st (Unit 1) and Last (Unit stackUnits) populate modular uplink modules unless policy === "all"!
+      const unitHasModularSled = (stackUnits > 2 && uplinkPolicy === "first_last") ? (u === 1 || u === stackUnits) : true;
+      const unitCages = (unitHasModularSled || (!hasDedicatedStack && parsedCages.length < 2))
+        ? [...parsedCages, ...modularCages]
+        : [...parsedCages];
       // If stacked without dedicated stack ports (e.g. UniFi), the last 2 cages act as the Stacking Interconnect Ring!
-      for (let j = 1; j <= parsedCages.length; j++) {
+      for (let j = 1; j <= unitCages.length; j++) {
         const portNum = globalPortIdx++;
         const conn = existingConnections[portNum] || {};
-        const cageDef = parsedCages[j - 1];
-        const isStackInterconnect = (isStacked && !hasDedicatedStack && j > (parsedCages.length - 2));
+        const cageDef = unitCages[j - 1];
+        const isStackInterconnect = (isStacked && !hasDedicatedStack && j > (unitCages.length - 2));
 
         let role = isStackInterconnect ? "stack_interconnect" : "uplink";
         let isUplink = !isStackInterconnect;
@@ -619,10 +644,10 @@ const PortEngine = {
           ? `${cageDef.speed} Stacking DAC Ring` 
           : (cageDef.connector === "RJ-45" ? `${cageDef.speed} RJ-45 Copper Uplink` : `${cageDef.speed} ${cageDef.connector} Optical Cage`);
         let label = isStackInterconnect
-          ? (j === parsedCages.length ? `Unit ${u} - Stk DAC 2 (${cageDef.speed}) ← Unit ${prevU}` : `Unit ${u} - Stk DAC 1 (${cageDef.speed}) → Unit ${nextU}`)
+          ? (j === unitCages.length ? `Unit ${u} - Stk DAC 2 (${cageDef.speed}) ← Unit ${prevU}` : `Unit ${u} - Stk DAC 1 (${cageDef.speed}) → Unit ${nextU}`)
           : (stackUnits > 1 ? `Unit ${u} - Uplink ${j} (${cageDef.speed})` : `Uplink ${j} (${cageDef.speed})`);
         let shortLabel = isStackInterconnect
-          ? `U${u}:Stk${j - (parsedCages.length - 2)}`
+          ? `U${u}:Stk${j - (unitCages.length - 2)}`
           : (stackUnits > 1 ? `U${u}:${cageDef.connector === "RJ-45" ? "U" : "Q"}${j}` : `${cageDef.connector === "RJ-45" ? "U" : "Q"}${j}`);
 
         ports.push({
@@ -636,6 +661,8 @@ const PortEngine = {
           speed: cageDef.speed,
           speedLabel: speedLabel,
           isStackPort: isStackInterconnect,
+          isModular: Boolean(cageDef.isModularSledPort),
+          isModularSledPort: Boolean(cageDef.isModularSledPort),
           poeStandard: null,
           maxPoeWatts: 0,
           poeOutputWatts: 0,
@@ -653,6 +680,7 @@ const PortEngine = {
     item.physicalPorts = ports;
     item._lastStackUnits = stackUnits;
     item._lastUplinkModuleSku = resolvedModKey;
+    item._lastUplinkPolicy = uplinkPolicy;
     this.syncSwitchUplinks(item);
     this.syncSwitchEdgePorts(item);
     return ports;
@@ -707,12 +735,44 @@ const PortEngine = {
       }
     } else {
       // Access Switch: Uplink homes to Core/Agg switch
+      // Spread redundant uplinks across distinct stack members (1st member & Last member first!) for chassis diversity
       const targetId = item.customUplinkTargetId || item.uplinkTargetId;
       const targetSw = targetId ? (idMap.get(targetId) || null) : null;
       const linkCount = Math.min(uplinkPorts.length, parseInt(item.customLinkMultiplier || 1, 10));
-
-      uplinkPorts.forEach((p, idx) => {
-        if (targetSw && idx < linkCount) {
+      const byUnit = new Map();
+      uplinkPorts.forEach(p => {
+        const uKey = p.unitIndex || 1;
+        if (!byUnit.has(uKey)) byUnit.set(uKey, []);
+        byUnit.get(uKey).push(p);
+      });
+      const unitKeys = Array.from(byUnit.keys()).sort((a, b) => a - b);
+      if (unitKeys.length > 2) {
+        const firstU = unitKeys[0];
+        const lastU = unitKeys[unitKeys.length - 1];
+        const middleUs = unitKeys.slice(1, -1);
+        unitKeys.splice(0, unitKeys.length, firstU, lastU, ...middleUs);
+      }
+      const selectedPortNums = new Set();
+      if (targetSw && linkCount > 0 && unitKeys.length > 0) {
+        let round = 0;
+        while (selectedPortNums.size < linkCount) {
+          let addedInRound = false;
+          for (const uKey of unitKeys) {
+            const list = byUnit.get(uKey);
+            if (round < list.length && selectedPortNums.size < linkCount) {
+              selectedPortNums.add(list[round].portNumber);
+              addedInRound = true;
+            }
+          }
+          if (!addedInRound) break;
+          round++;
+        }
+      }
+      let activeCageSeq = 0;
+      uplinkPorts.forEach((p) => {
+        if (targetSw && selectedPortNums.has(p.portNumber)) {
+          activeCageSeq++;
+          const idx = activeCageSeq - 1;
           p.connectedDeviceId = targetSw.instanceId;
           p.connectedDeviceModel = targetSw.model;
           p.connectedDeviceRole = targetSw.role || "Core / Aggregation Switch";
@@ -1728,8 +1788,9 @@ const PortEngine = {
         const cStacked = (cSw.stackedUnits && cSw.stackedUnits >= 2) ||
           (cSw.stackedUnits !== 0 && cSw.qty >= 2 && (cSw.canStack || cSw.role === "Access" || cSw.role === "Aggregation"));
         const cUnits = cStacked ? (cSw.stackedUnits || cSw.qty) : 1;
-        const panelsPerUnit = cSw.standardPod ? 2 : Math.max(1, Math.ceil((parseInt(cSw.ports, 10) || 24) / 24));
-        basePanelSeq += cUnits * panelsPerUnit;
+        const isDual24 = cSw.patchPanelSku === "DUAL-24P";
+        const panelsPerUnit = cSw.standardPod ? (isDual24 ? 2 : 1) : ((cUnits >= 2 && cSw.patchPanelBetween) ? Math.max(1, cUnits - 1) / cUnits : 1);
+        basePanelSeq += Math.max(1, Math.round(cUnits * panelsPerUnit));
       }
     }
 
@@ -1822,28 +1883,50 @@ const PortEngine = {
     const byPortNumber = {};
     const panelsMap = new Map();
 
+    const isDual24Pod = switchItem.patchPanelSku === "DUAL-24P";
+    const hasPPBetween = (stackUnits >= 2 && !!switchItem.patchPanelBetween && !isStdPod);
+    const ppRackUnits = switchItem.patchPanelSku === "PP-2U-48P-MOD" ? 2 : 1;
+
     // Group access copper ports by unitIndex
     for (let u = 1; u <= stackUnits; u++) {
       const unitPorts = ports.filter(p => (p.unitIndex || 1) === u);
       const copperPorts = unitPorts.filter(p => !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ"));
       const is48P = copperPorts.length > 24;
       const halfSplit = is48P ? 24 : 12;
+      const singlePanelJacks = (switchItem.patchPanelSku === "PP-1U-24P-MOD") ? 24 : ((is48P || switchItem.patchPanelSku === "PP-1U-48P-MOD" || switchItem.patchPanelSku === "PP-2U-48P-MOD") ? 48 : 24);
+      const singlePanelSku = switchItem.patchPanelSku === "PP-2U-48P-MOD" ? "PP-2U-48P-MOD" : (singlePanelJacks === 48 ? "PP-1U-48P-MOD" : "PP-1U-24P-MOD");
 
-      // Compute RU positions if mounted in rack with Standard Pod
-      const unitBaseU = baseSlotU > 0 ? (baseSlotU + (u - 1) * (baseRU + (isStdPod ? 2 : 0))) : 0;
-      const lowerPPU = isStdPod && unitBaseU > 0 ? unitBaseU : 0;
-      const switchU = isStdPod && unitBaseU > 0 ? (unitBaseU + 1) : (baseSlotU > 0 ? (baseSlotU + (u - 1) * baseRU) : 0);
-      const upperPPU = isStdPod && unitBaseU > 0 ? (unitBaseU + baseRU + 1) : 0;
+      // Compute RU positions if mounted in rack with Standard Pod or Interleaved Patch Panels
+      let unitBaseU = 0, lowerPPU = 0, switchU = 0, upperPPU = 0;
+      if (baseSlotU > 0) {
+        if (isStdPod && isDual24Pod) {
+          unitBaseU = baseSlotU + (u - 1) * (baseRU + 2);
+          lowerPPU = unitBaseU;
+          switchU = unitBaseU + 1;
+          upperPPU = unitBaseU + baseRU + 1;
+        } else if (isStdPod) {
+          unitBaseU = baseSlotU + (u - 1) * (baseRU + ppRackUnits);
+          switchU = unitBaseU;
+          upperPPU = unitBaseU + baseRU;
+        } else if (hasPPBetween) {
+          const stepU = baseRU + ppRackUnits;
+          switchU = baseSlotU + (u - 1) * stepU;
+          upperPPU = u < stackUnits ? (switchU + baseRU) : (switchU - ppRackUnits);
+        } else {
+          const stepU = (stackUnits >= 2 && switchItem.cableManagerBetween) ? (baseRU + 1) : baseRU;
+          switchU = baseSlotU + (u - 1) * stepU;
+        }
+      }
 
       // Globally unique Orion Patch Panel IDs per Closet & Switch Unit (e.g. MDF-PP01, MDF-PP02)
-      const upperPanelSeqNum = basePanelSeq + (u - 1) * 2;
+      const upperPanelSeqNum = isDual24Pod ? (basePanelSeq + (u - 1) * 2) : (hasPPBetween ? (basePanelSeq + Math.min(u - 1, stackUnits - 2)) : (basePanelSeq + (u - 1)));
       const lowerPanelSeqNum = basePanelSeq + (u - 1) * 2 + 1;
       const upperShortCode = `PP${String(upperPanelSeqNum).padStart(2, "0")}`;
       const lowerShortCode = `PP${String(lowerPanelSeqNum).padStart(2, "0")}`;
       const upperPanelId = `${closetCode}-${upperShortCode}`;
       const lowerPanelId = `${closetCode}-${lowerShortCode}`;
 
-      if (isStdPod) {
+      if (isStdPod && isDual24Pod) {
         panelsMap.set(upperPanelId, {
           panelId: upperPanelId,
           shortCode: upperShortCode,
@@ -1891,6 +1974,33 @@ const PortEngine = {
             port: null
           }))
         });
+      } else if (isStdPod || (hasPPBetween && u < stackUnits)) {
+        if (!panelsMap.has(upperPanelId)) {
+          panelsMap.set(upperPanelId, {
+            panelId: upperPanelId,
+            shortCode: upperShortCode,
+            panelSeqNum: upperPanelSeqNum,
+            deckKey: `U${u}-SINGLE`,
+            label: `${upperPanelId} • ${ppRackUnits}U ${singlePanelJacks}P Keystone (${switchCode}${stackUnits > 1 ? `-U${u}` : ''})`,
+            shortLabel: upperPanelId,
+            sku: singlePanelSku,
+            rackUnits: ppRackUnits,
+            slotU: upperPPU > 0 ? (ppRackUnits > 1 ? `U${upperPPU + ppRackUnits - 1}-U${upperPPU}` : `U${upperPPU}`) : "Above Switch",
+            switchUnit: u,
+            switchSlotU: switchU > 0 ? `U${switchU}` : "",
+            deck: "single",
+            totalJacks: singlePanelJacks,
+            activePortRange: `Ports 1–${Math.min(copperPorts.length || singlePanelJacks, singlePanelJacks)}`,
+            patchCordSpec: '6" Cat6A Slim',
+            jacks: Array.from({ length: singlePanelJacks }, (_, idx) => ({
+              jackNumber: idx + 1,
+              jackLabel: `J${String(idx + 1).padStart(2, "0")}`,
+              panelTag: `${upperShortCode}-${String(idx + 1).padStart(2, "0")}`,
+              fullTag: `${upperPanelId}-${String(idx + 1).padStart(2, "0")}`,
+              port: null
+            }))
+          });
+        }
       }
 
       unitPorts.forEach((p, idxInUnit) => {
@@ -1920,7 +2030,7 @@ const PortEngine = {
         let deck = null;
 
         if (isCopperAccess && localCopperIdx >= 0) {
-          if (isStdPod) {
+          if (isStdPod && isDual24Pod) {
             const isUpper = localCopperIdx < halfSplit;
             deck = isUpper ? "upper" : "lower";
             panelShortCode = isUpper ? upperShortCode : lowerShortCode;
@@ -1939,27 +2049,46 @@ const PortEngine = {
               panelObj.jacks[jackNum - 1].port = p;
               panelObj.jacks[jackNum - 1].device = dev;
             }
+          } else if (isStdPod || hasPPBetween) {
+            deck = "single";
+            panelShortCode = upperShortCode;
+            panelId = p.customPatchPanelId || upperPanelId;
+            panelLabel = `${panelId} (${singlePanelJacks}P Keystone)`;
+            panelSlotU = upperPPU > 0 ? `U${upperPPU}` : `${ppRackUnits}U Above`;
+            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % singlePanelJacks) + 1);
+            jackLabel = `J${String(jackNum).padStart(2, "0")}`;
+            panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
+            patchCordSpec = `6" Cat6A Slim (${patchStd.color || "Yellow"})`;
+
+            const panelObj = panelsMap.get(upperPanelId);
+            if (panelObj && panelObj.jacks[jackNum - 1] && !panelObj.jacks[jackNum - 1].port) {
+              panelObj.jacks[jackNum - 1].port = p;
+              panelObj.jacks[jackNum - 1].device = dev;
+            }
           } else if (standalonePanels.length > 0) {
-            // Map across standalone rack patch panels in this closet
-            const ppIdx = Math.floor(localCopperIdx / 24) % standalonePanels.length;
+            // Map across standalone rack patch panels in this closet (respecting 48P vs 24P panels!)
+            const firstCap = parseInt(standalonePanels[0].ports, 10) || (/48p/i.test(standalonePanels[0].sku || standalonePanels[0].model || "") ? 48 : 24);
+            const ppIdx = Math.floor(localCopperIdx / firstCap) % standalonePanels.length;
             const ppItem = standalonePanels[ppIdx];
+            const ppCap = parseInt(ppItem.ports, 10) || (/48p/i.test(ppItem.sku || ppItem.model || "") ? 48 : 24);
             panelShortCode = `PP${String(basePanelSeq + ppIdx).padStart(2, "0")}`;
             const ppSeq = ppItem.deviceNumber || `${closetCode}-${panelShortCode}`;
             panelId = p.customPatchPanelId || ppSeq;
-            panelLabel = `${ppSeq} (${ppItem.friendlyName || ppItem.model || "24P Patch Panel"})`;
+            panelLabel = `${ppSeq} (${ppItem.friendlyName || ppItem.model || `${ppCap}P Patch Panel`})`;
             panelSlotU = ppItem.rackSlot ? `U${ppItem.rackSlot}` : "Rack";
-            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % 24) + 1);
+            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % ppCap) + 1);
             jackLabel = `J${String(jackNum).padStart(2, "0")}`;
             panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
             patchCordSpec = `${patchStd.lengthFt || 3}ft Cat6A (${patchStd.color || "Yellow"})`;
           } else {
-            // Standard Closet Patch Panel designation even if Standard Pod isn't toggled yet
-            const ppBank = basePanelSeq + Math.floor(((u - 1) * copperPorts.length + localCopperIdx) / 24);
+            // Standard Closet Patch Panel designation (48P panel for 48-port switches, 24P for <=24-port switches)
+            const defCap = is48P ? 48 : 24;
+            const ppBank = basePanelSeq + Math.floor(((u - 1) * copperPorts.length + localCopperIdx) / defCap);
             panelShortCode = `PP${String(ppBank).padStart(2, "0")}`;
             panelId = p.customPatchPanelId || `${closetCode}-${panelShortCode}`;
-            panelLabel = `${panelId} (24P Keystone)`;
+            panelLabel = `${panelId} (${defCap}P Keystone)`;
             panelSlotU = switchU > 0 ? `Near U${switchU}` : "Closet Patch Field";
-            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % 24) + 1);
+            jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % defCap) + 1);
             jackLabel = `J${String(jackNum).padStart(2, "0")}`;
             panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
             patchCordSpec = `${patchStd.lengthFt || 1}ft Cat6A (${patchStd.color || "Yellow"})`;

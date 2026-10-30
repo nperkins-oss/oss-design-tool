@@ -163,6 +163,7 @@ const CatalogRegistry = {
       })),
       ...netMounts.map(item => ({
         ...item,
+        model: item.model || item.name,
         domain: "networking",
         category: "mounting",
         type: "mounting",
@@ -171,6 +172,7 @@ const CatalogRegistry = {
       })),
       ...netLicenses.map(item => ({
         ...item,
+        model: item.model || item.name,
         domain: "networking",
         category: "licenses",
         type: "license",
@@ -179,6 +181,7 @@ const CatalogRegistry = {
       })),
       ...netUplinks.map(item => ({
         ...item,
+        model: item.model || item.name,
         domain: "networking",
         category: "modular_uplinks",
         type: "modular_uplink",
@@ -187,11 +190,22 @@ const CatalogRegistry = {
       })),
       ...netPsus.map(item => ({
         ...item,
+        model: item.model || item.name,
+        powerWatts: item.powerWatts || item.wattage || 0,
         domain: "networking",
-        category: "power_supplies",
-        type: "power_supply",
-        subCategory: "power_supplies",
-        role: "Power Supply"
+        category: item.category === "fan_module" ? "cooling" : (item.category === "blank_cover" ? "modular_uplinks" : "power_supplies"),
+        type: item.category === "fan_module" ? "fan_module" : (item.category === "blank_cover" ? "blank_cover" : (item.category === "power_cord" ? "power_cord" : "power_supply")),
+        subCategory: item.category === "blank_cover" ? "modular_uplinks" : "power_supplies",
+        role: item.category === "fan_module" ? "Cooling & Fans" : (item.category === "blank_cover" ? "Uplink Blank Cover" : (item.category === "power_cord" ? "Power Cord" : "Power Supply"))
+      })),
+      ...(this.networking.optics || []).filter(o => o && (o.medium === "stacking" || o.medium === "stackpower" || /stackpower|spwr|stack-kit|stak-kit/i.test(`${o.sku || ''} ${o.name || o.model || ''}`))).map(item => ({
+        ...item,
+        model: item.model || item.name,
+        domain: "networking",
+        category: "stacking_cables",
+        type: "stacking_cable",
+        subCategory: "modular_uplinks",
+        role: /spwr|stackpower/i.test(`${item.sku || ''} ${item.name || item.model || ''}`) ? "StackPower Cable" : "Stacking Hardware"
       }))
     ];
 
@@ -394,7 +408,8 @@ const CatalogRegistry = {
    */
   get(idOrSku) {
     if (!idOrSku) return null;
-    return this._byId.get(idOrSku) || this._bySku.get(idOrSku) || null;
+    const str = String(idOrSku).trim();
+    return this._byId.get(str) || this._bySku.get(str) || this._byId.get(str.toLowerCase()) || this._bySku.get(str.toUpperCase()) || null;
   },
 
   /**
@@ -404,7 +419,8 @@ const CatalogRegistry = {
     if (!idOrSku) return null;
     const item = this.get(idOrSku);
     if (item && (item.ports !== undefined || item.role === "Access" || item.role === "Core" || item.role === "Aggregation")) return item;
-    return (this.networking.switches || []).find(s => s.id === idOrSku || s.sku === idOrSku) || null;
+    const lower = String(idOrSku).trim().toLowerCase();
+    return (this.networking.switches || []).find(s => (s.id && s.id.toLowerCase() === lower) || (s.sku && s.sku.toLowerCase() === lower)) || null;
   },
 
   /**

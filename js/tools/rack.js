@@ -129,16 +129,62 @@ function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, de
     `;
   }).join("");
 
-  const first12 = jacksArray.slice(0, 12);
-  const second12 = jacksArray.slice(12, 24);
+  const renderRow = (rowJacks, showCordDown, showCordUp) => {
+    const first12 = rowJacks.slice(0, 12);
+    const second12 = rowJacks.slice(12, 24);
+    const renderBlockForRow = (slice) => slice.map(j => {
+      const p = j.port;
+      const isOccupied = Boolean(p && p.connectedDeviceId);
+      const isPoe = Boolean(isOccupied && (p.poeOutputWatts || 0) > 0);
+      const devLabel = j.device
+        ? `${j.device.deviceNumber ? j.device.deviceNumber + ' • ' : ''}${j.device.friendlyName || j.device.model}`
+        : (p?.connectedDeviceModel || "Unassigned / Spare");
+      const portNum = p ? p.portNumber : j.jackNumber;
+      const unitPort = p ? (p.unitPortNumber || p.portNumber) : j.jackNumber;
+      const pm = (p && patchMapping?.byPortNumber?.[p.portNumber]) ? patchMapping.byPortNumber[p.portNumber] : null;
+      const keystoneTag = j.fullTag || (pm ? `${pm.patchPanelId}:${pm.keystoneJackLabel}` : `Keystone ${j.jackLabel}`);
+      const cableRunTag = pm && pm.horizontalCableId ? `Cable ${pm.horizontalCableId} • ` : "";
+      const swPortTag = pm && pm.switchPortTag ? pm.switchPortTag : `Switch Port ${unitPort}`;
+      const dotState = isOccupied ? (isPoe ? "occupied-poe" : "occupied-data") : "";
+      const cordState = isOccupied ? (isPoe ? "poe" : "data") : "";
+      const tooltip = isOccupied
+        ? `${keystoneTag} ⟷ 6" Slim Cat6A ⟷ ${swPortTag} • ${cableRunTag}${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
+        : `${keystoneTag} (Open) ⟷ Mapped to ${swPortTag} — Click to assign in Port Studio`;
+      return `
+        <button
+          type="button"
+          onclick="event.stopPropagation(); openPortMatrixStudio('${switchInstanceId}', ${portNum})"
+          class="rack-kp-btn"
+          title="${escapeHTML(tooltip)}"
+        >
+          ${showRackPatchJumpers && showCordUp ? `<span class="rack-kp-cord ${cordState}"></span>` : ''}
+          <span class="rack-kp-dot ${dotState}">${j.jackNumber}</span>
+          ${showRackPatchJumpers && showCordDown ? `<span class="rack-kp-cord ${cordState}"></span>` : ''}
+        </button>
+      `;
+    }).join("");
 
-  return `
-    <div class="rack-kp-strip">
-      <div class="rack-kp-group">${renderBlock(first12)}</div>
-      <span class="w-1 h-2.5 bg-purple-900/40 rounded-full"></span>
-      <div class="rack-kp-group">${renderBlock(second12)}</div>
-    </div>
-  `;
+    return `
+      <div class="rack-kp-strip">
+        <div class="rack-kp-group">${renderBlockForRow(first12)}</div>
+        <span class="w-1 h-2.5 bg-purple-900/40 rounded-full"></span>
+        <div class="rack-kp-group">${renderBlockForRow(second12)}</div>
+      </div>
+    `;
+  };
+
+  if (jacksArray.length > 24) {
+    const top24 = jacksArray.slice(0, 24);
+    const bot24 = jacksArray.slice(24, 48);
+    return `
+      <div class="flex flex-col gap-0.5 items-end">
+        ${renderRow(top24, false, deck === "lower")}
+        ${renderRow(bot24, deck === "upper" || deck === "single", false)}
+      </div>
+    `;
+  }
+
+  return renderRow(jacksArray, deck === "upper" || deck === "single", deck === "lower");
 }
 
 function renderInteractiveRackSwitchFaceplateHTML(switchItem, unitNum, patchData) {
@@ -1024,9 +1070,18 @@ function getDevicePsuSpecs(item) {
     isDualModular = true;
   }
 
+  if (item.tertiaryPsuSku) {
+    psuCount = Math.max(psuCount, 3 * stackUnits);
+    isDualModular = true;
+  } else if (item.hasRedundantPsu || item.secondaryPsuSku) {
+    psuCount = Math.max(psuCount, 2 * stackUnits);
+    isDualModular = true;
+  }
+
   const baseW = parseFloat(item.baseWatts) || 0;
-  const inletType = (baseW > 1200) ? "C20 (16A/20A)" : "C14 (10A/15A)";
-  const cordType = inletType.startsWith("C20") ? "C19-to-C20" : "C13-to-C14";
+  const has1900W = /1900w/i.test(item.primaryPsuSku || "") || /1900w/i.test(item.secondaryPsuSku || "") || /1900w/i.test(item.tertiaryPsuSku || "");
+  const inletType = has1900W ? "C22/C21 (16A/20A)" : ((baseW > 1200) ? "C20 (16A/20A)" : "C14 (10A/15A)");
+  const cordType = has1900W ? "C21-to-C20" : (inletType.startsWith("C20") ? "C19-to-C20" : "C13-to-C14");
 
   return {
     psuCount,
@@ -3826,21 +3881,55 @@ function isFiberOrFirewall(item) {
   return isFirewallDevice(item) || isFiberSwitch(item);
 }
 
+function getRackSwitchPatchPanelMeta(it) {
+  if (typeof window !== "undefined" && typeof window.resolveSwitchPatchPanelConfig === "function") {
+    return window.resolveSwitchPatchPanelConfig(it);
+  }
+  const rawPorts = parseInt(it?.ports, 10) || 24;
+  const copperPorts = rawPorts === 52 ? 48 : (rawPorts === 28 ? 24 : (rawPorts > 48 ? 48 : rawPorts));
+  const isDual24 = it?.patchPanelSku === "DUAL-24P";
+  const is2U48 = it?.patchPanelSku === "PP-2U-48P-MOD";
+  const is1U24 = it?.patchPanelSku === "PP-1U-24P-MOD";
+  const is48 = !isDual24 && !is1U24 && (is2U48 || it?.patchPanelSku === "PP-1U-48P-MOD" || copperPorts > 24);
+  const rackUnits = is2U48 ? 2 : 1;
+  const ports = isDual24 ? 24 : (is48 ? 48 : 24);
+  const sku = isDual24 ? "PP-1U-24P-MOD" : (is2U48 ? "PP-2U-48P-MOD" : (is48 ? "PP-1U-48P-MOD" : "PP-1U-24P-MOD"));
+  const shortLabel = isDual24 ? "2x24P" : (is2U48 ? "2U 48P" : (is48 ? "48P" : "24P"));
+  const model = is2U48
+    ? "2U 48-Port High-Density Modular Keystone Patch Panel"
+    : (is48
+      ? "1U 48-Port High-Density Modular Keystone Patch Panel"
+      : "1U 24-Port High-Density Modular Keystone Patch Panel");
+  return {
+    sku,
+    model,
+    ports,
+    rackUnits,
+    panelsPerSwitch: isDual24 ? 2 : 1,
+    isDual24,
+    is48,
+    shortLabel,
+    copperPorts
+  };
+}
+
 function getRackItemHeight(it) {
   if (!it) return 1;
   const isZeroU = (it.rackUnits !== undefined && it.rackUnits !== null && parseInt(it.rackUnits, 10) === 0) || it.isDinMounted || (it.mounting && it.mounting.toLowerCase() === "din");
   if (isZeroU) return 0;
   const stack = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
   const baseRU = (it.rackUnits !== undefined && it.rackUnits !== null) ? (parseInt(it.rackUnits, 10) || 0) : 1;
+  const ppMeta = getRackSwitchPatchPanelMeta(it);
 
   if (it.standardPod) {
-    // Standard Pod: 1U 24P Patch panel directly above and 1U 24P patch panel directly below each switch unit
-    return (baseRU * stack) + (2 * stack);
+    // Standard Pod: Dual-24P (1U above + 1U below) when explicitly selected, otherwise 1 unified 48P (or 24P) panel per switch unit
+    const podPanelU = ppMeta.isDual24 ? 2 : ppMeta.rackUnits;
+    return (baseRU * stack) + (podPanelU * stack);
   }
 
   const hasPP = (stack >= 2 && !!it.patchPanelBetween);
   const hasHCM = (stack >= 2 && !!it.cableManagerBetween);
-  const interleave = (hasPP || hasHCM) ? (stack - 1) : 0;
+  const interleave = hasPP ? (ppMeta.rackUnits * (stack - 1)) : (hasHCM ? (stack - 1) : 0);
   return (baseRU * stack) + interleave;
 }
 
@@ -3881,6 +3970,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
         const patchMapping = (isSwitch || isFirewall) && typeof PortEngine !== "undefined"
           ? PortEngine.resolveSwitchPatchMapping(it)
           : null;
+        const ppMeta = getRackSwitchPatchPanelMeta(it);
 
         railHTML += `
           <div 
@@ -3958,19 +4048,35 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                     `}
                   </div>
 
+                  ${(stackUnits >= 2 && it.stackPowerEnabled) ? `
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-950/90 text-amber-300 border border-amber-600/60 flex items-center gap-0.5" title="Cisco StackPower Shared Backplane Ring Enabled (${it.stackPowerMode === 'redundant' ? 'RPS Redundant' : 'Power Sharing'})">
+                      <i data-lucide="zap" class="w-2.5 h-2.5 text-amber-400"></i> StackPower
+                    </span>
+                  ` : ''}
+
                   ${isCopper ? `
                     <button 
                       type="button" 
                       onclick="event.stopPropagation(); toggleSwitchStandardPod('${it.instanceId}')" 
                       class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${it.standardPod ? 'bg-purple-900/90 text-purple-200 border border-purple-500 hover:bg-purple-800' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}" 
-                      title="${it.standardPod ? 'Remove standard 24P patch panels above/below' : 'Add 1U 24P patch panels directly above & below with 6\" patch cables'}"
+                      title="${it.standardPod ? `Remove ${ppMeta.shortLabel} Standard Pod patch panel(s)` : `Add ${ppMeta.shortLabel} (${ppMeta.sku}) patch panel pod with 6\" slim Cat6A patch cords`}"
                     >
                       <i data-lucide="layers" class="w-2.5 h-2.5 ${it.standardPod ? 'text-purple-300' : 'text-slate-400'}"></i>
-                      <span>${it.standardPod ? '24P Pod' : '+24P Pod'}</span>
+                      <span>${it.standardPod ? `${ppMeta.shortLabel} Pod` : `+${ppMeta.shortLabel} Pod`}</span>
                     </button>
                   ` : ''}
 
                   ${(stackUnits >= 2 && !it.standardPod) ? `
+                    ${isCopper ? `
+                      <button 
+                        type="button" 
+                        onclick="event.stopPropagation(); toggleStackPatchPanel('${it.instanceId}')" 
+                        class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 cursor-pointer ${it.patchPanelBetween ? 'bg-purple-900/90 text-purple-200 border border-purple-500' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:text-white'}" 
+                        title="Toggle ${ppMeta.rackUnits}U ${ppMeta.ports}-Port Patch Panel (${ppMeta.sku}) in-between stacked switches"
+                      >
+                        <span>${it.patchPanelBetween ? `${ppMeta.shortLabel} Btwn` : `+${ppMeta.shortLabel} Btwn`}</span>
+                      </button>
+                    ` : ''}
                     <button 
                       type="button" 
                       onclick="event.stopPropagation(); toggleStackCableManager('${it.instanceId}')" 
@@ -3993,8 +4099,16 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                   </button>
                 ` : ''}
 
-                <!-- Cross-Navigation & Unmount/Delete Icons -->
+                <!-- Cross-Navigation, Accessories/Swap & Unmount/Delete Icons -->
                 <div class="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 bg-slate-950/90 border border-slate-800 rounded px-1 py-0.5 transition-opacity">
+                  ${!isPassiveInfrastructure(it) ? `
+                    <button onclick="event.stopPropagation(); if(typeof openBomItemAccessoriesModal==='function') openBomItemAccessoriesModal('${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-cyan-300" title="Configure Accessories, Power Supplies, StackPower &amp; Patch Options">
+                      <i data-lucide="sliders-horizontal" class="w-3 h-3"></i>
+                    </button>
+                    <button onclick="event.stopPropagation(); if(typeof openReplaceBomItemModal==='function') openReplaceBomItemModal('${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-purple-300" title="Replace / Swap Hardware Model in Place">
+                      <i data-lucide="repeat" class="w-3 h-3"></i>
+                    </button>
+                  ` : ''}
                   <button onclick="event.stopPropagation(); jumpToTopologyTarget('node:${it.instanceId}')" class="p-0.5 text-slate-400 hover:text-indigo-300" title="Jump to Logical Topology">
                     <i data-lucide="network" class="w-3 h-3"></i>
                   </button>
@@ -4014,50 +4128,102 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
               </div>
             </div>
 
-            <!-- Standard Pod Layout: Crisp 19" 1U Faceplates (Upper 24P Panel -> Switch Chassis -> Lower 24P Panel) -->
+            <!-- Standard Pod Layout: Single Unified 48P/24P Panel (Default) or Dual-24P Split Sandwich -->
             ${slotData.isStdPod ? `
               <div class="mt-1.5 space-y-1 border-t border-slate-800/80 pt-1.5">
                 ${Array.from({ length: stackUnits }, (_, sIdx) => {
                   const unitNum = stackUnits - sIdx;
                   const isMaster = unitNum === 1;
-                  const unitBaseU = u + (unitNum - 1) * (slotData.baseRU + 2);
-                  const lowerPPU = unitBaseU;
-                  const switchU = unitBaseU + 1;
-                  const upperPPU = unitBaseU + slotData.baseRU + 1;
 
-                  const is48P = (parseInt(it.ports, 10) || 24) >= 48;
-                  const upperPortRange = is48P ? "Ports 1–24" : "Ports 1–12";
-                  const lowerPortRange = is48P ? "Ports 25–48" : "Ports 13–24";
+                  if (ppMeta.isDual24) {
+                    const unitBaseU = u + (unitNum - 1) * (slotData.baseRU + 2);
+                    const lowerPPU = unitBaseU;
+                    const switchU = unitBaseU + 1;
+                    const upperPPU = unitBaseU + slotData.baseRU + 1;
 
-                  const upperPanelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "upper");
-                  const lowerPanelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "lower");
-                  const upperPanelId = upperPanelObj ? upperPanelObj.panelId : `PP${String((unitNum - 1) * 2 + 1).padStart(2, "0")}`;
-                  const lowerPanelId = lowerPanelObj ? lowerPanelObj.panelId : `PP${String((unitNum - 1) * 2 + 2).padStart(2, "0")}`;
+                    const is48P = ppMeta.copperPorts > 24;
+                    const upperPortRange = is48P ? "Ports 1–24" : "Ports 1–12";
+                    const lowerPortRange = is48P ? "Ports 25–48" : "Ports 13–24";
 
-                  const upperJacks = upperPanelObj ? upperPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
-                  const lowerJacks = lowerPanelObj ? lowerPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
-                  const upperActiveCount = upperJacks.filter(j => j.port && j.port.connectedDeviceId).length;
-                  const lowerActiveCount = lowerJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                    const upperPanelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "upper");
+                    const lowerPanelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "lower");
+                    const upperPanelId = upperPanelObj ? upperPanelObj.panelId : `PP${String((unitNum - 1) * 2 + 1).padStart(2, "0")}`;
+                    const lowerPanelId = lowerPanelObj ? lowerPanelObj.panelId : `PP${String((unitNum - 1) * 2 + 2).padStart(2, "0")}`;
+
+                    const upperJacks = upperPanelObj ? upperPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                    const lowerJacks = lowerPanelObj ? lowerPanelObj.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                    const upperActiveCount = upperJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                    const lowerActiveCount = lowerJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+
+                    return `
+                      <div class="space-y-1 p-1 rounded-lg bg-slate-950/75 border border-slate-800/90">
+                        <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-purple-300 font-bold w-7 shrink-0">U${upperPPU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${upperPanelId}</span>
+                            <span class="text-slate-300 truncate">24P Keystone (${upperPortRange})</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded ${upperActiveCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
+                              ${upperActiveCount}/24 Patched
+                            </span>
+                          </div>
+                          ${renderInteractiveRackKeystoneStripHTML(it.instanceId, upperJacks, "upper", patchMapping)}
+                        </div>
+                        <div class="px-2 py-1 rounded bg-slate-900/95 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-indigo-400 font-bold w-7 shrink-0">U${switchU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 font-bold border border-sky-700/60 shrink-0">
+                              ${stackUnits > 1 ? `${patchMapping?.switchCode || 'SW'}-U${unitNum} (${isMaster ? 'Master' : 'Member'})` : (patchMapping?.switchCode || 'Switch Faceplate')}
+                            </span>
+                            <span class="text-slate-200 font-semibold truncate">${escapeHTML(it.model)}</span>
+                            ${showRackPatchJumpers ? `<span class="text-[9px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.5 rounded hidden md:inline shrink-0">6" Slim Cat6A 1:1</span>` : ''}
+                          </div>
+                          ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
+                        </div>
+                        <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-purple-300 font-bold w-7 shrink-0">U${lowerPPU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${lowerPanelId}</span>
+                            <span class="text-slate-300 truncate">24P Keystone (${lowerPortRange})</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded ${lowerActiveCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
+                              ${lowerActiveCount}/24 Patched
+                            </span>
+                          </div>
+                          ${renderInteractiveRackKeystoneStripHTML(it.instanceId, lowerJacks, "lower", patchMapping)}
+                        </div>
+                      </div>
+                    `;
+                  }
+
+                  // Unified Single 48-Port (1U/2U) or 24-Port (1U) Patch Panel directly above each Switch Unit
+                  const unitBaseU = u + (unitNum - 1) * (slotData.baseRU + ppMeta.rackUnits);
+                  const switchU = unitBaseU;
+                  const upperPPU = unitBaseU + slotData.baseRU;
+                  const upperPPULabel = ppMeta.rackUnits > 1 ? `U${upperPPU + ppMeta.rackUnits - 1}-U${upperPPU}` : `U${upperPPU}`;
+                  const panelObj = patchMapping?.panels?.find(p => p.switchUnit === unitNum && p.deck === "single");
+                  const panelId = panelObj ? panelObj.panelId : `PP${String(unitNum).padStart(2, "0")}`;
+                  const panelJacks = panelObj ? panelObj.jacks : Array.from({ length: ppMeta.ports }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                  const activeCount = panelJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                  const portRangeLabel = `Ports 1–${Math.min(ppMeta.copperPorts || ppMeta.ports, ppMeta.ports)}`;
 
                   return `
                     <div class="space-y-1 p-1 rounded-lg bg-slate-950/75 border border-slate-800/90">
-                      <!-- 1U Upper 24-Port Keystone Patch Panel Row -->
+                      <!-- Unified 48P / 24P Keystone Patch Panel Row -->
                       <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2 min-w-0">
-                          <span class="text-purple-300 font-bold w-7 shrink-0">U${upperPPU}</span>
-                          <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${upperPanelId}</span>
-                          <span class="text-slate-300 truncate">24P Keystone (${upperPortRange})</span>
-                          <span class="text-[9px] px-1.5 py-0.5 rounded ${upperActiveCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
-                            ${upperActiveCount}/24 Patched
+                          <span class="text-purple-300 font-bold w-10 shrink-0">${upperPPULabel}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${panelId}</span>
+                          <span class="text-slate-300 truncate">${ppMeta.rackUnits}U ${ppMeta.ports}P Keystone (${portRangeLabel})</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded ${activeCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
+                            ${activeCount}/${ppMeta.ports} Patched
                           </span>
                         </div>
-                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, upperJacks, "upper", patchMapping)}
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, panelJacks, "single", patchMapping)}
                       </div>
 
-                      <!-- 1U Middle Switch Chassis Row -->
+                      <!-- Switch Chassis Row -->
                       <div class="px-2 py-1 rounded bg-slate-900/95 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2 min-w-0">
-                          <span class="text-indigo-400 font-bold w-7 shrink-0">U${switchU}</span>
+                          <span class="text-indigo-400 font-bold w-10 shrink-0">U${switchU}</span>
                           <span class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 font-bold border border-sky-700/60 shrink-0">
                             ${stackUnits > 1 ? `${patchMapping?.switchCode || 'SW'}-U${unitNum} (${isMaster ? 'Master' : 'Member'})` : (patchMapping?.switchCode || 'Switch Faceplate')}
                           </span>
@@ -4065,19 +4231,6 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                           ${showRackPatchJumpers ? `<span class="text-[9px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.5 rounded hidden md:inline shrink-0">6" Slim Cat6A 1:1</span>` : ''}
                         </div>
                         ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
-                      </div>
-
-                      <!-- 1U Lower 24-Port Keystone Patch Panel Row -->
-                      <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
-                        <div class="flex items-center gap-2 min-w-0">
-                          <span class="text-purple-300 font-bold w-7 shrink-0">U${lowerPPU}</span>
-                          <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${lowerPanelId}</span>
-                          <span class="text-slate-300 truncate">24P Keystone (${lowerPortRange})</span>
-                          <span class="text-[9px] px-1.5 py-0.5 rounded ${lowerActiveCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
-                            ${lowerActiveCount}/24 Patched
-                          </span>
-                        </div>
-                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, lowerJacks, "lower", patchMapping)}
                       </div>
                     </div>
                   `;
@@ -4089,17 +4242,20 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                 ${Array.from({ length: stackUnits }, (_, sIdx) => {
                   const unitNum = stackUnits - sIdx;
                   const isMaster = unitNum === 1;
-                  const stepU = (slotData.hasHCMBetween || slotData.hasPPBetween) ? 2 : slotData.baseRU;
+                  const interU = slotData.hasPPBetween ? ppMeta.rackUnits : (slotData.hasHCMBetween ? 1 : 0);
+                  const stepU = slotData.baseRU + interU;
                   const memberU = u + (unitNum - 1) * stepU;
-                  const betweenU = memberU - 1;
+                  const betweenU = memberU - interU;
+                  const hasModularUplinkOnThisUnit = (stackUnits <= 2 || (it.uplinkModuleStackPolicy || "first_last") === "all") || unitNum === 1 || unitNum === stackUnits;
                   let memberHTML = `
                     <div class="px-2 py-1 rounded bg-slate-950/90 border ${isMaster ? 'border-sky-500/40' : 'border-slate-800'} flex items-center justify-between gap-2 text-[10px] font-mono">
                       <div class="flex items-center gap-2 min-w-0">
-                        <span class="text-indigo-400 font-bold w-7 shrink-0">U${memberU}</span>
+                        <span class="text-indigo-400 font-bold w-10 shrink-0">U${memberU}</span>
                         <span class="px-1.5 py-0.5 rounded ${isMaster ? 'bg-sky-950 text-sky-300 font-bold border border-sky-800/60' : 'bg-slate-900 text-slate-300'} shrink-0">
-                          Unit ${unitNum} (${isMaster ? 'Master' : 'Member'})
+                          Unit ${unitNum} (${isMaster ? 'Master' : (unitNum === stackUnits ? 'Last Member' : 'Member')})
                         </span>
                         <span class="text-slate-300 font-semibold truncate">${escapeHTML(it.model)}</span>
+                        ${(it.selectedUplinkModule && stackUnits > 2 && hasModularUplinkOnThisUnit) ? `<span class="text-[8.5px] px-1 py-0.2 rounded bg-cyan-950/80 text-cyan-300 border border-cyan-700/50 shrink-0" title="Modular Uplink Populated on Edge Stack Member">Uplink Mod</span>` : ''}
                       </div>
                       ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
                     </div>
@@ -4108,19 +4264,29 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                     memberHTML += `
                       <div class="px-2 py-1 rounded bg-amber-950/40 border border-amber-600/50 flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2">
-                          <span class="text-amber-300 font-bold w-7 shrink-0">U${betweenU}</span>
+                          <span class="text-amber-300 font-bold w-10 shrink-0">U${betweenU}</span>
                           <span class="text-amber-200 font-bold">1U Horizontal Cable Manager (HCM-1U)</span>
                         </div>
                         <span class="text-[9px] text-amber-300/80">◄ Pass-Through Finger Duct ►</span>
                       </div>
                     `;
                   } else if (unitNum > 1 && slotData.hasPPBetween) {
+                    const betweenULabel = ppMeta.rackUnits > 1 ? `U${betweenU + ppMeta.rackUnits - 1}-U${betweenU}` : `U${betweenU}`;
+                    const btwnPanelObj = patchMapping?.panels?.find(p => p.switchUnit === (unitNum - 1) && p.deck === "single");
+                    const btwnPanelId = btwnPanelObj ? btwnPanelObj.panelId : `PP${String(unitNum - 1).padStart(2, "0")}`;
+                    const btwnJacks = btwnPanelObj ? btwnPanelObj.jacks : Array.from({ length: ppMeta.ports }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                    const btwnActive = btwnJacks.filter(j => j.port && j.port.connectedDeviceId).length;
                     memberHTML += `
                       <div class="px-2 py-1 rounded bg-purple-950/40 border border-purple-600/50 flex items-center justify-between gap-2 text-[10px] font-mono">
-                        <div class="flex items-center gap-2">
-                          <span class="text-purple-300 font-bold w-7 shrink-0">U${betweenU}</span>
-                          <span class="text-purple-200 font-bold">1U 24-Port Modular Keystone Patch Panel (PP-1U-24P-MOD)</span>
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-purple-300 font-bold w-10 shrink-0">${betweenULabel}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${btwnPanelId}</span>
+                          <span class="text-purple-200 font-bold truncate">${escapeHTML(ppMeta.model)} (${ppMeta.sku})</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded ${btwnActive > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
+                            ${btwnActive}/${ppMeta.ports} Patched
+                          </span>
                         </div>
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, btwnJacks, "single", patchMapping)}
                       </div>
                     `;
                   }
@@ -4219,6 +4385,7 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
         const stackUnits = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
         const isSwitch = isStackableSwitch(it);
         const isCopper = isCopperSwitch(it);
+        const ppMeta = getRackSwitchPatchPanelMeta(it);
         const targetU = parseInt(it.rackSlot, 10);
         const hasHcmBelow = !!(targetU > 1 && slots[targetU - 1] && (
           slots[targetU - 1].item.sku === "HCM-1U" || 
@@ -4362,10 +4529,10 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                       type="button" 
                       onclick="event.stopPropagation(); toggleSwitchStandardPod('${it.instanceId}')" 
                       class="px-2 py-0.5 rounded text-[9px] font-mono font-bold transition-all flex items-center gap-1 ${it.standardPod ? 'bg-emerald-900/90 text-emerald-200 border border-emerald-500 hover:bg-emerald-800 shadow-sm' : 'bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white'}" 
-                      title="${it.standardPod ? 'Remove standard 24P patch panels above/below' : 'Standard Rack Design: Add 1U 24P patch panels directly above & below with 6\" patch cables'}"
+                      title="${it.standardPod ? `Remove ${ppMeta.shortLabel} Standard Pod patch panel(s)` : `Standard Rack Design: Add ${ppMeta.shortLabel} (${ppMeta.sku}) patch panel pod with 6\" patch cables`}"
                     >
                       <i data-lucide="${it.standardPod ? 'check-circle-2' : 'panels-top-left'}" class="w-2.5 h-2.5 ${it.standardPod ? 'text-emerald-400' : 'text-slate-400'}"></i>
-                      <span>${it.standardPod ? 'Std 24P Active' : '+ Std 24P'}</span>
+                      <span>${it.standardPod ? `Std ${ppMeta.shortLabel} Active` : `+ Std ${ppMeta.shortLabel}`}</span>
                     </button>
                   ` : ''}
                 ` : ''}
@@ -4393,60 +4560,84 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
               </div>
             </div>
 
-            <!-- Rear Standard Pod Layout: Upper Tie Bar -> Switch Rear -> Lower Tie Bar per stack unit -->
+            <!-- Rear Standard Pod Layout: Single 48P/24P Tie Bar (Default) or Dual-24P Split Sandwich -->
             ${slotData.isStdPod ? `
               <div class="mt-2 space-y-1.5 border-t border-slate-800/80 pt-2">
                 ${Array.from({ length: stackUnits }, (_, sIdx) => {
                   const unitNum = stackUnits - sIdx;
-                  const isMaster = unitNum === 1;
-                  const unitBaseU = u + (unitNum - 1) * (slotData.baseRU + 2);
-                  const lowerPPU = unitBaseU;
-                  const switchU = unitBaseU + 1;
-                  const upperPPU = unitBaseU + slotData.baseRU + 1;
                   const unitLabel = stackUnits > 1 ? `Unit ${unitNum} ` : "";
+                  if (ppMeta.isDual24) {
+                    const unitBaseU = u + (unitNum - 1) * (slotData.baseRU + 2);
+                    const lowerPPU = unitBaseU;
+                    const switchU = unitBaseU + 1;
+                    const upperPPU = unitBaseU + slotData.baseRU + 1;
+                    return `
+                      <div class="space-y-1 p-1 rounded bg-slate-950/60 border border-purple-900/40">
+                        <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <span class="text-purple-300 font-bold">U${upperPPU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
+                              <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24P Patch Panel Rear (${unitLabel}Upper)
+                            </span>
+                            <span class="text-purple-400/80 text-[9px] font-semibold">Cable Retention Tie Bar &amp; Keystone Sockets</span>
+                          </div>
+                          <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">6" CORD DIRECT TIE-OFF</span>
+                        </div>
+                        <div class="p-1.5 rounded bg-slate-950/90 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <div class="flex items-center gap-2">
+                            <span class="text-indigo-400 font-bold">U${switchU}</span>
+                            <span class="text-slate-300 font-bold">${unitLabel}${escapeHTML(it.model)} Rear (${psuSpecs.inletType})</span>
+                          </div>
+                          <div class="text-[9px] text-slate-400 flex items-center gap-2">
+                            <span class="text-cyan-400 flex items-center gap-0.5"><i data-lucide="wind" class="w-2.5 h-2.5"></i> Fan Exhaust</span>
+                            ${stackUnits > 1 ? `<span class="text-indigo-400 flex items-center gap-0.5"><i data-lucide="link" class="w-2.5 h-2.5"></i> Stack Link</span>` : ''}
+                            ${(stackUnits > 1 && it.stackPowerEnabled) ? `<span class="text-amber-300 flex items-center gap-0.5"><i data-lucide="zap" class="w-2.5 h-2.5"></i> StackPower</span>` : ''}
+                            <span class="text-emerald-400 font-bold">PSU OK</span>
+                          </div>
+                        </div>
+                        <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <span class="text-purple-300 font-bold">U${lowerPPU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
+                              <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24P Patch Panel Rear (${unitLabel}Lower)
+                            </span>
+                            <span class="text-purple-400/80 text-[9px] font-semibold">Cable Retention Tie Bar &amp; Keystone Sockets</span>
+                          </div>
+                          <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">6" CORD DIRECT TIE-OFF</span>
+                        </div>
+                      </div>
+                    `;
+                  }
 
+                  const unitBaseU = u + (unitNum - 1) * (slotData.baseRU + ppMeta.rackUnits);
+                  const switchU = unitBaseU;
+                  const upperPPU = unitBaseU + slotData.baseRU;
+                  const upperPPULabel = ppMeta.rackUnits > 1 ? `U${upperPPU + ppMeta.rackUnits - 1}-U${upperPPU}` : `U${upperPPU}`;
                   return `
-                    <!-- Rear Unit ${unitNum} Pod Sandwich -->
                     <div class="space-y-1 p-1 rounded bg-slate-950/60 border border-purple-900/40">
-                      <!-- Upper 24P Patch Panel Rear Deck -->
                       <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
                         <div class="flex items-center gap-2">
-                          <span class="text-purple-300 font-bold">U${upperPPU}</span>
+                          <span class="text-purple-300 font-bold">${upperPPULabel}</span>
                           <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
-                            <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24P Patch Panel Rear (${unitLabel}Upper)
+                            <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> ${ppMeta.rackUnits}U ${ppMeta.ports}P Patch Panel Rear (${unitLabel}${ppMeta.sku})
                           </span>
-                          <span class="text-purple-400/80 text-[9px] font-semibold">Cable Retention Tie Bar &amp; Keystone Sockets</span>
+                          <span class="text-purple-400/80 text-[9px] font-semibold">Cable Retention Tie Bar &amp; ${ppMeta.ports}x Keystone Sockets</span>
                         </div>
                         <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
                           6" CORD DIRECT TIE-OFF
                         </span>
                       </div>
-
-                      <!-- Middle Switch Chassis Rear Indicator -->
                       <div class="p-1.5 rounded bg-slate-950/90 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2">
                           <span class="text-indigo-400 font-bold">U${switchU}</span>
-                          <span class="text-slate-300 font-bold">${stackUnits > 1 ? `Unit ${unitNum} ` : ''}${escapeHTML(it.model)} Rear (${psuSpecs.inletType})</span>
+                          <span class="text-slate-300 font-bold">${unitLabel}${escapeHTML(it.model)} Rear (${psuSpecs.inletType})</span>
                         </div>
                         <div class="text-[9px] text-slate-400 flex items-center gap-2">
                           <span class="text-cyan-400 flex items-center gap-0.5"><i data-lucide="wind" class="w-2.5 h-2.5"></i> Fan Exhaust</span>
                           ${stackUnits > 1 ? `<span class="text-indigo-400 flex items-center gap-0.5"><i data-lucide="link" class="w-2.5 h-2.5"></i> Stack Link</span>` : ''}
+                          ${(stackUnits > 1 && it.stackPowerEnabled) ? `<span class="text-amber-300 flex items-center gap-0.5"><i data-lucide="zap" class="w-2.5 h-2.5"></i> StackPower</span>` : ''}
                           <span class="text-emerald-400 font-bold">PSU OK</span>
                         </div>
-                      </div>
-
-                      <!-- Lower 24P Patch Panel Rear Deck -->
-                      <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
-                        <div class="flex items-center gap-2">
-                          <span class="text-purple-300 font-bold">U${lowerPPU}</span>
-                          <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70 flex items-center gap-1">
-                            <i data-lucide="layers" class="w-3 h-3 text-purple-300"></i> 1U 24P Patch Panel Rear (${unitLabel}Lower)
-                          </span>
-                          <span class="text-purple-400/80 text-[9px] font-semibold">Cable Retention Tie Bar &amp; Keystone Sockets</span>
-                        </div>
-                        <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">
-                          6" CORD DIRECT TIE-OFF
-                        </span>
                       </div>
                     </div>
                   `;
@@ -4495,8 +4686,10 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                   ${Array.from({ length: stackUnits }, (_, sIdx) => {
                     const unitNum = stackUnits - sIdx;
                     const isMaster = unitNum === 1;
-                    const memberU = u + (unitNum - 1) * 2;
-                    const ppU = memberU - 1;
+                    const stepU = slotData.baseRU + ppMeta.rackUnits;
+                    const memberU = u + (unitNum - 1) * stepU;
+                    const ppU = memberU - ppMeta.rackUnits;
+                    const ppULabel = ppMeta.rackUnits > 1 ? `U${ppU + ppMeta.rackUnits - 1}-U${ppU}` : `U${ppU}`;
                     let memberHTML = `
                       <div class="p-1.5 rounded bg-slate-950/90 border ${isMaster ? 'border-sky-500/40' : 'border-slate-800'} flex items-center justify-between gap-2 text-[10px] font-mono">
                         <div class="flex items-center gap-2">
@@ -4504,7 +4697,8 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                           <span class="text-slate-300 font-bold">Unit ${unitNum} Rear Chassis (${psuSpecs.inletType})</span>
                         </div>
                         <div class="text-[9px] text-slate-400 flex items-center gap-2">
-                          <span class="text-indigo-400 flex items-center gap-0.5"><i data-lucide="link" class="w-2.5 h-2.5"></i> 100G Stack Port</span>
+                          <span class="text-indigo-400 flex items-center gap-0.5"><i data-lucide="link" class="w-2.5 h-2.5"></i> Stack Ring</span>
+                          ${it.stackPowerEnabled ? `<span class="text-amber-300 flex items-center gap-0.5"><i data-lucide="zap" class="w-2.5 h-2.5"></i> StackPower</span>` : ''}
                           <span class="text-emerald-400 font-bold">PSU OK</span>
                         </div>
                       </div>
@@ -4513,10 +4707,10 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
                       memberHTML += `
                         <div class="p-1.5 rounded bg-purple-950/50 border border-purple-700/50 flex items-center justify-between gap-2 text-[10px] font-mono shadow-inner my-1">
                           <div class="flex items-center gap-2">
-                            <span class="text-purple-300 font-bold">U${ppU}</span>
-                            <span class="text-purple-200 font-bold">1U 24P Patch Panel Rear (Cable Management Tie Bar)</span>
+                            <span class="text-purple-300 font-bold">${ppULabel}</span>
+                            <span class="text-purple-200 font-bold">${ppMeta.rackUnits}U ${ppMeta.ports}P Patch Panel Rear (${ppMeta.sku} • Cable Management Tie Bar)</span>
                           </div>
-                          <span class="text-[9px] text-purple-400/80 font-mono">24x Keystone Cat6A / Fiber Pass-Through</span>
+                          <span class="text-[9px] text-purple-400/80 font-mono">${ppMeta.ports}x Keystone Cat6A Pass-Through</span>
                         </div>
                       `;
                     }
@@ -4526,7 +4720,7 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
               ` : `
                 <div class="mt-1.5 pt-1.5 border-t border-slate-800 flex items-center justify-between text-[9px] font-mono text-slate-400">
                   <span class="text-indigo-400 font-semibold flex items-center gap-1">
-                    <i data-lucide="link" class="w-2.5 h-2.5"></i> Dual 100G Direct-Attach Ring Cables
+                    <i data-lucide="link" class="w-2.5 h-2.5"></i> Direct-Attach Stack Ring${it.stackPowerEnabled ? ' + ⚡ Cisco StackPower Ring' : ''}
                   </span>
                   <span class="text-slate-500">${stackUnits}x Chassis Connected</span>
                 </div>
@@ -5836,6 +6030,7 @@ function updateSwitchStackFromRack(instanceId, newCount) {
     item.stackedUnits = 0;
     item.qty = 1;
     item.patchPanelBetween = false;
+    if (typeof syncPerChassisChildQuantities === "function") syncPerChassisChildQuantities(item);
     if (typeof PortEngine !== "undefined") {
       PortEngine.initSwitchPorts(item, true);
     }
@@ -5894,11 +6089,13 @@ function updateSwitchStackFromRack(instanceId, newCount) {
     });
   }
 
+  const prevStacked = parseInt(item.stackedUnits, 10) || 0;
   item.canStack = true;
   item.stackedUnits = targetCount;
-  item.qty = Math.max(item.qty || 1, targetCount);
+  item.qty = (prevStacked >= 2 && item.qty === prevStacked) ? targetCount : Math.max(item.qty || 1, targetCount);
   item.uplinkMode = "lag_dual";
-  item.customLinkMultiplier = Math.max(item.customLinkMultiplier || 1, targetCount);
+  item.customLinkMultiplier = Math.max(item.customLinkMultiplier || 1, 2);
+  if (typeof syncPerChassisChildQuantities === "function") syncPerChassisChildQuantities(item);
 
   if (typeof PortEngine !== "undefined") {
     PortEngine.initSwitchPorts(item, true);
@@ -5933,11 +6130,11 @@ function toggleStackPatchPanel(instanceId) {
 
   const willEnable = !item.patchPanelBetween;
   const stackUnits = item.stackedUnits;
-  const baseRU = (item.rackUnits !== undefined && item.rackUnits !== null) ? (parseInt(item.rackUnits, 10) || 0) : 1;
+  const ppMeta = getRackSwitchPatchPanelMeta(item);
   const currentAssignedU = parseInt(item.rackSlot, 10);
 
   if (willEnable && currentAssignedU && currentAssignedU >= 1) {
-    const newHeight = (baseRU * stackUnits) + (stackUnits - 1);
+    const newHeight = getRackItemHeight({ ...item, patchPanelBetween: true, cableManagerBetween: false });
     const hostId = FacilityStore.normalize(item.closetName || item.rackId);
     let targetU = currentAssignedU;
 
@@ -5978,6 +6175,9 @@ function toggleStackPatchPanel(instanceId) {
   }
 
   item.patchPanelBetween = willEnable;
+  if (willEnable) {
+    item.cableManagerBetween = false;
+  }
 
   if (typeof applyStackCabling === "function") {
     applyStackCabling(item);
@@ -6002,7 +6202,7 @@ function toggleStackPatchPanel(instanceId) {
 
   if (typeof showToast === "function") {
     showToast(willEnable
-      ? `Added 24-Port Patch Panel between stacked switches (${stackUnits - 1}x panel added)`
+      ? `Added ${ppMeta.rackUnits}U ${ppMeta.ports}-Port Patch Panel between stacked switches (${stackUnits - 1}x ${ppMeta.sku} added)`
       : `Removed interleaved patch panels from switch stack.`);
   }
 }
@@ -6158,9 +6358,10 @@ function toggleSwitchStandardPod(instanceId) {
   }
 
   if (typeof showToast === "function") {
-    const ports = (parseInt(item.ports, 10) || 24) * stackUnits;
+    const ppMeta = getRackSwitchPatchPanelMeta(item);
+    const ports = (ppMeta.copperPorts || parseInt(item.ports, 10) || 24) * stackUnits;
     showToast(willEnable
-      ? `Applied Standard Pod: 24P Patch Panels above & below with ${ports}x 6" Slim Patch Cords.`
+      ? `Applied Standard Pod: ${ppMeta.isDual24 ? 'Dual 24P Patch Panels above & below' : `${ppMeta.rackUnits}U ${ppMeta.ports}-Port Patch Panel (${ppMeta.sku})`} with ${ports}x 6" Slim Patch Cords.`
       : `Removed Standard Pod configuration from ${item.model}.`);
   }
 }
@@ -7629,11 +7830,14 @@ function renderHostTelemetry(assignedItems, parsed, activeEnc) {
           <div class="pt-2.5 mt-2 border-t border-slate-800/80">
             <!-- Quick-Add Passive Infrastructure Strip -->
             <div class="flex items-center gap-1 mb-2.5 flex-wrap">
-              <button onclick="addPassiveToActiveRack('pp24')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 24-Port Modular Keystone Patch Panel">
-                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 24P Panel
+              <button onclick="addPassiveToActiveRack('pp24')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 24-Port Modular Keystone Patch Panel (PP-1U-24P-MOD)">
+                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 1U 24P Panel
               </button>
-              <button onclick="addPassiveToActiveRack('pp48')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 2U 48-Port Modular Keystone Patch Panel">
-                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 48P Panel
+              <button onclick="addPassiveToActiveRack('pp48_1u')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 48-Port High-Density Modular Keystone Patch Panel (PP-1U-48P-MOD)">
+                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 1U 48P Panel
+              </button>
+              <button onclick="addPassiveToActiveRack('pp48')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-purple-500/60 rounded text-[10px] font-bold text-purple-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 2U 48-Port Modular Keystone Patch Panel (PP-2U-48P-MOD)">
+                <i data-lucide="plus" class="w-3 h-3 text-purple-400"></i> 2U 48P Panel
               </button>
               <button onclick="addPassiveToActiveRack('liu24')" class="px-2 py-1 bg-slate-950 hover:bg-slate-800 border border-slate-700 hover:border-cyan-500/60 rounded text-[10px] font-bold text-cyan-300 flex items-center gap-1 transition-colors cursor-pointer" title="Add 1U 24-Fiber (12-Port Duplex LC) Rack-Mount Fiber LIU Enclosure">
                 <i data-lucide="plus" class="w-3 h-3 text-cyan-400"></i> 1U Fiber LIU
@@ -8419,6 +8623,17 @@ function addPassiveToActiveRack(type) {
       ports: 24,
       role: "Structured Cabling",
       weightLbs: 2.5
+    };
+  } else if (type === "pp48_1u") {
+    itemData = {
+      sku: "PP-1U-48P-MOD",
+      model: "1U 48-Port High-Density Modular Keystone Patch Panel",
+      vendor: "Panduit",
+      msrp: 108,
+      rackUnits: 1,
+      ports: 48,
+      role: "Structured Cabling",
+      weightLbs: 2.2
     };
   } else if (type === "pp48") {
     itemData = {

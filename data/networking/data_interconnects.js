@@ -7,54 +7,55 @@
 // ==========================================
 const MODULAR_UPLINK_CATALOG = {
   // Cisco Catalyst Modular Sleds (9300 / 9300X / MS390)
-  "C9300-NM-8X": { sku: "C9300-NM-8X", name: "Cisco 8x 10G SFP+ Network Module", speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "C9300-NM-4G": { sku: "C9300-NM-4G", name: "Cisco 4x 1G SFP Network Module", speed: "1G", ports: 4, msrp: 650, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "C9300-NM-2Q": { sku: "C9300-NM-2Q", name: "Cisco 2x 40G QSFP+ Network Module", speed: "40G", ports: 2, msrp: 3000, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
-  "C9300-NM-4M": { sku: "C9300-NM-4M", name: "Cisco 4x Multi-Gigabit Network Module", speed: "10G", ports: 4, msrp: 1500, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "C9300-NM-2Y": { sku: "C9300-NM-2Y", name: "Cisco 2x 25G/10G/1G SFP28 Network Module (Catalyst 9300)", speed: "25G", ports: 2, msrp: 2100, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
-  "C9300-NM-2Y-M": { sku: "C9300-NM-2Y-M", name: "Cisco Meraki 2x 25G/10G SFP28 Network Module", speed: "25G", ports: 2, msrp: 2100, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
-  "C9300-NM-8X-M": { sku: "C9300-NM-8X-M", name: "Cisco Meraki 8x 10G SFP+ Network Module", speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "C9300-NM-4M-M": { sku: "C9300-NM-4M-M", name: "Cisco Meraki 4x Multi-Gigabit Network Module", speed: "10G", ports: 4, msrp: 1500, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "C9300X-NM-8Y": { sku: "C9300X-NM-8Y", name: "Cisco 8x 10G/25G SFP28 Network Module", speed: "25G", ports: 8, msrp: 3200, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
-  "C9300X-NM-8Y-M": { sku: "C9300X-NM-8Y-M", name: "Cisco Meraki 8x 10G/25G SFP28 Network Module (C9300X-M)", speed: "25G", ports: 8, msrp: 3200, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
-  "C9300X-NM-2C": { sku: "C9300X-NM-2C", name: "Cisco 2x 40G/100G QSFP28 Network Module", speed: "100G", ports: 2, msrp: 4500, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
-  "C9300X-NM-2C-M": { sku: "C9300X-NM-2C-M", name: "Cisco Meraki 2x 40G/100G QSFP28 Network Module (C9300X-M)", speed: "100G", ports: 2, msrp: 4500, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
-  "C9300X-NM-4C": { sku: "C9300X-NM-4C", name: "Cisco 4x 40G/100G QSFP28 Network Module (9300X-HX/TX/24Y)", speed: "100G", ports: 4, msrp: 5800, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
-  "C9350-NM-4C": { sku: "C9350-NM-4C", name: "Cisco C9350 4x 40G/100G QSFP28 Network Module (-48HX/-48TX/-24Y)", speed: "100G", ports: 4, connector: "QSFP28", mediaType: "qsfp28_100g", msrp: 5900, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-4c.webp" },
-  "C9350-NM-8L": { sku: "C9350-NM-8L", name: "Cisco C9350 8x 10G/25G/50G SFP56 Network Module (-48HX/-48TX/-24Y)", speed: "50G", ports: 8, connector: "SFP56", mediaType: "sfp56_50g", msrp: 4800, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8l.webp" },
-  "C9350-NM-2C": { sku: "C9350-NM-2C", name: "Cisco C9350 2x 40G/100G QSFP28 Network Module", speed: "100G", ports: 2, connector: "QSFP28", mediaType: "qsfp28_100g", msrp: 4500, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-2c.webp" },
-  "C9350-NM-8Y": { sku: "C9350-NM-8Y", name: "Cisco C9350 8x 1G/10G/25G SFP28 Network Module", speed: "25G", ports: 8, connector: "SFP28", mediaType: "sfp28_25g", msrp: 3300, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8y.webp" },
-  "C9350-NM-8M": { sku: "C9350-NM-8M", name: "Cisco C9350 8x 10G Multigigabit (100M/1G/2.5G/5G/10G) RJ-45 Network Module", speed: "10G", ports: 8, connector: "RJ-45", mediaType: "rj45_10g", isCopperUplink: true, msrp: 2600, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8m.webp" },
-  "C9300-NM-BLANK": { sku: "C9300-NM-BLANK=", name: "Cisco Catalyst 9300 Network Module Blank Cover Plate", speed: "N/A", ports: 0, msrp: 45, image: "assets/images/products/unifi_uacc_rack_panel_ocd.webp" },
-  "MA-MOD-4X10G": { sku: "MA-MOD-4X10G", name: "Meraki 4x 10G SFP+ Modular Uplink Card (MS390)", speed: "10G", ports: 4, msrp: 1200, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "MA-MOD-8X10G": { sku: "MA-MOD-8X10G", name: "Meraki 8x 10G SFP+ Modular Uplink Card (MS390)", speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "MA-MOD-2X40G": { sku: "MA-MOD-2X40G", name: "Meraki 2x 40G QSFP+ Modular Uplink Card (MS390)", speed: "40G", ports: 2, msrp: 3000, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
+  "C9300-NM-8X": { sku: "C9300-NM-8X", name: "Cisco 8x 10G SFP+ Network Module", vendor: "Cisco", speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "C9300-NM-4G": { sku: "C9300-NM-4G", name: "Cisco 4x 1G SFP Network Module", vendor: "Cisco", speed: "1G", ports: 4, msrp: 650, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "C9300-NM-2Q": { sku: "C9300-NM-2Q", name: "Cisco 2x 40G QSFP+ Network Module", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "40G", ports: 2, msrp: 3000, datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf", image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
+  "C9300-NM-2Q-M": { sku: "C9300-NM-2Q-M", name: "Cisco Catalyst 9300-M 2x 40G QSFP+ Network Module", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "40G", ports: 2, msrp: 3000, datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
+  "C9300-NM-4M": { sku: "C9300-NM-4M", name: "Cisco 4x Multi-Gigabit Network Module", vendor: "Cisco", speed: "10G", ports: 4, msrp: 1500, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "C9300-NM-2Y": { sku: "C9300-NM-2Y", name: "Cisco 2x 25G/10G/1G SFP28 Network Module (Catalyst 9300)", vendor: "Cisco", speed: "25G", ports: 2, msrp: 2100, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
+  "C9300-NM-2Y-M": { sku: "C9300-NM-2Y-M", name: "Cisco Meraki 2x 25G/10G SFP28 Network Module", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "25G", ports: 2, msrp: 2100, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
+  "C9300-NM-8X-M": { sku: "C9300-NM-8X-M", name: "Cisco Meraki 8x 10G SFP+ Network Module", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "C9300-NM-4M-M": { sku: "C9300-NM-4M-M", name: "Cisco Meraki 4x Multi-Gigabit Network Module", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "10G", ports: 4, msrp: 1500, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "C9300X-NM-8Y": { sku: "C9300X-NM-8Y", name: "Cisco 8x 10G/25G SFP28 Network Module", vendor: "Cisco", speed: "25G", ports: 8, msrp: 3200, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
+  "C9300X-NM-8Y-M": { sku: "C9300X-NM-8Y-M", name: "Cisco Meraki 8x 10G/25G SFP28 Network Module (C9300X-M)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "25G", ports: 8, msrp: 3200, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
+  "C9300X-NM-2C": { sku: "C9300X-NM-2C", name: "Cisco 2x 40G/100G QSFP28 Network Module", vendor: "Cisco", speed: "100G", ports: 2, msrp: 4500, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
+  "C9300X-NM-2C-M": { sku: "C9300X-NM-2C-M", name: "Cisco Meraki 2x 40G/100G QSFP28 Network Module (C9300X-M)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "100G", ports: 2, msrp: 4500, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
+  "C9300X-NM-4C": { sku: "C9300X-NM-4C", name: "Cisco 4x 40G/100G QSFP28 Network Module (9300X-HX/TX/24Y)", vendor: "Cisco", speed: "100G", ports: 4, msrp: 5800, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
+  "C9350-NM-4C": { sku: "C9350-NM-4C", name: "Cisco C9350 4x 40G/100G QSFP28 Network Module (-48HX/-48TX/-24Y)", vendor: "Cisco", speed: "100G", ports: 4, connector: "QSFP28", mediaType: "qsfp28_100g", msrp: 5900, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-4c.webp" },
+  "C9350-NM-8L": { sku: "C9350-NM-8L", name: "Cisco C9350 8x 10G/25G/50G SFP56 Network Module (-48HX/-48TX/-24Y)", vendor: "Cisco", speed: "50G", ports: 8, connector: "SFP56", mediaType: "sfp56_50g", msrp: 4800, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8l.webp" },
+  "C9350-NM-2C": { sku: "C9350-NM-2C", name: "Cisco C9350 2x 40G/100G QSFP28 Network Module", vendor: "Cisco", speed: "100G", ports: 2, connector: "QSFP28", mediaType: "qsfp28_100g", msrp: 4500, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-2c.webp" },
+  "C9350-NM-8Y": { sku: "C9350-NM-8Y", name: "Cisco C9350 8x 1G/10G/25G SFP28 Network Module", vendor: "Cisco", speed: "25G", ports: 8, connector: "SFP28", mediaType: "sfp28_25g", msrp: 3300, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8y.webp" },
+  "C9350-NM-8M": { sku: "C9350-NM-8M", name: "Cisco C9350 8x 10G Multigigabit (100M/1G/2.5G/5G/10G) RJ-45 Network Module", vendor: "Cisco", speed: "10G", ports: 8, connector: "RJ-45", mediaType: "rj45_10g", isCopperUplink: true, msrp: 2600, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8m.webp" },
+  "C9300-NM-BLANK": { sku: "C9300-NM-BLANK=", name: "Cisco Catalyst 9300 Network Module Blank Cover Plate", vendor: "Cisco", speed: "N/A", ports: 0, msrp: 45, image: "assets/images/products/unifi_uacc_rack_panel_ocd.webp" },
+  "MA-MOD-4X10G": { sku: "MA-MOD-4X10G", name: "Meraki 4x 10G SFP+ Modular Uplink Card (MS390)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "10G", ports: 4, msrp: 1200, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "MA-MOD-8X10G": { sku: "MA-MOD-8X10G", name: "Meraki 8x 10G SFP+ Modular Uplink Card (MS390)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "MA-MOD-2X40G": { sku: "MA-MOD-2X40G", name: "Meraki 2x 40G QSFP+ Modular Uplink Card (MS390)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "40G", ports: 2, msrp: 3000, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
 
   // Juniper EX4400 Extension Modules
-  "EX4400-EM-4Y": { sku: "EX4400-EM-4Y", name: "Juniper 4x 10G/25G SFP28 Uplink Module", speed: "25G", ports: 4, msrp: 1850, image: "assets/images/products/juniper_ex4400_em_4y.webp" },
-  "EX4400-EM-1C": { sku: "EX4400-EM-1C", name: "Juniper 1x 100G QSFP28 Uplink Module", speed: "100G", ports: 1, msrp: 2400, image: "assets/images/products/juniper_ex4400_em_1c.webp" },
-  "EX4400-EM-4S": { sku: "EX4400-EM-4S", name: "Juniper 4x 1G/10G SFP+ Uplink Module", speed: "10G", ports: 4, msrp: 1200, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
+  "EX4400-EM-4Y": { sku: "EX4400-EM-4Y", name: "Juniper 4x 10G/25G SFP28 Uplink Module", vendor: "Juniper", speed: "25G", ports: 4, msrp: 1850, image: "assets/images/products/juniper_ex4400_em_4y.webp" },
+  "EX4400-EM-1C": { sku: "EX4400-EM-1C", name: "Juniper 1x 100G QSFP28 Uplink Module", vendor: "Juniper", speed: "100G", ports: 1, msrp: 2400, image: "assets/images/products/juniper_ex4400_em_1c.webp" },
+  "EX4400-EM-4S": { sku: "EX4400-EM-4S", name: "Juniper 4x 1G/10G SFP+ Uplink Module", vendor: "Juniper", speed: "10G", ports: 4, msrp: 1200, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
 
   // Juniper EX4300 Extension Modules
-  "EX-UM-4X4SFP": { sku: "EX-UM-4X4SFP", name: "Juniper 4x 1G/10G SFP+ Uplink Module (EX4300)", speed: "10G", ports: 4, msrp: 1450, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
-  "EX-UM-2QSFP": { sku: "EX-UM-2QSFP", name: "Juniper 2x 40G QSFP+ Uplink Module (EX4300)", speed: "40G", ports: 2, msrp: 2200, image: "assets/images/products/juniper_ex4400_em_1c.webp" },
-  "EX-UM-8X8SFP": { sku: "EX-UM-8X8SFP", name: "Juniper 8x 1G/10G SFP+ Uplink Module (EX4300-32F)", speed: "10G", ports: 8, msrp: 2600, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
-  "EX-UM-4SFPP-MR": { sku: "EX-UM-4SFPP-MR", name: "Juniper 4x 1G/10G SFP+ Multirate Uplink Module (EX4300-48MP)", speed: "10G", ports: 4, msrp: 1850, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
-  "EX-UM-2QSFP-MR": { sku: "EX-UM-2QSFP-MR", name: "Juniper 2x 40G QSFP+ / 100G QSFP28 Multirate Module (EX4300-48MP)", speed: "100G", ports: 2, msrp: 3200, image: "assets/images/products/juniper_ex4400_em_1c.webp" },
+  "EX-UM-4X4SFP": { sku: "EX-UM-4X4SFP", name: "Juniper 4x 1G/10G SFP+ Uplink Module (EX4300)", vendor: "Juniper", speed: "10G", ports: 4, msrp: 1450, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
+  "EX-UM-2QSFP": { sku: "EX-UM-2QSFP", name: "Juniper 2x 40G QSFP+ Uplink Module (EX4300)", vendor: "Juniper", speed: "40G", ports: 2, msrp: 2200, image: "assets/images/products/juniper_ex4400_em_1c.webp" },
+  "EX-UM-8X8SFP": { sku: "EX-UM-8X8SFP", name: "Juniper 8x 1G/10G SFP+ Uplink Module (EX4300-32F)", vendor: "Juniper", speed: "10G", ports: 8, msrp: 2600, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
+  "EX-UM-4SFPP-MR": { sku: "EX-UM-4SFPP-MR", name: "Juniper 4x 1G/10G SFP+ Multirate Uplink Module (EX4300-48MP)", vendor: "Juniper", speed: "10G", ports: 4, msrp: 1850, image: "assets/images/products/juniper_ex4400_em_4s.webp" },
+  "EX-UM-2QSFP-MR": { sku: "EX-UM-2QSFP-MR", name: "Juniper 2x 40G QSFP+ / 100G QSFP28 Multirate Module (EX4300-48MP)", vendor: "Juniper", speed: "100G", ports: 2, msrp: 3200, image: "assets/images/products/juniper_ex4400_em_1c.webp" },
 
   // Ruckus ICX 7650 & 7550 Expansion Modules
-  "ICX-4X10GF": { sku: "ICX-4X10GF", name: "Ruckus 4x 10G SFP+ Uplink Module (ICX 7550 / 7650)", speed: "10G", ports: 4, msrp: 1100, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "ICX-2X100Q": { sku: "ICX-2X100Q", name: "Ruckus 2x 100G QSFP28 Uplink Module (ICX 7550 / 7650)", speed: "100G", ports: 2, msrp: 3200, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
-  "ICX7550-4X25GF": { sku: "ICX7550-4X25GF", name: "Ruckus 4x 10G/25G SFP28 Uplink Module (ICX 7550)", speed: "25G", ports: 4, msrp: 2200, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
-  "ICX7650-2X40GQ": { sku: "ICX7650-2X40GQ", name: "Ruckus 2x 40G QSFP+ Uplink Module (ICX 7650 / 7550)", speed: "40G", ports: 2, msrp: 1800, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
-  "ICX7650-1X100GQ": { sku: "ICX7650-1X100GQ", name: "Ruckus 1x 100G QSFP28 Uplink Module (ICX 7650 / 7550)", speed: "100G", ports: 1, msrp: 2400, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
+  "ICX-4X10GF": { sku: "ICX-4X10GF", name: "Ruckus 4x 10G SFP+ Uplink Module (ICX 7550 / 7650)", vendor: "Ruckus", speed: "10G", ports: 4, msrp: 1100, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "ICX-2X100Q": { sku: "ICX-2X100Q", name: "Ruckus 2x 100G QSFP28 Uplink Module (ICX 7550 / 7650)", vendor: "Ruckus", speed: "100G", ports: 2, msrp: 3200, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
+  "ICX7550-4X25GF": { sku: "ICX7550-4X25GF", name: "Ruckus 4x 10G/25G SFP28 Uplink Module (ICX 7550)", vendor: "Ruckus", speed: "25G", ports: 4, msrp: 2200, image: "assets/images/products/ruckus_icx7550_4x25gf.webp" },
+  "ICX7650-2X40GQ": { sku: "ICX7650-2X40GQ", name: "Ruckus 2x 40G QSFP+ Uplink Module (ICX 7650 / 7550)", vendor: "Ruckus", speed: "40G", ports: 2, msrp: 1800, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
+  "ICX7650-1X100GQ": { sku: "ICX7650-1X100GQ", name: "Ruckus 1x 100G QSFP28 Uplink Module (ICX 7650 / 7550)", vendor: "Ruckus", speed: "100G", ports: 1, msrp: 2400, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
 
   // Ruckus ICX 7450 Expansion Modules
-  "ICX7400-4X10GF": { sku: "ICX7400-4X10GF", name: "Ruckus 4x 10G SFP+ Uplink Module (ICX 7450)", speed: "10G", ports: 4, msrp: 1100, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "ICX7400-1X40GQ": { sku: "ICX7400-1X40GQ", name: "Ruckus 1x 40G QSFP+ Uplink Module (ICX 7450)", speed: "40G", ports: 1, msrp: 1450, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
-  "ICX7400-4X1GF": { sku: "ICX7400-4X1GF", name: "Ruckus 4x 1G SFP Uplink Module (ICX 7450)", speed: "1G", ports: 4, msrp: 650, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "ICX7400-4X10GC": { sku: "ICX7400-4X10GC", name: "Ruckus 4x 10GBASE-T Copper RJ45 Uplink Module (ICX 7450)", speed: "10G", ports: 4, msrp: 1250, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
-  "ICX7400-SERVICE-MOD": { sku: "ICX7400-SERVICE-MOD", name: "Ruckus ICX 7450 IPsec VPN Hardware Encryption Service Module", speed: "10G", ports: 0, msrp: 1950, image: "assets/images/products/ruckus_icx_4x10gf.webp" }
+  "ICX7400-4X10GF": { sku: "ICX7400-4X10GF", name: "Ruckus 4x 10G SFP+ Uplink Module (ICX 7450)", vendor: "Ruckus", speed: "10G", ports: 4, msrp: 1100, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "ICX7400-1X40GQ": { sku: "ICX7400-1X40GQ", name: "Ruckus 1x 40G QSFP+ Uplink Module (ICX 7450)", vendor: "Ruckus", speed: "40G", ports: 1, msrp: 1450, image: "assets/images/products/ruckus_icx7650_2x40gq.webp" },
+  "ICX7400-4X1GF": { sku: "ICX7400-4X1GF", name: "Ruckus 4x 1G SFP Uplink Module (ICX 7450)", vendor: "Ruckus", speed: "1G", ports: 4, msrp: 650, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "ICX7400-4X10GC": { sku: "ICX7400-4X10GC", name: "Ruckus 4x 10GBASE-T Copper RJ45 Uplink Module (ICX 7450)", vendor: "Ruckus", speed: "10G", ports: 4, msrp: 1250, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
+  "ICX7400-SERVICE-MOD": { sku: "ICX7400-SERVICE-MOD", name: "Ruckus ICX 7450 IPsec VPN Hardware Encryption Service Module", vendor: "Ruckus", speed: "10G", ports: 0, msrp: 1950, image: "assets/images/products/ruckus_icx_4x10gf.webp" }
 };
 window.MODULAR_UPLINK_CATALOG = MODULAR_UPLINK_CATALOG;
 
@@ -63,37 +64,37 @@ window.MODULAR_UPLINK_CATALOG = MODULAR_UPLINK_CATALOG;
 // ==========================================
 const FEATURE_LICENSE_CATALOG = {
   // Ruckus ICX FastIron Feature Licenses
-  "ICX7850-PREM-LIC": { sku: "ICX7850-PREM-LIC", name: "Ruckus ICX 7850 Layer 3 Premium License (BGP, VRF-Lite)", msrp: 4500, category: "switch_feature" },
-  "ICX7650-PREM-LIC": { sku: "ICX7650-PREM-LIC", name: "Ruckus ICX 7650 Advanced L3 License (OSPF, BGP, VRF, PIM)", msrp: 2800, category: "switch_feature" },
-  "ICX7550-PREM-LIC": { sku: "ICX7550-PREM-LIC", name: "Ruckus ICX 7550 Layer 3 Premium License (full BGP4, VRF-Lite, IPv6)", msrp: 2400, category: "switch_feature" },
-  "ICX7450-PREM-LIC": { sku: "ICX7450-PREM-LIC", name: "Ruckus ICX 7450 Layer 3 Premium Software License", msrp: 1400, category: "switch_feature" },
-  "ICX7250-PREM-LIC": { sku: "ICX7250-PREM-LIC", name: "Ruckus ICX 7250 Layer 3 Premium License", msrp: 900, category: "switch_feature" },
-  "ICX-MACSEC-LIC": { sku: "ICX-MACSEC-LIC", name: "Ruckus ICX 128/256-bit MACsec Hardware Encryption License", msrp: 1200, category: "switch_feature" },
+  "ICX7850-PREM-LIC": { sku: "ICX7850-PREM-LIC", name: "Ruckus ICX 7850 Layer 3 Premium License (BGP, VRF-Lite)", vendor: "Ruckus", msrp: 4500, category: "switch_feature" },
+  "ICX7650-PREM-LIC": { sku: "ICX7650-PREM-LIC", name: "Ruckus ICX 7650 Advanced L3 License (OSPF, BGP, VRF, PIM)", vendor: "Ruckus", msrp: 2800, category: "switch_feature" },
+  "ICX7550-PREM-LIC": { sku: "ICX7550-PREM-LIC", name: "Ruckus ICX 7550 Layer 3 Premium License (full BGP4, VRF-Lite, IPv6)", vendor: "Ruckus", msrp: 2400, category: "switch_feature" },
+  "ICX7450-PREM-LIC": { sku: "ICX7450-PREM-LIC", name: "Ruckus ICX 7450 Layer 3 Premium Software License", vendor: "Ruckus", msrp: 1400, category: "switch_feature" },
+  "ICX7250-PREM-LIC": { sku: "ICX7250-PREM-LIC", name: "Ruckus ICX 7250 Layer 3 Premium License", vendor: "Ruckus", msrp: 900, category: "switch_feature" },
+  "ICX-MACSEC-LIC": { sku: "ICX-MACSEC-LIC", name: "Ruckus ICX 128/256-bit MACsec Hardware Encryption License", vendor: "Ruckus", msrp: 1200, category: "switch_feature" },
 
   // Allied Telesis Feature Licenses
-  "AT-FL-X530-CPOE": { sku: "AT-FL-X530-CPOE", name: "Allied Telesis Continuous PoE License (Zero-Drop Reboot)", msrp: 500, category: "switch_feature" },
-  "AT-FL-X530-01": { sku: "AT-FL-X530-01", name: "Allied Telesis x530 Premium L3 Routing (OSPFv2, BGP4, VRF)", msrp: 1350, category: "switch_feature" },
-  "AT-FL-IE340-01": { sku: "AT-FL-IE340-01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", msrp: 650, category: "switch_feature" },
-  "AT-IE340-FL01": { sku: "AT-IE340-FL01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", msrp: 650, category: "switch_feature" },
-  "AT-IE220-FL01": { sku: "AT-IE220-FL01", name: "Allied Telesis IE220 10G Uplink & 95W PoE++ Sourcing License", msrp: 340, category: "switch_feature" },
-  "AT-FL-X320-01": { sku: "AT-FL-X320-01", name: "Allied Telesis x320 Premium L3 & Continuous PoE License", msrp: 650, category: "switch_feature" },
-  "AT-FL-AMF-NODE": { sku: "AT-FL-AMF-NODE", name: "Allied Telesis AMF-Plus Node Permanent License", msrp: 450, category: "switch_feature" },
+  "AT-FL-X530-CPOE": { sku: "AT-FL-X530-CPOE", name: "Allied Telesis Continuous PoE License (Zero-Drop Reboot)", vendor: "Allied Telesis", msrp: 500, category: "switch_feature" },
+  "AT-FL-X530-01": { sku: "AT-FL-X530-01", name: "Allied Telesis x530 Premium L3 Routing (OSPFv2, BGP4, VRF)", vendor: "Allied Telesis", msrp: 1350, category: "switch_feature" },
+  "AT-FL-IE340-01": { sku: "AT-FL-IE340-01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", vendor: "Allied Telesis", msrp: 650, category: "switch_feature" },
+  "AT-IE340-FL01": { sku: "AT-IE340-FL01", name: "Allied Telesis IE340 Industrial Premium L3 Routing License", vendor: "Allied Telesis", msrp: 650, category: "switch_feature" },
+  "AT-IE220-FL01": { sku: "AT-IE220-FL01", name: "Allied Telesis IE220 10G Uplink & 95W PoE++ Sourcing License", vendor: "Allied Telesis", msrp: 340, category: "switch_feature" },
+  "AT-FL-X320-01": { sku: "AT-FL-X320-01", name: "Allied Telesis x320 Premium L3 & Continuous PoE License", vendor: "Allied Telesis", msrp: 650, category: "switch_feature" },
+  "AT-FL-AMF-NODE": { sku: "AT-FL-AMF-NODE", name: "Allied Telesis AMF-Plus Node Permanent License", vendor: "Allied Telesis", msrp: 450, category: "switch_feature" },
 
   // Juniper Junos Feature Tiers
-  "JUNIPER-S-EX-A": { sku: "S-EX-A-C1", name: "Juniper Advanced Junos L3 Routing License (Class 1)", msrp: 650, category: "switch_feature" },
-  "JUNIPER-S-EX-P": { sku: "S-EX-P-C1", name: "Juniper Premium Junos EVPN-VXLAN License (Class 1)", msrp: 1250, category: "switch_feature" },
-  "S-EX-A-C2-P": { sku: "S-EX-A-C2-P", name: "Juniper Advanced Junos L3 Routing License - Class 2 (24 Ports)", msrp: 850, category: "switch_feature" },
-  "S-EX-P-C2-P": { sku: "S-EX-P-C2-P", name: "Juniper Premium Junos EVPN-VXLAN License - Class 2 (24 Ports)", msrp: 1650, category: "switch_feature" },
-  "S-EX-A-C3-P": { sku: "S-EX-A-C3-P", name: "Juniper Advanced Junos L3 Routing License - Class 3 (32/48 Ports)", msrp: 1250, category: "switch_feature" },
-  "S-EX-P-C3-P": { sku: "S-EX-P-C3-P", name: "Juniper Premium Junos EVPN-VXLAN License - Class 3 (32/48 Ports)", msrp: 2450, category: "switch_feature" },
-  "EX-QFX-MACSEC-ACC4": { sku: "EX-QFX-MACSEC-ACC4", name: "Juniper MACsec 128/256-bit Hardware Encryption License (EX Series)", msrp: 950, category: "switch_feature" },
+  "JUNIPER-S-EX-A": { sku: "S-EX-A-C1", name: "Juniper Advanced Junos L3 Routing License (Class 1)", vendor: "Juniper", msrp: 650, category: "switch_feature" },
+  "JUNIPER-S-EX-P": { sku: "S-EX-P-C1", name: "Juniper Premium Junos EVPN-VXLAN License (Class 1)", vendor: "Juniper", msrp: 1250, category: "switch_feature" },
+  "S-EX-A-C2-P": { sku: "S-EX-A-C2-P", name: "Juniper Advanced Junos L3 Routing License - Class 2 (24 Ports)", vendor: "Juniper", msrp: 850, category: "switch_feature" },
+  "S-EX-P-C2-P": { sku: "S-EX-P-C2-P", name: "Juniper Premium Junos EVPN-VXLAN License - Class 2 (24 Ports)", vendor: "Juniper", msrp: 1650, category: "switch_feature" },
+  "S-EX-A-C3-P": { sku: "S-EX-A-C3-P", name: "Juniper Advanced Junos L3 Routing License - Class 3 (32/48 Ports)", vendor: "Juniper", msrp: 1250, category: "switch_feature" },
+  "S-EX-P-C3-P": { sku: "S-EX-P-C3-P", name: "Juniper Premium Junos EVPN-VXLAN License - Class 3 (32/48 Ports)", vendor: "Juniper", msrp: 2450, category: "switch_feature" },
+  "EX-QFX-MACSEC-ACC4": { sku: "EX-QFX-MACSEC-ACC4", name: "Juniper MACsec 128/256-bit Hardware Encryption License (EX Series)", vendor: "Juniper", msrp: 950, category: "switch_feature" },
 
   // Firewall Threat Protection & UTM Subscriptions
-  "LIC-MX67-SEC-1YR": { sku: "LIC-MX67-SEC-1YR", name: "Meraki MX67 Advanced Security License (1-Year)", msrp: 995, category: "firewall_utm" },
-  "LIC-MX85-SEC-1YR": { sku: "LIC-MX85-SEC-1YR", name: "Meraki MX85 Advanced Security License (1-Year)", msrp: 2495, category: "firewall_utm" },
-  "LIC-MX105-SEC-1YR": { sku: "LIC-MX105-SEC-1YR", name: "Meraki MX105 Advanced Security License (1-Year)", msrp: 4250, category: "firewall_utm" },
-  "AT-FL-AR4-UTM-1YR": { sku: "AT-FL-AR4-UTM-1YR", name: "Allied Telesis AR4050S UTM Threat Protection (1-Year)", msrp: 650, category: "firewall_utm" },
-  "AT-FL-AR3-UTM-1YR": { sku: "AT-FL-AR3-UTM-1YR", name: "Allied Telesis AR3050S UTM Threat Protection (1-Year)", msrp: 480, category: "firewall_utm" }
+  "LIC-MX67-SEC-1YR": { sku: "LIC-MX67-SEC-1YR", name: "Meraki MX67 Advanced Security License (1-Year)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 995, category: "firewall_utm" },
+  "LIC-MX85-SEC-1YR": { sku: "LIC-MX85-SEC-1YR", name: "Meraki MX85 Advanced Security License (1-Year)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 2495, category: "firewall_utm" },
+  "LIC-MX105-SEC-1YR": { sku: "LIC-MX105-SEC-1YR", name: "Meraki MX105 Advanced Security License (1-Year)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 4250, category: "firewall_utm" },
+  "AT-FL-AR4-UTM-1YR": { sku: "AT-FL-AR4-UTM-1YR", name: "Allied Telesis AR4050S UTM Threat Protection (1-Year)", vendor: "Allied Telesis", msrp: 650, category: "firewall_utm" },
+  "AT-FL-AR3-UTM-1YR": { sku: "AT-FL-AR3-UTM-1YR", name: "Allied Telesis AR3050S UTM Threat Protection (1-Year)", vendor: "Allied Telesis", msrp: 480, category: "firewall_utm" }
 };
 window.FEATURE_LICENSE_CATALOG = FEATURE_LICENSE_CATALOG;
 
@@ -237,275 +238,307 @@ const POWER_SUPPLY_CATALOG = {
         datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
         image: "assets/images/products/cisco-pwr-c2-500wac.webp"
     },
-  "PWR-C1-1900WAC-P": { sku: "PWR-C1-1900WAC-P", name: "Cisco 1900W AC Platinum PSU (Catalyst 9300X UPOE+)", msrp: 1600, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600, weightLbs: 3.1,
+  "PWR-C1-1900WAC-P": { sku: "PWR-C1-1900WAC-P", name: "Cisco 1900W AC Platinum PSU (Catalyst 9300 / 9300X, 230V/115V C21)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 1600, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1440, requiresHighAmpCord: "C9K-PWR-CAB-AC-US", weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-1900WAC-P-M": { sku: "PWR-C1-1900WAC-P-M", name: "Cisco Meraki 1900W AC Secondary PSU (Catalyst 9300X-M)", msrp: 1650, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600, weightLbs: 3.1,
+  "PWR-C1-1900WAC-P-O": { sku: "PWR-C1-1900WAC-P-O", name: "Cisco 1900W AC Primary PSU Factory Upgrade Option (-O, Catalyst 9300 / 9300X)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 750, fullMsrp: 1600, isPrimaryUpgradeOption: true, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1440, requiresHighAmpCord: "C9K-PWR-CAB-AC-US", weightLbs: 3.1,
+        datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+        image: "assets/images/products/ruckus_rps_poe.webp"
+    },
+  "PWR-C1-1900WAC-P-M": { sku: "PWR-C1-1900WAC-P-M", name: "Cisco Catalyst 1900W AC Power Supply (Catalyst 9300-M / 9300X-M, C21)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 1650, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1440, requiresHighAmpCord: "C9K-PWR-CAB-AC-US", weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-1100WAC-P": { sku: "PWR-C1-1100WAC-P", name: "Cisco 1100W AC Platinum PSU (Catalyst 9300)", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
+  "PWR-C1-1900WAC-P-M-O": { sku: "PWR-C1-1900WAC-P-M-O", name: "Cisco Catalyst 1900W AC Primary PSU Factory Upgrade (-O, C9300-M / C9300X-M)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 800, fullMsrp: 1650, isPrimaryUpgradeOption: true, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1440, requiresHighAmpCord: "C9K-PWR-CAB-AC-US", weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Meraki 1100W AC Secondary PSU (C9300X / MS390)", msrp: 1250, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
+  "PWR-C1-1100WAC-P": { sku: "PWR-C1-1100WAC-P", name: "Cisco 1100W AC Platinum PSU (Catalyst 9300 / 9300L / 9300X)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 822, weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
+  "PWR-C1-1100WAC-P-O": { sku: "PWR-C1-1100WAC-P-O", name: "Cisco 1100W AC Primary PSU Factory Upgrade Option (-O, Catalyst 9300 / 9300L)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 350, fullMsrp: 1200, isPrimaryUpgradeOption: true, category: "internal_psu", wattage: 1100, poeBudgetContribution: 822, weightLbs: 3.1,
+        datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+        image: "assets/images/products/ruckus_rps_poe.webp"
+    },
+  "PWR-C1-1100WAC-P-M": { sku: "PWR-C1-1100WAC-P-M", name: "Cisco Catalyst 1100W AC Power Supply (C9300-M / C9300L-M / C9300X-M / MS390)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 1250, category: "internal_psu", wattage: 1100, poeBudgetContribution: 822, weightLbs: 3.1,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        image: "assets/images/products/ruckus_rps_poe.webp"
+    },
+  "PWR-C1-1100WAC-P-M-O": { sku: "PWR-C1-1100WAC-P-M-O", name: "Cisco Catalyst 1100W AC Primary PSU Factory Upgrade (-O, C9300-M / C9300L-M)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 400, fullMsrp: 1250, isPrimaryUpgradeOption: true, category: "internal_psu", wattage: 1100, poeBudgetContribution: 822, weightLbs: 3.1,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst 9300-M Datasheet.pdf",
+        image: "assets/images/products/ruckus_rps_poe.webp"
+    },
+  "MA-PWR-C1-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "MA-PWR-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
+  "MA-PWR-1100WAC": { sku: "MA-PWR-1100WAC", name: "Meraki MS390 1100W Modular AC Power Supply", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 1200, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-715WAC-P": { sku: "PWR-C1-715WAC-P", name: "Cisco 715W AC Platinum PSU (Catalyst 9300)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
+  "PWR-C1-715WAC-P": { sku: "PWR-C1-715WAC-P", name: "Cisco 715W AC Platinum PSU (Catalyst 9300)", vendor: "Cisco", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
+  "PWR-C1-715WAC-P-M": { sku: "PWR-C1-715WAC-P-M", name: "Cisco Meraki 715W AC Secondary PSU (C9300L / MS390)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "MA-PWR-715WAC": { sku: "MA-PWR-715WAC", name: "Meraki MS390 715W Modular AC Power Supply", msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
+  "MA-PWR-715WAC": { sku: "MA-PWR-715WAC", name: "Meraki MS390 715W Modular AC Power Supply", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 850, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-350WAC-P": { sku: "PWR-C1-350WAC-P", name: "Cisco 350W AC Platinum PSU (Catalyst 9300 Data)", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6,
+  "PWR-C1-350WAC-P": { sku: "PWR-C1-350WAC-P", name: "Cisco 350W AC Platinum PSU (Catalyst 9300 Data)", vendor: "Cisco", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "PWR-C1-350WAC-P-M": { sku: "PWR-C1-350WAC-P-M", name: "Cisco Meraki 350W AC Secondary PSU (C9300-M Data)", msrp: 575, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6,
+  "PWR-C1-350WAC-P-M": { sku: "PWR-C1-350WAC-P-M", name: "Cisco Meraki 350W AC Secondary PSU (C9300-M Data)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 575, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "MA-PWR-350WAC": { sku: "MA-PWR-350WAC", name: "Meraki MS390 350W Modular AC Power Supply", msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6,
+  "MA-PWR-350WAC": { sku: "MA-PWR-350WAC", name: "Meraki MS390 350W Modular AC Power Supply", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 550, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "MA-PWR-250WAC": { sku: "MA-PWR-250WAC", name: "Meraki 250W Modular AC Power Supply (MS250 / MS350 Data)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.4,
+  "MA-PWR-250WAC": { sku: "MA-PWR-250WAC", name: "Meraki 250W Modular AC Power Supply (MS250 / MS350 Data)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "MA-PWR-640WAC": { sku: "MA-PWR-640WAC", name: "Meraki 640W Modular AC PoE+ Power Supply (MS250 / MS350 LP)", msrp: 750, category: "internal_psu", wattage: 640, poeBudgetContribution: 370, weightLbs: 2.7,
+  "MA-PWR-640WAC": { sku: "MA-PWR-640WAC", name: "Meraki 640W Modular AC PoE+ Power Supply (MS250 / MS350 LP)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 750, category: "internal_psu", wattage: 640, poeBudgetContribution: 370, weightLbs: 2.7,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "MA-PWR-1025WAC": { sku: "MA-PWR-1025WAC", name: "Meraki 1025W Modular AC PoE+ Power Supply (MS250 / MS350 FP / MS355)", msrp: 1150, category: "internal_psu", wattage: 1025, poeBudgetContribution: 740, weightLbs: 3.0,
+  "MA-PWR-1025WAC": { sku: "MA-PWR-1025WAC", name: "Meraki 1025W Modular AC PoE+ Power Supply (MS250 / MS350 FP / MS355)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], msrp: 1150, category: "internal_psu", wattage: 1025, poeBudgetContribution: 740, weightLbs: 3.0,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C5-600WAC": { sku: "PWR-C5-600WAC", name: "Cisco Catalyst 9200L 600W AC Secondary Power Supply", msrp: 695, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 2.4,
+  "PWR-MS320-1025WAC": { sku: "PWR-MS320-1025WAC", name: "Meraki 1025W Hot-Swappable AC Power Supply (MS320-48 / MS350-48)", vendor: "Meraki", msrp: 1150, category: "internal_psu", wattage: 1025, poeBudgetContribution: 740, weightLbs: 3.0,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/ruckus_rps_poe.webp"
+    },
+  "MA-PWR-150WAC-ADP": { sku: "MA-PWR-150WAC-ADP", name: "Meraki 150W External AC Power Adapter (MS130-8X)", vendor: "Meraki", msrp: 165, category: "external_brick", wattage: 150, poeBudgetContribution: 120, weightLbs: 1.4,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+  "MA-PWR-300WAC-ADP": { sku: "MA-PWR-300WAC-ADP", name: "Meraki 300W External AC Power Adapter (MS130-12X)", vendor: "Meraki", msrp: 275, category: "external_brick", wattage: 300, poeBudgetContribution: 240, weightLbs: 1.9,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+  "MA-PWR-300W-INDADP": { sku: "MA-PWR-300W-INDADP", name: "Meraki 300W Ruggedized Industrial Power Adapter (MS130R-8P)", vendor: "Meraki", msrp: 345, category: "external_brick", wattage: 300, poeBudgetContribution: 240, weightLbs: 2.2,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+        image: "assets/images/products/unifi_uacc_adapter_210w.webp"
+    },
+  "PWR-C5-600WAC": { sku: "PWR-C5-600WAC", name: "Cisco Catalyst 9200L 600W AC Secondary Power Supply", vendor: "Cisco", msrp: 695, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C5-600WAC-M": { sku: "PWR-C5-600WAC-M", name: "Cisco Meraki C9200L 600W AC Secondary Power Supply", msrp: 695, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 2.4,
+  "PWR-C5-600WAC-M": { sku: "PWR-C5-600WAC-M", name: "Cisco Meraki C9200L 600W AC Secondary Power Supply", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 695, category: "internal_psu", wattage: 600, poeBudgetContribution: 370, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C5-1KWAC": { sku: "PWR-C5-1KWAC", name: "Cisco Catalyst 9200L 1000W AC Secondary Power Supply", msrp: 1095, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.6,
+  "PWR-C5-1KWAC": { sku: "PWR-C5-1KWAC", name: "Cisco Catalyst 9200L 1000W AC Secondary Power Supply", vendor: "Cisco", msrp: 1095, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C5-1KWAC-M": { sku: "PWR-C5-1KWAC-M", name: "Cisco Meraki C9200L 1000W AC Secondary Power Supply", msrp: 1095, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.6,
+  "PWR-C5-1KWAC-M": { sku: "PWR-C5-1KWAC-M", name: "Cisco Meraki C9200L 1000W AC Secondary Power Supply", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 1095, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst 9200L-M Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "PWR-C1-715WDC": { sku: "PWR-C1-715WDC", name: "Cisco 715W DC Power Supply (Catalyst 9300 -48VDC)", msrp: 1100, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
+  "PWR-C1-715WDC": { sku: "PWR-C1-715WDC", name: "Cisco 715W DC Power Supply (Catalyst 9300 -48VDC)", vendor: "Cisco", msrp: 1100, category: "internal_psu", wattage: 715, poeBudgetContribution: 437, weightLbs: 2.8,
         datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         image: "assets/images/products/juniper_jpsu_dc.webp"
     },
-  "PWR-C1-1100WDC": { sku: "PWR-C1-1100WDC", name: "Cisco 1100W DC Power Supply (Catalyst 9300 -48VDC)", msrp: 1450, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
+  "PWR-C1-1100WDC": { sku: "PWR-C1-1100WDC", name: "Cisco 1100W DC Power Supply (Catalyst 9300 -48VDC)", vendor: "Cisco", msrp: 1450, category: "internal_psu", wattage: 1100, poeBudgetContribution: 800, weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         image: "assets/images/products/juniper_jpsu_dc.webp"
     },
-  "C9K-PWR-CAB-AC-US": { sku: "C9K-PWR-CAB-AC-US", name: "Cisco High-Amperage C21 AC Power Cord (NEMA 5-20P)", msrp: 65, category: "power_cord", wattage: 0, poeBudgetContribution: 0, weightLbs: 0.8,
+  "C9K-PWR-CAB-AC-US": { sku: "C9K-PWR-CAB-AC-US", name: "Cisco High-Amperage C21 AC Power Cord (NEMA 5-20P)", vendor: "Cisco", msrp: 65, category: "power_cord", wattage: 0, poeBudgetContribution: 0, weightLbs: 0.8,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/unifi_usp_cable.webp"
     },
-  "C9K-PWR-CAB-AC-BL": { sku: "C9K-PWR-CAB-AC-BL", name: "Cisco High-Amperage C20-to-C21 Jumper Cord (Rack PDU)", msrp: 75, category: "power_cord", wattage: 0, poeBudgetContribution: 0, weightLbs: 0.8,
+  "C9K-PWR-CAB-AC-BL": { sku: "C9K-PWR-CAB-AC-BL", name: "Cisco High-Amperage C20-to-C21 Jumper Cord (Rack PDU)", vendor: "Cisco", msrp: 75, category: "power_cord", wattage: 0, poeBudgetContribution: 0, weightLbs: 0.8,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/unifi_usp_cable.webp"
     },
 
   // Juniper Networks Modular Power Supplies (AC & DC)
-  "JPSU-2000-C-AC-AFO": { sku: "JPSU-2000-C-AC-AFO", name: "Juniper 2000W AC Platinum PSU (EX4400 High PoE)", msrp: 1850, category: "internal_psu", wattage: 2000, poeBudgetContribution: 1800, weightLbs: 2.4,
+  "JPSU-2000-C-AC-AFO": { sku: "JPSU-2000-C-AC-AFO", name: "Juniper 2000W AC Platinum PSU (EX4400 High PoE)", vendor: "Juniper", msrp: 1850, category: "internal_psu", wattage: 2000, poeBudgetContribution: 1800, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-1600-C-AC-AFO": { sku: "JPSU-1600-C-AC-AFO", name: "Juniper 1600W AC Redundant PSU (EX4400-48MP PoE-bt)", msrp: 1450, category: "internal_psu", wattage: 1600, poeBudgetContribution: 1400, weightLbs: 2.3,
+  "JPSU-1600-C-AC-AFO": { sku: "JPSU-1600-C-AC-AFO", name: "Juniper 1600W AC Redundant PSU (EX4400-48MP PoE-bt)", vendor: "Juniper", msrp: 1450, category: "internal_psu", wattage: 1600, poeBudgetContribution: 1400, weightLbs: 2.3,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-1050-C-AC-AFO": { sku: "JPSU-1050-C-AC-AFO", name: "Juniper 1050W AC Redundant PSU (EX4400 PoE+)", msrp: 1050, category: "internal_psu", wattage: 1050, poeBudgetContribution: 880, weightLbs: 2.2,
+  "JPSU-1050-C-AC-AFO": { sku: "JPSU-1050-C-AC-AFO", name: "Juniper 1050W AC Redundant PSU (EX4400 PoE+)", vendor: "Juniper", msrp: 1050, category: "internal_psu", wattage: 1050, poeBudgetContribution: 880, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-920-AC-AFO": { sku: "JPSU-920-AC-AFO", name: "Juniper 920W AC Redundant PSU Front-to-Back (EX4100-48P)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.2,
+  "JPSU-920-AC-AFO": { sku: "JPSU-920-AC-AFO", name: "Juniper 920W AC Redundant PSU Front-to-Back (EX4100-48P)", vendor: "Juniper", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-920-AC-AFI": { sku: "JPSU-920-AC-AFI", name: "Juniper 920W AC Redundant PSU Back-to-Front (EX4400)", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.2,
+  "JPSU-920-AC-AFI": { sku: "JPSU-920-AC-AFI", name: "Juniper 920W AC Redundant PSU Back-to-Front (EX4400)", vendor: "Juniper", msrp: 950, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-600-AC-AFO": { sku: "JPSU-600-AC-AFO", name: "Juniper 600W AC Redundant PSU (EX4100-24P)", msrp: 650, category: "internal_psu", wattage: 600, poeBudgetContribution: 450, weightLbs: 2.0,
+  "JPSU-600-AC-AFO": { sku: "JPSU-600-AC-AFO", name: "Juniper 600W AC Redundant PSU (EX4100-24P)", vendor: "Juniper", msrp: 650, category: "internal_psu", wattage: 600, poeBudgetContribution: 450, weightLbs: 2.0,
         datasheetPath: "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-550-C-AC-AFO": { sku: "JPSU-550-C-AC-AFO", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFO)", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0,
+  "JPSU-550-C-AC-AFO": { sku: "JPSU-550-C-AC-AFO", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFO)", vendor: "Juniper", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-550-C-AC-AFI": { sku: "JPSU-550-C-AC-AFI", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFI)", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0,
+  "JPSU-550-C-AC-AFI": { sku: "JPSU-550-C-AC-AFI", name: "Juniper 550W AC Redundant PSU (EX4400 Data AFI)", vendor: "Juniper", msrp: 650, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-150-AC-AFO": { sku: "JPSU-150-AC-AFO", name: "Juniper 150W AC Redundant PSU (EX4100/EX3400 Data)", msrp: 350, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.8,
+  "JPSU-150-AC-AFO": { sku: "JPSU-150-AC-AFO", name: "Juniper 150W AC Redundant PSU (EX4100/EX3400 Data)", vendor: "Juniper", msrp: 350, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.8,
         datasheetPath: "Datasheets/Network/Juniper/ex4100-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-350-AC-AFO": { sku: "JPSU-350-AC-AFO", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFO)", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.0,
+  "JPSU-350-AC-AFO": { sku: "JPSU-350-AC-AFO", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFO)", vendor: "Juniper", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.0,
         datasheetPath: "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-350-AC-AFI": { sku: "JPSU-350-AC-AFI", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFI)", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.0,
+  "JPSU-350-AC-AFI": { sku: "JPSU-350-AC-AFI", name: "Juniper 350W AC Redundant PSU (EX4300 Data AFI)", vendor: "Juniper", msrp: 450, category: "internal_psu", wattage: 350, poeBudgetContribution: 0, weightLbs: 2.0,
         datasheetPath: "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-715-AC-AFO": { sku: "JPSU-715-AC-AFO", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFO)", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565, weightLbs: 2.2,
+  "JPSU-715-AC-AFO": { sku: "JPSU-715-AC-AFO", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFO)", vendor: "Juniper", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-715-AC-AFI": { sku: "JPSU-715-AC-AFI", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFI)", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565, weightLbs: 2.2,
+  "JPSU-715-AC-AFI": { sku: "JPSU-715-AC-AFI", name: "Juniper 715W AC Redundant PSU (EX4300-24P AFI)", vendor: "Juniper", msrp: 750, category: "internal_psu", wattage: 715, poeBudgetContribution: 565, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-1100-AC-AFO": { sku: "JPSU-1100-AC-AFO", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFO)", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950, weightLbs: 2.5,
+  "JPSU-1100-AC-AFO": { sku: "JPSU-1100-AC-AFO", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFO)", vendor: "Juniper", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-1100-AC-AFI": { sku: "JPSU-1100-AC-AFI", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFI)", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950, weightLbs: 2.5,
+  "JPSU-1100-AC-AFI": { sku: "JPSU-1100-AC-AFI", name: "Juniper 1100W AC Redundant PSU (EX4300-48P AFI)", vendor: "Juniper", msrp: 1100, category: "internal_psu", wattage: 1100, poeBudgetContribution: 950, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Juniper/ex4300-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-550-C-DC-AFO": { sku: "JPSU-550-C-DC-AFO", name: "Juniper 550W DC Redundant PSU (EX4400 -48VDC)", msrp: 850, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0,
+  "JPSU-550-C-DC-AFO": { sku: "JPSU-550-C-DC-AFO", name: "Juniper 550W DC Redundant PSU (EX4400 -48VDC)", vendor: "Juniper", msrp: 850, category: "internal_psu", wattage: 550, poeBudgetContribution: 0, weightLbs: 2.0,
         datasheetPath: "Datasheets/Network/Juniper/ex4400-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_dc.webp"
     },
-  "JPSU-650-AC-AFO": { sku: "JPSU-650-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
+  "JPSU-650-AC-AFO": { sku: "JPSU-650-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", vendor: "Juniper", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-650W-AC-AFO": { sku: "JPSU-650W-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
+  "JPSU-650W-AC-AFO": { sku: "JPSU-650W-AC-AFO", name: "Juniper 650W AC Redundant PSU Front-to-Back Airflow (EX4600/4650, QFX5110/5120)", vendor: "Juniper", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-650-AC-AFI": { sku: "JPSU-650-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
+  "JPSU-650-AC-AFI": { sku: "JPSU-650-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", vendor: "Juniper", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-650W-AC-AFI": { sku: "JPSU-650W-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
+  "JPSU-650W-AC-AFI": { sku: "JPSU-650W-AC-AFI", name: "Juniper 650W AC Redundant PSU Back-to-Front Airflow (EX4600/4650, QFX5110/5120)", vendor: "Juniper", msrp: 750, category: "internal_psu", wattage: 650, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Juniper/ex4600-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-850-AC-AFO": { sku: "JPSU-850-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
+  "JPSU-850-AC-AFO": { sku: "JPSU-850-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", vendor: "Juniper", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-850W-AC-AFO": { sku: "JPSU-850W-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
+  "JPSU-850W-AC-AFO": { sku: "JPSU-850W-AC-AFO", name: "Juniper 850W AC Redundant PSU Front-to-Back Airflow (QFX5200)", vendor: "Juniper", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-850-AC-AFI": { sku: "JPSU-850-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
+  "JPSU-850-AC-AFI": { sku: "JPSU-850-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", vendor: "Juniper", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-850W-AC-AFI": { sku: "JPSU-850W-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
+  "JPSU-850W-AC-AFI": { sku: "JPSU-850W-AC-AFI", name: "Juniper 850W AC Redundant PSU Back-to-Front Airflow (QFX5200)", vendor: "Juniper", msrp: 950, category: "internal_psu", wattage: 850, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Juniper/qfx5200-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", msrp: 650, category: "external_brick", wattage: 340, poeBudgetContribution: 240, weightLbs: 3.1,
+  "JPSU-H-340W-E-AC": { sku: "JPSU-H-340W-E-AC", name: "Juniper 340W External Hardened AC PSU (EX4100-H-12MP)", vendor: "Juniper", msrp: 650, category: "external_brick", wattage: 340, poeBudgetContribution: 240, weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
-  "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", msrp: 750, category: "internal_hardened", wattage: 340, poeBudgetContribution: 240, weightLbs: 2.8,
+  "JPSU-H-340W-AC": { sku: "JPSU-H-340W-AC", name: "Juniper 340W Internal Hardened AC PSU (EX4100-H-24MP)", vendor: "Juniper", msrp: 750, category: "internal_hardened", wattage: 340, poeBudgetContribution: 240, weightLbs: 2.8,
         datasheetPath: "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
         image: "assets/images/products/juniper_jpsu_ac.webp"
     },
 
   // Ruckus CommScope Modular Power Supplies
-  "RPS22-E": { sku: "RPS22-E", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Exhaust (ICX 7550)", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960, weightLbs: 2.5,
+  "RPS22-E": { sku: "RPS22-E", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Exhaust (ICX 7550)", vendor: "Ruckus", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS22-I": { sku: "RPS22-I", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Intake (ICX 7550)", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960, weightLbs: 2.5,
+  "RPS22-I": { sku: "RPS22-I", name: "Ruckus 1000W/1200W AC Redundant PoE PSU Intake (ICX 7550)", vendor: "Ruckus", msrp: 950, category: "internal_psu", wattage: 1200, poeBudgetContribution: 960, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS21-E": { sku: "RPS21-E", name: "Ruckus 400W AC Redundant Non-PoE PSU Exhaust (ICX 7550)", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2,
+  "RPS21-E": { sku: "RPS21-E", name: "Ruckus 400W AC Redundant Non-PoE PSU Exhaust (ICX 7550)", vendor: "Ruckus", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS21-I": { sku: "RPS21-I", name: "Ruckus 400W AC Redundant Non-PoE PSU Intake (ICX 7550)", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2,
+  "RPS21-I": { sku: "RPS21-I", name: "Ruckus 400W AC Redundant Non-PoE PSU Intake (ICX 7550)", vendor: "Ruckus", msrp: 550, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS21DC-E": { sku: "RPS21DC-E", name: "Ruckus 400W DC Redundant Non-PoE PSU (ICX 7550 -48VDC)", msrp: 750, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2,
+  "RPS21DC-E": { sku: "RPS21DC-E", name: "Ruckus 400W DC Redundant Non-PoE PSU (ICX 7550 -48VDC)", vendor: "Ruckus", msrp: 750, category: "internal_psu", wattage: 400, poeBudgetContribution: 0, weightLbs: 2.2,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7550 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS23-E": { sku: "RPS23-E", name: "Ruckus 1000W AC Redundant PSU (ICX 7650 / 8200)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
+  "RPS23-E": { sku: "RPS23-E", name: "Ruckus 1000W AC Redundant PSU (ICX 7650 / 8200)", vendor: "Ruckus", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 8200 Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS19-E": { sku: "RPS19-E", name: "Ruckus 920W/650W AC Redundant Power Supply Exhaust (ICX 7150-48ZP / 7850)", msrp: 795, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.4,
+  "RPS19-E": { sku: "RPS19-E", name: "Ruckus 920W/650W AC Redundant Power Supply Exhaust (ICX 7150-48ZP / 7850)", vendor: "Ruckus", msrp: 795, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS19-I": { sku: "RPS19-I", name: "Ruckus 920W/650W AC Redundant Power Supply Intake (ICX 7150-48ZP / 7850)", msrp: 795, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.4,
+  "RPS19-I": { sku: "RPS19-I", name: "Ruckus 920W/650W AC Redundant Power Supply Intake (ICX 7150-48ZP / 7850)", vendor: "Ruckus", msrp: 795, category: "internal_psu", wattage: 920, poeBudgetContribution: 740, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7150 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS9+": { sku: "RPS9+", name: "Ruckus 500W AC Redundant Power Supply (ICX 7750)", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4,
+  "RPS9+": { sku: "RPS9+", name: "Ruckus 500W AC Redundant Power Supply (ICX 7750)", vendor: "Ruckus", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS9E": { sku: "RPS9E", name: "Ruckus 500W AC Redundant Power Supply Exhaust (ICX 7750)", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4,
+  "RPS9E": { sku: "RPS9E", name: "Ruckus 500W AC Redundant Power Supply Exhaust (ICX 7750)", vendor: "Ruckus", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS9I": { sku: "RPS9I", name: "Ruckus 500W AC Redundant Power Supply Intake (ICX 7750)", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4,
+  "RPS9I": { sku: "RPS9I", name: "Ruckus 500W AC Redundant Power Supply Intake (ICX 7750)", vendor: "Ruckus", msrp: 695, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX Switch Family Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS16": { sku: "RPS16", name: "Ruckus 1000W AC Redundant PoE Power Supply (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
+  "RPS16": { sku: "RPS16", name: "Ruckus 1000W AC Redundant PoE Power Supply (ICX 7450 / 7650)", vendor: "Ruckus", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS16-E": { sku: "RPS16-E", name: "Ruckus 1000W AC Redundant PoE PSU Exhaust (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
+  "RPS16-E": { sku: "RPS16-E", name: "Ruckus 1000W AC Redundant PoE PSU Exhaust (ICX 7450 / 7650)", vendor: "Ruckus", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS16-I": { sku: "RPS16-I", name: "Ruckus 1000W AC Redundant PoE PSU Intake (ICX 7450 / 7650)", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
+  "RPS16-I": { sku: "RPS16-I", name: "Ruckus 1000W AC Redundant PoE PSU Intake (ICX 7450 / 7650)", vendor: "Ruckus", msrp: 850, category: "internal_psu", wattage: 1000, poeBudgetContribution: 740, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS15": { sku: "RPS15", name: "Ruckus 250W AC Redundant Non-PoE PSU (ICX 7450 / 7650)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1,
+  "RPS15": { sku: "RPS15", name: "Ruckus 250W AC Redundant Non-PoE PSU (ICX 7450 / 7650)", vendor: "Ruckus", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS15-E": { sku: "RPS15-E", name: "Ruckus 250W AC Redundant Non-PoE PSU Exhaust (ICX 7450 / 7650)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1,
+  "RPS15-E": { sku: "RPS15-E", name: "Ruckus 250W AC Redundant Non-PoE PSU Exhaust (ICX 7450 / 7650)", vendor: "Ruckus", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "RPS16DC": { sku: "RPS16DC", name: "Ruckus 510W DC Redundant PoE PSU (ICX 7450 / 7650 -48VDC)", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390, weightLbs: 2.4,
+  "RPS16DC": { sku: "RPS16DC", name: "Ruckus 510W DC Redundant PoE PSU (ICX 7450 / 7650 -48VDC)", vendor: "Ruckus", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "RPS16DC-E": { sku: "RPS16DC-E", name: "Ruckus 510W DC Redundant PoE PSU Exhaust (ICX 7450 / 7650 -48VDC)", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390, weightLbs: 2.4,
+  "RPS16DC-E": { sku: "RPS16DC-E", name: "Ruckus 510W DC Redundant PoE PSU Exhaust (ICX 7450 / 7650 -48VDC)", vendor: "Ruckus", msrp: 950, category: "internal_psu", wattage: 510, poeBudgetContribution: 390, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Ruckus/RUCKUS ICX 7450 Switch Data Sheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
@@ -519,8 +552,12 @@ const POWER_SUPPLY_CATALOG = {
         datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         image: "assets/images/products/unifi_uacc_fan_4020.webp"
     },
-  "FAN-T2-M": { sku: "FAN-T2-M", name: "Cisco Meraki System Fan Module (Catalyst 9300-M / MS390 Spare)", vendor: "Meraki", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4,
+  "FAN-T2-M": { sku: "FAN-T2-M", name: "Cisco Catalyst / Meraki System Fan Module (C9300-M / C9300L-M / C9300X-M / MS390)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+        image: "assets/images/products/unifi_uacc_fan_4020.webp"
+    },
+  "MA-FAN-16K": { sku: "MA-FAN-16K", name: "Meraki 16K RPM Front-to-Back System Cooling Fan (MS410-16)", vendor: "Meraki", msrp: 115, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4,
+        datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
         image: "assets/images/products/unifi_uacc_fan_4020.webp"
     },
   "EX4400-FAN-AFO": { sku: "EX4400-FAN-AFO", name: "Juniper EX4400 Hot-Swap Fan Tray (Front-to-Back Airflow)", vendor: "Juniper", msrp: 120, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.5,
@@ -561,27 +598,27 @@ const POWER_SUPPLY_CATALOG = {
     },
 
   // Allied Telesis Modular Power
-  "AT-PWR600-AC": { sku: "AT-PWR600-AC", name: "Allied Telesis 600W Hot-Swap AC System Power Supply (x950 Series)", msrp: 850, category: "internal_psu", wattage: 600, poeBudgetContribution: 0, weightLbs: 2.6,
+  "AT-PWR600-AC": { sku: "AT-PWR600-AC", name: "Allied Telesis 600W Hot-Swap AC System Power Supply (x950 Series)", vendor: "Allied Telesis", msrp: 850, category: "internal_psu", wattage: 600, poeBudgetContribution: 0, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Allied Telesis/ati-x950series-ds.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "AT-PWR800": { sku: "AT-PWR800-80", name: "Allied Telesis 800W AC Redundant PSU (x530 / x930 Series)", msrp: 750, category: "internal_psu", wattage: 800, poeBudgetContribution: 500, weightLbs: 2.5,
+  "AT-PWR800": { sku: "AT-PWR800-80", name: "Allied Telesis 800W AC Redundant PSU (x530 / x930 Series)", vendor: "Allied Telesis", msrp: 750, category: "internal_psu", wattage: 800, poeBudgetContribution: 500, weightLbs: 2.5,
         datasheetPath: "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
     },
-  "AT-PWR250-AC": { sku: "AT-PWR250-AC", name: "Allied Telesis 250W AC Redundant System Power Supply (x930 / x530)", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1,
+  "AT-PWR250-AC": { sku: "AT-PWR250-AC", name: "Allied Telesis 250W AC Redundant System Power Supply (x930 / x530)", vendor: "Allied Telesis", msrp: 450, category: "internal_psu", wattage: 250, poeBudgetContribution: 0, weightLbs: 2.1,
         datasheetPath: "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "AT-PWR150-AC": { sku: "AT-PWR150-AC", name: "Allied Telesis 150W AC Redundant System Power Supply (x930)", msrp: 380, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.9,
+  "AT-PWR150-AC": { sku: "AT-PWR150-AC", name: "Allied Telesis 150W AC Redundant System Power Supply (x930)", vendor: "Allied Telesis", msrp: 380, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.9,
         datasheetPath: "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
         image: "assets/images/products/ruckus_rps_ac.webp"
     },
-  "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", msrp: 380, category: "external_brick", wattage: 300, poeBudgetContribution: 240, weightLbs: 2.4,
+  "AT-PWR300": { sku: "AT-PWR300-30", name: "Allied Telesis 300W External PSU (x320 / GS980EM)", vendor: "Allied Telesis", msrp: 380, category: "external_brick", wattage: 300, poeBudgetContribution: 240, weightLbs: 2.4,
         datasheetPath: "Datasheets/Network/Allied Telesis/ati-gs980em-series-ds.pdf",
         image: "assets/images/products/unifi_uacc_adapter_210w.webp"
     },
-  "AT-PWR05": { sku: "AT-PWR05", name: "Allied Telesis 480W Industrial DIN Rail DC Power Supply (IE340 / IE220)", msrp: 390, category: "din_psu", wattage: 480, poeBudgetContribution: 370, weightLbs: 2.6,
+  "AT-PWR05": { sku: "AT-PWR05", name: "Allied Telesis 480W Industrial DIN Rail DC Power Supply (IE340 / IE220)", vendor: "Allied Telesis", msrp: 390, category: "din_psu", wattage: 480, poeBudgetContribution: 370, weightLbs: 2.6,
         datasheetPath: "Datasheets/Network/Allied Telesis/ati-ie340series-ds.pdf",
         image: "assets/images/products/meanwell_ndr_120_48.webp"
     },
@@ -673,15 +710,15 @@ const POWER_SUPPLY_CATALOG = {
         image: "assets/images/products/unifi_uacc_adapter_60w.webp"
     },
   // Backward-compatibility aliases
-  "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 1.85, depthInches: 4.5,
+  "AMGPSU-148-P240A": { sku: "AMGPSU-148-P240A", name: "AMG 240W Industrial DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 260, category: "din_psu", wattage: 240, poeBudgetContribution: 240, weightLbs: 1.85, depthInches: 4.5,
         datasheetPath: "Datasheets/Network/AMG/AMGPSU-I48-P240A Datasheet D39313-03.pdf",
         image: "assets/images/products/amgpsu_i48_p240a.webp"
     },
-  "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480, weightLbs: 2.65, depthInches: 5.0,
+  "AMGPSU-148-P480A": { sku: "AMGPSU-148-P480A", name: "AMG 480W Industrial High-Power DIN Rail PSU (48-56VDC)", vendor: "AMG", msrp: 420, category: "din_psu", wattage: 480, poeBudgetContribution: 480, weightLbs: 2.65, depthInches: 5.0,
         datasheetPath: "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
         image: "assets/images/products/amgpsu_i48_p480a.webp"
     },
-  "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", msrp: 399, category: "dc_rps", wattage: 950, poeBudgetContribution: 0, weightLbs: 12.13, depthInches: 12.8,
+  "USP-RPS": { sku: "USP-RPS", name: "UniFi SmartPower Redundant DC Power System", vendor: "UniFi", msrp: 399, category: "dc_rps", wattage: 950, poeBudgetContribution: 0, weightLbs: 12.13, depthInches: 12.8,
         datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Redundant Power - Tech Specs.pdf",
         image: "assets/images/products/unifi_usp_rps.webp"
     },
@@ -702,7 +739,51 @@ const POWER_SUPPLY_CATALOG = {
   "UACC-PSU-12V-150W": { sku: "UACC-PSU-12V-150W", name: "UniFi 150W 12V Hot-Swappable AC Power Supply Module", vendor: "UniFi", msrp: 99, category: "internal_psu", wattage: 150, poeBudgetContribution: 0, weightLbs: 1.5,
         datasheetPath: "Datasheets/Network/Ubiquiti/UniFi Hot-Swappable Power Supply 150W - Tech Specs.pdf",
         image: "assets/images/products/unifi_uacc_psu_12v_150w.webp"
-    }
+    },
+
+  // Cisco Catalyst Expansion Blank Covers & Console Cables
+  "C9300-NM-BLANK=": {
+    sku: "C9300-NM-BLANK=",
+    name: "Cisco Catalyst 9300 Network Module Blank Cover Plate",
+    vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
+    msrp: 35,
+    category: "blank_cover",
+    wattage: 0,
+    poeBudgetContribution: 0,
+    weightLbs: 0.25,
+    description: "Protective EMI/airflow blank faceplate cover for unpopulated Catalyst 9300 / 9300-M / MS390 modular uplink expansion bays (middle stack members)",
+    datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+    image: "assets/images/products/cisco-c9350-nm-8y.webp"
+  },
+  "CAB-CONSOLE-USB-M": {
+    sku: "CAB-CONSOLE-USB-M",
+    name: "Cisco Catalyst / Meraki USB Type-A to Mini-B Console Cable (6ft)",
+    vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
+    msrp: 35,
+    category: "power_cord",
+    wattage: 0,
+    poeBudgetContribution: 0,
+    weightLbs: 0.2,
+    description: "6-foot USB Type-A to Mini-B out-of-band CLI console management cable for Cisco Catalyst 9200/9300/9500 and Catalyst-M switches",
+    datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+    image: "assets/images/products/unifi_usp_cable.webp"
+  },
+  "CAB-CONSOLE-RJ45": {
+    sku: "CAB-CONSOLE-RJ45",
+    name: "Cisco RJ-45 to DB9 Rollover Console Management Cable (6ft)",
+    vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
+    msrp: 30,
+    category: "power_cord",
+    wattage: 0,
+    poeBudgetContribution: 0,
+    weightLbs: 0.2,
+    description: "Standard 6-foot light-blue Cisco RJ-45 to DB9 serial console management rollover cable",
+    datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+    image: "assets/images/products/unifi_usp_cable.webp"
+  }
 };
 window.POWER_SUPPLY_CATALOG = POWER_SUPPLY_CATALOG;
 
@@ -1027,6 +1108,7 @@ const MOUNTING_CATALOG = {
     depthInches: 1.2,
     name: "Cisco Catalyst Universal 4-Post Equipment Rack Mount Kit",
     vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
     msrp: 120,
     category: "mounting",
     type: "sliding_rails",
@@ -1036,11 +1118,87 @@ const MOUNTING_CATALOG = {
         datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
+  "4PT-KIT-T1-M": {
+    sku: "4PT-KIT-T1-M",
+    depthInches: 1.2,
+    name: "Cisco Catalyst 9300-M / 9300L-M Type-1 4-Post Rack Mount Kit",
+    vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
+    msrp: 120,
+    category: "mounting",
+    type: "sliding_rails",
+    rackUnits: 1,
+    weightLbs: 3.5,
+    description: "Type-1 adjustable 4-post rack mount rail kit for Cisco Catalyst 9300-M, 9300L-M, and Meraki MS390 switches",
+    datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
+    image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+  },
+  "4PT-KIT-T2": {
+    sku: "4PT-KIT-T2",
+    depthInches: 1.2,
+    name: "Cisco Catalyst Type-2 4-Post Equipment Rack Mount Kit",
+    vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
+    msrp: 120,
+    category: "mounting",
+    type: "sliding_rails",
+    rackUnits: 1,
+    weightLbs: 3.5,
+    description: "Type-2 adjustable 4-post equipment rack mount kit for deep-chassis Cisco Catalyst 9300X and 9500 Series switches",
+    datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
+    image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+  },
+  "MA-MNT-MID-1": {
+    sku: "MA-MNT-MID-1",
+    name: "Meraki Mid-Mount Shallow Rack Mounting Bracket Kit (MS225 / MS250)",
+    vendor: "Meraki",
+    compatibleVendors: ["Meraki", "Cisco"],
+    msrp: 85,
+    category: "mounting",
+    type: "rack_kit",
+    rackUnits: 0,
+    weightLbs: 1.4,
+    depthInches: 6.0,
+    description: "Mid-mount rack bracket kit for shallow switch racks or dual-sided switch installations (MS225/MS250)",
+    datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+    image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+  },
+  "MA-RCKMNT": {
+    sku: "MA-RCKMNT",
+    name: "Meraki 19\" Standard Rack Mount Ears Kit (MS225 / MS250)",
+    vendor: "Meraki",
+    compatibleVendors: ["Meraki", "Cisco"],
+    msrp: 55,
+    category: "mounting",
+    type: "rack_kit",
+    rackUnits: 0,
+    weightLbs: 0.9,
+    depthInches: 2.0,
+    description: "Replacement 19-inch front rack-ear mounting brackets with screws for Meraki MS225 and MS250 switches",
+    datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+    image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+  },
+  "MA-WMNTBR-PWR-ADP": {
+    sku: "MA-WMNTBR-PWR-ADP",
+    name: "Meraki Steel Wall Mount Bracket for External 150W/300W Power Adapter",
+    vendor: "Meraki",
+    compatibleVendors: ["Meraki", "Cisco"],
+    msrp: 45,
+    category: "mounting",
+    type: "wall_bracket",
+    rackUnits: 0,
+    weightLbs: 1.1,
+    depthInches: 3.0,
+    description: "Durable steel wall-mount bracket with adjustable clamps for MA-PWR-150WAC-ADP and MA-PWR-300WAC-ADP",
+    datasheetPath: "Datasheets/Network/Cisco/Cisco Meraki MS Accessories Datasheet.pdf",
+    image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
+  },
   "4PT-KIT-T2-M": {
     sku: "4PT-KIT-T2-M",
     depthInches: 1.2,
     name: "Cisco Catalyst 9300-M 4-Post Equipment Rack Mount Kit",
     vendor: "Meraki",
+    compatibleVendors: ["Cisco", "Meraki"],
     msrp: 120,
     category: "mounting",
     type: "sliding_rails",
@@ -1055,6 +1213,7 @@ const MOUNTING_CATALOG = {
     depthInches: 1.2,
     name: "Cisco 19\" Recessed Rack Mount Extension Kit",
     vendor: "Cisco",
+    compatibleVendors: ["Cisco", "Meraki"],
     msrp: 95,
     category: "mounting",
     type: "rack_ears",
@@ -1135,35 +1294,41 @@ const OPTICS_LIST = [
   // A. Dedicated Proprietary Stacking & StackPower Cables
   // ----------------------------------------
   // Cisco StackPower Cables (Pools power across stack units)
-  { vendor: "Cisco", sku: "CAB-SPWR-35CM", name: "Cisco C9350 StackPower+ 55V Interconnect Cable (35cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 110, lengthMeters: 0.35, reach: "35cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
-  { vendor: "Cisco", sku: "CAB-SPWR-100CM", name: "Cisco C9350 StackPower+ 55V Interconnect Cable (100cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 160, lengthMeters: 1.0, reach: "100cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
-  { vendor: "Cisco", sku: "CAB-SPWR-30CM", name: "Cisco Catalyst StackPower Cable (30cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 95, lengthMeters: 0.3, reach: "30cm", industrial: false },
-  { vendor: "Cisco", sku: "CAB-SPWR-150CM", name: "Cisco Catalyst StackPower Cable (150cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 145, lengthMeters: 1.5, reach: "150cm", industrial: false },
-  { vendor: "Meraki", sku: "CAB-SPWR-30CM-M", name: "Meraki Catalyst 9300-M StackPower Cable (30cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 95, lengthMeters: 0.3, reach: "30cm", industrial: false },
-  { vendor: "Meraki", sku: "CAB-SPWR-150CM-M", name: "Meraki Catalyst 9300-M StackPower Cable (150cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 145, lengthMeters: 1.5, reach: "150cm", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "CAB-SPWR-35CM", name: "Cisco C9350 StackPower+ 55V Interconnect Cable (35cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 110, lengthMeters: 0.35, reach: "35cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "CAB-SPWR-100CM", name: "Cisco C9350 StackPower+ 55V Interconnect Cable (100cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 160, lengthMeters: 1.0, reach: "100cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "CAB-SPWR-30CM", name: "Cisco Catalyst StackPower Cable (30cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 95, lengthMeters: 0.3, reach: "30cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "CAB-SPWR-150CM", name: "Cisco Catalyst StackPower Cable (150cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 145, lengthMeters: 1.5, reach: "150cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "CAB-SPWR-30CM-M", name: "Meraki Catalyst 9300-M StackPower Cable (30cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 95, lengthMeters: 0.3, reach: "30cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "CAB-SPWR-150CM-M", name: "Meraki Catalyst 9300-M StackPower Cable (150cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 145, lengthMeters: 1.5, reach: "150cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
 
   // Cisco Catalyst StackWise-480 / StackWise-1T Stacking Cables
-  { vendor: "Cisco", sku: "STACK-T1A-50CM", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (0.5m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 225, lengthMeters: 0.5, reach: "0.5m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
-  { vendor: "Cisco", sku: "STACK-T1A-1M", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (1m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 275, lengthMeters: 1, reach: "1m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
-  { vendor: "Cisco", sku: "STACK-T1A-3M", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (3m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 375, lengthMeters: 3, reach: "3m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
-  { vendor: "Cisco", sku: "STACK-T1-50CM", name: "Cisco Catalyst StackWise-480 Stacking Cable (0.5m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
-  { vendor: "Cisco", sku: "STACK-T1-1M", name: "Cisco Catalyst StackWise-480 Stacking Cable (1m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
-  { vendor: "Cisco", sku: "STACK-T1-3M", name: "Cisco Catalyst StackWise-480 Stacking Cable (3m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T1-50CM-M", name: "Catalyst Meraki 480G Stacking Cable (0.5m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T1-1M-M", name: "Catalyst Meraki 480G Stacking Cable (1m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T1-3M-M", name: "Catalyst Meraki 480G Stacking Cable (3m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1A-50CM", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (0.5m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 225, lengthMeters: 0.5, reach: "0.5m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1A-1M", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (1m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 275, lengthMeters: 1, reach: "1m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1A-3M", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (3m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 375, lengthMeters: 3, reach: "3m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1-50CM", name: "Cisco Catalyst StackWise-480 Stacking Cable (0.5m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1-1M", name: "Cisco Catalyst StackWise-480 Stacking Cable (1m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1-3M", name: "Cisco Catalyst StackWise-480 Stacking Cable (3m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1-50CM-M", name: "Catalyst Meraki 480G Stacking Cable (0.5m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1-1M-M", name: "Catalyst Meraki 480G Stacking Cable (1m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T1-3M-M", name: "Catalyst Meraki 480G Stacking Cable (3m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
 
   // Cisco Catalyst 9300L Type 3A & 9200L Type 4 Stacking Cables
-  { vendor: "Meraki", sku: "STACK-T3A-50CM-M", name: "Catalyst 9300L Type 3A Stacking Cable (0.5m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 175, lengthMeters: 0.5, reach: "0.5m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T3A-1M-M", name: "Catalyst 9300L Type 3A Stacking Cable (1m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 215, lengthMeters: 1, reach: "1m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T3A-3M-M", name: "Catalyst 9300L Type 3A Stacking Cable (3m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 315, lengthMeters: 3, reach: "3m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-50CM", name: "Cisco Catalyst StackWise-1T Stacking Cable (0.5m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 280, lengthMeters: 0.5, reach: "0.5m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-1M", name: "Cisco Catalyst StackWise-1T Stacking Cable (1m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 320, lengthMeters: 1, reach: "1m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-3M", name: "Cisco Catalyst StackWise-1T Stacking Cable (3m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 420, lengthMeters: 3, reach: "3m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-50CM-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (0.5m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-1M-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (1m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
-  { vendor: "Meraki", sku: "STACK-T4-3M-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (3m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
-  { vendor: "Cisco", sku: "C9200L-STACK-KIT", name: "Cisco Catalyst 9200L Stacking Kit (2 Adapters + 1 0.5m Cable)", speed: "80G", speedRank: 80, formFactor: "Stacking", medium: "stacking", msrp: 1050, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T3A-50CM-M", name: "Catalyst 9300L Type 3A Stacking Cable (0.5m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 175, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T3A-1M-M", name: "Catalyst 9300L Type 3A Stacking Cable (1m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 215, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T3A-3M-M", name: "Catalyst 9300L Type 3A Stacking Cable (3m)", speed: "320G", speedRank: 320, formFactor: "Stacking", medium: "stacking", msrp: 315, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T4-50CM", name: "Cisco Catalyst StackWise-1T Stacking Cable (0.5m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 280, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T4-1M", name: "Cisco Catalyst StackWise-1T Stacking Cable (1m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 320, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T4-3M", name: "Cisco Catalyst StackWise-1T Stacking Cable (3m)", speed: "1000G", speedRank: 1000, formFactor: "Stacking", medium: "stacking", msrp: 420, lengthMeters: 3, reach: "3m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T4-50CM-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (0.5m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T4-1M-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (1m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
+  { vendor: "Meraki", compatibleVendors: ["Cisco", "Meraki"], sku: "STACK-T4-3M-M", name: "Catalyst 9200/9300X Type 4 Stacking Cable (3m)", speed: "160G", speedRank: 160, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
+  { sku: "C9300L-STAK-KIT2-M", name: "Cisco Catalyst 9300L-M 320G Stacking Kit (2 Stack Adapters + 0.5m Type-3 Cable)", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], speed: "320G", formFactor: "Stacking Kit", medium: "stacking", reach: "0.5m", lengthMeters: 0.5, msrp: 1150, description: "Hardware stacking kit for Catalyst 9300L-M switches including 2 stack modules and 50cm stacking cable", datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { sku: "MA-CBL-120G-50CM", name: "Meraki MS390 120G Hardware Stacking Cable (50cm)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "120G", formFactor: "StackWise", medium: "stacking", reach: "0.5m", lengthMeters: 0.5, msrp: 165, description: "High-speed 120G physical stacking cable (0.5m) for Cisco Meraki MS390 switches", datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { sku: "MA-CBL-120G-1M", name: "Meraki MS390 120G Hardware Stacking Cable (1m)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "120G", formFactor: "StackWise", medium: "stacking", reach: "1m", lengthMeters: 1.0, msrp: 215, description: "High-speed 120G physical stacking cable (1m) for Cisco Meraki MS390 switches", datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { sku: "MA-CBL-120G-3M", name: "Meraki MS390 120G Hardware Stacking Cable (3m)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "120G", formFactor: "StackWise", medium: "stacking", reach: "3m", lengthMeters: 3.0, msrp: 315, description: "High-speed 120G physical stacking cable (3m) for Cisco Meraki MS390 switches", datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { sku: "MA-CBL-SPWR-30CM", name: "Meraki MS390 StackPower Cable (30cm)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "StackPower", formFactor: "StackPower", medium: "stackpower", reach: "0.3m", lengthMeters: 0.3, msrp: 95, description: "30cm StackPower power-sharing interconnect cable for Meraki MS390 and Catalyst 9300-M", datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { sku: "MA-CBL-SPWR-150CM", name: "Meraki MS390 StackPower Cable (150cm)", vendor: "Meraki", compatibleVendors: ["Meraki", "Cisco"], speed: "StackPower", formFactor: "StackPower", medium: "stackpower", reach: "1.5m", lengthMeters: 1.5, msrp: 145, description: "150cm StackPower ring-closing power-sharing cable for Meraki MS390 and Catalyst 9300-M", datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { sku: "C9200L-STACK-KIT", vendor: "Cisco", compatibleVendors: ["Cisco", "Meraki"], name: "Cisco Catalyst 9200L Stacking Kit (2 Adapters + 1 0.5m Cable)", speed: "80G", speedRank: 80, formFactor: "Stacking", medium: "stacking", msrp: 1050, lengthMeters: 0.5, reach: "0.5m", industrial: false },
 
   // Meraki MS210/MS225/MS250/MS350/MS355 Hardware Stacking
   { vendor: "Meraki", sku: "MA-CBL-40G-50CM", name: "Meraki 40G Stacking Cable (0.5m, MS210/MS225/MS250/MS350)", speed: "40G", speedRank: 40, formFactor: "Stacking", medium: "stacking", msrp: 145, lengthMeters: 0.5, reach: "0.5m", industrial: false },
