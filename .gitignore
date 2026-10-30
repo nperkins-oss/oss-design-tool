@@ -1,6 +1,15 @@
 # Temporary scratch scripts, browser test profiles, and debug dumps
 scratch/
 
+# Node.js & Python tooling caches
+node_modules/
+__pycache__/
+*.pyc
+
+# Local environment overrides
+.env
+.env.local
+
 # Operating System Files
 Thumbs.db
 ehthumbs.db

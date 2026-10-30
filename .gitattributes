@@ -1,0 +1,25 @@
+# Normalize text files to LF in repository index to prevent CRLF churn across Windows & Linux CI
+* text=auto eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.py text eol=lf
+
+# Binary assets (never modify bytes)
+*.webp binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.xlsx binary
+*.xls binary
+*.zip binary

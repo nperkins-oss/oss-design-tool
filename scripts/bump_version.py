@@ -4,7 +4,7 @@ bump_version.py - Single-Source-of-Truth Version & Build Stamp Synchronizer
 OSS Network & Security Design Tool (NetSelect Enterprise)
 
 Usage:
-  python scripts/bump_version.py --set 0.11.0-beta.2
+  python scripts/bump_version.py --set 0.11.0-beta.7
   python scripts/bump_version.py --patch
   python scripts/bump_version.py --minor --prerelease rc.1
   python scripts/bump_version.py --release
@@ -17,6 +17,7 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 VERSION_FILE = ROOT / "VERSION.json"
+PACKAGE_JSON_FILE = ROOT / "package.json"
 APP_JS_FILE = ROOT / "js" / "core" / "app.js"
 INDEX_HTML_FILE = ROOT / "index.html"
 LOGIN_HTML_FILE = ROOT / "login.html"
@@ -31,7 +32,7 @@ def parse_semver(ver_str: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Bump and synchronize OSS Design Tool version")
-    parser.add_argument("--set", dest="set_version", help="Explicit version (e.g., 0.11.0-beta.2)")
+    parser.add_argument("--set", dest="set_version", help="Explicit version (e.g., 0.11.0-beta.7)")
     parser.add_argument("--major", action="store_true", help="Increment major version")
     parser.add_argument("--minor", action="store_true", help="Increment minor version")
     parser.add_argument("--patch", action="store_true", help="Increment patch version or prerelease counter")
@@ -57,7 +58,7 @@ def main():
         pre = args.prerelease
     elif args.patch:
         if pre and not args.prerelease:
-            # Increment trailing number in prerelease if present (e.g., beta.1 -> beta.2)
+            # Increment trailing number in prerelease if present (e.g., beta.6 -> beta.7)
             pm = re.match(r"^([a-zA-Z]+)(?:\.(\d+))?$", pre)
             if pm:
                 tag = pm.group(1)
@@ -84,6 +85,12 @@ def main():
     data["schemaVersion"] = schema_ver
     VERSION_FILE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
+    # Sync package.json
+    if PACKAGE_JSON_FILE.exists():
+        pkg_data = json.loads(PACKAGE_JSON_FILE.read_text(encoding="utf-8"))
+        pkg_data["version"] = new_ver
+        PACKAGE_JSON_FILE.write_text(json.dumps(pkg_data, indent=2) + "\n", encoding="utf-8", newline="\n")
+
     # Sync js/core/app.js
     if APP_JS_FILE.exists():
         app_text = APP_JS_FILE.read_text(encoding="utf-8")
@@ -107,7 +114,7 @@ def main():
         )
         APP_JS_FILE.write_text(app_text, encoding="utf-8", newline="\n")
 
-    # Sync index.html fallback badge text & cache-busting query params on local CSS/JS assets
+    # Sync index.html fallback badge text & cache-busting query params on local CSS, data, and JS assets
     if INDEX_HTML_FILE.exists():
         idx_text = INDEX_HTML_FILE.read_text(encoding="utf-8")
         idx_text = re.sub(
@@ -117,7 +124,7 @@ def main():
             count=1,
         )
         idx_text = re.sub(
-            r'((?:src|href)="(?:js|assets/css)/[^"?]+\.(?:js|css))(?:\?v=[^"]*)?(")',
+            r'((?:src|href)="(?:js|data|assets/css)/[^"?]+\.(?:js|css))(?:\?v=[^"]*)?(")',
             rf"\g<1>?v={new_ver}\g<2>",
             idx_text,
         )
