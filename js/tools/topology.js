@@ -521,7 +521,11 @@ function findPatchCordItem(targetFt, preferredVendor, isEtherlighting, preferred
 function formatDacItem(baseSku, baseName, baseMsrp, lengthStr, speed, vendor) {
   const upperLen = lengthStr.toUpperCase();
   let sku = baseSku;
-  if (/1M/i.test(sku)) {
+  const is50cmBase = /50CM/i.test(baseSku);
+  if (is50cmBase) {
+    const cmMap = { "0.5M": "50CM", "1M": "1M", "2M": "3M", "3M": "3M", "5M": "3M" };
+    sku = sku.replace(/50CM/i, cmMap[upperLen] || upperLen);
+  } else if (/1M/i.test(sku)) {
     sku = sku.replace(/1M/i, upperLen);
   } else if (/0101/.test(sku)) {
     const ruckusMap = { "0.5M": "0051", "1M": "0101", "2M": "0201", "3M": "0301", "5M": "0501" };
@@ -530,18 +534,31 @@ function formatDacItem(baseSku, baseName, baseMsrp, lengthStr, speed, vendor) {
     sku = `${sku}-${upperLen}`;
   }
 
+  if (typeof OPTICS_LIST !== "undefined" && Array.isArray(OPTICS_LIST)) {
+    const exactMatch = OPTICS_LIST.find(o => o && o.sku === sku);
+    if (exactMatch) {
+      return { sku: exactMatch.sku, name: exactMatch.name, msrp: exactMatch.msrp };
+    }
+  }
+
+  const displayLen = (is50cmBase && (lengthStr === "2m" || lengthStr === "5m")) ? "3m" : lengthStr;
   let name = baseName;
-  if (/\(1m\)/i.test(name)) {
-    name = name.replace(/\(1m\)/i, `(${lengthStr})`);
-  } else if (!name.includes(lengthStr)) {
-    name = `${name} (${lengthStr})`;
+  if (/\((?:0\.5m|50cm|1m)\)/i.test(name)) {
+    name = name.replace(/\((?:0\.5m|50cm|1m)\)/i, `(${displayLen})`);
+  } else if (!name.includes(displayLen)) {
+    name = `${name} (${displayLen})`;
   }
 
   let msrp = baseMsrp;
-  if (lengthStr === "0.5m") msrp = Math.max(15, Math.round(baseMsrp * 0.9));
-  else if (lengthStr === "2m") msrp = baseMsrp + 10;
-  else if (lengthStr === "3m") msrp = baseMsrp + 20;
-  else if (lengthStr === "5m") msrp = baseMsrp + 35;
+  if (is50cmBase) {
+    if (displayLen === "1m") msrp = baseMsrp + 40;
+    else if (displayLen === "3m") msrp = baseMsrp + 120;
+  } else {
+    if (lengthStr === "0.5m") msrp = Math.max(15, Math.round(baseMsrp * 0.9));
+    else if (lengthStr === "2m") msrp = baseMsrp + 10;
+    else if (lengthStr === "3m") msrp = baseMsrp + 20;
+    else if (lengthStr === "5m") msrp = baseMsrp + 35;
+  }
 
   return { sku, name, msrp };
 }

@@ -31,7 +31,7 @@ function saveBOMState() {
 // Meraki License Compliance
 // -----------------------------------------------------------
 function checkMerakiCompliance() {
-  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && (i.vendor === "Meraki" || i.vendor === "Cisco"));
+  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && (i.vendor === "Meraki" || (i.vendor === "Cisco" && i.selectedMgmtProfile !== "standalone")));
   if (!merakiDevices || merakiDevices.length === 0) return { compliant: true, missingCount: 0 };
 
   let unmanagedCount = 0;
@@ -47,7 +47,7 @@ function checkMerakiCompliance() {
 }
 
 function autoFixMerakiLicenses() {
-  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && (i.vendor === "Meraki" || i.vendor === "Cisco"));
+  const merakiDevices = projectBOM.filter(i => !i.parentInstanceId && (i.vendor === "Meraki" || (i.vendor === "Cisco" && i.selectedMgmtProfile !== "standalone")));
   merakiDevices.forEach(dev => {
     dev.selectedMgmtProfile = "cloud";
     const term = dev.individualTerm || globalSelectedTerm || "1YR";
@@ -574,6 +574,7 @@ function addToProjectBOM(id, targetLocation = null, batchCount = 1, skipConfirm 
     uplinkTargetId: null,
     uplinkMode: "single",
     modularUplink: sw.modularUplink || null,
+    installedUplinkModuleSku: sw.modularUplink ? (selectedSledSku || "none") : undefined,
     powerSource: (sw.poePassThrough && sw.powerSource === "poe_switch") ? "poe_switch" : "internal_psu"
   };
 
@@ -2621,6 +2622,7 @@ function changeBomUplinkModule(parentInstanceId, newModuleSku) {
   if (!parent) return;
 
   const existingIdx = projectBOM.findIndex(i => i.parentInstanceId === parentInstanceId && i.role === "Uplink Module");
+  parent.installedUplinkModuleSku = (!newModuleSku || newModuleSku === "none") ? "none" : newModuleSku;
 
   if (!newModuleSku || newModuleSku === "none") {
     if (existingIdx !== -1) {
@@ -3987,7 +3989,7 @@ function renderLicenseManagerContent() {
                         ${Object.entries(vendorProfiles).map(([pKey, pData]) => `
                           <option value="${pKey}" ${activeKey === pKey ? 'selected' : ''}>${pData.name}</option>
                         `).join('')}
-                        ${dev.vendor !== "Meraki" ? `
+                        ${dev.vendor !== "Meraki" && !vendorProfiles.standalone ? `
                           <option value="standalone" ${activeKey === 'standalone' ? 'selected' : ''}>Standalone / Air-Gapped CLI ($0)</option>
                         ` : ''}
                       </select>

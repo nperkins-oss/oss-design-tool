@@ -9369,11 +9369,7 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
         "datasheet": "Datasheets/Network/Ubiquiti/UniFi Flex 2.5G PoE - Tech Specs.pdf",
         "image": "assets/images/products/unifi-usw-flex-2-5g-8-poe.webp"
-    }
-};
-
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CATALOG_ASSETS,
+    },
     "GSC-Sipelia-Base": {
         "datasheetPath": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf",
         "datasheet": "Datasheets/Genetec/Plugins/Genetec_Sipelia_User_Guide.pdf"
@@ -9644,6 +9640,76 @@ if (typeof module !== 'undefined' && module.exports) {
     "milestone-xpemps": { "datasheetPath": "Datasheets/Milestone/Milestone XProtect Comparison Chart 2026 R1.pdf" },
     "XPEMPS": { "datasheetPath": "Datasheets/Milestone/Milestone XProtect Comparison Chart 2026 R1.pdf" },
     "milestone-xpemgcs": { "datasheetPath": "Datasheets/Milestone/Milestone XProtect Comparison Chart 2026 R1.pdf" },
-    "XPEMGCS": { "datasheetPath": "Datasheets/Milestone/Milestone XProtect Comparison Chart 2026 R1.pdf" }
+    "XPEMGCS": { "datasheetPath": "Datasheets/Milestone/Milestone XProtect Comparison Chart 2026 R1.pdf" },
+    "cisco-c9350-48hx": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hx.webp" },
+    "C9350-48HX": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hx.webp" },
+    "cisco-c9350-48hxn": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hxn.webp" },
+    "C9350-48HXN": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hxn.webp" },
+    "cisco-c9350-48hxg": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hxg.webp" },
+    "C9350-48HXG": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hxg.webp" },
+    "cisco-c9350-48tx": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48tx.webp" },
+    "C9350-48TX": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48tx.webp" },
+    "cisco-c9350-48hm": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hm.webp" },
+    "C9350-48HM": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48hm.webp" },
+    "cisco-c9350-24hx": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24hx.webp" },
+    "C9350-24HX": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24hx.webp" },
+    "cisco-c9350-48u": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48u.webp" },
+    "C9350-48U": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48u.webp" },
+    "cisco-c9350-48p": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48p.webp" },
+    "C9350-48P": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48p.webp" },
+    "cisco-c9350-48t": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48t.webp" },
+    "C9350-48T": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48t.webp" },
+    "cisco-c9350-24u": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24u.webp" },
+    "C9350-24U": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24u.webp" },
+    "cisco-c9350-24p": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24p.webp" },
+    "C9350-24P": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24p.webp" },
+    "cisco-c9350-24t": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24t.webp" },
+    "C9350-24T": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24t.webp" },
+    "cisco-c9350-24y": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24y.webp" },
+    "C9350-24Y": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24y.webp" },
+    "cisco-c9350-12y": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-12y.webp" },
+    "C9350-12Y": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-12y.webp" },
+    "cisco-c9350-48s": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48s.webp" },
+    "C9350-48S": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-48s.webp" },
+    "cisco-c9350-24s": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24s.webp" },
+    "C9350-24S": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-24s.webp" },
+    "C9350-NM-4C": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-4c.webp" },
+    "C9350-NM-4C=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-4c.webp" },
+    "C9350-NM-8L": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-8l.webp" },
+    "C9350-NM-8L=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-8l.webp" },
+    "C9350-NM-2C": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-2c.webp" },
+    "C9350-NM-2C=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-2c.webp" },
+    "C9350-NM-8Y": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-8y.webp" },
+    "C9350-NM-8Y=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-8y.webp" },
+    "C9350-NM-8M": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-8m.webp" },
+    "C9350-NM-8M=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-nm-8m.webp" },
+    "PWR-C2-1600WAC": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-pwr-c2-1600wac.webp" },
+    "PWR-C2-1600WAC=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-pwr-c2-1600wac.webp" },
+    "PWR-C2-850WAC": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-pwr-c2-850wac.webp" },
+    "PWR-C2-850WAC=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-pwr-c2-850wac.webp" },
+    "PWR-C2-500WAC": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-pwr-c2-500wac.webp" },
+    "PWR-C2-500WAC=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-pwr-c2-500wac.webp" },
+    "C9350-FAN-I": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-fan-i.webp" },
+    "C9350-FAN-I=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/cisco-c9350-fan-i.webp" },
+    "STACK-T1A-50CM": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "STACK-T1A-50CM=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "STACK-T1A-1M": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "STACK-T1A-1M=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "STACK-T1A-3M": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "STACK-T1A-3M=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+    "CAB-SPWR-35CM": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_usp_cable.webp" },
+    "CAB-SPWR-35CM=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_usp_cable.webp" },
+    "CAB-SPWR-100CM": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_usp_cable.webp" },
+    "CAB-SPWR-100CM=": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_usp_cable.webp" },
+    "SFP-50G-SR-S": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_om_sfp28_sr.webp" },
+    "SFP-50G-LR-S": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_om_sfp28_lr.webp" },
+    "SFP-H50G-CU1M": { "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp" }
 };
+
+if (typeof window !== 'undefined') {
+  window.CATALOG_ASSETS = CATALOG_ASSETS;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { CATALOG_ASSETS };
 }

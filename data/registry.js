@@ -111,6 +111,7 @@ const CatalogRegistry = {
       ...(typeof UNIFI_SWITCHES !== "undefined" ? UNIFI_SWITCHES : []),
       ...(typeof RUCKUS_SWITCHES !== "undefined" ? RUCKUS_SWITCHES : []),
       ...(typeof MERAKI_SWITCHES !== "undefined" ? MERAKI_SWITCHES : []),
+      ...(typeof CISCO_SWITCHES !== "undefined" ? CISCO_SWITCHES : []),
       ...(typeof JUNIPER_SWITCHES !== "undefined" ? JUNIPER_SWITCHES : []),
       ...(typeof AMG_SWITCHES !== "undefined" ? AMG_SWITCHES : []),
       ...(typeof ALLIED_SWITCHES !== "undefined" ? ALLIED_SWITCHES : [])

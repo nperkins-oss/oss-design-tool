@@ -20,6 +20,7 @@ const PORT_MEDIA_TYPES = {
   sfp_2_5g: { id: "sfp_2.5g", label: "2.5G SFP Optical Cage", speed: "2.5G", speedMbps: 2500, connector: "SFP", defaultPoe: null },
   sfp_plus_10g: { id: "sfp_plus_10g", label: "10G SFP+ Optical Cage", speed: "10G", speedMbps: 10000, connector: "SFP+", defaultPoe: null },
   sfp28_25g: { id: "sfp28_25g", label: "25G SFP28 Optical Cage", speed: "25G", speedMbps: 25000, connector: "SFP28", defaultPoe: null },
+  sfp56_50g: { id: "sfp56_50g", label: "50G SFP56 Optical Cage", speed: "50G", speedMbps: 50000, connector: "SFP56", defaultPoe: null },
   qsfp_plus_40g: { id: "qsfp_plus_40g", label: "40G QSFP+ Optical Cage", speed: "40G", speedMbps: 40000, connector: "QSFP+", defaultPoe: null },
   qsfp28_100g: { id: "qsfp28_100g", label: "100G QSFP28 Optical Cage", speed: "100G", speedMbps: 100000, connector: "QSFP28", defaultPoe: null },
   dac_copper: { id: "dac_copper", label: "Direct Attach Copper (DAC)", speed: "10G", speedMbps: 10000, connector: "SFP+ DAC", defaultPoe: null },
@@ -112,6 +113,62 @@ const PortEngine = {
   POWER_MODES: POWER_SOURCE_MODES,
 
   /**
+   * Resolves the default and currently installed modular uplink module specification for a switch
+   */
+  resolveModularUplinkSpec(item) {
+    if (!item || !item.modularUplink || !item.modularUplink.hasSlot) return null;
+    const catalog = (typeof MODULAR_UPLINK_CATALOG !== "undefined" && MODULAR_UPLINK_CATALOG) ? MODULAR_UPLINK_CATALOG : {};
+    const findMod = (skuOrKey) => {
+      if (!skuOrKey || skuOrKey === "none") return null;
+      if (catalog[skuOrKey]) return { key: skuOrKey, mod: catalog[skuOrKey] };
+      const foundKey = Object.keys(catalog).find(k => catalog[k] && catalog[k].sku === skuOrKey);
+      return foundKey ? { key: foundKey, mod: catalog[foundKey] } : null;
+    };
+    const inferCageSpec = (mod) => {
+      if (!mod || !mod.ports || mod.ports <= 0) return null;
+      const spd = (mod.speed || "10G").toUpperCase();
+      const nm = (mod.name || "").toLowerCase();
+      const isCopper = Boolean(mod.isCopperUplink || mod.connector === "RJ-45" || /rj-?45|copper|base-t|multi-?gig/i.test(nm));
+      if (isCopper) {
+        const mediaType = mod.mediaType || (spd.includes("10") ? "rj45_10g" : (spd.includes("5") ? "rj45_5g" : (spd.includes("2.5") ? "rj45_2.5g" : "rj45_1g")));
+        return { count: parseInt(mod.ports, 10) || 0, speed: spd, connector: "RJ-45", mediaType, prefix: "MGig ", isCopperUplink: true };
+      }
+      if (mod.mediaType && mod.connector) {
+        const pfx = mod.connector.startsWith("QSFP") ? "Q" : `${mod.connector} `;
+        return { count: parseInt(mod.ports, 10) || 0, speed: spd, connector: mod.connector, mediaType: mod.mediaType, prefix: pfx, isCopperUplink: false };
+      }
+      if (spd.includes("100")) return { count: parseInt(mod.ports, 10) || 0, speed: "100G", connector: "QSFP28", mediaType: "qsfp28_100g", prefix: "Q", isCopperUplink: false };
+      if (spd.includes("50")) return { count: parseInt(mod.ports, 10) || 0, speed: "50G", connector: "SFP56", mediaType: "sfp56_50g", prefix: "SFP56 ", isCopperUplink: false };
+      if (spd.includes("40")) return { count: parseInt(mod.ports, 10) || 0, speed: "40G", connector: "QSFP+", mediaType: "qsfp_plus_40g", prefix: "Q", isCopperUplink: false };
+      if (spd.includes("25")) return { count: parseInt(mod.ports, 10) || 0, speed: "25G", connector: "SFP28", mediaType: "sfp28_25g", prefix: "SFP28 ", isCopperUplink: false };
+      if (spd.includes("10")) return { count: parseInt(mod.ports, 10) || 0, speed: "10G", connector: "SFP+", mediaType: "sfp_plus_10g", prefix: "SFP+ ", isCopperUplink: false };
+      return { count: parseInt(mod.ports, 10) || 0, speed: "1G", connector: "SFP", mediaType: "sfp_1g", prefix: "SFP ", isCopperUplink: false };
+    };
+
+    const defaultLookup = findMod(item.modularUplink.defaultModuleSku);
+    const defaultSpec = defaultLookup ? inferCageSpec(defaultLookup.mod) : null;
+
+    let activeSku = item.installedUplinkModuleSku;
+    if (activeSku === undefined && item.instanceId && typeof projectBOM !== "undefined" && Array.isArray(projectBOM)) {
+      const childMod = projectBOM.find(i => i && i.parentInstanceId === item.instanceId && i.role === "Uplink Module");
+      if (childMod) {
+        activeSku = childMod.id || childMod.sku;
+      }
+    }
+    if (activeSku === undefined) {
+      activeSku = item.modularUplink.defaultModuleSku || "none";
+    }
+
+    const activeLookup = findMod(activeSku);
+    const activeSpec = activeLookup ? inferCageSpec(activeLookup.mod) : null;
+    return {
+      resolvedKey: activeLookup ? activeLookup.key : (activeSku || "none"),
+      defaultSpec,
+      activeSpec
+    };
+  },
+
+  /**
    * Checks if switch has dedicated physical stacking hardware (e.g. Cisco StackWise)
    * vs using standard high-speed optical uplink cages for stacking (e.g. UniFi, Aruba VSF)
    */
@@ -123,7 +180,7 @@ const PortEngine = {
     // UniFi switches do NOT have dedicated stacking ports - they stack via optical cages
     if (v === "unifi" || /unifi|ubiquiti/i.test(m)) return false;
     if (item.hasDedicatedStackPorts !== undefined) return !!item.hasDedicatedStackPorts;
-    return /stackwise|stack-t1|stack-t4|c9300|c3850|ms350|ms355|ms425/i.test(m + " " + s);
+    return /stackwise|stack-t1a|stack-t1|stack-t3|stack-t4|c9350|c9300|c9200|c3850|ms350|ms355|ms390|ms425/i.test(m + " " + s);
   },
 
   /**
@@ -141,8 +198,10 @@ const PortEngine = {
     const isStacked = (item.stackedUnits && item.stackedUnits >= 2) || 
       (item.stackedUnits !== 0 && item.qty >= 2 && (item.canStack || item.role === "Access" || item.role === "Aggregation"));
     const stackUnits = isStacked ? (item.stackedUnits || item.qty) : 1;
+    const modState = this.resolveModularUplinkSpec(item);
+    const resolvedModKey = modState ? modState.resolvedKey : null;
 
-    if (!forceReinit && Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0 && item._lastStackUnits === stackUnits) {
+    if (!forceReinit && Array.isArray(item.physicalPorts) && item.physicalPorts.length > 0 && item._lastStackUnits === stackUnits && item._lastUplinkModuleSku === resolvedModKey) {
       return item.physicalPorts;
     }
 
@@ -178,7 +237,14 @@ const PortEngine = {
 
     // Detect optical uplink cages from uplinksSummary, SKU, or port descriptions
     const portDesc = `${item.portFormFactorSummary || ''} ${item.uplinksSummary || ''} ${item.description || ''}`.toLowerCase();
-    const pb = (item.portsBreakdown && typeof item.portsBreakdown === "object") ? item.portsBreakdown : null;
+    const rawPb = (item.portsBreakdown && typeof item.portsBreakdown === "object") ? item.portsBreakdown : null;
+    let pb = rawPb ? { ...rawPb } : null;
+    if (pb && modState && modState.defaultSpec && !modState.defaultSpec.isCopperUplink) {
+      const defKey = modState.defaultSpec.mediaType;
+      if (pb[defKey] !== undefined) {
+        pb[defKey] = Math.max(0, (parseInt(pb[defKey], 10) || 0) - modState.defaultSpec.count);
+      }
+    }
     const pbCopperCount = pb
       ? (parseInt(pb.rj45_100m, 10) || 0) +
         (parseInt(pb.rj45_1g, 10) || 0) +
@@ -191,6 +257,7 @@ const PortEngine = {
         (parseInt(pb.sfp_2_5g || pb["sfp_2.5g"], 10) || 0) +
         (parseInt(pb.sfp_plus_10g, 10) || 0) +
         (parseInt(pb.sfp28_25g, 10) || 0) +
+        (parseInt(pb.sfp56_50g, 10) || 0) +
         (parseInt(pb.qsfp_plus_40g, 10) || 0) +
         (parseInt(pb.qsfp28_100g, 10) || 0)
       : 0;
@@ -221,8 +288,19 @@ const PortEngine = {
         pushCages(pb.sfp_2_5g || pb["sfp_2.5g"], "2.5G", "sfp_2.5g", "SFP", "SFP ");
         pushCages(pb.sfp_plus_10g, "10G", "sfp_plus_10g", "SFP+", "SFP+ ");
         pushCages(pb.sfp28_25g, "25G", "sfp28_25g", "SFP28", "SFP28 ");
+        pushCages(pb.sfp56_50g, "50G", "sfp56_50g", "SFP56", "SFP56 ");
         pushCages(pb.qsfp_plus_40g, "40G", "qsfp_plus_40g", "QSFP+", "Q");
         pushCages(pb.qsfp28_100g, "100G", "qsfp28_100g", "QSFP28", "Q");
+      }
+      if (modState && modState.activeSpec) {
+        for (let k = 0; k < modState.activeSpec.count; k++) {
+          opticalCageDefs.push({
+            speed: modState.activeSpec.speed,
+            media: modState.activeSpec.mediaType,
+            connector: modState.activeSpec.connector,
+            prefix: modState.activeSpec.prefix
+          });
+        }
       }
 
       if (opticalCageDefs.length === 0) {
@@ -283,6 +361,7 @@ const PortEngine = {
 
       item.physicalPorts = ports;
       item._lastStackUnits = stackUnits;
+    item._lastUplinkModuleSku = resolvedModKey;
       this.syncSwitchUplinks(item);
       this.syncSwitchEdgePorts(item);
       return ports;
@@ -313,8 +392,18 @@ const PortEngine = {
       addOptCages(pb.sfp_2_5g || pb["sfp_2.5g"], "2.5G", "SFP", "sfp_2.5g");
       addOptCages(pb.sfp_plus_10g, "10G", "SFP+", "sfp_plus_10g");
       addOptCages(pb.sfp28_25g, "25G", "SFP28", "sfp28_25g");
+      addOptCages(pb.sfp56_50g, "50G", "SFP56", "sfp56_50g");
       addOptCages(pb.qsfp_plus_40g, "40G", "QSFP+", "qsfp_plus_40g");
       addOptCages(pb.qsfp28_100g, "100G", "QSFP28", "qsfp28_100g");
+      if (modState && modState.activeSpec) {
+        for (let c = 0; c < modState.activeSpec.count; c++) {
+          parsedCages.push({
+            speed: modState.activeSpec.speed,
+            connector: modState.activeSpec.connector,
+            mediaType: modState.activeSpec.mediaType
+          });
+        }
+      }
     } else {
       // Fallback: Parse multi-tier copper port breakdown from portFormFactorSummary or interfaces
       const copperRegex = /(\d+)\s*x\s*([0-9.]+[MGKmgk]?)\s*(?:RJ-?45|copper|base-t|gbe)?/gi;
@@ -384,7 +473,7 @@ const PortEngine = {
     );
 
     let uplinkPortCount = parsedCages.length;
-    if (uplinkPortCount === 0 && !isPureCopperSwitch) {
+    if (uplinkPortCount === 0 && !isPureCopperSwitch && !modState) {
       if (portDesc.includes("100g") || (item.maxBackboneSpeed === "100G")) {
         uplinkPortCount = 4;
         for (let k = 0; k < 4; k++) parsedCages.push({ speed: "100G", connector: "QSFP28", mediaType: "qsfp28_100g" });
@@ -528,13 +617,13 @@ const PortEngine = {
         let isUplink = !isStackInterconnect;
         let speedLabel = isStackInterconnect 
           ? `${cageDef.speed} Stacking DAC Ring` 
-          : `${cageDef.speed} ${cageDef.connector} Optical Cage`;
+          : (cageDef.connector === "RJ-45" ? `${cageDef.speed} RJ-45 Copper Uplink` : `${cageDef.speed} ${cageDef.connector} Optical Cage`);
         let label = isStackInterconnect
           ? (j === parsedCages.length ? `Unit ${u} - Stk DAC 2 (${cageDef.speed}) ← Unit ${prevU}` : `Unit ${u} - Stk DAC 1 (${cageDef.speed}) → Unit ${nextU}`)
           : (stackUnits > 1 ? `Unit ${u} - Uplink ${j} (${cageDef.speed})` : `Uplink ${j} (${cageDef.speed})`);
         let shortLabel = isStackInterconnect
           ? `U${u}:Stk${j - (parsedCages.length - 2)}`
-          : (stackUnits > 1 ? `U${u}:Q${j}` : `Q${j}`);
+          : (stackUnits > 1 ? `U${u}:${cageDef.connector === "RJ-45" ? "U" : "Q"}${j}` : `${cageDef.connector === "RJ-45" ? "U" : "Q"}${j}`);
 
         ports.push({
           portNumber: portNum,
@@ -563,6 +652,7 @@ const PortEngine = {
 
     item.physicalPorts = ports;
     item._lastStackUnits = stackUnits;
+    item._lastUplinkModuleSku = resolvedModKey;
     this.syncSwitchUplinks(item);
     this.syncSwitchEdgePorts(item);
     return ports;

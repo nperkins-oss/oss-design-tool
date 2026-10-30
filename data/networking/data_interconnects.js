@@ -20,6 +20,11 @@ const MODULAR_UPLINK_CATALOG = {
   "C9300X-NM-2C": { sku: "C9300X-NM-2C", name: "Cisco 2x 40G/100G QSFP28 Network Module", speed: "100G", ports: 2, msrp: 4500, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
   "C9300X-NM-2C-M": { sku: "C9300X-NM-2C-M", name: "Cisco Meraki 2x 40G/100G QSFP28 Network Module (C9300X-M)", speed: "100G", ports: 2, msrp: 4500, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
   "C9300X-NM-4C": { sku: "C9300X-NM-4C", name: "Cisco 4x 40G/100G QSFP28 Network Module (9300X-HX/TX/24Y)", speed: "100G", ports: 4, msrp: 5800, image: "assets/images/products/ruckus_icx7650_1x100gq.webp" },
+  "C9350-NM-4C": { sku: "C9350-NM-4C", name: "Cisco C9350 4x 40G/100G QSFP28 Network Module (-48HX/-48TX/-24Y)", speed: "100G", ports: 4, connector: "QSFP28", mediaType: "qsfp28_100g", msrp: 5900, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-4c.webp" },
+  "C9350-NM-8L": { sku: "C9350-NM-8L", name: "Cisco C9350 8x 10G/25G/50G SFP56 Network Module (-48HX/-48TX/-24Y)", speed: "50G", ports: 8, connector: "SFP56", mediaType: "sfp56_50g", msrp: 4800, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8l.webp" },
+  "C9350-NM-2C": { sku: "C9350-NM-2C", name: "Cisco C9350 2x 40G/100G QSFP28 Network Module", speed: "100G", ports: 2, connector: "QSFP28", mediaType: "qsfp28_100g", msrp: 4500, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-2c.webp" },
+  "C9350-NM-8Y": { sku: "C9350-NM-8Y", name: "Cisco C9350 8x 1G/10G/25G SFP28 Network Module", speed: "25G", ports: 8, connector: "SFP28", mediaType: "sfp28_25g", msrp: 3300, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8y.webp" },
+  "C9350-NM-8M": { sku: "C9350-NM-8M", name: "Cisco C9350 8x 10G Multigigabit (100M/1G/2.5G/5G/10G) RJ-45 Network Module", speed: "10G", ports: 8, connector: "RJ-45", mediaType: "rj45_10g", isCopperUplink: true, msrp: 2600, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/cisco-c9350-nm-8m.webp" },
   "C9300-NM-BLANK": { sku: "C9300-NM-BLANK=", name: "Cisco Catalyst 9300 Network Module Blank Cover Plate", speed: "N/A", ports: 0, msrp: 45, image: "assets/images/products/unifi_uacc_rack_panel_ocd.webp" },
   "MA-MOD-4X10G": { sku: "MA-MOD-4X10G", name: "Meraki 4x 10G SFP+ Modular Uplink Card (MS390)", speed: "10G", ports: 4, msrp: 1200, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
   "MA-MOD-8X10G": { sku: "MA-MOD-8X10G", name: "Meraki 8x 10G SFP+ Modular Uplink Card (MS390)", speed: "10G", ports: 8, msrp: 2400, image: "assets/images/products/ruckus_icx_4x10gf.webp" },
@@ -96,6 +101,30 @@ window.FEATURE_LICENSE_CATALOG = FEATURE_LICENSE_CATALOG;
 // 3. MANAGEMENT SUBSCRIPTIONS (MULTI-YEAR TERMS)
 // ==========================================
 const MGMT_SUBSCRIPTION_CATALOG = {
+  "Cisco": {
+    "cloud": {
+      name: "Cisco Networking Subscription - Meraki Cloud Management",
+      terms: {
+        "1YR": { sku: "LIC-C9350-1YR", msrp: 460 },
+        "3YR": { sku: "LIC-C9350-3YR", msrp: 1150 },
+        "5YR": { sku: "LIC-C9350-5YR", msrp: 1750 },
+        "7YR": { sku: "LIC-C9350-7YR", msrp: 2380 },
+        "10YR": { sku: "LIC-C9350-10YR", msrp: 3200 }
+      }
+    },
+    "catalyst_center": {
+      name: "Cisco Networking Subscription - Catalyst Center On-Premises",
+      terms: {
+        "1YR": { sku: "C9350-DNA-A-1Y", msrp: 460 },
+        "3YR": { sku: "C9350-DNA-A-3Y", msrp: 1150 },
+        "5YR": { sku: "C9350-DNA-A-5Y", msrp: 1750 }
+      }
+    },
+    "standalone": {
+      name: "Cisco IOS XE Autonomous CLI (Network Essentials/Advantage Included / $0)",
+      terms: { "PERP": { sku: "IOSXE-BASE", msrp: 0 } }
+    }
+  },
   "Meraki": {
     "cloud": {
       name: "Meraki Dashboard Enterprise License (Mandatory)",
@@ -196,6 +225,18 @@ const MGMT_SUBSCRIPTION_CATALOG = {
 // ==========================================
 const POWER_SUPPLY_CATALOG = {
   // Cisco Catalyst & Meraki Modular Power Supplies & High-Amperage Cables
+  "PWR-C2-1600WAC": { sku: "PWR-C2-1600WAC", name: "Cisco C9350 1600W AC Platinum Modular PSU (Type-C2, 55V StackPower+)", vendor: "Cisco", msrp: 1650, category: "internal_psu", wattage: 1600, poeBudgetContribution: 1600, weightLbs: 3.1,
+        datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
+        image: "assets/images/products/cisco-pwr-c2-1600wac.webp"
+    },
+  "PWR-C2-850WAC": { sku: "PWR-C2-850WAC", name: "Cisco C9350 850W AC Platinum Modular PSU (Type-C2, 55V StackPower+)", vendor: "Cisco", msrp: 1050, category: "internal_psu", wattage: 850, poeBudgetContribution: 850, weightLbs: 2.6,
+        datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
+        image: "assets/images/products/cisco-pwr-c2-850wac.webp"
+    },
+  "PWR-C2-500WAC": { sku: "PWR-C2-500WAC", name: "Cisco C9350 500W AC Platinum Modular PSU (Type-C2 Data/Fiber)", vendor: "Cisco", msrp: 650, category: "internal_psu", wattage: 500, poeBudgetContribution: 0, weightLbs: 2.5,
+        datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
+        image: "assets/images/products/cisco-pwr-c2-500wac.webp"
+    },
   "PWR-C1-1900WAC-P": { sku: "PWR-C1-1900WAC-P", name: "Cisco 1900W AC Platinum PSU (Catalyst 9300X UPOE+)", msrp: 1600, category: "internal_psu", wattage: 1900, poeBudgetContribution: 1600, weightLbs: 3.1,
         datasheetPath: "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         image: "assets/images/products/ruckus_rps_poe.webp"
@@ -470,6 +511,10 @@ const POWER_SUPPLY_CATALOG = {
     },
 
   // Hot-Swappable Cooling Fan Modules (Cisco, Juniper, Ruckus, UniFi)
+  "C9350-FAN-I": { sku: "C9350-FAN-I", name: "Cisco C9350 Hot-Swappable Type-I Fan Unit (Spare)", vendor: "Cisco", msrp: 110, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4,
+        datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
+        image: "assets/images/products/cisco-c9350-fan-i.webp"
+    },
   "FAN-T2": { sku: "FAN-T2", name: "Cisco Catalyst 9300 Hot-Swap Fan Module (Spare)", vendor: "Cisco", msrp: 95, category: "fan_module", wattage: 5, poeBudgetContribution: 0, weightLbs: 0.4,
         datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         image: "assets/images/products/unifi_uacc_fan_4020.webp"
@@ -987,7 +1032,7 @@ const MOUNTING_CATALOG = {
     type: "sliding_rails",
     rackUnits: 1,
     weightLbs: 3.5,
-    description: "Heavy-duty adjustable 4-post rack mount kit designed for Catalyst 9300 and 9300X switches in 24-36 inch deep 19-inch equipment racks",
+    description: "Heavy-duty adjustable 4-post rack mount kit designed for Catalyst 9300, 9300X, and C9350 Series switches in 24-36 inch deep 19-inch equipment racks",
         datasheetPath: "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         image: "assets/images/products/unifi_uacc_rack_rails_slide.webp"
     },
@@ -1090,12 +1135,17 @@ const OPTICS_LIST = [
   // A. Dedicated Proprietary Stacking & StackPower Cables
   // ----------------------------------------
   // Cisco StackPower Cables (Pools power across stack units)
+  { vendor: "Cisco", sku: "CAB-SPWR-35CM", name: "Cisco C9350 StackPower+ 55V Interconnect Cable (35cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 110, lengthMeters: 0.35, reach: "35cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
+  { vendor: "Cisco", sku: "CAB-SPWR-100CM", name: "Cisco C9350 StackPower+ 55V Interconnect Cable (100cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 160, lengthMeters: 1.0, reach: "100cm", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_usp_cable.webp" },
   { vendor: "Cisco", sku: "CAB-SPWR-30CM", name: "Cisco Catalyst StackPower Cable (30cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 95, lengthMeters: 0.3, reach: "30cm", industrial: false },
   { vendor: "Cisco", sku: "CAB-SPWR-150CM", name: "Cisco Catalyst StackPower Cable (150cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 145, lengthMeters: 1.5, reach: "150cm", industrial: false },
   { vendor: "Meraki", sku: "CAB-SPWR-30CM-M", name: "Meraki Catalyst 9300-M StackPower Cable (30cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 95, lengthMeters: 0.3, reach: "30cm", industrial: false },
   { vendor: "Meraki", sku: "CAB-SPWR-150CM-M", name: "Meraki Catalyst 9300-M StackPower Cable (150cm)", speed: "Power", speedRank: 0, formFactor: "StackPower", medium: "stackpower", msrp: 145, lengthMeters: 1.5, reach: "150cm", industrial: false },
 
   // Cisco Catalyst StackWise-480 / StackWise-1T Stacking Cables
+  { vendor: "Cisco", sku: "STACK-T1A-50CM", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (0.5m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 225, lengthMeters: 0.5, reach: "0.5m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { vendor: "Cisco", sku: "STACK-T1A-1M", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (1m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 275, lengthMeters: 1, reach: "1m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
+  { vendor: "Cisco", sku: "STACK-T1A-3M", name: "Cisco C9350 StackWise-1.6T Type 1A Stacking Cable (3m)", speed: "1600G", speedRank: 1600, formFactor: "Stacking", medium: "stacking", msrp: 375, lengthMeters: 3, reach: "3m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
   { vendor: "Cisco", sku: "STACK-T1-50CM", name: "Cisco Catalyst StackWise-480 Stacking Cable (0.5m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 195, lengthMeters: 0.5, reach: "0.5m", industrial: false },
   { vendor: "Cisco", sku: "STACK-T1-1M", name: "Cisco Catalyst StackWise-480 Stacking Cable (1m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 245, lengthMeters: 1, reach: "1m", industrial: false },
   { vendor: "Cisco", sku: "STACK-T1-3M", name: "Cisco Catalyst StackWise-480 Stacking Cable (3m)", speed: "480G", speedRank: 480, formFactor: "Stacking", medium: "stacking", msrp: 345, lengthMeters: 3, reach: "3m", industrial: false },
@@ -1340,6 +1390,9 @@ const OPTICS_LIST = [
   { vendor: "FS.com", sku: "FS-S28-PC03", name: "FS.com 25G SFP28 Passive Direct Attach Copper Twinax Cable (3m, Coded)", speed: "25G", speedRank: 25, formFactor: "DAC", medium: "dac", msrp: 42, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true },
   { vendor: "FS.com", sku: "FS-Q-PC01", name: "FS.com 40G QSFP+ Passive Direct Attach Copper Twinax Cable (1m, Coded)", speed: "40G", speedRank: 40, formFactor: "DAC", medium: "dac", msrp: 45, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
   { vendor: "FS.com", sku: "FS-Q28-PC01", name: "FS.com 100G QSFP28 Passive Direct Attach Copper Twinax Cable (1m, Coded)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 65, lengthMeters: 1, reach: "1m", industrial: false, thirdParty: true },
+  { vendor: "Cisco", sku: "SFP-50G-SR-S", name: "Cisco 50GBASE-SR Multi-Mode SFP56 Transceiver (100m)", speed: "50G", speedRank: 50, formFactor: "SFP56", medium: "mmf", msrp: 1650, industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_om_sfp28_sr.webp" },
+  { vendor: "Cisco", sku: "SFP-50G-LR-S", name: "Cisco 50GBASE-LR Single-Mode SFP56 Transceiver (10km)", speed: "50G", speedRank: 50, formFactor: "SFP56", medium: "smf", msrp: 3100, industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_om_sfp28_lr.webp" },
+  { vendor: "Cisco", sku: "SFP-H50G-CU1M", name: "Cisco 50G SFP56 Passive Direct Attach Copper Cable (1m)", speed: "50G", speedRank: 50, formFactor: "DAC", medium: "dac", msrp: 260, lengthMeters: 1, reach: "1m", industrial: false, datasheetPath: "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf", image: "assets/images/products/unifi_uacc_dac_qsfp28.webp" },
   { vendor: "FS.com", sku: "FS-Q28-PC03", name: "FS.com 100G QSFP28 Passive Direct Attach Copper Twinax Cable (3m, Coded)", speed: "100G", speedRank: 100, formFactor: "DAC", medium: "dac", msrp: 89, lengthMeters: 3, reach: "3m", industrial: false, thirdParty: true }
 ];
 
@@ -1561,6 +1614,11 @@ const OPTICS_CATALOG = {
       "mmf": { sku: "QSFP-40G-SR4", name: "Cisco 40GBASE-SR4 Multi-Mode QSFP+", msrp: 1900 },
       "smf": { sku: "QSFP-40G-LR4", name: "Cisco 40GBASE-LR4 Single-Mode QSFP+", msrp: 3400 },
       "dac": { sku: "QSFP-H40G-CU1M", name: "Cisco 40G QSFP+ Direct Attach Copper (1m)", msrp: 280 }
+    },
+    "50G": {
+      "mmf": { sku: "SFP-50G-SR-S", name: "Cisco 50GBASE-SR Multi-Mode SFP56", msrp: 1650 },
+      "smf": { sku: "SFP-50G-LR-S", name: "Cisco 50GBASE-LR Single-Mode SFP56", msrp: 3100 },
+      "dac": { sku: "SFP-H50G-CU1M", name: "Cisco 50G SFP56 Direct Attach Copper (1m)", msrp: 260 }
     },
     "100G": {
       "mmf": { sku: "QSFP-100G-SR4-S", name: "Cisco 100GBASE-SR4 Multi-Mode QSFP28", msrp: 2900 },
