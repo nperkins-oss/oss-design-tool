@@ -524,77 +524,252 @@ function getSwitchCopperPortCount(item) {
   return raw > 48 ? 48 : raw;
 }
 
+/**
+ * Detects physical left/right copper port block offset on <=24-port 19" rackmount switches:
+ *  - "left":  Cisco, Meraki, Juniper, Ruckus, Aruba/HPE, Allied Telesis, Fortinet (2x12 copper block on left half)
+ *  - "right": Ubiquiti UniFi 16/24P rackmount switches (1.3" LCM touchscreen & bezel on left, RJ-45 ports shifted right)
+ *  - "inline": Full-width or generic 24-port switches
+ */
+function resolveSwitch24PortOffset(item) {
+  const copperPorts = getSwitchCopperPortCount(item);
+  if (copperPorts > 24 || copperPorts <= 0) {
+    return {
+      is24Class: false,
+      side: "full",
+      autoSide: "full",
+      isAutoSide: true,
+      rawMode: "auto",
+      effectiveMode: "full_width",
+      alignedPortsPerUnit: copperPorts,
+      offsetPortsPerUnit: 0,
+      shortBadge: "Full-Width 48P",
+      description: "Full-width 48-port dual-row chassis"
+    };
+  }
+
+  const catItem = lookupCatalogRecordForBomItem(item);
+  const vendor = String(item?.vendor || catItem?.vendor || "").trim();
+  const skuModel = `${item?.sku || ""} ${item?.id || ""} ${item?.model || ""} ${catItem?.sku || ""} ${catItem?.model || ""}`.toUpperCase();
+
+  let autoSide = "inline";
+  if (/UNIFI|UBIQUITI/i.test(vendor) || /\bUSW-/i.test(skuModel)) {
+    autoSide = "right";
+  } else if (
+    copperPorts >= 12 &&
+    (/CISCO|MERAKI|JUNIPER|RUCKUS|ARUBA|HPE|ALLIED|FORTINET|EXTREME/i.test(vendor) ||
+     /\b(C9200|C9300|C9350|C1200|C1300|CBS|MS1[235]0|MS2[125]0|MS3[59]0|EX2300|EX4[134]00|ICX|AT-X|FS-[124])/i.test(skuModel))
+  ) {
+    autoSide = "left";
+  }
+
+  const explicitSide = (item?.portOffsetSide && item.portOffsetSide !== "auto") ? item.portOffsetSide : null;
+  const side = (explicitSide === "left" || explicitSide === "right" || explicitSide === "inline") ? explicitSide : autoSide;
+  const rawMode = item?.offset24PatchMode || "auto";
+
+  let effectiveMode = rawMode;
+  if (!rawMode || rawMode === "auto") {
+    effectiveMode = (side === "left" || side === "right") ? "mixed_cords" : "inline_6in";
+  } else if (side === "inline" && effectiveMode === "mixed_cords") {
+    effectiveMode = "inline_6in";
+  }
+
+  let alignedPortsPerUnit = copperPorts;
+  let offsetPortsPerUnit = 0;
+  if (effectiveMode === "mixed_cords" && (side === "left" || side === "right")) {
+    if (side === "left") {
+      alignedPortsPerUnit = Math.min(12, copperPorts);
+      offsetPortsPerUnit = Math.max(0, copperPorts - 12);
+    } else {
+      offsetPortsPerUnit = Math.min(12, copperPorts);
+      alignedPortsPerUnit = Math.max(0, copperPorts - 12);
+    }
+  } else if (effectiveMode === "all_1ft_cords") {
+    alignedPortsPerUnit = 0;
+    offsetPortsPerUnit = copperPorts;
+  }
+
+  const sideTitle = side === "left" ? "Left-Offset 2×12" : (side === "right" ? "Right-Offset (LCM Left)" : "Full-Width Inline");
+  let shortBadge = sideTitle;
+  if (effectiveMode === "mixed_cords") {
+    shortBadge = `${sideTitle} • ${alignedPortsPerUnit}×6" + ${offsetPortsPerUnit}×1ft`;
+  } else if (effectiveMode === "offset_48p_frame") {
+    shortBadge = `48P Half-Frame (${side === "right" ? "Right" : "Left"} 2×12) • ${copperPorts}×6"`;
+  } else if (effectiveMode === "all_1ft_cords") {
+    shortBadge = `${sideTitle} • ${copperPorts}×1ft`;
+  } else {
+    shortBadge = `${sideTitle} • ${copperPorts}×6"`;
+  }
+
+  return {
+    is24Class: true,
+    side,
+    autoSide,
+    isAutoSide: !explicitSide,
+    rawMode,
+    effectiveMode,
+    alignedPortsPerUnit,
+    offsetPortsPerUnit,
+    shortBadge,
+    description: side === "left"
+      ? "Copper ports clustered in 2×12 block on LEFT half of chassis"
+      : (side === "right"
+        ? "LCM screen/bezel on left; copper ports shifted to RIGHT half of chassis"
+        : "Copper ports distributed across full faceplate width")
+  };
+}
+
+function resolve24PortCordLengthFt(offset24, localCopperIdx) {
+  if (!offset24 || !offset24.is24Class) return 0.5;
+  if (offset24.effectiveMode === "all_1ft_cords") return 1;
+  if (offset24.effectiveMode === "offset_48p_frame" || offset24.effectiveMode === "inline_6in" || offset24.side === "inline") return 0.5;
+  if (offset24.side === "left") {
+    return localCopperIdx < 12 ? 0.5 : 1;
+  }
+  if (offset24.side === "right") {
+    return localCopperIdx < 12 ? 1 : 0.5;
+  }
+  return 0.5;
+}
+
 function resolveSwitchPatchPanelConfig(item) {
   const copperPorts = getSwitchCopperPortCount(item);
-  const override = item?.patchPanelSku || null;
+  const stackUnits = (item?.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
+  const override = (item?.patchPanelSku && item.patchPanelSku !== "auto") ? item.patchPanelSku : null;
+  const offset24 = resolveSwitch24PortOffset(item);
+
+  const cat24 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.sku === "PP-1U-24P-MOD")) || null;
+  const cat48 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.sku === "PP-1U-48P-MOD")) || null;
+  const cat2U48 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.sku === "PP-2U-48P-MOD")) || null;
+
+  const cap24Model = cat24?.name || "1U 24-Port High-Density Modular Keystone Patch Panel";
+  const cap24Msrp = Number(cat24?.msrp) || 68;
+  const cap24WeightLbs = Number(cat24?.weightLbs) || 1.8;
+
+  const between48Model = cat48?.name || "1U 48-Port High-Density Modular Keystone Patch Panel";
+  const between48Msrp = Number(cat48?.msrp) || 108;
+  const between48WeightLbs = Number(cat48?.weightLbs) || 2.2;
 
   if (override === "DUAL-24P") {
     return {
       sku: "PP-1U-24P-MOD",
-      model: "1U 24-Port High-Density Modular Keystone Patch Panel",
+      model: cap24Model,
       ports: 24,
       rackUnits: 1,
-      msrp: 68,
-      weightLbs: 1.8,
+      msrp: cap24Msrp,
+      weightLbs: cap24WeightLbs,
       depthInches: 1.5,
       panelsPerSwitch: 2,
+      isSandwich48: false,
       isDual24: true,
       is48: false,
+      isOffset48Frame: false,
       shortLabel: "2x24P",
-      copperPorts
+      copperPorts,
+      offset24
     };
   }
 
   if (override === "PP-2U-48P-MOD") {
     return {
       sku: "PP-2U-48P-MOD",
-      model: "2U 48-Port High-Density Modular Keystone Patch Panel",
+      model: cat2U48?.name || "2U 48-Port High-Density Modular Keystone Patch Panel",
       ports: 48,
       rackUnits: 2,
-      msrp: 115,
-      weightLbs: 3.4,
+      msrp: Number(cat2U48?.msrp) || 115,
+      weightLbs: Number(cat2U48?.weightLbs) || 3.4,
       depthInches: 1.5,
       panelsPerSwitch: 1,
+      isSandwich48: false,
       isDual24: false,
       is48: true,
+      isOffset48Frame: false,
       shortLabel: "2U 48P",
-      copperPorts
+      copperPorts,
+      offset24
     };
   }
 
-  const use48 = override === "PP-1U-48P-MOD" || (override !== "PP-1U-24P-MOD" && copperPorts > 24);
-  if (use48) {
-    const cat48 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.sku === "PP-1U-48P-MOD")) || null;
+  // Default 48-Port Switch Architecture ("SANDWICH-48" or auto):
+  //  - Standalone 48P (N=1): 2x 24-Port panels (1U Above & 1U Below switch = 3U total)
+  //  - Stacked / Adjacent 48P (N>=2): 2x 24-Port outer cap panels (Above top & Below bottom) + (N-1)x 48-Port panels IN BETWEEN
+  //  - In-Between Stack Only (!standardPod && patchPanelBetween): (N-1)x 48-Port panels IN BETWEEN
+  if ((copperPorts > 24 && (!override || override === "SANDWICH-48")) || override === "SANDWICH-48") {
+    const adjRole = item?.podAdjacentRole || null;
+    const outer24Count = adjRole === "top" || adjRole === "bottom" ? 1 : (adjRole === "middle" ? 0 : 2);
+    const inner48Count = Math.max(0, stackUnits - 1) + (adjRole === "top" || adjRole === "middle" ? 1 : 0);
     return {
       sku: "PP-1U-48P-MOD",
-      model: cat48?.name || "1U 48-Port High-Density Modular Keystone Patch Panel",
+      model: between48Model,
       ports: 48,
       rackUnits: 1,
-      msrp: Number(cat48?.msrp) || 108,
-      weightLbs: Number(cat48?.weightLbs) || 2.2,
-      depthInches: Number(cat48?.depthInches) || 1.5,
+      msrp: between48Msrp,
+      weightLbs: between48WeightLbs,
+      depthInches: 1.5,
+      cap24Sku: "PP-1U-24P-MOD",
+      cap24Model,
+      cap24Msrp,
+      cap24WeightLbs,
+      between48Sku: "PP-1U-48P-MOD",
+      between48Model,
+      between48Msrp,
+      between48WeightLbs,
+      betweenRackUnits: 1,
+      outer24Count,
+      inner48Count,
       panelsPerSwitch: 1,
+      isSandwich48: true,
       isDual24: false,
       is48: true,
-      shortLabel: "48P",
-      copperPorts
+      isOffset48Frame: false,
+      shortLabel: (stackUnits >= 2 || inner48Count > 0) ? "24P+48P" : "2x24P",
+      btwnShortLabel: "48P",
+      copperPorts,
+      offset24
     };
   }
 
-  const cat24 = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchPanels?.find(p => p.sku === "PP-1U-24P-MOD")) || null;
+  // Explicit single 1U 48P panel above each switch OR 24P Offset Half-Populated 48P Frame
+  if (override === "PP-1U-48P-MOD" || (!override && offset24.is24Class && offset24.effectiveMode === "offset_48p_frame")) {
+    const isHalfFrame = Boolean(offset24.is24Class && offset24.effectiveMode === "offset_48p_frame" && override !== "PP-1U-48P-MOD");
+    return {
+      sku: "PP-1U-48P-MOD",
+      model: between48Model,
+      ports: isHalfFrame ? Math.min(24, copperPorts || 24) : 48,
+      frameSlots: 48,
+      rackUnits: 1,
+      msrp: between48Msrp,
+      weightLbs: between48WeightLbs,
+      depthInches: 1.5,
+      panelsPerSwitch: 1,
+      isSandwich48: false,
+      isDual24: false,
+      is48: !isHalfFrame,
+      isOffset48Frame: isHalfFrame,
+      populatedSide: isHalfFrame ? (offset24.side === "right" ? "right" : "left") : null,
+      shortLabel: isHalfFrame ? (offset24.side === "right" ? "48P-R24" : "48P-L24") : "48P",
+      btwnShortLabel: "48P",
+      copperPorts,
+      offset24
+    };
+  }
+
   return {
     sku: "PP-1U-24P-MOD",
-    model: cat24?.name || "1U 24-Port High-Density Modular Keystone Patch Panel",
+    model: cap24Model,
     ports: 24,
     rackUnits: 1,
-    msrp: Number(cat24?.msrp) || 68,
-    weightLbs: Number(cat24?.weightLbs) || 1.8,
-    depthInches: Number(cat24?.depthInches) || 1.5,
+    msrp: cap24Msrp,
+    weightLbs: cap24WeightLbs,
+    depthInches: 1.5,
     panelsPerSwitch: 1,
+    isSandwich48: false,
     isDual24: false,
     is48: false,
+    isOffset48Frame: false,
     shortLabel: "24P",
-    copperPorts
+    btwnShortLabel: "24P",
+    copperPorts,
+    offset24
   };
 }
 
@@ -688,7 +863,7 @@ function resolveCiscoStackPowerCables(item) {
 
   const ppCfg = resolveSwitchPatchPanelConfig(item);
   const interU = item.standardPod
-    ? (ppCfg.isDual24 ? 2 : ppCfg.rackUnits)
+    ? (ppCfg.isSandwich48 ? (ppCfg.betweenRackUnits || 1) : (ppCfg.isDual24 ? 2 : ppCfg.rackUnits))
     : (item.patchPanelBetween ? ppCfg.rackUnits : (item.cableManagerBetween ? 1 : 0));
 
   const pref = item.stackPowerCableLength || "auto";
@@ -1623,7 +1798,12 @@ function applyStackCabling(item) {
 
   if (item.stackedUnits >= 2) {
     const baseRU = parseInt(item.rackUnits, 10) || 1;
-    const interleaveU = (item.patchPanelBetween ? ppCfg.rackUnits * (item.stackedUnits - 1) : 0) + (item.cableManagerBetween ? (item.stackedUnits - 1) : 0);
+    const podInterleavePerGap = item.standardPod
+      ? (ppCfg.isSandwich48 ? (ppCfg.betweenRackUnits || 1) : (ppCfg.isDual24 ? 2 : ppCfg.rackUnits))
+      : 0;
+    const interleaveU = item.standardPod
+      ? (podInterleavePerGap * (item.stackedUnits - 1))
+      : ((item.patchPanelBetween ? ppCfg.rackUnits * (item.stackedUnits - 1) : 0) + (item.cableManagerBetween ? (item.stackedUnits - 1) : 0));
     const stackSpanU = ((item.stackedUnits - 1) * baseRU) + interleaveU;
 
     // Stack cable length dynamically adjusted for member U-span
@@ -1737,7 +1917,7 @@ function applyStackCabling(item) {
       }
     }
 
-    if (item.patchPanelBetween && stackInfraScope.rackPatchPanels !== false && !stackDirectRj45) {
+    if (item.patchPanelBetween && !item.standardPod && stackInfraScope.rackPatchPanels !== false && !stackDirectRj45) {
       projectBOM.push({
         instanceId: `stack-pp-${item.instanceId}`,
         parentInstanceId: item.instanceId,
@@ -1806,32 +1986,89 @@ function applyStandardPodCabling(item) {
   const stackMultiplier = (item.stackedUnits && item.stackedUnits >= 2) ? item.stackedUnits : 1;
   const ppCfg = resolveSwitchPatchPanelConfig(item);
   const totalCopperPorts = ppCfg.copperPorts * stackMultiplier;
-  const panelQty = ppCfg.panelsPerSwitch * stackMultiplier; // 1x 48P (or 24P) per switch by default; 2x 24P only if DUAL-24P
   const keystonePackQty = Math.max(1, Math.ceil(totalCopperPorts / 24));
 
   if (infraScope.rackPatchPanels !== false && !isDirectRj45) {
-    // 1. Add Unified 48-Port (1U/2U) or 24-Port Modular Keystone Patch Panel(s)
-    projectBOM.push({
-      instanceId: `pod-pp-${item.instanceId}`,
-      parentInstanceId: item.instanceId,
-      source: "switch_standard_pod",
-      id: `${item.id}-pod-pp`,
-      model: `${ppCfg.model} (${ppCfg.isDual24 ? 'Standard Pod: Above & Below' : 'Standard Switch Pod'})`,
-      sku: ppCfg.sku,
-      role: "Structured Cabling",
-      category: "Infrastructure",
-      vendor: "Panduit",
-      msrp: ppCfg.msrp,
-      rackUnits: ppCfg.rackUnits,
-      weightLbs: ppCfg.weightLbs,
-      depthInches: ppCfg.depthInches,
-      ports: ppCfg.ports,
-      poeBudget: 0,
-      baseWatts: 0,
-      closetName: item.closetName,
-      rackId: item.rackId,
-      qty: panelQty
-    });
+    if (ppCfg.isSandwich48) {
+      // 1A. 48-Port Switch Sandwich Pod: 24-Port Panels Above & Below + 48-Port Panels In-Between
+      if (ppCfg.outer24Count > 0) {
+        const capDesc = stackMultiplier >= 2 || ppCfg.inner48Count > 0
+          ? "Standard Pod: Outer Top & Bottom 24P Cap Panels"
+          : "Standard Pod: 24P Above & Below Switch";
+        projectBOM.push({
+          instanceId: `pod-pp24-${item.instanceId}`,
+          parentInstanceId: item.instanceId,
+          source: "switch_standard_pod",
+          id: `${item.id}-pod-pp24`,
+          model: `${ppCfg.cap24Model} (${capDesc})`,
+          sku: ppCfg.cap24Sku,
+          role: "Structured Cabling",
+          category: "Infrastructure",
+          vendor: "Panduit",
+          msrp: ppCfg.cap24Msrp,
+          rackUnits: 1,
+          weightLbs: ppCfg.cap24WeightLbs,
+          depthInches: ppCfg.depthInches,
+          ports: 24,
+          poeBudget: 0,
+          baseWatts: 0,
+          closetName: item.closetName,
+          rackId: item.rackId,
+          qty: ppCfg.outer24Count
+        });
+      }
+      if (ppCfg.inner48Count > 0) {
+        projectBOM.push({
+          instanceId: `pod-pp48-btwn-${item.instanceId}`,
+          parentInstanceId: item.instanceId,
+          source: "switch_standard_pod",
+          id: `${item.id}-pod-pp48-btwn`,
+          model: `${ppCfg.between48Model} (Standard Pod: In-Between 48P Shared Panel)`,
+          sku: ppCfg.between48Sku,
+          role: "Structured Cabling",
+          category: "Infrastructure",
+          vendor: "Panduit",
+          msrp: ppCfg.between48Msrp,
+          rackUnits: ppCfg.betweenRackUnits || 1,
+          weightLbs: ppCfg.between48WeightLbs,
+          depthInches: ppCfg.depthInches,
+          ports: 48,
+          poeBudget: 0,
+          baseWatts: 0,
+          closetName: item.closetName,
+          rackId: item.rackId,
+          qty: ppCfg.inner48Count
+        });
+      }
+    } else {
+      // 1B. 24-Port Pod (Standard 1U 24P, Half-Populated 1U 48P Offset Frame, or Explicit Override)
+      const panelQty = ppCfg.panelsPerSwitch * stackMultiplier;
+      const podDesc = ppCfg.isOffset48Frame
+        ? `Half-Populated 2×12 ${ppCfg.populatedSide === 'right' ? 'Right' : 'Left'}-Offset Frame`
+        : (ppCfg.isDual24 ? 'Standard Pod: Above & Below' : 'Standard Switch Pod');
+      projectBOM.push({
+        instanceId: `pod-pp-${item.instanceId}`,
+        parentInstanceId: item.instanceId,
+        source: "switch_standard_pod",
+        id: `${item.id}-pod-pp`,
+        model: `${ppCfg.model} (${podDesc})`,
+        sku: ppCfg.sku,
+        role: "Structured Cabling",
+        category: "Infrastructure",
+        vendor: "Panduit",
+        msrp: ppCfg.msrp,
+        rackUnits: ppCfg.rackUnits,
+        weightLbs: ppCfg.weightLbs,
+        depthInches: ppCfg.depthInches,
+        ports: ppCfg.ports,
+        frameSlots: ppCfg.frameSlots || ppCfg.ports,
+        poeBudget: 0,
+        baseWatts: 0,
+        closetName: item.closetName,
+        rackId: item.rackId,
+        qty: panelQty
+      });
+    }
 
     // 2. Add Cat6A Shielded Toolless Keystone Jack 24-Packs to populate the modular patch panels
     const defaultJack = (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.connectors?.[0]) || {
@@ -1863,15 +2100,23 @@ function applyStandardPodCabling(item) {
 
   if (infraScope.patchCords === false) return;
 
-  // 3. Add 6-Inch (0.5-Foot) Cat6A Slim Patch Cords aligned with Project Cabling Standards & connected device colors
-  const colorCounts = {};
+  // 3. Add Cat6A Slim Patch Cords (6-Inch vertical direct + automatic 1-Foot horizontal-reach split on Left/Right Offset 24P switches)
+  const cordBuckets = {}; // key: "<lengthFt>|<colorName>" -> { lengthFt, colorName, count }
+  const addCordBucket = (lengthFt, colorName, cnt) => {
+    if (cnt <= 0) return;
+    const key = `${lengthFt}|${colorName}`;
+    if (!cordBuckets[key]) cordBuckets[key] = { lengthFt, colorName, count: 0 };
+    cordBuckets[key].count += cnt;
+  };
+
   const ports = (typeof PortEngine !== "undefined" && typeof PortEngine.initSwitchPorts === "function")
     ? PortEngine.initSwitchPorts(item)
     : [];
   const copperPorts = ports.filter(p => !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ"));
+  const perUnitCopper = Math.max(1, ppCfg.copperPorts || 24);
 
   if (copperPorts.length > 0) {
-    copperPorts.forEach(p => {
+    copperPorts.forEach((p, idx) => {
       const dev = (p.connectedDeviceId && Array.isArray(projectBOM))
         ? projectBOM.find(b => b && b.instanceId === p.connectedDeviceId)
         : null;
@@ -1879,39 +2124,55 @@ function applyStandardPodCabling(item) {
         ? getProjectCablingStandard(dev, "patch")
         : { color: "Yellow" };
       const col = patchStd?.color || "Yellow";
-      colorCounts[col] = (colorCounts[col] || 0) + 1;
+      const localCopperIdx = p.unitPortNumber ? ((p.unitPortNumber - 1) % perUnitCopper) : (idx % perUnitCopper);
+      const lenFt = ppCfg.offset24?.is24Class ? resolve24PortCordLengthFt(ppCfg.offset24, localCopperIdx) : 0.5;
+      addCordBucket(lenFt, col, 1);
     });
   } else {
     const defStd = (typeof getProjectCablingStandard === "function")
       ? getProjectCablingStandard(null, "patch")
       : { color: "Yellow" };
     const col = defStd?.color || "Yellow";
-    colorCounts[col] = totalCopperPorts;
+    if (ppCfg.offset24?.is24Class) {
+      addCordBucket(0.5, col, ppCfg.offset24.alignedPortsPerUnit * stackMultiplier);
+      addCordBucket(1, col, ppCfg.offset24.offsetPortsPerUnit * stackMultiplier);
+    } else {
+      addCordBucket(0.5, col, totalCopperPorts);
+    }
   }
 
-  Object.entries(colorCounts).forEach(([colorName, count]) => {
+  Object.values(cordBuckets).forEach(({ lengthFt, colorName, count }) => {
     if (count <= 0) return;
+    const isOneFoot = lengthFt === 1;
     const matchedCord = (typeof findPatchCordItem === "function")
-      ? findPatchCordItem(0.5, "Panduit", false, colorName)
+      ? findPatchCordItem(lengthFt, "Panduit", false, colorName)
       : {
-          sku: colorName === "Blue" ? "C6A-SLIM-6IN-BL" : "C6A-SLIM-6IN-YL",
-          name: `Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, ${colorName})`,
+          sku: isOneFoot
+            ? (colorName === "Blue" ? "C6A-SLIM-1FT-BL" : "C6A-SLIM-1FT-YL")
+            : (colorName === "Blue" ? "C6A-SLIM-6IN-BL" : "C6A-SLIM-6IN-YL"),
+          name: isOneFoot
+            ? `Cat6A 28AWG Slim High-Density Patch Cord (1-Foot, ${colorName})`
+            : `Cat6A 28AWG Slim High-Density Patch Cord (6-Inch / 0.5-Foot, ${colorName})`,
           vendor: "Panduit",
-          msrp: 6.20
+          msrp: isOneFoot ? 7.50 : 6.20
         };
+    const lenSlug = isOneFoot ? "1ft" : "6in";
+    const offsetNote = (isOneFoot && ppCfg.offset24?.is24Class && ppCfg.offset24.effectiveMode === "mixed_cords")
+      ? ` [24P ${ppCfg.offset24.side === 'right' ? 'Right' : 'Left'}-Offset Reach]`
+      : "";
     projectBOM.push({
-      instanceId: `pod-patch-cables-${item.instanceId}-${colorName.toLowerCase()}`,
+      instanceId: `pod-patch-cables-${item.instanceId}-${lenSlug}-${colorName.toLowerCase()}`,
       parentInstanceId: item.instanceId,
       source: "switch_standard_pod",
-      id: `${item.id}-pod-patch-cables-${colorName.toLowerCase()}`,
-      model: matchedCord.name,
+      id: `${item.id}-pod-patch-cables-${lenSlug}-${colorName.toLowerCase()}`,
+      model: `${matchedCord.name}${offsetNote}`,
       sku: matchedCord.sku,
       role: "Structured Cabling",
       category: "Infrastructure",
       vendor: matchedCord.vendor || "Panduit",
-      msrp: matchedCord.msrp || 6.20,
+      msrp: matchedCord.msrp || (isOneFoot ? 7.50 : 6.20),
       rackUnits: 0,
-      lengthFt: 0.5,
+      lengthFt,
       color: colorName,
       poeBudget: 0,
       baseWatts: 0,
@@ -3987,7 +4248,7 @@ function renderBomTableRow(item) {
                     title="${item.patchPanelBetween ? `Remove ${ppCfg.ports}-port (${ppCfg.sku}) patch panel between stacked switches` : `Place ${ppCfg.rackUnits}U ${ppCfg.ports}-port (${ppCfg.sku}) patch panel in between stacked switches`}"
                   >
                     <i data-lucide="${item.patchPanelBetween ? 'check-square' : 'plus-square'}" class="w-2.5 h-2.5 ${item.patchPanelBetween ? 'text-purple-400' : 'text-slate-400'}"></i>
-                    <span>${item.patchPanelBetween ? `${ppCfg.shortLabel} Patch In-Between` : `+ ${ppCfg.shortLabel} Patch`}</span>
+                    <span>${item.patchPanelBetween ? `${ppCfg.btwnShortLabel || ppCfg.shortLabel} Patch In-Between` : `+ ${ppCfg.btwnShortLabel || ppCfg.shortLabel} Patch`}</span>
                   </button>
                   ${hasStackPower ? `
                     <button
@@ -5502,6 +5763,7 @@ function setBomItemPatchPanelOptions(instanceId, layoutMode, panelSku) {
     item.patchPanelSku = (!panelSku || panelSku === "auto") ? null : panelSku;
   }
   if (layoutMode !== undefined) {
+    delete item.podAdjacentRole;
     if (layoutMode === "standard_pod") {
       item.standardPod = true;
       item.patchPanelBetween = false;
@@ -5513,6 +5775,24 @@ function setBomItemPatchPanelOptions(instanceId, layoutMode, panelSku) {
     } else {
       item.standardPod = false;
       item.patchPanelBetween = false;
+    }
+  }
+  applyStackCabling(item);
+  applyStandardPodCabling(item);
+  refreshAllViewsAfterBomConfigChange();
+  if (activeBomAccessoriesInstanceId === instanceId) renderBomItemAccessoriesModalContent();
+}
+
+function setBomItem24PortOffsetOptions(instanceId, side, patchMode) {
+  const item = projectBOM.find(i => i.instanceId === instanceId);
+  if (!item) return;
+  if (side !== undefined) {
+    item.portOffsetSide = (!side || side === "auto") ? null : side;
+  }
+  if (patchMode !== undefined) {
+    item.offset24PatchMode = (!patchMode || patchMode === "auto") ? null : patchMode;
+    if (patchMode === "offset_48p_frame" && item.patchPanelSku === "PP-1U-24P-MOD") {
+      item.patchPanelSku = null;
     }
   }
   applyStackCabling(item);
@@ -5952,7 +6232,9 @@ function renderBomItemAccessoriesModalContent() {
                 <span class="font-bold text-white text-xs">Virtual Stacking, StackPower &amp; Patch Panel Layout</span>
               </div>
               <span class="text-[10px] font-mono text-purple-300 bg-purple-950/80 border border-purple-700/60 px-2 py-0.5 rounded">
-                Resolved Panel: ${escapeHTML(ppCfg.sku)} (${ppCfg.rackUnits}U ${ppCfg.ports}-Port)
+                ${ppCfg.isSandwich48
+                  ? `Sandwich: ${ppCfg.outer24Count}× 24P Outer${ppCfg.inner48Count > 0 ? ` + ${ppCfg.inner48Count}× 48P Btwn` : ' (Above & Below)'}`
+                  : `Resolved Panel: ${escapeHTML(ppCfg.sku)} (${ppCfg.rackUnits}U ${ppCfg.isOffset48Frame ? '48P Half-Populated 24J' : `${ppCfg.ports}-Port`})`}
               </span>
             </div>
 
@@ -5971,22 +6253,58 @@ function renderBomItemAccessoriesModalContent() {
                 <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Patch Panel Arrangement</label>
                 <select onchange="setBomItemPatchPanelOptions('${item.instanceId}', this.value, undefined)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs cursor-pointer">
                   <option value="none" ${currentPatchLayout === "none" ? 'selected' : ''}>No Attached Pod / Stack Patch Panels</option>
-                  <option value="standard_pod" ${currentPatchLayout === "standard_pod" ? 'selected' : ''}>Standard Pod (Panel Above Each Switch)</option>
-                  ${stackCount >= 2 ? `<option value="between_stack" ${currentPatchLayout === "between_stack" ? 'selected' : ''}>In-Between Stack Members (${stackCount - 1}x Interleaved)</option>` : ''}
+                  <option value="standard_pod" ${currentPatchLayout === "standard_pod" ? 'selected' : ''}>${ppCfg.copperPorts > 24 ? 'Standard Sandwich Pod (24P Top/Bot + 48P In-Between)' : 'Standard Pod (Panel Above Each Switch)'}</option>
+                  ${stackCount >= 2 ? `<option value="between_stack" ${currentPatchLayout === "between_stack" ? 'selected' : ''}>In-Between Stack Only (${stackCount - 1}x ${ppCfg.copperPorts > 24 ? '48P ' : ''}Interleaved)</option>` : ''}
                 </select>
               </div>
 
               <div>
                 <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Patch Panel Density / SKU</label>
                 <select onchange="setBomItemPatchPanelOptions('${item.instanceId}', undefined, this.value)" class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-lg px-2.5 py-1.5 text-xs cursor-pointer">
-                  <option value="auto" ${currentPatchSku === "auto" ? 'selected' : ''}>Auto (${ppCfg.copperPorts > 24 ? '1U 48-Port PP-1U-48P-MOD' : '1U 24-Port PP-1U-24P-MOD'})</option>
-                  <option value="PP-1U-48P-MOD" ${currentPatchSku === "PP-1U-48P-MOD" ? 'selected' : ''}>1U 48-Port High-Density (PP-1U-48P-MOD)</option>
-                  <option value="PP-2U-48P-MOD" ${currentPatchSku === "PP-2U-48P-MOD" ? 'selected' : ''}>2U 48-Port Keystone (PP-2U-48P-MOD)</option>
+                  <option value="auto" ${currentPatchSku === "auto" ? 'selected' : ''}>Auto (${ppCfg.copperPorts > 24 ? '24P Outer Caps + 48P In-Between' : (ppCfg.isOffset48Frame ? '1U 48P Half-Frame (24 Jacks)' : '1U 24-Port PP-1U-24P-MOD')})</option>
+                  ${ppCfg.copperPorts > 24 ? `<option value="SANDWICH-48" ${currentPatchSku === "SANDWICH-48" ? 'selected' : ''}>24P Above &amp; Below + 48P In-Between (Recommended)</option>` : ''}
+                  <option value="PP-1U-48P-MOD" ${currentPatchSku === "PP-1U-48P-MOD" ? 'selected' : ''}>1U 48-Port Above Each Switch (PP-1U-48P-MOD)</option>
+                  <option value="PP-2U-48P-MOD" ${currentPatchSku === "PP-2U-48P-MOD" ? 'selected' : ''}>2U 48-Port Above Each Switch (PP-2U-48P-MOD)</option>
                   <option value="PP-1U-24P-MOD" ${currentPatchSku === "PP-1U-24P-MOD" ? 'selected' : ''}>1U 24-Port Keystone (PP-1U-24P-MOD)</option>
-                  <option value="DUAL-24P" ${currentPatchSku === "DUAL-24P" ? 'selected' : ''}>Dual 1U 24-Port Split (Above &amp; Below Switch)</option>
+                  <option value="DUAL-24P" ${currentPatchSku === "DUAL-24P" ? 'selected' : ''}>Dual 1U 24-Port Per Switch (2x 24P Every Chassis)</option>
                 </select>
               </div>
             </div>
+
+            ${ppCfg.offset24?.is24Class ? `
+              <div class="p-3 rounded-lg bg-indigo-950/30 border border-indigo-700/50 space-y-2">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <span class="font-bold text-indigo-200 flex items-center gap-1.5">
+                    <i data-lucide="align-horizontal-space-around" class="w-3.5 h-3.5 text-indigo-400"></i>
+                    <span>24-Port Physical Faceplate Offset &amp; Patch Cord Reach</span>
+                  </span>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-950/90 border border-indigo-600/60 text-cyan-300 font-bold">
+                    ${escapeHTML(ppCfg.offset24.shortBadge)}
+                  </span>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label class="block text-[10px] font-mono text-indigo-300/80 mb-1">Switch Copper Port Cluster Position</label>
+                    <select onchange="setBomItem24PortOffsetOptions('${item.instanceId}', this.value, undefined)" class="w-full bg-slate-900 border border-indigo-700/60 text-slate-200 rounded-lg px-2 py-1 text-[11px] cursor-pointer">
+                      <option value="auto" ${!item.portOffsetSide ? 'selected' : ''}>Auto-Detect (${ppCfg.offset24.autoSide === 'left' ? 'Left 2×12 Cluster' : (ppCfg.offset24.autoSide === 'right' ? 'Right Cluster / LCM Left' : 'Full-Width Inline')})</option>
+                      <option value="left" ${item.portOffsetSide === 'left' ? 'selected' : ''}>Left-Offset 2×12 Block (Cisco / Meraki / Juniper / Ruckus)</option>
+                      <option value="right" ${item.portOffsetSide === 'right' ? 'selected' : ''}>Right-Offset Block (UniFi w/ Left LCM Screen)</option>
+                      <option value="inline" ${item.portOffsetSide === 'inline' ? 'selected' : ''}>Full-Width Inline (No Horizontal Offset)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-mono text-indigo-300/80 mb-1">Offset Patching Strategy</label>
+                    <select onchange="setBomItem24PortOffsetOptions('${item.instanceId}', undefined, this.value)" class="w-full bg-slate-900 border border-indigo-700/60 text-slate-200 rounded-lg px-2 py-1 text-[11px] cursor-pointer">
+                      <option value="auto" ${!item.offset24PatchMode ? 'selected' : ''}>Auto (${ppCfg.offset24.side === 'inline' ? '1U 24P + All 6" Cords' : '1U 24P + Split 12× 6" & 12× 1ft Cords'})</option>
+                      <option value="mixed_cords" ${item.offset24PatchMode === 'mixed_cords' ? 'selected' : ''}>1U 24P Panel + Split 12× 6" (Aligned) &amp; 12× 1ft (Offset Reach)</option>
+                      <option value="offset_48p_frame" ${item.offset24PatchMode === 'offset_48p_frame' ? 'selected' : ''}>Half-Populated 1U 48P Frame (Matching 2×12 Side + All 24× 6" Cords)</option>
+                      <option value="all_1ft_cords" ${item.offset24PatchMode === 'all_1ft_cords' ? 'selected' : ''}>1U 24P Panel + Uniform 24× 1-Foot Cords</option>
+                      <option value="inline_6in" ${item.offset24PatchMode === 'inline_6in' ? 'selected' : ''}>1U 24P Panel + All 24× 6-Inch Cords</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
 
             ${stackCount >= 2 ? `
               <label class="flex items-center gap-2 text-[11px] text-slate-300 cursor-pointer">
@@ -6789,7 +7107,10 @@ window.toggleBomLocationCollapse = toggleBomLocationCollapse;
 window.toggleBomExpandAll = toggleBomExpandAll;
 window.resetBomFilters = resetBomFilters;
 window.getSwitchCopperPortCount = getSwitchCopperPortCount;
+window.resolveSwitch24PortOffset = resolveSwitch24PortOffset;
+window.resolve24PortCordLengthFt = resolve24PortCordLengthFt;
 window.resolveSwitchPatchPanelConfig = resolveSwitchPatchPanelConfig;
+window.setBomItem24PortOffsetOptions = setBomItem24PortOffsetOptions;
 window.getRequiredUplinkModuleQty = getRequiredUplinkModuleQty;
 window.supportsCiscoStackPower = supportsCiscoStackPower;
 window.resolveCiscoStackPowerCables = resolveCiscoStackPowerCables;

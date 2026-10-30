@@ -1788,9 +1788,14 @@ const PortEngine = {
         const cStacked = (cSw.stackedUnits && cSw.stackedUnits >= 2) ||
           (cSw.stackedUnits !== 0 && cSw.qty >= 2 && (cSw.canStack || cSw.role === "Access" || cSw.role === "Aggregation"));
         const cUnits = cStacked ? (cSw.stackedUnits || cSw.qty) : 1;
-        const isDual24 = cSw.patchPanelSku === "DUAL-24P";
-        const panelsPerUnit = cSw.standardPod ? (isDual24 ? 2 : 1) : ((cUnits >= 2 && cSw.patchPanelBetween) ? Math.max(1, cUnits - 1) / cUnits : 1);
-        basePanelSeq += Math.max(1, Math.round(cUnits * panelsPerUnit));
+        const cCfg = (typeof resolveSwitchPatchPanelConfig === "function") ? resolveSwitchPatchPanelConfig(cSw) : null;
+        if (cSw.standardPod && cCfg?.isSandwich48) {
+          basePanelSeq += Math.max(1, (cCfg.outer24Count || 0) + (cCfg.inner48Count || 0));
+        } else {
+          const isDual24 = cSw.patchPanelSku === "DUAL-24P";
+          const panelsPerUnit = cSw.standardPod ? (isDual24 ? 2 : 1) : ((cUnits >= 2 && cSw.patchPanelBetween) ? Math.max(1, cUnits - 1) / cUnits : 1);
+          basePanelSeq += Math.max(1, Math.round(cUnits * panelsPerUnit));
+        }
       }
     }
 
@@ -1883,9 +1888,102 @@ const PortEngine = {
     const byPortNumber = {};
     const panelsMap = new Map();
 
-    const isDual24Pod = switchItem.patchPanelSku === "DUAL-24P";
+    const ppCfg = (typeof resolveSwitchPatchPanelConfig === "function") ? resolveSwitchPatchPanelConfig(switchItem) : null;
+    const offset24 = (typeof resolveSwitch24PortOffset === "function")
+      ? resolveSwitch24PortOffset(switchItem)
+      : { is24Class: false, side: "full", effectiveMode: "full_width" };
+    const isSandwich48 = Boolean(isStdPod && (ppCfg ? ppCfg.isSandwich48 : (!switchItem.patchPanelSku && (parseInt(switchItem.ports, 10) || 24) > 24)));
+    const isDual24Pod = !isSandwich48 && switchItem.patchPanelSku === "DUAL-24P";
+    const isOffset48Frame = Boolean(isStdPod && ppCfg?.isOffset48Frame);
     const hasPPBetween = (stackUnits >= 2 && !!switchItem.patchPanelBetween && !isStdPod);
     const ppRackUnits = switchItem.patchPanelSku === "PP-2U-48P-MOD" ? 2 : 1;
+    const betweenRU = ppCfg?.betweenRackUnits || 1;
+
+    // Pre-build 48-Port Sandwich Panels in strict Top-to-Bottom Rack Elevation Order:
+    //  [Top 1U 24P Cap] -> [Unit N] -> [Shared 1U 48P Btwn] -> ... -> [Unit 1] -> [Bottom 1U 24P Cap]
+    const adjRole = switchItem.podAdjacentRole || null;
+    const hasTop24Cap = isSandwich48 && adjRole !== "middle" && adjRole !== "bottom";
+    const hasBottom24Cap = isSandwich48 && adjRole !== "top" && adjRole !== "middle";
+    const hasBottomShared48 = isSandwich48 && (adjRole === "top" || adjRole === "middle");
+
+    let sandwichTopPanel = null;
+    let sandwichBotPanel = null;
+    let sandwichBotShared48Panel = null;
+    const sandwichBetweenPanels = {}; // boundaryIndex b (1..stackUnits-1, between Unit b and Unit b+1) -> panelObj
+
+    const getSandwichSwitchU = (unitNum) => {
+      if (baseSlotU <= 0) return 0;
+      const floorOffset = hasBottom24Cap ? 1 : (hasBottomShared48 ? betweenRU : 0);
+      return baseSlotU + floorOffset + (unitNum - 1) * (baseRU + betweenRU);
+    };
+
+    if (isSandwich48) {
+      let seqCursor = basePanelSeq;
+      const makePanel = (seq, deckKey, deckType, sku, totalJacks, slotNumU, swUnit, rangeText, extra = {}) => {
+        const shortCode = `PP${String(seq).padStart(2, "0")}`;
+        const pId = `${closetCode}-${shortCode}`;
+        const pObj = {
+          panelId: pId,
+          shortCode,
+          panelSeqNum: seq,
+          deckKey,
+          label: `${pId} • ${totalJacks === 48 ? '1U 48P Shared In-Between' : (deckType === 'upper' ? '1U 24P Top Cap' : '1U 24P Bottom Cap')} (${switchCode})`,
+          shortLabel: pId,
+          sku,
+          rackUnits: 1,
+          slotU: slotNumU > 0 ? `U${slotNumU}` : (deckType === "upper" ? "Above Switch" : (deckType === "lower" ? "Below Switch" : "In-Between Switches")),
+          numericU: slotNumU,
+          switchUnit: swUnit,
+          deck: deckType,
+          totalJacks,
+          activePortRange: rangeText,
+          patchCordSpec: '6" Cat6A Slim',
+          jacks: Array.from({ length: totalJacks }, (_, idx) => ({
+            jackNumber: idx + 1,
+            jackLabel: `J${String(idx + 1).padStart(2, "0")}`,
+            panelTag: `${shortCode}-${String(idx + 1).padStart(2, "0")}`,
+            fullTag: `${pId}-${String(idx + 1).padStart(2, "0")}`,
+            port: null
+          })),
+          ...extra
+        };
+        panelsMap.set(pId, pObj);
+        return pObj;
+      };
+
+      if (hasTop24Cap) {
+        const topU = baseSlotU > 0 ? (getSandwichSwitchU(stackUnits) + baseRU) : 0;
+        const rangeTxt = stackUnits > 1 ? `Unit ${stackUnits} Ports 1–24` : "Ports 1–24";
+        sandwichTopPanel = makePanel(seqCursor++, "SANDWICH-TOP", "upper", "PP-1U-24P-MOD", 24, topU, stackUnits, rangeTxt, { position: "top_cap" });
+      }
+
+      for (let b = stackUnits - 1; b >= 1; b--) {
+        const btwnU = baseSlotU > 0 ? (getSandwichSwitchU(b) + baseRU) : 0;
+        const rangeTxt = `U${b + 1} P25–48 (↑) / U${b} P1–24 (↓)`;
+        sandwichBetweenPanels[b] = makePanel(seqCursor++, `SANDWICH-BTWN-${b}`, "between", "PP-1U-48P-MOD", 48, btwnU, b, rangeTxt, {
+          position: "between_units",
+          boundaryIndex: b,
+          upperSwitchUnit: b + 1,
+          lowerSwitchUnit: b
+        });
+      }
+
+      if (hasBottomShared48) {
+        const botSharedU = baseSlotU > 0 ? baseSlotU : 0;
+        sandwichBotShared48Panel = makePanel(seqCursor++, "SANDWICH-BTWN-0", "between", "PP-1U-48P-MOD", 48, botSharedU, 1, "Ports 25–48 (↑) / Lower Sw P1–24 (↓)", {
+          position: "between_adjacent_switches",
+          boundaryIndex: 0,
+          upperSwitchUnit: 1,
+          lowerSwitchUnit: 0
+        });
+      }
+
+      if (hasBottom24Cap) {
+        const botU = baseSlotU > 0 ? baseSlotU : 0;
+        const rangeTxt = stackUnits > 1 ? "Unit 1 Ports 25–48" : "Ports 25–48";
+        sandwichBotPanel = makePanel(seqCursor++, "SANDWICH-BOT", "lower", "PP-1U-24P-MOD", 24, botU, 1, rangeTxt, { position: "bottom_cap" });
+      }
+    }
 
     // Group access copper ports by unitIndex
     for (let u = 1; u <= stackUnits; u++) {
@@ -1893,13 +1991,21 @@ const PortEngine = {
       const copperPorts = unitPorts.filter(p => !p.isUplink && p.role !== "uplink" && p.role !== "stack_interconnect" && String(p.connector || "RJ-45").includes("RJ"));
       const is48P = copperPorts.length > 24;
       const halfSplit = is48P ? 24 : 12;
-      const singlePanelJacks = (switchItem.patchPanelSku === "PP-1U-24P-MOD") ? 24 : ((is48P || switchItem.patchPanelSku === "PP-1U-48P-MOD" || switchItem.patchPanelSku === "PP-2U-48P-MOD") ? 48 : 24);
-      const singlePanelSku = switchItem.patchPanelSku === "PP-2U-48P-MOD" ? "PP-2U-48P-MOD" : (singlePanelJacks === 48 ? "PP-1U-48P-MOD" : "PP-1U-24P-MOD");
+      const singlePanelJacks = isOffset48Frame
+        ? Math.min(24, copperPorts.length || 24)
+        : ((switchItem.patchPanelSku === "PP-1U-24P-MOD") ? 24 : ((is48P || switchItem.patchPanelSku === "PP-1U-48P-MOD" || switchItem.patchPanelSku === "PP-2U-48P-MOD") ? 48 : 24));
+      const singlePanelSku = isOffset48Frame
+        ? "PP-1U-48P-MOD"
+        : (switchItem.patchPanelSku === "PP-2U-48P-MOD" ? "PP-2U-48P-MOD" : (singlePanelJacks === 48 ? "PP-1U-48P-MOD" : "PP-1U-24P-MOD"));
 
       // Compute RU positions if mounted in rack with Standard Pod or Interleaved Patch Panels
       let unitBaseU = 0, lowerPPU = 0, switchU = 0, upperPPU = 0;
       if (baseSlotU > 0) {
-        if (isStdPod && isDual24Pod) {
+        if (isSandwich48) {
+          switchU = getSandwichSwitchU(u);
+          upperPPU = switchU + baseRU;
+          lowerPPU = switchU - 1;
+        } else if (isStdPod && isDual24Pod) {
           unitBaseU = baseSlotU + (u - 1) * (baseRU + 2);
           lowerPPU = unitBaseU;
           switchU = unitBaseU + 1;
@@ -1926,7 +2032,7 @@ const PortEngine = {
       const upperPanelId = `${closetCode}-${upperShortCode}`;
       const lowerPanelId = `${closetCode}-${lowerShortCode}`;
 
-      if (isStdPod && isDual24Pod) {
+      if (!isSandwich48 && isStdPod && isDual24Pod) {
         panelsMap.set(upperPanelId, {
           panelId: upperPanelId,
           shortCode: upperShortCode,
@@ -1974,24 +2080,34 @@ const PortEngine = {
             port: null
           }))
         });
-      } else if (isStdPod || (hasPPBetween && u < stackUnits)) {
+      } else if (!isSandwich48 && (isStdPod || (hasPPBetween && u < stackUnits))) {
         if (!panelsMap.has(upperPanelId)) {
+          const panelCordSummary = offset24.is24Class
+            ? (offset24.effectiveMode === "mixed_cords"
+              ? '12×6" + 12×1ft Cat6A Slim'
+              : (offset24.effectiveMode === "all_1ft_cords" ? '1ft Cat6A Slim' : '6" Cat6A Slim'))
+            : '6" Cat6A Slim';
           panelsMap.set(upperPanelId, {
             panelId: upperPanelId,
             shortCode: upperShortCode,
             panelSeqNum: upperPanelSeqNum,
             deckKey: `U${u}-SINGLE`,
-            label: `${upperPanelId} • ${ppRackUnits}U ${singlePanelJacks}P Keystone (${switchCode}${stackUnits > 1 ? `-U${u}` : ''})`,
+            label: `${upperPanelId} • ${ppRackUnits}U ${isOffset48Frame ? `48P Half-Frame (${offset24.side === 'right' ? 'Right' : 'Left'} 24J)` : `${singlePanelJacks}P Keystone`} (${switchCode}${stackUnits > 1 ? `-U${u}` : ''})`,
             shortLabel: upperPanelId,
             sku: singlePanelSku,
             rackUnits: ppRackUnits,
+            frameSlots: isOffset48Frame ? 48 : singlePanelJacks,
+            isOffset48Frame,
+            populatedSide: isOffset48Frame ? (offset24.side === "right" ? "right" : "left") : null,
+            portOffsetSide: offset24.is24Class ? offset24.side : "full",
+            offset24PatchMode: offset24.is24Class ? offset24.effectiveMode : "full_width",
             slotU: upperPPU > 0 ? (ppRackUnits > 1 ? `U${upperPPU + ppRackUnits - 1}-U${upperPPU}` : `U${upperPPU}`) : "Above Switch",
             switchUnit: u,
             switchSlotU: switchU > 0 ? `U${switchU}` : "",
             deck: "single",
             totalJacks: singlePanelJacks,
             activePortRange: `Ports 1–${Math.min(copperPorts.length || singlePanelJacks, singlePanelJacks)}`,
-            patchCordSpec: '6" Cat6A Slim',
+            patchCordSpec: panelCordSummary,
             jacks: Array.from({ length: singlePanelJacks }, (_, idx) => ({
               jackNumber: idx + 1,
               jackLabel: `J${String(idx + 1).padStart(2, "0")}`,
@@ -2026,11 +2142,71 @@ const PortEngine = {
         let jackNum = p.customKeystoneJack || p.customPatchJack || null;
         let jackLabel = "";
         let panelTag = "";
+        let patchCordLengthFt = patchStd.lengthFt || 3;
         let patchCordSpec = `3ft Cat6A (${patchStd.color || "Yellow"})`;
         let deck = null;
 
         if (isCopperAccess && localCopperIdx >= 0) {
-          if (isStdPod && isDual24Pod) {
+          if (isSandwich48) {
+            const isUpperRow = localCopperIdx < 24;
+            let targetPanel = null;
+            let defaultJack = 1;
+
+            if (isUpperRow) {
+              if (u === stackUnits && sandwichTopPanel) {
+                targetPanel = sandwichTopPanel;
+                defaultJack = localCopperIdx + 1; // J01..J24 on Top 24P Cap
+                deck = "upper";
+              } else if (u < stackUnits && sandwichBetweenPanels[u]) {
+                targetPanel = sandwichBetweenPanels[u];
+                defaultJack = 24 + localCopperIdx + 1; // J25..J48 (Bottom row) on Shared 48P above Unit u
+                deck = "between";
+              }
+            } else {
+              if (u > 1 && sandwichBetweenPanels[u - 1]) {
+                targetPanel = sandwichBetweenPanels[u - 1];
+                defaultJack = (localCopperIdx - 24) + 1; // J01..J24 (Top row) on Shared 48P below Unit u
+                deck = "between";
+              } else if (u === 1 && sandwichBotPanel) {
+                targetPanel = sandwichBotPanel;
+                defaultJack = (localCopperIdx - 24) + 1; // J01..J24 on Bottom 24P Cap
+                deck = "lower";
+              } else if (u === 1 && sandwichBotShared48Panel) {
+                targetPanel = sandwichBotShared48Panel;
+                defaultJack = (localCopperIdx - 24) + 1; // J01..J24 on Shared 48P below Unit 1
+                deck = "between";
+              }
+            }
+
+            if (targetPanel) {
+              panelShortCode = targetPanel.shortCode;
+              panelId = p.customPatchPanelId || targetPanel.panelId;
+              panelLabel = targetPanel.label;
+              panelSlotU = targetPanel.slotU;
+              jackNum = p.customKeystoneJack || p.customPatchJack || defaultJack;
+              jackLabel = `J${String(jackNum).padStart(2, "0")}`;
+              panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
+              patchCordLengthFt = 0.5;
+              patchCordSpec = `6" Cat6A Slim (${patchStd.color || "Yellow"})`;
+              if (targetPanel.jacks[jackNum - 1]) {
+                targetPanel.jacks[jackNum - 1].port = p;
+                targetPanel.jacks[jackNum - 1].device = dev;
+              }
+            } else {
+              // Adjacent unstacked lower/middle 48P switch whose upper 24 ports patch UP to upper neighbor's shared 48P panel
+              const sharedAboveSeq = Math.max(1, basePanelSeq - 1);
+              panelShortCode = `PP${String(sharedAboveSeq).padStart(2, "0")}`;
+              panelId = p.customPatchPanelId || `${closetCode}-${panelShortCode}`;
+              panelLabel = `${panelId} (Shared In-Between 48P Above)`;
+              panelSlotU = upperPPU > 0 ? `U${upperPPU}` : "1U Above";
+              jackNum = p.customKeystoneJack || p.customPatchJack || (24 + localCopperIdx + 1);
+              jackLabel = `J${String(jackNum).padStart(2, "0")}`;
+              panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
+              deck = "between";
+              patchCordLengthFt = 0.5;
+              patchCordSpec = `6" Cat6A Slim (${patchStd.color || "Yellow"})`;
+            }
+          } else if (isStdPod && isDual24Pod) {
             const isUpper = localCopperIdx < halfSplit;
             deck = isUpper ? "upper" : "lower";
             panelShortCode = isUpper ? upperShortCode : lowerShortCode;
@@ -2042,6 +2218,7 @@ const PortEngine = {
             jackNum = p.customKeystoneJack || p.customPatchJack || (isUpper ? (localCopperIdx + 1) : (localCopperIdx - halfSplit + 1));
             jackLabel = `J${String(jackNum).padStart(2, "0")}`;
             panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
+            patchCordLengthFt = 0.5;
             patchCordSpec = `6" Cat6A Slim (${patchStd.color || "Yellow"})`;
 
             const panelObj = panelsMap.get(isUpper ? upperPanelId : lowerPanelId);
@@ -2053,12 +2230,18 @@ const PortEngine = {
             deck = "single";
             panelShortCode = upperShortCode;
             panelId = p.customPatchPanelId || upperPanelId;
-            panelLabel = `${panelId} (${singlePanelJacks}P Keystone)`;
+            panelLabel = `${panelId} (${isOffset48Frame ? '48P Half-Frame 24J' : `${singlePanelJacks}P Keystone`})`;
             panelSlotU = upperPPU > 0 ? `U${upperPPU}` : `${ppRackUnits}U Above`;
             jackNum = p.customKeystoneJack || p.customPatchJack || ((localCopperIdx % singlePanelJacks) + 1);
             jackLabel = `J${String(jackNum).padStart(2, "0")}`;
             panelTag = `${panelShortCode}-${String(jackNum).padStart(2, "0")}`;
-            patchCordSpec = `6" Cat6A Slim (${patchStd.color || "Yellow"})`;
+            const resolvedFt = (isStdPod && offset24.is24Class && typeof resolve24PortCordLengthFt === "function")
+              ? resolve24PortCordLengthFt(offset24, localCopperIdx)
+              : 0.5;
+            patchCordLengthFt = resolvedFt;
+            patchCordSpec = resolvedFt === 1
+              ? `1ft Cat6A Slim (${patchStd.color || "Yellow"}${offset24.effectiveMode === 'mixed_cords' ? ' • Offset Reach' : ''})`
+              : `6" Cat6A Slim (${patchStd.color || "Yellow"})`;
 
             const panelObj = panelsMap.get(upperPanelId);
             if (panelObj && panelObj.jacks[jackNum - 1] && !panelObj.jacks[jackNum - 1].port) {
@@ -2163,7 +2346,9 @@ const PortEngine = {
           panelTag,
           fullPatchCoordinate: isCopperAccess ? `${panelId}:${jackLabel}${panelSlotU ? ` [${panelSlotU}]` : ""}` : `${panelId} (${jackLabel})`,
           patchCordId,
+          patchCordLengthFt,
           patchCordSpec,
+          portOffsetSide: offset24.is24Class ? offset24.side : "full",
           patchCordColor: patchStd.color || "Yellow",
           patchCordHex: patchStd.hex || "#eab308",
           runColor: runStd.color || "Yellow",
@@ -2190,6 +2375,8 @@ const PortEngine = {
       switchCode,
       closetCode,
       isStandardPod: isStdPod,
+      isSandwich48,
+      offset24,
       panels: Array.from(panelsMap.values())
     };
   }

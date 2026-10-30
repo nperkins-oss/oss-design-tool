@@ -435,6 +435,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-1FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (1-Foot, Blue)",
@@ -446,6 +447,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-2FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (2-Foot, Blue)",
@@ -457,6 +459,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-3FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (3-Foot, Blue)",
@@ -468,6 +471,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-5FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim High-Density Patch Cord (5-Foot, Blue)",
@@ -479,6 +483,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-7FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (7-Foot, Blue)",
@@ -490,6 +495,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-10FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (10-Foot, Blue)",
@@ -501,6 +507,7 @@ const CABLING_CATALOG = {
     },
     {
       sku: "C6A-SLIM-15FT-BL",
+      color: "Blue",
       weightLbs: 0.85,
       depthInches: 1.2,
       name: "Cat6A 28AWG Slim Patch Cord (15-Foot, Blue)",

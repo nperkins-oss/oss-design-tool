@@ -84,7 +84,7 @@ window.toggleRackPatchJumpers = toggleRackPatchJumpers;
  * Renders an interactive, data-driven 24-Keystone Patch Panel row and paired Switch row
  * with live PortEngine occupancy, end-to-end trace tooltips, and 1-click Port Matrix navigation.
  */
-function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, deck, patchMapping) {
+function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, deck, patchMapping, stripOpts = {}) {
   const renderBlock = (slice) => slice.map(j => {
     const p = j.port;
     const isOccupied = Boolean(p && p.connectedDeviceId);
@@ -111,9 +111,10 @@ function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, de
       }
     }
 
+    const cordDesc = pm?.patchCordSpec || '6" Slim Cat6A';
     const tooltip = isOccupied
-      ? `${keystoneTag} ⟷ 6" Slim Cat6A ⟷ ${swPortTag} • ${cableRunTag}${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
-      : `${keystoneTag} (Open) ⟷ Mapped to ${swPortTag} — Click to assign in Port Studio`;
+      ? `${keystoneTag} ⟷ ${cordDesc} ⟷ ${swPortTag} • ${cableRunTag}${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
+      : `${keystoneTag} (Open) ⟷ ${cordDesc} ⟷ Mapped to ${swPortTag} — Click to assign in Port Studio`;
 
     return `
       <button
@@ -147,9 +148,10 @@ function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, de
       const swPortTag = pm && pm.switchPortTag ? pm.switchPortTag : `Switch Port ${unitPort}`;
       const dotState = isOccupied ? (isPoe ? "occupied-poe" : "occupied-data") : "";
       const cordState = isOccupied ? (isPoe ? "poe" : "data") : "";
+      const cordDesc = pm?.patchCordSpec || '6" Slim Cat6A';
       const tooltip = isOccupied
-        ? `${keystoneTag} ⟷ 6" Slim Cat6A ⟷ ${swPortTag} • ${cableRunTag}${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
-        : `${keystoneTag} (Open) ⟷ Mapped to ${swPortTag} — Click to assign in Port Studio`;
+        ? `${keystoneTag} ⟷ ${cordDesc} ⟷ ${swPortTag} • ${cableRunTag}${devLabel}${isPoe ? ` (${p.poeOutputWatts}W PoE)` : ''} — Click to trace in Port Studio`
+        : `${keystoneTag} (Open) ⟷ ${cordDesc} ⟷ Mapped to ${swPortTag} — Click to assign in Port Studio`;
       return `
         <button
           type="button"
@@ -176,10 +178,38 @@ function renderInteractiveRackKeystoneStripHTML(switchInstanceId, jacksArray, de
   if (jacksArray.length > 24) {
     const top24 = jacksArray.slice(0, 24);
     const bot24 = jacksArray.slice(24, 48);
+    if (deck === "between") {
+      // Shared In-Between 48P Panel: Top 24 jacks patch UP to upper switch (Ports 25-48), Bottom 24 jacks patch DOWN to lower switch (Ports 1-24)
+      return `
+        <div class="flex flex-col gap-0.5 items-end">
+          ${renderRow(top24, false, true)}
+          ${renderRow(bot24, true, false)}
+        </div>
+      `;
+    }
     return `
       <div class="flex flex-col gap-0.5 items-end">
         ${renderRow(top24, false, deck === "lower")}
         ${renderRow(bot24, deck === "upper" || deck === "single", false)}
+      </div>
+    `;
+  }
+
+  if (stripOpts && stripOpts.isOffset48Frame) {
+    // Half-populated 1U 48-Port Modular Frame (2x12 active jacks on Left or Right half + 24 blank modular slots on opposite half)
+    const side = stripOpts.populatedSide === "right" ? "right" : "left";
+    const top12 = jacksArray.slice(0, 12);
+    const bot12 = jacksArray.slice(12, 24);
+    const blankHalfHtml = `<span class="px-1.5 py-0.5 rounded bg-slate-900/90 border border-dashed border-slate-700/70 text-[8px] font-mono text-slate-500 select-none" title="24 Unpopulated Modular Keystone Slots (Spare Expansion Capacity)">24× Blank Slots</span>`;
+    const activeHalfHtml = `
+      <div class="flex flex-col gap-0.5">
+        <div class="rack-kp-group">${renderBlock(top12)}</div>
+        <div class="rack-kp-group">${renderBlock(bot12)}</div>
+      </div>
+    `;
+    return `
+      <div class="flex items-center gap-1.5">
+        ${side === "left" ? `${activeHalfHtml}${blankHalfHtml}` : `${blankHalfHtml}${activeHalfHtml}`}
       </div>
     `;
   }
@@ -242,10 +272,17 @@ function renderInteractiveRackSwitchFaceplateHTML(switchItem, unitNum, patchData
 
   const topRow = is48P ? copperPorts.slice(0, 24) : copperPorts.slice(0, 12);
   const botRow = is48P ? copperPorts.slice(24, 48) : copperPorts.slice(12, 24);
+  const offset24 = (!is48P && typeof resolveSwitch24PortOffset === "function")
+    ? resolveSwitch24PortOffset(switchItem)
+    : null;
+  const offsetSide = offset24?.is24Class ? offset24.side : "full";
 
   return `
     <div class="rack-sw-strip">
-      <div class="rack-sw-rows">
+      ${offsetSide === "right" ? `
+        <span class="px-1 py-0.5 mr-1.5 rounded bg-cyan-950/90 border border-cyan-700/50 text-[7.5px] font-mono font-bold text-cyan-300 leading-none select-none" title="Left LCM Touchscreen &amp; Chassis Bezel — 24 RJ-45 Copper Ports Offset Right">LCM</span>
+      ` : ''}
+      <div class="rack-sw-rows" title="${offset24?.is24Class ? escapeHTML(offset24.description) : '48-Port Full-Width Copper Matrix'}">
         <div class="rack-sw-row">
           ${topRow.slice(0, 12).map(renderPortDot).join("")}
           ${topRow.length > 12 ? `<span class="w-1"></span>${topRow.slice(12, 24).map(renderPortDot).join("")}` : ''}
@@ -257,6 +294,9 @@ function renderInteractiveRackSwitchFaceplateHTML(switchItem, unitNum, patchData
           </div>
         ` : ''}
       </div>
+      ${offsetSide === "left" ? `
+        <span class="w-5 sm:w-8 h-3 mx-1 rounded-sm bg-slate-950/80 border border-dashed border-slate-700/70 flex items-center justify-center text-[7px] font-mono text-slate-500 select-none" title="Left-Offset 2×12 Copper Block — Right Chassis Bezel Space">2×12L</span>
+      ` : ''}
       ${uplinkPorts.length > 0 ? `
         <div class="pl-1.5 border-l border-slate-800 rack-sw-row" title="Optical Uplink / Stack Cages">
           ${uplinkPorts.map(renderPortDot).join("")}
@@ -3333,6 +3373,21 @@ function autoMountAllToActiveRack() {
   }
 }
 
+function clearRackPodAdjacentRoles(hostLoc) {
+  if (typeof projectBOM === "undefined" || !Array.isArray(projectBOM)) return;
+  const normTarget = hostLoc ? FacilityStore.normalize(hostLoc) : null;
+  projectBOM.forEach(sw => {
+    if (!sw || sw.parentInstanceId || !sw.podAdjacentRole) return;
+    const swLoc = FacilityStore.normalize(sw.closetName || sw.rackId);
+    if (!normTarget || swLoc === normTarget || swLoc === FacilityStore.UNASSIGNED) {
+      delete sw.podAdjacentRole;
+      if (sw.standardPod && typeof applyStandardPodCabling === "function") {
+        applyStandardPodCabling(sw);
+      }
+    }
+  });
+}
+
 function unmountAllFromActiveRack() {
   if (typeof projectBOM === "undefined") return;
 
@@ -3347,6 +3402,7 @@ function unmountAllFromActiveRack() {
     }
   });
 
+  clearRackPodAdjacentRoles(activeRackId);
   FacilityStore.notifyWorkspaceChange();
   renderRackVisualizer();
   if (typeof showToast === "function") {
@@ -3358,9 +3414,11 @@ function unmountRackItem(instanceId) {
   if (typeof projectBOM === "undefined") return;
   const item = projectBOM.find(i => i.instanceId === instanceId);
   if (item) {
+    const prevHost = item.closetName || item.rackId;
     item.rackSlot = null;
     item.closetName = FacilityStore.UNASSIGNED;
     item.rackId = FacilityStore.UNASSIGNED;
+    clearRackPodAdjacentRoles(prevHost);
     FacilityStore.notifyWorkspaceChange();
     renderRackVisualizer();
     if (typeof showToast === "function") {
@@ -3922,7 +3980,12 @@ function getRackItemHeight(it) {
   const ppMeta = getRackSwitchPatchPanelMeta(it);
 
   if (it.standardPod) {
-    // Standard Pod: Dual-24P (1U above + 1U below) when explicitly selected, otherwise 1 unified 48P (or 24P) panel per switch unit
+    if (ppMeta.isSandwich48) {
+      // 48P Sandwich Pod: 2x 1U 24P Outer Caps (above top & below bottom) + (N-1)x 1U 48P Panels In-Between
+      const outerU = ppMeta.outer24Count !== undefined ? ppMeta.outer24Count : 2;
+      const innerU = (ppMeta.inner48Count !== undefined ? ppMeta.inner48Count : Math.max(0, stack - 1)) * (ppMeta.betweenRackUnits || 1);
+      return (baseRU * stack) + outerU + innerU;
+    }
     const podPanelU = ppMeta.isDual24 ? 2 : ppMeta.rackUnits;
     return (baseRU * stack) + (podPanelU * stack);
   }
@@ -4128,8 +4191,116 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
               </div>
             </div>
 
-            <!-- Standard Pod Layout: Single Unified 48P/24P Panel (Default) or Dual-24P Split Sandwich -->
-            ${slotData.isStdPod ? `
+            <!-- Standard Pod Layout: 48P Sandwich (24P Top/Bot + 48P In-Between), 24P Offset-Aware Pod, or Explicit Override -->
+            ${(slotData.isStdPod && ppMeta.isSandwich48) ? `
+              <div class="mt-1.5 space-y-1 border-t border-slate-800/80 pt-1.5 p-1 rounded-lg bg-slate-950/75">
+                ${(() => {
+                  const adjRole = it.podAdjacentRole || null;
+                  const hasTopCap = adjRole !== "middle" && adjRole !== "bottom";
+                  const hasBotCap = adjRole !== "top" && adjRole !== "middle";
+                  const hasBotShared48 = adjRole === "top" || adjRole === "middle";
+                  const betweenRU = ppMeta.betweenRackUnits || 1;
+                  const floorOffset = hasBotCap ? 1 : (hasBotShared48 ? betweenRU : 0);
+                  const getSwU = (uNum) => u + floorOffset + (uNum - 1) * (slotData.baseRU + betweenRU);
+                  const rows = [];
+
+                  if (hasTopCap) {
+                    const topCapU = getSwU(stackUnits) + slotData.baseRU;
+                    const topPanel = patchMapping?.panels?.find(p => p.deckKey === "SANDWICH-TOP") || patchMapping?.panels?.find(p => p.deck === "upper");
+                    const topId = topPanel ? topPanel.panelId : "PP01";
+                    const topJacks = topPanel ? topPanel.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                    const topActive = topJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                    rows.push(`
+                      <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-purple-300 font-bold w-10 shrink-0">U${topCapU}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${topId}</span>
+                          <span class="text-slate-300 truncate">1U 24P Top Cap (${stackUnits > 1 ? `U${stackUnits} ` : ''}Ports 1–24 ↓)</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded ${topActive > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">${topActive}/24 Patched</span>
+                        </div>
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, topJacks, "upper", patchMapping)}
+                      </div>
+                    `);
+                  }
+
+                  for (let unitNum = stackUnits; unitNum >= 1; unitNum--) {
+                    const isMaster = unitNum === 1;
+                    const switchU = getSwU(unitNum);
+                    rows.push(`
+                      <div class="px-2 py-1 rounded bg-slate-900/95 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-indigo-400 font-bold w-10 shrink-0">U${switchU}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-sky-950 text-sky-300 font-bold border border-sky-700/60 shrink-0">
+                            ${stackUnits > 1 ? `${patchMapping?.switchCode || 'SW'}-U${unitNum} (${isMaster ? 'Master' : 'Member'})` : (patchMapping?.switchCode || 'Switch Faceplate')}
+                          </span>
+                          <span class="text-slate-200 font-semibold truncate">${escapeHTML(it.model)}</span>
+                          ${showRackPatchJumpers ? `<span class="text-[9px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.5 rounded hidden md:inline shrink-0">6" Slim Cat6A ↑↓</span>` : ''}
+                        </div>
+                        ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
+                      </div>
+                    `);
+
+                    if (unitNum > 1) {
+                      const bIdx = unitNum - 1;
+                      const btwnU = getSwU(bIdx) + slotData.baseRU;
+                      const btwnPanel = patchMapping?.panels?.find(p => p.deckKey === `SANDWICH-BTWN-${bIdx}`);
+                      const btwnId = btwnPanel ? btwnPanel.panelId : `PP${String(stackUnits - bIdx + 1).padStart(2, "0")}`;
+                      const btwnJacks = btwnPanel ? btwnPanel.jacks : Array.from({ length: 48 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                      const btwnActive = btwnJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                      rows.push(`
+                        <div class="px-2 py-1 rounded bg-fuchsia-950/45 border border-fuchsia-500/50 flex items-center justify-between gap-2 text-[10px] font-mono">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="text-fuchsia-300 font-bold w-10 shrink-0">U${btwnU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-fuchsia-900/80 text-fuchsia-100 font-bold border border-fuchsia-500/50 shrink-0">${btwnId}</span>
+                            <span class="text-fuchsia-200 truncate">1U 48P Shared In-Between (↑ U${unitNum} P25–48 / ↓ U${bIdx} P1–24)</span>
+                            <span class="text-[9px] px-1.5 py-0.5 rounded ${btwnActive > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">${btwnActive}/48 Patched</span>
+                          </div>
+                          ${renderInteractiveRackKeystoneStripHTML(it.instanceId, btwnJacks, "between", patchMapping)}
+                        </div>
+                      `);
+                    }
+                  }
+
+                  if (hasBotShared48) {
+                    const botSharedPanel = patchMapping?.panels?.find(p => p.deckKey === "SANDWICH-BTWN-0");
+                    const bsId = botSharedPanel ? botSharedPanel.panelId : "PP-SH";
+                    const bsJacks = botSharedPanel ? botSharedPanel.jacks : Array.from({ length: 48 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                    const bsActive = bsJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                    rows.push(`
+                      <div class="px-2 py-1 rounded bg-fuchsia-950/45 border border-fuchsia-500/50 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-fuchsia-300 font-bold w-10 shrink-0">U${u}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-fuchsia-900/80 text-fuchsia-100 font-bold border border-fuchsia-500/50 shrink-0">${bsId}</span>
+                          <span class="text-fuchsia-200 truncate">1U 48P Shared In-Between (↑ P25–48 / ↓ Adjacent 48P P1–24)</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded ${bsActive > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">${bsActive}/48 Patched</span>
+                        </div>
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, bsJacks, "between", patchMapping)}
+                      </div>
+                    `);
+                  }
+
+                  if (hasBotCap) {
+                    const botPanel = patchMapping?.panels?.find(p => p.deckKey === "SANDWICH-BOT") || patchMapping?.panels?.find(p => p.deck === "lower");
+                    const botId = botPanel ? botPanel.panelId : `PP${String(stackUnits + 1).padStart(2, "0")}`;
+                    const botJacks = botPanel ? botPanel.jacks : Array.from({ length: 24 }, (_, idx) => ({ jackNumber: idx + 1, jackLabel: `J${String(idx + 1).padStart(2, "0")}`, port: null }));
+                    const botActive = botJacks.filter(j => j.port && j.port.connectedDeviceId).length;
+                    rows.push(`
+                      <div class="px-2 py-1 rounded bg-purple-950/45 border border-purple-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2 min-w-0">
+                          <span class="text-purple-300 font-bold w-10 shrink-0">U${u}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${botId}</span>
+                          <span class="text-slate-300 truncate">1U 24P Bottom Cap (${stackUnits > 1 ? 'U1 ' : ''}Ports 25–48 ↑)</span>
+                          <span class="text-[9px] px-1.5 py-0.5 rounded ${botActive > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">${botActive}/24 Patched</span>
+                        </div>
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, botJacks, "lower", patchMapping)}
+                      </div>
+                    `);
+                  }
+
+                  return rows.join("");
+                })()}
+              </div>
+            ` : slotData.isStdPod ? `
               <div class="mt-1.5 space-y-1 border-t border-slate-800/80 pt-1.5">
                 ${Array.from({ length: stackUnits }, (_, sIdx) => {
                   const unitNum = stackUnits - sIdx;
@@ -4212,12 +4383,12 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                         <div class="flex items-center gap-2 min-w-0">
                           <span class="text-purple-300 font-bold w-10 shrink-0">${upperPPULabel}</span>
                           <span class="px-1.5 py-0.5 rounded bg-purple-900/80 text-purple-200 font-bold border border-purple-500/50 shrink-0">${panelId}</span>
-                          <span class="text-slate-300 truncate">${ppMeta.rackUnits}U ${ppMeta.ports}P Keystone (${portRangeLabel})</span>
+                          <span class="text-slate-300 truncate">${ppMeta.isOffset48Frame ? `1U 48P Half-Frame (${ppMeta.populatedSide === 'right' ? 'Right' : 'Left'} 2×12 • ${portRangeLabel})` : `${ppMeta.rackUnits}U ${ppMeta.ports}P Keystone (${portRangeLabel})`}</span>
                           <span class="text-[9px] px-1.5 py-0.5 rounded ${activeCount > 0 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-600/50' : 'bg-slate-900 text-slate-400 border border-slate-800'} font-bold shrink-0">
                             ${activeCount}/${ppMeta.ports} Patched
                           </span>
                         </div>
-                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, panelJacks, "single", patchMapping)}
+                        ${renderInteractiveRackKeystoneStripHTML(it.instanceId, panelJacks, "single", patchMapping, { isOffset48Frame: Boolean(ppMeta.isOffset48Frame), populatedSide: ppMeta.populatedSide })}
                       </div>
 
                       <!-- Switch Chassis Row -->
@@ -4228,7 +4399,7 @@ function renderEquipmentRackFrontFrame(frame, assignedItems, slots, maxU, active
                             ${stackUnits > 1 ? `${patchMapping?.switchCode || 'SW'}-U${unitNum} (${isMaster ? 'Master' : 'Member'})` : (patchMapping?.switchCode || 'Switch Faceplate')}
                           </span>
                           <span class="text-slate-200 font-semibold truncate">${escapeHTML(it.model)}</span>
-                          ${showRackPatchJumpers ? `<span class="text-[9px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.5 rounded hidden md:inline shrink-0">6" Slim Cat6A 1:1</span>` : ''}
+                          ${showRackPatchJumpers ? `<span class="text-[9px] text-cyan-300 bg-cyan-950/70 border border-cyan-700/50 px-1.5 py-0.5 rounded hidden md:inline shrink-0">${escapeHTML(ppMeta.offset24?.is24Class ? ppMeta.offset24.shortBadge : '6" Slim Cat6A 1:1')}</span>` : ''}
                         </div>
                         ${renderInteractiveRackSwitchFaceplateHTML(it, unitNum, patchMapping)}
                       </div>
@@ -4560,8 +4731,95 @@ function renderEquipmentRackRearFrame(frame, assignedItems, slots, maxU, activeE
               </div>
             </div>
 
-            <!-- Rear Standard Pod Layout: Single 48P/24P Tie Bar (Default) or Dual-24P Split Sandwich -->
-            ${slotData.isStdPod ? `
+            <!-- Rear Standard Pod Layout: 48P Sandwich (24P Top/Bot + 48P In-Between) or 24P Pod -->
+            ${(slotData.isStdPod && ppMeta.isSandwich48) ? `
+              <div class="mt-2 space-y-1 p-1 rounded bg-slate-950/60 border border-purple-900/40">
+                ${(() => {
+                  const adjRole = it.podAdjacentRole || null;
+                  const hasTopCap = adjRole !== "middle" && adjRole !== "bottom";
+                  const hasBotCap = adjRole !== "top" && adjRole !== "middle";
+                  const hasBotShared48 = adjRole === "top" || adjRole === "middle";
+                  const betweenRU = ppMeta.betweenRackUnits || 1;
+                  const floorOffset = hasBotCap ? 1 : (hasBotShared48 ? betweenRU : 0);
+                  const getSwU = (uNum) => u + floorOffset + (uNum - 1) * (slotData.baseRU + betweenRU);
+                  const rows = [];
+
+                  if (hasTopCap) {
+                    const topCapU = getSwU(stackUnits) + slotData.baseRU;
+                    rows.push(`
+                      <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
+                        <div class="flex items-center gap-2">
+                          <span class="text-purple-300 font-bold">U${topCapU}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70">1U 24P Patch Panel Rear (Top Cap • PP-1U-24P-MOD)</span>
+                          <span class="text-purple-400/80 text-[9px] font-semibold">24x Keystone Tie Bar</span>
+                        </div>
+                        <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">6" CORD DIRECT</span>
+                      </div>
+                    `);
+                  }
+
+                  for (let unitNum = stackUnits; unitNum >= 1; unitNum--) {
+                    const switchU = getSwU(unitNum);
+                    const unitLabel = stackUnits > 1 ? `Unit ${unitNum} ` : "";
+                    rows.push(`
+                      <div class="p-1.5 rounded bg-slate-950/90 border border-sky-500/40 flex items-center justify-between gap-2 text-[10px] font-mono">
+                        <div class="flex items-center gap-2">
+                          <span class="text-indigo-400 font-bold">U${switchU}</span>
+                          <span class="text-slate-300 font-bold">${unitLabel}${escapeHTML(it.model)} Rear (${psuSpecs.inletType})</span>
+                        </div>
+                        <div class="text-[9px] text-slate-400 flex items-center gap-2">
+                          <span class="text-cyan-400 flex items-center gap-0.5"><i data-lucide="wind" class="w-2.5 h-2.5"></i> Fan Exhaust</span>
+                          ${stackUnits > 1 ? `<span class="text-indigo-400 flex items-center gap-0.5"><i data-lucide="link" class="w-2.5 h-2.5"></i> Stack Link</span>` : ''}
+                          ${(stackUnits > 1 && it.stackPowerEnabled) ? `<span class="text-amber-300 flex items-center gap-0.5"><i data-lucide="zap" class="w-2.5 h-2.5"></i> StackPower</span>` : ''}
+                          <span class="text-emerald-400 font-bold">PSU OK</span>
+                        </div>
+                      </div>
+                    `);
+                    if (unitNum > 1) {
+                      const bIdx = unitNum - 1;
+                      const btwnU = getSwU(bIdx) + slotData.baseRU;
+                      rows.push(`
+                        <div class="p-1.5 rounded bg-fuchsia-950/60 border border-fuchsia-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
+                          <div class="flex items-center gap-2">
+                            <span class="text-fuchsia-300 font-bold">U${btwnU}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-fuchsia-900/90 text-fuchsia-100 font-bold border border-fuchsia-500/70">1U 48P Shared Patch Panel Rear (In-Between • PP-1U-48P-MOD)</span>
+                            <span class="text-fuchsia-300/80 text-[9px] font-semibold">48x Dual-Row Keystone Tie Bar</span>
+                          </div>
+                          <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">24↑ + 24↓ 6" CORDS</span>
+                        </div>
+                      `);
+                    }
+                  }
+
+                  if (hasBotShared48) {
+                    rows.push(`
+                      <div class="p-1.5 rounded bg-fuchsia-950/60 border border-fuchsia-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
+                        <div class="flex items-center gap-2">
+                          <span class="text-fuchsia-300 font-bold">U${u}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-fuchsia-900/90 text-fuchsia-100 font-bold border border-fuchsia-500/70">1U 48P Shared Patch Panel Rear (Between Adjacent 48P Switches)</span>
+                        </div>
+                        <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">24↑ + 24↓ 6" CORDS</span>
+                      </div>
+                    `);
+                  }
+
+                  if (hasBotCap) {
+                    rows.push(`
+                      <div class="p-1.5 rounded bg-purple-950/70 border border-purple-600/70 flex items-center justify-between gap-2 text-[10px] font-mono shadow-sm">
+                        <div class="flex items-center gap-2">
+                          <span class="text-purple-300 font-bold">U${u}</span>
+                          <span class="px-1.5 py-0.5 rounded bg-purple-900/90 text-purple-200 font-bold border border-purple-500/70">1U 24P Patch Panel Rear (Bottom Cap • PP-1U-24P-MOD)</span>
+                          <span class="text-purple-400/80 text-[9px] font-semibold">24x Keystone Tie Bar</span>
+                        </div>
+                        <span class="text-[8.5px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 border border-emerald-600 text-emerald-300 font-bold">6" CORD DIRECT</span>
+                      </div>
+                    `);
+                  }
+
+                  return rows.join("");
+                })()}
+              </div>
+            ` : slotData.isStdPod ? `
               <div class="mt-2 space-y-1.5 border-t border-slate-800/80 pt-2">
                 ${Array.from({ length: stackUnits }, (_, sIdx) => {
                   const unitNum = stackUnits - sIdx;
@@ -5982,7 +6240,8 @@ function handleRackSlotDrop(e, targetU) {
     return;
   }
 
-  // 3. Commit all displacements
+  // 3. Commit all displacements (and restore self-contained 2x24P pods if manually rearranging unstacked 48P switches)
+  clearRackPodAdjacentRoles(activeRackId);
   Object.keys(bumpRes.placements).forEach(instId => {
     const targetItem = projectBOM.find(x => x.instanceId === instId);
     if (targetItem) {
@@ -6333,6 +6592,7 @@ function toggleSwitchStandardPod(instanceId) {
   }
 
   item.standardPod = willEnable;
+  delete item.podAdjacentRole;
 
   if (typeof applyStandardPodCabling === "function") {
     applyStandardPodCabling(item);
@@ -6361,7 +6621,9 @@ function toggleSwitchStandardPod(instanceId) {
     const ppMeta = getRackSwitchPatchPanelMeta(item);
     const ports = (ppMeta.copperPorts || parseInt(item.ports, 10) || 24) * stackUnits;
     showToast(willEnable
-      ? `Applied Standard Pod: ${ppMeta.isDual24 ? 'Dual 24P Patch Panels above & below' : `${ppMeta.rackUnits}U ${ppMeta.ports}-Port Patch Panel (${ppMeta.sku})`} with ${ports}x 6" Slim Patch Cords.`
+      ? (ppMeta.isSandwich48
+        ? `Applied 48P Sandwich Pod: ${ppMeta.outer24Count}x 24P Outer Panels${ppMeta.inner48Count > 0 ? ` + ${ppMeta.inner48Count}x 48P In-Between` : ' (Above & Below)'} with ${ports}x 6" Slim Cords.`
+        : `Applied Standard Pod: ${ppMeta.sku} (${ppMeta.offset24?.is24Class ? ppMeta.offset24.shortBadge : `${ports}x 6" Slim Cords`}).`)
       : `Removed Standard Pod configuration from ${item.model}.`);
   }
 }
@@ -6389,7 +6651,48 @@ function applyStandardPodsToActiveRack() {
     return;
   }
 
-  // 3. Apply standard pod to all copper switches (24P & 48P, standalone or stacked)
+  // 3. Sort mounted items by enterprise priority first so adjacent standalone 48P switches can share 1U 48P in-between panels:
+  // ISP > Firewalls > Core > Aggregation > Access Switches (copper pods) > Servers > UPSes
+  mountedItems.sort((a, b) => {
+    const pA = getDeviceMountPriority(a);
+    const pB = getDeviceMountPriority(b);
+    if (pA.priority !== pB.priority) {
+      return pA.priority - pB.priority;
+    }
+    if (pA.priority === 5 || pA.portCount || pB.portCount) {
+      const portDiff = (pB.portCount || 0) - (pA.portCount || 0);
+      if (portDiff !== 0) return portDiff;
+    }
+    return (a.model || "").localeCompare(b.model || "");
+  });
+
+  // 4. Detect consecutive unstacked 48P copper switches so they form a unified [24P Top + 48P Switches w/ 48P In-Between + 24P Bottom] Sandwich
+  mountedItems.forEach(it => { delete it.podAdjacentRole; });
+  const isUnstacked48Copper = (it) => {
+    if (!isCopperSwitch(it)) return false;
+    const st = (it.stackedUnits && it.stackedUnits >= 2) ? it.stackedUnits : 1;
+    if (st >= 2) return false;
+    if (it.patchPanelSku && it.patchPanelSku !== "auto" && it.patchPanelSku !== "SANDWICH-48") return false;
+    const cp = (typeof getSwitchCopperPortCount === "function") ? getSwitchCopperPortCount(it) : (parseInt(it.ports, 10) || 24);
+    return cp > 24;
+  };
+
+  let runStart = -1;
+  for (let i = 0; i <= mountedItems.length; i++) {
+    const match = i < mountedItems.length && isUnstacked48Copper(mountedItems[i]);
+    if (match && runStart === -1) {
+      runStart = i;
+    } else if (!match && runStart !== -1) {
+      const runLen = i - runStart;
+      if (runLen >= 2) {
+        for (let k = runStart; k < i; k++) {
+          mountedItems[k].podAdjacentRole = (k === runStart) ? "top" : ((k === i - 1) ? "bottom" : "middle");
+        }
+      }
+      runStart = -1;
+    }
+  }
+
   let copperSwitchCount = 0;
   mountedItems.forEach(it => {
     if (isCopperSwitch(it)) {
@@ -6405,21 +6708,6 @@ function applyStandardPodsToActiveRack() {
         applyStackCabling(it);
       }
     }
-  });
-
-  // 4. Sort mounted items by enterprise priority:
-  // ISP > Firewalls > Core > Aggregation > Access Switches (copper pods) > Servers > UPSes
-  mountedItems.sort((a, b) => {
-    const pA = getDeviceMountPriority(a);
-    const pB = getDeviceMountPriority(b);
-    if (pA.priority !== pB.priority) {
-      return pA.priority - pB.priority;
-    }
-    if (pA.priority === 5 || pA.portCount || pB.portCount) {
-      const portDiff = (pB.portCount || 0) - (pA.portCount || 0);
-      if (portDiff !== 0) return portDiff;
-    }
-    return (a.model || "").localeCompare(b.model || "");
   });
 
   // 5. Interleave 1U Horizontal Cable Managers between adjacent fiber switches and firewalls

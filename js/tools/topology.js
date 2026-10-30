@@ -466,30 +466,35 @@ function findPatchCordItem(targetFt, preferredVendor, isEtherlighting, preferred
 
   if (typeof CABLING_CATALOG !== "undefined" && CABLING_CATALOG.patchCords) {
     const cords = CABLING_CATALOG.patchCords;
+    const tol = targetFt <= 1.5 ? 0.24 : 0.6;
+    const pickClosest = (pred) => {
+      const matches = cords.filter(c => pred(c) && Math.abs((c.lengthFt || 0) - targetFt) <= tol);
+      if (matches.length === 0) return null;
+      matches.sort((a, b) => Math.abs((a.lengthFt || 0) - targetFt) - Math.abs((b.lengthFt || 0) - targetFt));
+      return matches[0];
+    };
+
     if (isEtherlighting) {
-      const el = cords.find(c => c.etherlighting && Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      const el = pickClosest(c => c.etherlighting);
       if (el) return el;
     }
     // 1. Preferred vendor + target color + length
     if (preferredVendor) {
-      const match = cords.find(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) &&
-        (c.color || '').toLowerCase() === targetColor.toLowerCase() &&
-        Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      const match = pickClosest(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) &&
+        (c.color || '').toLowerCase() === targetColor.toLowerCase());
       if (match) return match;
     }
     // 2. Target color + length
-    const colorMatch = cords.find(c => (c.color || '').toLowerCase() === targetColor.toLowerCase() &&
-      Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+    const colorMatch = pickClosest(c => (c.color || '').toLowerCase() === targetColor.toLowerCase());
     if (colorMatch) return colorMatch;
 
     // 3. Preferred vendor + length fallback
     if (preferredVendor) {
-      const match = cords.find(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()) &&
-        Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+      const match = pickClosest(c => (c.vendor || '').toLowerCase().includes(preferredVendor.toLowerCase()));
       if (match) return match;
     }
     // 4. Any length match
-    const match = cords.find(c => Math.abs((c.lengthFt || 0) - targetFt) < 0.6);
+    const match = pickClosest(() => true);
     if (match) return match;
   }
 

@@ -6432,9 +6432,18 @@ function commitCablingToBOM(options = {}) {
       });
 
       const netPanelDropsNeeded = Math.max(0, closetDropsCount - existingPanelCapacity);
-      const p48 = Math.floor(netPanelDropsNeeded / 48);
-      const rem = netPanelDropsNeeded % 48;
-      const p24 = rem > 0 ? (rem <= 24 ? 1 : 2) : 0;
+      const total24Blocks = netPanelDropsNeeded > 0 ? Math.ceil(netPanelDropsNeeded / 24) : 0;
+      let p24 = 0;
+      let p48 = 0;
+      if (total24Blocks === 1) {
+        p24 = 1; // Single <=24-port switch: 1x 24P panel
+      } else if (total24Blocks === 2) {
+        p24 = 2; // Standalone 48-port switch (25..48 drops): 2x 24P panels (above & below)
+      } else if (total24Blocks >= 3) {
+        // Multiple 48P switches (>48 drops): 2x 24P outer top/bottom caps + 48P panels in between
+        p48 = Math.floor((total24Blocks - 2) / 2);
+        p24 = 2 + ((total24Blocks - 2) % 2);
+      }
 
       if (infraScope.rackPatchPanels !== false && !isDirectRj45) {
         if (p48 > 0) {
