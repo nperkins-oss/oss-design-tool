@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-bump_version.py - Single-Source-of-Truth Version & Build Stamp Synchronizer
+bump_version.py - Single-Source-of-Truth Version, Build Stamp & Changelog Synchronizer
 OSS Network & Security Design Tool (NetSelect Enterprise)
 
 Usage:
-  python scripts/bump_version.py --set 0.11.0-beta.7
+  python scripts/bump_version.py --set 0.11.0-beta.8
   python scripts/bump_version.py --patch
   python scripts/bump_version.py --minor --prerelease rc.1
   python scripts/bump_version.py --release
@@ -21,6 +21,7 @@ PACKAGE_JSON_FILE = ROOT / "package.json"
 APP_JS_FILE = ROOT / "js" / "core" / "app.js"
 INDEX_HTML_FILE = ROOT / "index.html"
 LOGIN_HTML_FILE = ROOT / "login.html"
+CHANGELOG_FILE = ROOT / "CHANGELOG.md"
 
 
 def parse_semver(ver_str: str):
@@ -32,13 +33,14 @@ def parse_semver(ver_str: str):
 
 def main():
     parser = argparse.ArgumentParser(description="Bump and synchronize OSS Design Tool version")
-    parser.add_argument("--set", dest="set_version", help="Explicit version (e.g., 0.11.0-beta.7)")
+    parser.add_argument("--set", dest="set_version", help="Explicit version (e.g., 0.11.0-beta.8)")
     parser.add_argument("--major", action="store_true", help="Increment major version")
     parser.add_argument("--minor", action="store_true", help="Increment minor version")
     parser.add_argument("--patch", action="store_true", help="Increment patch version or prerelease counter")
     parser.add_argument("--prerelease", help="Set prerelease tag (e.g., alpha.1, beta.1, rc.1)")
     parser.add_argument("--release", action="store_true", help="Strip prerelease tag for production release")
     parser.add_argument("--schema", help="Update schemaVersion (e.g., 2.1.0)")
+    parser.add_argument("--no-changelog", action="store_true", help="Skip auto-scaffolding CHANGELOG.md section")
     args = parser.parse_args()
 
     data = json.loads(VERSION_FILE.read_text(encoding="utf-8"))
@@ -58,7 +60,6 @@ def main():
         pre = args.prerelease
     elif args.patch:
         if pre and not args.prerelease:
-            # Increment trailing number in prerelease if present (e.g., beta.6 -> beta.7)
             pm = re.match(r"^([a-zA-Z]+)(?:\.(\d+))?$", pre)
             if pm:
                 tag = pm.group(1)
@@ -76,8 +77,10 @@ def main():
     if args.release:
         pre = None
 
+    now = datetime.datetime.now()
     new_ver = f"{major}.{minor}.{patch}" + (f"-{pre}" if pre else "")
-    build_stamp = datetime.datetime.now().strftime("%Y.%m.%d.%H%M")
+    build_stamp = now.strftime("%Y.%m.%d.%H%M")
+    iso_date = now.strftime("%Y-%m-%d")
     schema_ver = args.schema or data.get("schemaVersion", "2.1.0")
 
     data["version"] = new_ver
@@ -85,13 +88,11 @@ def main():
     data["schemaVersion"] = schema_ver
     VERSION_FILE.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    # Sync package.json
     if PACKAGE_JSON_FILE.exists():
         pkg_data = json.loads(PACKAGE_JSON_FILE.read_text(encoding="utf-8"))
         pkg_data["version"] = new_ver
         PACKAGE_JSON_FILE.write_text(json.dumps(pkg_data, indent=2) + "\n", encoding="utf-8", newline="\n")
 
-    # Sync js/core/app.js
     if APP_JS_FILE.exists():
         app_text = APP_JS_FILE.read_text(encoding="utf-8")
         app_text = re.sub(
@@ -114,11 +115,10 @@ def main():
         )
         APP_JS_FILE.write_text(app_text, encoding="utf-8", newline="\n")
 
-    # Sync index.html fallback badge text & cache-busting query params on local CSS, data, and JS assets
     if INDEX_HTML_FILE.exists():
         idx_text = INDEX_HTML_FILE.read_text(encoding="utf-8")
         idx_text = re.sub(
-            r'(<span[^>]*id="appVersionBadge"[^>]*>)[^<]*(</span>)',
+            r'(<(?:span|button)[^>]*id="appVersionBadge"[^>]*>)[^<]*(</(?:span|button)>)',
             rf"\g<1>v{new_ver}\g<2>",
             idx_text,
             count=1,
@@ -130,7 +130,6 @@ def main():
         )
         INDEX_HTML_FILE.write_text(idx_text, encoding="utf-8", newline="\n")
 
-    # Sync login.html badge
     if LOGIN_HTML_FILE.exists():
         login_text = LOGIN_HTML_FILE.read_text(encoding="utf-8")
         login_text = re.sub(
@@ -140,6 +139,23 @@ def main():
             count=1,
         )
         LOGIN_HTML_FILE.write_text(login_text, encoding="utf-8", newline="\n")
+
+    if not args.no_changelog and CHANGELOG_FILE.exists():
+        cl_text = CHANGELOG_FILE.read_text(encoding="utf-8").replace("\r\n", "\n")
+        if not re.search(rf"^## \[{re.escape(new_ver)}\]", cl_text, flags=re.MULTILINE):
+            scaffold = (
+                f"## [{new_ver}] - {iso_date}\n\n"
+                "### Added & Enhanced\n"
+                f"- _TODO: Document release notes for v{new_ver} before running npm run verify_\n\n"
+                "---\n\n"
+            )
+            m_first = re.search(r"^## \[", cl_text, flags=re.MULTILINE)
+            if m_first:
+                cl_text = cl_text[: m_first.start()] + scaffold + cl_text[m_first.start() :]
+            else:
+                cl_text = cl_text.rstrip() + "\n\n" + scaffold
+            CHANGELOG_FILE.write_text(cl_text, encoding="utf-8", newline="\n")
+            print(f"[Changelog] Scaffolded ## [{new_ver}] - {iso_date} in CHANGELOG.md (fill in notes before verifying).")
 
     print(f"[Version Sync] Updated APP_VERSION = v{new_ver}, BUILD_NUMBER = {build_stamp}, SCHEMA_VERSION = {schema_ver}")
 

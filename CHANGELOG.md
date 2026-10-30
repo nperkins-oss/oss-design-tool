@@ -1,9 +1,129 @@
 # Changelog
 
-All notable changes to the **NetSelect Enterprise** network & physical security infrastructure sizing engine will be documented in this file.
+All notable changes to the **OSS Network & Security Design Tool** (NetSelect Enterprise) sizing and engineering platform will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+---
+
+## [0.11.0-beta.8] - 2026-10-30
+
+### Interactive Version Badge, In-App Release Notes Modal & Automated Changelog Gate
+- **Clickable Version Badge & What's New Modal (`index.html`, `js/core/app.js`, `staticwebapp.config.json`)**:
+  - Upgraded `#appVersionBadge` in the primary header to an interactive button (and added a **What's New & Release Notes** shortcut in the Project Menu) that opens `#changelogModal` rendered live from `CHANGELOG.md`.
+  - Added unread release notification indicator dot tracked via `localStorage` (`oss_last_seen_changelog_version`), environment/build/schema metadata pills, instant keyword & SKU search, release channel filter tabs, and a quick-jump version timeline sidebar.
+  - Updated `staticwebapp.config.json` `navigationFallback.exclude` and `mimeTypes` to serve `CHANGELOG.md` cleanly on Azure Static Web Apps.
+- **Automated Changelog Scaffolding & Pre-Deploy Enforcement (`scripts/bump_version.js`, `scripts/bump_version.py`, `scripts/verify_app.js`, `.agents/rules/deployment.md`)**:
+  - Enhanced `bump_version.js` and `bump_version.py` to automatically scaffold a dated `## [<version>] - YYYY-MM-DD` section in `CHANGELOG.md` whenever a new version is stamped.
+  - Added active-version release notes parity enforcement and headless `parseChangelogMarkdown` verification to `scripts/verify_app.js` so CI/CD builds fail if `CHANGELOG.md` lacks documented notes for `VERSION.json`.
+  - Backfilled complete release history from `0.10.46-alpha` through `0.11.0-beta.8`.
+
+---
+
+## [0.11.0-beta.7] - 2026-10-30
+
+### 48-Port Sandwich Patch Panel Architecture & 24-Port Offset Patching
+- **48P Switch Sandwich Rule (`js/tools/bom.js`, `js/engines/port_engine.js`, `js/tools/rack.js`, `js/tools/physical_layout.js`)**:
+  - **Standalone 48P Switches (`N = 1`)**: Standardized on **`2x PP-1U-24P-MOD`** (`1U 24-Port` panel above for upper ports `1–24` + `1U 24-Port` panel below for lower ports `25–48` = `3U` pod).
+  - **Stacked & Adjacent 48P Switches (`N >= 2`)**: Standardized on **`2x PP-1U-24P-MOD`** at the outer top and bottom caps plus **`(N - 1)x PP-1U-48P-MOD`** shared in between adjacent switches across BOM pods, `PortEngine.resolveSwitchPatchMapping` (`PP01..PP(N+1)` 1:1 port mapping), Rack Front/Rear Elevations (dual-direction `↑` / `↓` jumper indicators and automatic merging of adjacent unstacked 48P switches in `applyStandardPodsToActiveRack`), and Floorplan Closet Auto-Cabling.
+- **24-Port Left / Right Offset Port Detection & Patching Strategies (`js/tools/bom.js`, `js/tools/topology.js`, `js/tools/rack.js`, `data/infrastructure/data_cabling.js`)**:
+  - Added `resolveSwitch24PortOffset` auto-detecting **`left`** `2×12` copper port blocks (Cisco, Meraki, Juniper, Aruba/HPE, Ruckus, Fortinet, Allied Telesis) vs. **`right`** shifted copper blocks with left `1.3"` LCM touchscreens (Ubiquiti UniFi `USW-*` 16/24-port rackmount switches) vs. **`inline`** full-width layouts.
+  - Added 4 selectable 24P offset patching strategies in `#bomItemAccessoriesModal`: **`mixed_cords`** (default: `1x PP-1U-24P-MOD` + `12x 6-Inch` + `12x 1-Foot` cords), **`offset_48p_frame`** (half-populated `1x PP-1U-48P-MOD` frame + `1x C6A-KEY-SLD-24` pack + `24x 6-Inch` cords with 24 blank slots), **`all_1ft_cords`**, and **`inline_6in`**.
+  - Tightened `findPatchCordItem` length tolerance in `topology.js` and added `color: "Blue"` metadata on `C6A-SLIM-*` cords so `0.5ft` (`6in`) and `1.0ft` (`1ft`) slim cords resolve distinctly.
+
+### Pre-Deploy Verification Gate & Repository Tooling
+- **5-Stage Verification Suite & CI Gate (`scripts/verify_app.js`, `scripts/bump_version.js`, `package.json`, `.gitattributes`, `.github/workflows/azure-static-web-apps-green-hill-00d9d7810.yml`)**:
+  - Added zero-dependency Node verification suite (`npm run verify`) validating version/cache-bust parity, required wizard & BOM modals, `vm.Script` syntax across all 72 browser scripts, disk existence of all 2,497 `CATALOG_ASSETS` WebP/PDF references (resolving 4 Streamvault PDF links in `data/data_assets.js`), and headless full-stack runtime boot.
+  - Added `.gitattributes` LF normalization, Node `scripts/bump_version.js`, and gated Azure Static Web Apps deployments on `node scripts/verify_app.js`.
+
+---
+
+## [0.11.0-beta.6] - 2026-10-30
+
+### Switch Stacking Intelligence, Cisco StackPower & Post-BOM Hardware Configurator
+- **1st & Last Stack Uplink Module Policy (`js/tools/bom.js`, `js/tools/topology.js`, `js/engines/port_engine.js`)**:
+  - When stacking `N >= 3` modular switches, modular uplink sleds and optical transceivers now default to **`first_last`** (`2` uplink modules on Member `#1` and Member `#N` only, leaving intermediate members' modular bays unpopulated), with per-stack override options (`first_last`, `all_members`, `first_only`, `none`).
+- **Cisco StackPower Ring & Star Support (`data/networking/data_interconnects.js`, `data/networking/data_meraki.js`, `data/networking/data_cisco_c9350.js`, `js/tools/bom.js`)**:
+  - Added StackPower power-sharing configuration for Cisco Catalyst `C9300` and `C9350` stacks supporting ring topology (`CAB-SPWR-30CM` & `CAB-SPWR-150CM`, up to 4 switches per StackPower ring with automatic multi-ring splitting for 5–8 member stacks) and `XPS-2200` star topologies.
+- **Cisco Catalyst Oversized Power Supplies (`data/networking/data_interconnects.js`, `data/networking/data_meraki.js`)**:
+  - Added Cisco Catalyst `1100W` and `1900W` oversized AC Platinum power supplies (`PWR-C1-1100WAC-P-O`, `PWR-C1-1100WAC-P-M-O`, `PWR-C1-1900WAC-P-O`, `PWR-C1-1900WAC-P-M-O`) across `C9300-48P` and modular Catalyst families.
+- **Post-BOM Configure Options & Accessories Modal (`#bomItemAccessoriesModal` in `js/tools/bom.js`, `index.html`)**:
+  - Added full lifecycle configuration for parts already in the BOM: primary PSU wattage upgrades, 2nd/3rd redundant hot-swap PSUs, modular uplink sleds, 4-post rack mount kits, spare fan modules, feature licenses, StackPower, and `1U 24P` / `1U 48P` patch panel pods.
+- **In-Place Hardware Swap / Product Replacement (`#bomReplaceItemModal` in `js/tools/bom.js`, `index.html`)**:
+  - Added 1-click **Swap / Replace Hardware** workflow preserving `instanceId`, rack elevation slot, floorplan coordinates, topology links, friendly name, stack membership, and compatible accessories when switching a BOM part to another SKU.
+
+---
+
+## [0.11.0-beta.5] - 2026-10-30
+
+### Cisco Catalyst C9350 Series Smart Switches Catalog Ingestion
+- **Cisco Catalyst C9350 Smart Switches & Ecosystem (`data/networking/data_cisco_c9350.js`, `data/networking/data_interconnects.js`, `data/data_assets.js`, `index.html`)**:
+  - Ingested the Cisco Catalyst `C9350` Series Smart Switches (`C9350-24T`, `C9350-24P`, `C9350-24U`, `C9350-24HX`, `C9350-48T`, `C9350-48P`, `C9350-48U`, `C9350-48HX`) powered by Silicon One `A100` ASICs with `90W` Cisco UPOE+ (`802.3bt` Type 4), triple hot-swap PSU bays, and `1.6 Tbps` StackWise-1.6T backplane stacking.
+  - Added `C9350` dual-rate `25G/10G` (`C9350-NM-8Y`, `C9350-NM-4Y`) and `100G/40G` (`C9350-NM-2C`, `C9350-NM-4C`) modular uplink sleds, StackWise-1.6T cables (`STACK-T5-50CM`, `STACK-T5-1M`, `STACK-T5-3M`), and hot-swap AC PSUs (`PWR-C2-715WAC`, `PWR-C2-1100WAC`, `PWR-C2-1900WAC`).
+  - Linked verified OEM PDF datasheets, transparent `800×600` WebP product imagery, and DRC compatibility tags.
+
+---
+
+## [0.11.0-beta.4] - 2026-10-29
+
+### Bidirectional Scope-to-BOM & DRC Health Reconciliation
+- **Live Scope Reconciliation (`js/tools/project_wizard.js`, `js/tools/project_health.js`, `js/tools/bom.js`)**:
+  - Implemented bidirectional synchronization across all 7 Orion project scope toggles so enabling or disabling scopes automatically updates BOM inclusion/provisioning states and immediately reconciles Design Rule Checker (DRC) health warnings and compliance scores without stale deficits.
+
+---
+
+## [0.11.0-beta.3] - 2026-10-29
+
+### 5-Step Guided Project Wizard, Revision Branching & 7 Independent Scopes
+- **5-Step New Project Wizard & Revision Engine (`js/tools/project_wizard.js`, `js/tools/revisions.js`, `index.html`)**:
+  - Expanded the New Project Wizard to a 5-step guided engineering workflow covering Project Identity & Revision Branching, 7 Independent Orion Division-of-Responsibility (DOR) Scopes, VMS/ACS Platform Defaults (Genetec Security Center default + ACS host matrix), Structured Cabling & Color Standards (with baseline cabling inheritance), and Optics/Margin Policies.
+
+---
+
+## [0.11.0-beta.2] - 2026-10-29
+
+### Enterprise VMS / Server Sizing Suite, Workspace Studios & UX Architecture
+- **Genetec Security Center 5.13/5.14 & Streamvault Ecosystem (`data/compute/`, `data/software/`, `js/core/app.js`, `js/tools/project_health.js`)**:
+  - Ingested official Genetec Streamvault appliances (`SV`, `SVA`, `SVR`, `SVW` series) with complete build options, RAID configurations, GPU decoding tiers, and official `5.14` datasheets.
+  - Built the integrated Genetec `5.13`/`5.14` Licensing Designer defaulting to unified `GSC-BASE-S` / `GSC-BASE-E` base packages with SQL Server 2025 `50 GB` Express cap guardrails, Core Failover dropdowns, Sipelia Standard/Advanced, RSA perimeter sensors (Quanergy, SpotterRF, Security Weaver), Suprema (`GSC-1SDK-SUPREMA-READ`), ClearID, Global Cardholder Sync, Medeco, and multi-select Partner SDK checklists.
+  - Added Genetec server specification, role isolation, and licensing compliance checks to the Design Rule Checker (DRC), plus the **Genetec 5.14 Client Workstation Sizer**.
+- **Milestone Systems Husky IVO & XProtect 2026 R2 Ecosystem (`data/compute/`, `data/software/`, `js/core/app.js`)**:
+  - Ingested Milestone Husky (`IVO`, `XA`, `XE`, `GW`) recording appliances and XProtect `2026 R2` Express+, Professional+, Expert, and Corporate base/device/Care Plus licensing sizers with multi-manufacturer VMS comparison.
+- **Multi-Group Video Storage, RAID, 30TB Archiver Cap & Failover Sizers (`js/core/app.js`, `js/engines/`)**:
+  - Added multi-group camera storage & bandwidth tables with per-group resolution, FPS, codec, duty cycle, retention, **"Low-FPS (2 FPS) Until Motion/Event Boost"** toggle, and column "All-Same" sync checkboxes.
+  - Enforced the `30 TB` Windows volume cap isolated per Archiver role, multi-role server packing, RAID 5/6/10 drive matrix calculations, and dynamic `N`-Server Hot-Standby Ring & `N→M` Shared Failover calculators.
+- **Generic Camera Initial Design Mode, Door Schedule Studio & Top-Level Calculators (`js/core/app.js`, `index.html`)**:
+  - Added persistent Global Camera Design Mode toggle supporting 11 Generic Camera Types synced bidirectionally with the PoE Calculator and Storage Sizer, plus 1-click Bulk & Per-Camera Vendor SKU Upgrade.
+  - Added top-level **Calculators & Sizers** navigation and **Door Schedule Studio**, gated incomplete modules behind `FEATURE_FLAGS` for clean beta focus.
+- **Power Matrix Studio, 1:1 Catalog PDUs & 2-Line Orion Brady Labeling (`js/tools/rack.js`, `js/tools/cable_schedule.js`, `js/tools/port_matrix.js`)**:
+  - Promoted **Power Matrix Studio** to a first-class workspace tab with 1:1 catalog PDU receptacle mapping, voltage/amperage breaker audits, and real power jumper cord SKUs.
+  - Unified unique Orion Patch Panel IDs, OSS Cable Legend Run IDs, and 2-Line Brady power & data cable labels across Rack Elevations, Port Matrix Studio, and Cable Pull Schedules.
+  - Completed 100% OEM PDF datasheet, `weightLbs` / `depthInches`, `portsBreakdown`, and `800×600` WebP product imagery calibration across catalog items.
+- **Unified Workspace Tabs, Resizable Split-Panes & Security Hardening (`js/core/tab_manager.js`, `js/tools/`, `index.html`)**:
+  - Unified studio navigation into persistent workspace tabs with cross-studio deep links, persistent search/filter memory across tab switches, draggable split-pane dividers, resizable table columns across all schedules/calculators, `O(1)` project deletion, default project guards, `?v=` cache-busting, and XSS sanitization across studios and workbook exporters.
+
+---
+
+## [0.11.0-beta.1] - 2026-10-13
+
+### Blueprint IndexedDB Engine, Multi-Zone DORI Cones, Pathway Routing & Pre-Compiled CSS
+- **Physical Layout CAD & Floorplan Engine (`js/tools/physical_layout.js`, `js/core/storage.js`)**:
+  - Migrated high-resolution floorplan blueprints to IndexedDB storage with multi-page PDF floorplan import, `60fps` hardware-accelerated canvas drag, multi-zone DORI (`Detection`, `Observation`, `Recognition`, `Identification`) FOV color bands, and multi-trunk pathway corridor routing.
+- **Cross-Studio Polish & Pre-Compiled Tailwind CSS (`js/tools/topology.js`, `assets/css/tailwind.min.css`, `index.html`)**:
+  - Added Topology Canvas Undo/Redo history, unified VLAN management (defaulting to untagged/no-VLAN baseline), resolved 18 cross-studio synchronization issues, and replaced runtime Tailwind CDN scripting with pre-compiled local `assets/css/tailwind.min.css`.
+
+---
+
+## [0.10.46-alpha] - 2026-10-12
+
+### Azure Static Web Apps CI/CD, Entra ID SSO & Orion TOW DRC Standards
+- **Corporate Authentication & Cloud Deployment (`staticwebapp.config.json`, `login.html`, `js/core/auth.js`, `.github/workflows/`)**:
+  - Configured Azure Static Web Apps staging & production CI/CD pipelines with OIDC authentication, Microsoft Entra ID corporate SSO login, `@orionsecuritysolutions.com` domain guard, and WebP product asset optimization.
+- **Power Catalog, National Code / Orion TOW DRC & Datasheet Pipeline (`data/infrastructure/data_accessories.js`, `js/engines/`, `.agents/`)**:
+  - Expanded Eaton `ePDU G3` and Tripp Lite enterprise power distribution units, mounts, and accessories.
+  - Aligned Design Rule Checker (DRC) validations with NEC / TIA-569 National Codes and Orion Theory of Work (TOW) installation standards.
+  - Streamlined Physical Layout Studio into a single unified toolbar with floating canvas dock and added the standardized `catalog-datasheet-ingestion` engineering pipeline.
 
 ---
 

@@ -1,6 +1,6 @@
 {
   "name": "oss-design-tool",
-  "version": "0.11.0-beta.7",
+  "version": "0.11.0-beta.8",
   "private": true,
   "description": "Orion Security Solutions — Enterprise Network, Physical Security & Infrastructure Design Tool",
   "scripts": {

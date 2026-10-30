@@ -38,7 +38,26 @@ const appVerMatch = appJsSrc.match(/const APP_VERSION\s*=\s*"([^"]+)";/);
 assert(appVerMatch && appVerMatch[1] === expectedVersion, `js/core/app.js APP_VERSION (${appVerMatch?.[1]}) !== VERSION.json (${expectedVersion})`);
 
 const indexHtml = readUtf8('index.html');
-assert(indexHtml.includes(`>v${expectedVersion}</span>`), `index.html #appVersionBadge does not match v${expectedVersion}`);
+const badgeRe = new RegExp(`id="appVersionBadge"[^>]*>v${expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}</(?:span|button)>`);
+assert(badgeRe.test(indexHtml), `index.html #appVersionBadge does not match v${expectedVersion}`);
+
+// Verify CHANGELOG.md documents the active VERSION.json version without placeholder TODOs
+assert(existsRel('CHANGELOG.md'), 'CHANGELOG.md must exist at repository root');
+const changelogMd = readUtf8('CHANGELOG.md').replace(/\r\n/g, '\n');
+const escapedExpectedVer = expectedVersion.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const clHeaderMatch = changelogMd.match(new RegExp(`^## \\[${escapedExpectedVer}\\]\\s+-\\s+\\d{4}-\\d{2}-\\d{2}\\s*$`, 'm'));
+assert(
+  clHeaderMatch,
+  `CHANGELOG.md is missing a dated release header "## [${expectedVersion}] - YYYY-MM-DD". Update CHANGELOG.md before deploying.`
+);
+const clBodyStart = clHeaderMatch.index + clHeaderMatch[0].length;
+const clRest = changelogMd.slice(clBodyStart);
+const nextHeaderIdx = clRest.search(/^## \[/m);
+const clSectionBody = nextHeaderIdx >= 0 ? clRest.slice(0, nextHeaderIdx) : clRest;
+assert(
+  /^-\s+\S+/m.test(clSectionBody) && !clSectionBody.includes('_TODO: Document release notes'),
+  `CHANGELOG.md section for [${expectedVersion}] contains an unedited TODO placeholder or has no bullet items.`
+);
 
 // Extract all local CSS and JS asset references from index.html
 const localAssetRegex = /(?:src|href)="((?:js|data|assets\/css)\/[^"?]+\.(?:js|css))(?:\?v=([^"]*))?"/g;
@@ -70,7 +89,7 @@ for (let s = 1; s <= 5; s++) {
   assert(indexHtml.includes(`id="wizStepPill-${s}"`), `index.html missing #wizStepPill-${s}`);
   assert(indexHtml.includes(`id="wizStepContent-${s}"`), `index.html missing #wizStepContent-${s}`);
 }
-for (const modalId of ['bomModal', 'bomItemAccessoriesModal', 'bomReplaceItemModal', 'newProjectModal', 'projectDefaultConfirmModal']) {
+for (const modalId of ['bomModal', 'bomItemAccessoriesModal', 'bomReplaceItemModal', 'changelogModal', 'newProjectModal', 'projectDefaultConfirmModal']) {
   assert(indexHtml.includes(`id="${modalId}"`), `index.html missing required modal #${modalId}`);
 }
 const modalSlice = indexHtml.slice(indexHtml.indexOf('id="newProjectModal"'), indexHtml.indexOf('id="projectDefaultConfirmModal"'));
@@ -312,7 +331,86 @@ vm.runInContext(`
   assert(port35 && port35.connectedDeviceId === 'cam-verify-1', 'In-place swap must preserve connected camera on Port 35');
 `, ctx);
 
-console.log('✓ [5/5] Engineering Regression Suite Passed: Stacking, StackPower, 48P Panels, PSU PoE Matrix & In-Place Swap verified.');
-console.log('==================================================================');
-console.log('ALL PRE-DEPLOY CHECKS PASSED');
-console.log('==================================================================');
+// 5F. Live Changelog Parser, Unread Version Badge Dot & What's New Modal Verification
+(async () => {
+  const appDom = new Map();
+  appDom.set('appVersionBadge', makeEl('appVersionBadge', 'button'));
+  appDom.set('changelogModal', makeEl('changelogModal', 'div'));
+  appDom.set('changelogVersionTimeline', makeEl('changelogVersionTimeline', 'div'));
+  appDom.set('changelogFeedContainer', makeEl('changelogFeedContainer', 'div'));
+  appDom.set('changelogMatchCountBadge', makeEl('changelogMatchCountBadge', 'span'));
+  appDom.set('changelogSearchClearBtn', makeEl('changelogSearchClearBtn', 'button'));
+  const lsStore = new Map();
+  const appSandbox = {
+    console,
+    Math,
+    Date,
+    JSON,
+    Set,
+    Map,
+    Array,
+    Object,
+    Number,
+    String,
+    Boolean,
+    RegExp,
+    Promise,
+    encodeURIComponent,
+    decodeURIComponent,
+    setTimeout: (fn) => { if (typeof fn === 'function') fn(); return 0; },
+    clearTimeout: () => {},
+    localStorage: {
+      getItem: (k) => (lsStore.has(k) ? lsStore.get(k) : null),
+      setItem: (k, v) => lsStore.set(k, String(v)),
+      removeItem: (k) => lsStore.delete(k)
+    },
+    location: { hostname: 'staging.oss.azurestaticapps.net', protocol: 'https:' },
+    fetch: async () => ({ ok: true, text: async () => changelogMd }),
+    document: {
+      readyState: 'loading',
+      body: makeEl('body', 'body'),
+      getElementById: (id) => appDom.get(id) || makeEl(id, 'div'),
+      createElement: (tag) => makeEl('', tag),
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      addEventListener: () => {}
+    }
+  };
+  appSandbox.window = appSandbox;
+  appSandbox.globalThis = appSandbox;
+  const appCtx = vm.createContext(appSandbox);
+  vm.runInContext(appJsSrc, appCtx, { filename: 'js/core/app.js' });
+
+  // Unseen version must display pulsing cyan indicator dot on #appVersionBadge
+  appCtx.renderVersionBadge();
+  assert(appDom.get('appVersionBadge').innerHTML.includes('bg-cyan-400'), 'Unseen version must render pulsing cyan notification dot on #appVersionBadge');
+
+  const parsedChangelog = appCtx.parseChangelogMarkdown(changelogMd);
+  assert(Array.isArray(parsedChangelog) && parsedChangelog.length >= 45, `Expected >= 45 parsed changelog releases, got ${parsedChangelog?.length}`);
+  assert.strictEqual(parsedChangelog[0].version, expectedVersion, `Top changelog release (${parsedChangelog[0].version}) must match VERSION.json (${expectedVersion})`);
+  assert.strictEqual(parsedChangelog[0].isCurrent, true, 'Top changelog release must be flagged isCurrent === true');
+
+  const wildcardHtml = appCtx.formatChangelogInlineHTML('Supports `USW-*` and `C6A-SLIM-*` SKUs');
+  assert(wildcardHtml.includes('>USW-*</code>') && wildcardHtml.includes('>C6A-SLIM-*</code>'), 'Inline code wildcard asterisks must not be mangled into <em> tags');
+
+  // Opening modal must mark version seen, clear unread dot, unhide modal, and render release cards
+  await appCtx.openChangelogModal();
+  assert.strictEqual(lsStore.get('oss_last_seen_changelog_version'), expectedVersion, 'openChangelogModal must store seen version in localStorage');
+  assert(!appDom.get('appVersionBadge').innerHTML.includes('bg-cyan-400'), 'Opening changelog modal must clear unread dot on #appVersionBadge');
+  assert(!appDom.get('changelogModal').classList.contains('hidden'), 'openChangelogModal must unhide #changelogModal');
+  assert(appDom.get('changelogFeedContainer').innerHTML.includes(`v${expectedVersion}`), 'Changelog feed must render active version release card');
+
+  appCtx.setChangelogSearchQuery('StackPower');
+  assert(appDom.get('changelogFeedContainer').innerHTML.includes('0.11.0-beta.6'), 'Changelog live search for "StackPower" must match v0.11.0-beta.6');
+
+  appCtx.closeChangelogModal();
+  assert(appDom.get('changelogModal').classList.contains('hidden'), 'closeChangelogModal must hide #changelogModal');
+
+  console.log('✓ [5/5] Engineering Regression Suite Passed: Stacking, StackPower, 48P Sandwich, 24P Offset, PSU PoE Matrix, Swap & Changelog Modal verified.');
+  console.log('==================================================================');
+  console.log('ALL PRE-DEPLOY CHECKS PASSED');
+  console.log('==================================================================');
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

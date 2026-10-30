@@ -65,7 +65,8 @@
       "/Datasheets/*",
       "/datasheets/*",
       "/login.html",
-      "*.{css,scss,js,png,gif,ico,jpg,svg,webp,json,pdf}"
+      "/CHANGELOG.md",
+      "*.{css,scss,js,png,gif,ico,jpg,svg,webp,json,pdf,md}"
     ]
   },
   "globalHeaders": {
@@ -79,6 +80,7 @@
     ".webp": "image/webp",
     ".json": "application/json",
     ".svg": "image/svg+xml",
-    ".pdf": "application/pdf"
+    ".pdf": "application/pdf",
+    ".md": "text/markdown; charset=utf-8"
   }
 }
