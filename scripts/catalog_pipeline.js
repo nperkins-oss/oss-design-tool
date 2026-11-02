@@ -18,6 +18,9 @@ const ROOT = path.resolve(__dirname, '..');
 const DATA_FILES_IN_ORDER = [
   'data/data_assets.js',
   'data/compute_storage/data_servers.js',
+  'data/infrastructure/data_ups_pdu.js',
+  'data/infrastructure/data_racks_mounts.js',
+  'data/infrastructure/data_media_poe.js',
   'data/infrastructure/data_accessories.js',
   'data/infrastructure/data_cabling.js',
   'data/networking/data_allied.js',
@@ -155,7 +158,13 @@ function resolveTargetDatabase(item) {
     if (vendor.includes('amg')) return { file: 'data/networking/data_amg.js', varName: 'AMG_SWITCHES' };
     if (vendor.includes('allied')) return { file: 'data/networking/data_allied.js', varName: 'ALLIED_SWITCHES' };
   }
-  return { file: 'data/infrastructure/data_accessories.js', varName: 'ACCESSORY_DATABASE' };
+  if (['ups', 'pdus', 'power_cords', 'power_supply', 'power_cable', 'network_card', 'environmental_sensor', 'licenses'].includes(cat)) {
+    return { file: 'data/infrastructure/data_ups_pdu.js', varName: 'UPS_PDU_DATABASE' };
+  }
+  if (['racks', 'outdoor_enclosure', 'security_cabinet', 'industrial_din', 'architectural_backboard', 'mounting', 'rack_panel', 'patch_panel', 'shelf', 'cable_management', 'pathways'].includes(cat)) {
+    return { file: 'data/infrastructure/data_racks_mounts.js', varName: 'RACKS_MOUNTS_DATABASE' };
+  }
+  return { file: 'data/infrastructure/data_media_poe.js', varName: 'MEDIA_POE_DATABASE' };
 }
 
 function validateEntry(item, registry, assetsMap, allowUpdate = false) {

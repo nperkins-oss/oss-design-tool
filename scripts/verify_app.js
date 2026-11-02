@@ -62,6 +62,7 @@ assert(
 // Extract all local CSS and JS asset references from index.html
 const localAssetRegex = /(?:src|href)="((?:js|data|assets\/css)\/[^"?]+\.(?:js|css))(?:\?v=([^"]*))?"/g;
 const localScripts = [];
+const localCssFiles = [];
 const staleVersionTags = [];
 let assetMatch;
 while ((assetMatch = localAssetRegex.exec(indexHtml)) !== null) {
@@ -73,6 +74,8 @@ while ((assetMatch = localAssetRegex.exec(indexHtml)) !== null) {
   }
   if (relPath.endsWith('.js')) {
     localScripts.push(relPath);
+  } else if (relPath.endsWith('.css')) {
+    localCssFiles.push(relPath);
   }
 }
 assert.strictEqual(
@@ -80,7 +83,7 @@ assert.strictEqual(
   0,
   `Stale or missing ?v=${expectedVersion} cache-bust params in index.html:\n  ` + staleVersionTags.join('\n  ')
 );
-console.log(`✓ [1/5] Version Sync Verified: v${expectedVersion} across VERSION.json, package.json, app.js & ${localScripts.length + 1} HTML asset tags.`);
+console.log(`✓ [1/5] Version Sync Verified: v${expectedVersion} across VERSION.json, package.json, app.js & ${localScripts.length + localCssFiles.length} HTML asset tags.`);
 
 // ---------------------------------------------------------------------------
 // 2. HTML Structure, Modals & 5-Step Project Wizard Audit
@@ -186,18 +189,19 @@ const bootScripts = localScripts.filter(s =>
   s === 'js/core/namespace.js' ||
   s === 'js/core/storage.js' ||
   s === 'js/core/facility.js' ||
+  s === 'js/core/facility_ui.js' ||
   s === 'js/engines/device_taxonomy.js' ||
   s === 'js/engines/port_engine.js' ||
   s === 'js/engines/sizer_network.js' ||
   (s.startsWith('js/sizers/') && !s.startsWith('js/sizers/ui/')) ||
   s === 'js/engines/search_filter.js' ||
   s === 'js/renderers/render_cards.js' ||
-  s === 'js/tools/topology.js' ||
+  s.startsWith('js/tools/topology') ||
   s.startsWith('js/studios/topology/') ||
-  s === 'js/tools/rack.js' ||
+  s.startsWith('js/tools/rack') ||
   s.startsWith('js/studios/power/') ||
   s.startsWith('js/studios/rack/') ||
-  s === 'js/tools/bom.js' ||
+  s.startsWith('js/tools/bom') ||
   s.startsWith('js/bom/') ||
   s === 'js/tools/project_wizard.js'
 );

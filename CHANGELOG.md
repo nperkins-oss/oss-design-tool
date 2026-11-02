@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0-beta.12] - 2026-11-02
+
+### Phase 2 Codebase Modularization (Tools, Core UI, Infrastructure Catalogs & Stylesheet)
+- **Extracted Custom Stylesheet (`assets/css/app.css`, `index.html`)**:
+  - Extracted 454 lines of inline `<style>` rules (custom scrollbars, topology clusters, interactive rack/keystone/PDU strips, table/pane resizers, and `@media print` submittal styles) from `index.html` into `assets/css/app.css` with automated `?v=` cache-busting synchronization.
+- **Modularized Infrastructure Accessory Catalog (`data/infrastructure/`, `scripts/catalog_pipeline.js`)**:
+  - Split the 9,731-line `data_accessories.js` monolith into 3 focused domain files plus a lightweight backwards-compatible aggregator:
+    - `data/infrastructure/data_ups_pdu.js` (`UPS_PDU_DATABASE`: 150 UPS, EBP, PDU, power cord, network card, environmental probe & power license entries)
+    - `data/infrastructure/data_racks_mounts.js` (`RACKS_MOUNTS_DATABASE`: 67 equipment racks, NEMA enclosures, security cabinets, backboards, shelves, rails, chassis & pathway entries)
+    - `data/infrastructure/data_media_poe.js` (`MEDIA_POE_DATABASE`: 78 industrial media converters, PoE injectors/splitters, surge arrestors, CWDM mux/demux & fiber video/data multiplexers)
+    - `data/infrastructure/data_accessories.js` (`ACCESSORY_DATABASE` aggregator combining all 295 entries seamlessly)
+- **Split Large Studio & Core Engine Modules (`js/core/`, `js/tools/`, `scripts/verify_app.js`)**:
+  - **Facility Engine (`4,165` lines → 2 files)**: `js/core/facility.js` (`FacilityStore` state & cascading event dispatcher) and `js/core/facility_ui.js` (Facility Manager modal UI, drag-and-drop hardware assignment & Quick-Add Enclosure modal).
+  - **Rack & Enclosure Studio (`9,069` lines → 3 files)**: `js/tools/rack.js` (Host selector, auto-mounting & 5 physical host frame renderers), `js/tools/rack_power.js` (0U vertical channels, PDU/power cord resolution, feed balancing & Rack Power Matrix modal), and `js/tools/rack_telemetry.js` (Drag-and-drop bump displacement engine, 48P/24P Standard Pod builders & host telemetry).
+  - **Physical Layout Studio (`7,323` lines → 3 files)**: `js/tools/physical_layout.js` (Canvas state, `CanvasHistory`, Camera FOV/DORI math, PDF blueprint ingestion & mouse/keyboard handlers), `js/tools/physical_layout_routing.js` (FOV cone SVG renderer, pathway trunk routing, unplaced device staging & physical inspector), and `js/tools/physical_layout_canvas.js` (`renderCableCanvas`, `commitCablingToBOM` & multi-select bulk alignment/distribution).
+  - **BOM & Licensing Studio (`7,143` lines → 3 files)**: `js/tools/bom.js` (Core BOM state, 24P/48P patch panel & StackPower sizing, PSU PoE matrix & item addition APIs), `js/tools/bom_views.js` (Grouped/Category/Flat BOM tables, License Manager modal & engineering CSV export), and `js/tools/bom_configurator.js` (Post-BOM Hardware Accessories Configurator modal & in-place Hardware Swap engine).
+  - **Logical Topology Studio (`6,204` lines → 2 files)**: `js/tools/topology.js` (Graph state, `TopologyHistory`, DAC/patch/fiber auto-synthesis, cluster cards & SVG Bézier links) and `js/tools/topology_inspector.js` (Slide-out Topology Inspector, auto-hierarchy layout & quick-jump search).
+
+---
+
 ## [0.11.0-beta.11] - 2026-11-02
 
 ### Full Hardware Datasheet Ingestion & Asset Coverage Completion (100% Actionable Device PDFs Linked)
