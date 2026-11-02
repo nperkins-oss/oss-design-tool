@@ -332,9 +332,25 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Infrastructure/Altronix/Altronix Trove3 - Datasheet.pdf",
         "image": "assets/images/products/altronix_trove3.webp"
     },
+    "amg-110-2x-sp": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG110-2X-SP Datasheet D35096-00.pdf",
+        "image": "assets/images/products/ubnt-eth-sp-g2.webp"
+    },
+    "amg-110m-1g-sp": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG110M-1G-SP Datasheet D39243-02.pdf",
+        "image": "assets/images/products/ubnt-eth-sp-g2.webp"
+    },
+    "amg-110m-1x-sp": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG110M-1X-SP Datasheet D35095-00.pdf",
+        "image": "assets/images/products/ubnt-eth-sp-g2.webp"
+    },
     "amg-140-1gr": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
         "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-150-1g-s60-pd": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG150-1G-S60-PD Datasheet D33644-01.pdf",
+        "image": "assets/images/products/amg-150-1gat-p30.webp"
     },
     "amg-150-1gat-p30": {
         "datasheetPath": "Datasheets/Network/AMG/AMG150 1 Port Series Datasheet D33646-05.pdf",
@@ -368,6 +384,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG155 1 Port Series Datasheet D33648-08.pdf",
         "image": "assets/images/products/amg-155-1gat-p30.webp"
     },
+    "amg-155-2gat-p60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG155 Series Datasheet D33278-01.pdf",
+        "image": "assets/images/products/amg-155-1gat-p30.webp"
+    },
+    "amg-155-2gbt-p120": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG155 120W Series Datasheet D33466-03.pdf",
+        "image": "assets/images/products/amg-155-1gat-p30.webp"
+    },
     "amg-156-1gbt-p90": {
         "datasheetPath": "Datasheets/Network/AMG/AMG156 8_16_24 Series Datasheet D33394-03.pdf",
         "image": "assets/images/products/amg-156-1gbt-p90.webp"
@@ -376,21 +400,85 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG160-1F-1EC Datasheet D37139-04.pdf",
         "image": "assets/images/products/amg-160-1f-1ec.webp"
     },
+    "amg-160-1f-1et": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG160-1F-1ET Datasheet D37126-04.pdf",
+        "image": "assets/images/products/amg-160-1f-1ec.webp"
+    },
+    "amg-160-1f-1eu": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG160-1F-1EU Datasheet D37140-04.pdf",
+        "image": "assets/images/products/amg-160-1f-1ec.webp"
+    },
+    "amg-160c-rp-aa": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG160C Extend-Net Rack Datasheet D37127-02.pdf",
+        "image": "assets/images/products/amg-2036-rp-aa.webp"
+    },
     "amg-172-1g-1v": {
         "datasheetPath": "Datasheets/Network/AMG/AMG172 Series Datasheet D39111-10.pdf",
         "image": "assets/images/products/amg-172-1g-1v.webp"
     },
+    "amg-173-1g-1v": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG173 Series Datasheet D39292-03.pdf",
+        "image": "assets/images/products/amg-172-1g-1v.webp"
+    },
+    "amg-2001": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2001 Datasheet D14339-04.pdf",
+        "image": "assets/images/products/amgpsu_w12_p25.webp"
+    },
+    "amg-2002": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2002 Datasheet D16126-03.pdf",
+        "image": "assets/images/products/amgpsu_w12_p25.webp"
+    },
+    "amg-2003a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2003A Datasheet D24348-02.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
+    "amg-2004a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2004A Datasheet D24343-01.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
+    "amg-2012": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2012 Datasheet D24244-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p240.webp"
+    },
+    "amg-2013": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2013 Datasheet D24245-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p480.webp"
+    },
     "amg-2015": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG2015 3U Rack Datasheet D18965-02.pdf",
         "image": "assets/images/products/amg-2015.webp"
     },
     "amg-2015-dr": {
         "datasheetPath": "Datasheets/Network/AMG/AMG2015-DR 3U Rack Datasheet D18966-02.pdf",
         "image": "assets/images/products/amg-2015-dr.webp"
     },
+    "amg-2016": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2016 Datasheet D24242-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
+    },
+    "amg-2019": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2019 Datasheet D24243-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
+    },
+    "amg-2023": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2023 Datasheet D24314-02.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
+    "amg-2027": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2027 DIN Rail 4U Rack Datasheet D29749-02.pdf",
+        "image": "assets/images/products/amg-2015-dr.webp"
+    },
+    "amg-2028": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2028 2U Rack Datasheet D29750-00.pdf",
+        "image": "assets/images/products/amg-2031.webp"
+    },
     "amg-2031": {
         "datasheetPath": "Datasheets/Network/AMG/AMG2031 1U Rack Datasheet D33276-01.pdf",
         "image": "assets/images/products/amg-2031.webp"
+    },
+    "amg-2034-1256-rp-ad": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2034 4U Rack Datasheet D37121-03.pdf",
+        "image": "assets/images/products/amg-2015-dr.webp"
     },
     "amg-2035": {
         "datasheetPath": "Datasheets/Network/AMG/AMG2035 90 Degree Bracket Datasheet D39283-01.pdf",
@@ -400,8 +488,16 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG2036 Blade Chassis Datasheet D33818-03.pdf",
         "image": "assets/images/products/amg-2036-rp-aa.webp"
     },
-    "amg-210m-1g-1s": {
+    "amg-210c-14-rp-aa": {
         "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "image": "assets/images/products/amg-2015.webp"
+    },
+    "amg-210m-1g-1s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG210M Series Datasheet D39119-07.pdf",
+        "image": "assets/images/products/amg-210m-1g-1s.webp"
+    },
+    "amg-210m-1gat-1s-p30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG210M PoE Series Datasheet D39137-04.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg-250-1g-1s": {
@@ -436,20 +532,44 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
         "image": "assets/images/products/amg-250r-1g-1s.webp"
     },
+    "amg-255-1gat-1s-p30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG255 Series Datasheet D33279-01.pdf",
+        "image": "assets/images/products/amg-255-2gbt-1s.webp"
+    },
     "amg-255-2gbt-1s": {
         "datasheetPath": "Datasheets/Network/AMG/AMG255 120W Series Datasheet D33467-03.pdf",
         "image": "assets/images/products/amg-255-2gbt-1s.webp"
     },
+    "amg-260-1gat-1s-p30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260 1_1 Series Datasheet D33638-05.pdf",
+        "image": "assets/images/products/amg-250-1g-1s.webp"
+    },
+    "amg-260-2gat-1s-p60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260 2_1 Series Datasheet D33882-01.pdf",
+        "image": "assets/images/products/amg-250-2g-1s.webp"
+    },
+    "amg-260-2gat-2s-p60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260 2_2 Series Datasheet D33883-01.pdf",
+        "image": "assets/images/products/amg-250-2g-2s.webp"
+    },
+    "amg-260b-1g-1s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260B Series Datasheet D33817-04.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg-260m-1g-1s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG260M Series Datasheet D33639-08.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg-260m-1gbt-1s-p90": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG260M Series Datasheet D33639-08.pdf",
+        "image": "assets/images/products/amg-210m-1g-1s.webp"
+    },
+    "amg-260p-1g-1s-iq": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260P_IQ Series Datasheet D35266-03.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg-265m-1g-1s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG265M Series Datasheet D33722-04.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg-350-14gat-2s": {
@@ -476,6 +596,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-4G-1C-1S Series Datasheet D33397-03.pdf",
         "image": "assets/images/products/amg-350-4g-1c-1s.webp"
     },
+    "amg-350-4gat-1g-2s-p120": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350 7 Port Series Datasheet D33900-03.pdf",
+        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+    },
     "amg-350-4gat-1g-pd": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-4GAT-1G-P75-PD Datasheet D33641-01.pdf",
         "image": "assets/images/products/amg-350-4gat-1g-pd.webp"
@@ -484,9 +608,17 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-4G-1C-1S Series Datasheet D33397-03.pdf",
         "image": "assets/images/products/amg-350-4g-1c-1s.webp"
     },
+    "amg-350-4gbt-1g-2s-p240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350 7 Port Series Datasheet D33900-03.pdf",
+        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+    },
     "amg-350-5g": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-5G Series Datasheet D33403-03.pdf",
         "image": "assets/images/products/amg-350-5g.webp"
+    },
+    "amg-350-5g-2s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350 7 Port Series Datasheet D33900-03.pdf",
+        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
     },
     "amg-350-8g": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-8G Series Datasheet D33404-01.pdf",
@@ -500,20 +632,28 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-8G Series Datasheet D33404-01.pdf",
         "image": "assets/images/products/amg-350-8g.webp"
     },
+    "amg-350r-2g-2s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350R Series Datasheet D33053-07.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
+    "amg-4600": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG4000 datasheet D14392.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg-510-16gat-2c": {
         "datasheetPath": "Datasheets/Network/AMG/AMG510-16G Series Datasheet D39131-06.pdf",
         "image": "assets/images/products/amg-510-16gat-2c.webp"
     },
     "amg-510-22gat-2cat-2s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-22G Series Datasheet D39149-04.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg-510-24g-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G Series Datasheet D39132-06.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg-510-24gat-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G Series Datasheet D39132-06.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg-510-24gat-4xs-rp": {
@@ -525,7 +665,7 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-510-48gat-4xs.webp"
     },
     "amg-510-4g-24s-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-4G-24S-4XS Datasheet D39123-08.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg-510-8g-2s": {
@@ -540,6 +680,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG510-16G Series Datasheet D39131-06.pdf",
         "image": "assets/images/products/amg-510-16gat-2c.webp"
     },
+    "amg-5122": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5122 Datasheet D35084-00.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-5400": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5400  AMG5500 data sheet (D17359).pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg-560-24gat-4s-rp-ad": {
         "datasheetPath": "Datasheets/Network/AMG/AMG560-24G Series Datasheet D39136-01.pdf",
         "image": "assets/images/products/amg-560-24gat-4xs.webp"
@@ -549,7 +697,7 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-560-24gat-4xs.webp"
     },
     "amg-560-8g-12s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG560 20 Port Series Datasheet D39301-02.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "amg-560-8g-4s": {
@@ -557,7 +705,7 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "amg-560-8g-8s-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG560 20 Port Series Datasheet D39301-02.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "amg-560-8gat-4s": {
@@ -567,6 +715,10 @@ const CATALOG_ASSETS = {
     "amg-560-8gat-4xs": {
         "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
+    },
+    "amg-5600": {
+        "datasheetPath": "Datasheets/Network/AMG/ANG5600 5700 Datasheet D14475.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
     },
     "amg-570-12gat-4s": {
         "datasheetPath": "Datasheets/Network/AMG/AMG570 12-16 Port Series Datasheet D36352-05.pdf",
@@ -632,9 +784,25 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG570 12-16 Port Series Datasheet D36352-05.pdf",
         "image": "assets/images/products/amg-570-8gat-4s.webp"
     },
+    "amg-5800": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5800 datasheet D22158.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
+    "amg-5900": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5900 datasheet D22014.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
+    "amg-6100": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG6100 datasheet D18098.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg-750-1g-4gat-104-p120": {
         "datasheetPath": "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
         "image": "assets/images/products/amg-eoc-7501.webp"
+    },
+    "amg-810-1f-pd": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG810 Series Datasheet D35159-01.pdf",
+        "image": "assets/images/products/amg-816-1f-rp-ad.webp"
     },
     "amg-816-1f-rp-ad": {
         "datasheetPath": "Datasheets/Network/AMG/AMG816 Series Datasheet D35161-02.pdf",
@@ -660,9 +828,105 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG8870F-WALL Datasheet D26093-00.pdf",
         "image": "assets/images/products/amg8870f_wall.webp"
     },
+    "amg-9050g-h": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9050G Datasheet D24070-07.pdf",
+        "image": "assets/images/products/amg-350-5g.webp"
+    },
+    "amg-9050g-hp-h": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9050G Datasheet D24070-07.pdf",
+        "image": "assets/images/products/amg-350-5g.webp"
+    },
+    "amg-9hm2p-8g-2s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P Series Datasheet D27066-11.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "amg-9hm2p-8g4h4n-2s-p480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P (PoE 90W) Datasheet D27069-05.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "amg-9hm2p-8gh-2s-4s16c-p240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P_MSES2 Series Datasheet D27046-05.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "amg-9hm2p-8gh-2s-p240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P (PoE) Datasheet D27064-13.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "amg-9hm2p-8gu-2s-p480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P (PoE 60W) Datasheet D27069-07.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "amg-9hmec-1gh-1s-p30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMEC Series Datasheet D29427-07.pdf",
+        "image": "assets/images/products/amg-250-1g-1s.webp"
+    },
+    "amg-9hmu-8g-2s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU Series Datasheet D28143-05.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "amg-9hmu-8g4h4n-2s-p480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU (PoE 90W) Datasheet D29198-04.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "amg-9hmu-8gh-2s-p240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU (PoE) Datasheet D28144-07.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "amg-9hmu-8gu-2s-p480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU (PoE 60W) Datasheet D29166-04.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "AMG-DAC-10G-0.5M": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-DAC-10G Series Datasheet D39265-01.pdf"
+    },
+    "AMG-DAC-10G-1M": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-DAC-10G Series Datasheet D39265-01.pdf"
+    },
+    "AMG-DAC-10G-2M": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-DAC-10G Series Datasheet D39265-01.pdf"
+    },
+    "AMG-DAC-10G-3M": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-DAC-10G Series Datasheet D39265-01.pdf"
+    },
     "amg-eoc-7501": {
         "datasheetPath": "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
         "image": "assets/images/products/amg-eoc-7501.webp"
+    },
+    "amg-fib-1sd-3cc-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1SD-3CC Series Datasheet D31076-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-1vt-1sd-3cc-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1V-1SD-3CC Series Datasheet D31079-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-1vt-3cc-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1V-3CC[-D] Series Datasheet D31078-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-1vt-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1V Series Datasheet D31077-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-2vt-1sd-3cc-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-2V-1SD-3CC Series Datasheet D31082-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-2vt-3cc-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-2V-3CC[-D] Series Datasheet D31081-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-2vt-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-2V Series Datasheet D31080-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-fib-3cc-s1a": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-3CC Series Datasheet D31075-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "amg-mnt-iq": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGMNT-IQ Bracket Datasheet D35273-01.pdf",
+        "image": "assets/images/products/amg-2035.webp"
     },
     "amg-mnt-mag-04": {
         "datasheetPath": "Datasheets/Network/AMG/AMGMNT-MAG Series Datasheet D39361-00.pdf",
@@ -676,6 +940,18 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
         "image": "assets/images/products/amg-250-1g-1s.webp"
     },
+    "AMG110-2X-SP": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG110-2X-SP Datasheet D35096-00.pdf",
+        "image": "assets/images/products/ubnt-eth-sp-g2.webp"
+    },
+    "AMG110M-1G-SP": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG110M-1G-SP Datasheet D39243-02.pdf",
+        "image": "assets/images/products/ubnt-eth-sp-g2.webp"
+    },
+    "AMG110M-1X-SP": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG110M-1X-SP Datasheet D35095-00.pdf",
+        "image": "assets/images/products/ubnt-eth-sp-g2.webp"
+    },
     "amg140-1gr": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
         "image": "assets/images/products/amg-140-1gr.webp"
@@ -683,6 +959,10 @@ const CATALOG_ASSETS = {
     "AMG140-1GR": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
         "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMG150-1G-S60-PD": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG150-1G-S60-PD Datasheet D33644-01.pdf",
+        "image": "assets/images/products/amg-150-1gat-p30.webp"
     },
     "amg150-1gat-p30": {
         "datasheetPath": "Datasheets/Network/AMG/AMG150 1 Port Series Datasheet D33646-05.pdf",
@@ -748,6 +1028,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG155 1 Port Series Datasheet D33648-08.pdf",
         "image": "assets/images/products/amg-155-1gat-p30.webp"
     },
+    "AMG155-2GAT-P60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG155 Series Datasheet D33278-01.pdf",
+        "image": "assets/images/products/amg-155-1gat-p30.webp"
+    },
+    "AMG155-2GBT-P120": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG155 120W Series Datasheet D33466-03.pdf",
+        "image": "assets/images/products/amg-155-1gat-p30.webp"
+    },
     "amg156-1gbt-p90": {
         "datasheetPath": "Datasheets/Network/AMG/AMG156 8_16_24 Series Datasheet D33394-03.pdf",
         "image": "assets/images/products/amg-156-1gbt-p90.webp"
@@ -764,6 +1052,18 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG160-1F-1EC Datasheet D37139-04.pdf",
         "image": "assets/images/products/amg-160-1f-1ec.webp"
     },
+    "AMG160-1F-1ET": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG160-1F-1ET Datasheet D37126-04.pdf",
+        "image": "assets/images/products/amg-160-1f-1ec.webp"
+    },
+    "AMG160-1F-1EU": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG160-1F-1EU Datasheet D37140-04.pdf",
+        "image": "assets/images/products/amg-160-1f-1ec.webp"
+    },
+    "AMG160C-RP-AA": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG160C Extend-Net Rack Datasheet D37127-02.pdf",
+        "image": "assets/images/products/amg-2036-rp-aa.webp"
+    },
     "amg172-1g-1v": {
         "datasheetPath": "Datasheets/Network/AMG/AMG172 Series Datasheet D39111-10.pdf",
         "image": "assets/images/products/amg-172-1g-1v.webp"
@@ -772,8 +1072,36 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG172 Series Datasheet D39111-10.pdf",
         "image": "assets/images/products/amg-172-1g-1v.webp"
     },
+    "AMG173-1G-1V": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG173 Series Datasheet D39292-03.pdf",
+        "image": "assets/images/products/amg-172-1g-1v.webp"
+    },
+    "AMG2001": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2001 Datasheet D14339-04.pdf",
+        "image": "assets/images/products/amgpsu_w12_p25.webp"
+    },
+    "AMG2002": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2002 Datasheet D16126-03.pdf",
+        "image": "assets/images/products/amgpsu_w12_p25.webp"
+    },
+    "AMG2003A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2003A Datasheet D24348-02.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
+    "AMG2004A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2004A Datasheet D24343-01.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
+    "AMG2012": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2012 Datasheet D24244-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p240.webp"
+    },
+    "AMG2013": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2013 Datasheet D24245-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p480.webp"
+    },
     "AMG2015": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG2015 3U Rack Datasheet D18965-02.pdf",
         "image": "assets/images/products/amg-2015.webp"
     },
     "amg2015-dr": {
@@ -784,6 +1112,26 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG2015-DR 3U Rack Datasheet D18966-02.pdf",
         "image": "assets/images/products/amg-2015-dr.webp"
     },
+    "AMG2016": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2016 Datasheet D24242-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
+    },
+    "AMG2019": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2019 Datasheet D24243-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
+    },
+    "AMG2023": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2023 Datasheet D24314-02.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
+    "AMG2027": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2027 DIN Rail 4U Rack Datasheet D29749-02.pdf",
+        "image": "assets/images/products/amg-2015-dr.webp"
+    },
+    "AMG2028": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2028 2U Rack Datasheet D29750-00.pdf",
+        "image": "assets/images/products/amg-2031.webp"
+    },
     "amg2031": {
         "datasheetPath": "Datasheets/Network/AMG/AMG2031 1U Rack Datasheet D33276-01.pdf",
         "image": "assets/images/products/amg-2031.webp"
@@ -791,6 +1139,10 @@ const CATALOG_ASSETS = {
     "AMG2031": {
         "datasheetPath": "Datasheets/Network/AMG/AMG2031 1U Rack Datasheet D33276-01.pdf",
         "image": "assets/images/products/amg-2031.webp"
+    },
+    "AMG2034-1256-RP-AD": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG2034 4U Rack Datasheet D37121-03.pdf",
+        "image": "assets/images/products/amg-2015-dr.webp"
     },
     "amg2035": {
         "datasheetPath": "Datasheets/Network/AMG/AMG2035 90 Degree Bracket Datasheet D39283-01.pdf",
@@ -808,12 +1160,20 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG2036 Blade Chassis Datasheet D33818-03.pdf",
         "image": "assets/images/products/amg-2036-rp-aa.webp"
     },
-    "amg210m-1g-1s": {
+    "AMG210C-14-RP-AA": {
         "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "image": "assets/images/products/amg-2015.webp"
+    },
+    "amg210m-1g-1s": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG210M Series Datasheet D39119-07.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "AMG210M-1G-1S": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG210M Series Datasheet D39119-07.pdf",
+        "image": "assets/images/products/amg-210m-1g-1s.webp"
+    },
+    "AMG210M-1GAT-1S-P30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG210M PoE Series Datasheet D39137-04.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg250-1g-1s": {
@@ -872,6 +1232,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG250R Series Datasheet D33036-07.pdf",
         "image": "assets/images/products/amg-250r-1g-1s.webp"
     },
+    "AMG255-1GAT-1S-P30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG255 Series Datasheet D33279-01.pdf",
+        "image": "assets/images/products/amg-255-2gbt-1s.webp"
+    },
     "amg255-2gbt-1s-p120": {
         "datasheetPath": "Datasheets/Network/AMG/AMG255 120W Series Datasheet D33467-03.pdf",
         "image": "assets/images/products/amg-255-2gbt-1s.webp"
@@ -880,28 +1244,48 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG255 120W Series Datasheet D33467-03.pdf",
         "image": "assets/images/products/amg-255-2gbt-1s.webp"
     },
+    "AMG260-1GAT-1S-P30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260 1_1 Series Datasheet D33638-05.pdf",
+        "image": "assets/images/products/amg-250-1g-1s.webp"
+    },
+    "AMG260-2GAT-1S-P60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260 2_1 Series Datasheet D33882-01.pdf",
+        "image": "assets/images/products/amg-250-2g-1s.webp"
+    },
+    "AMG260-2GAT-2S-P60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260 2_2 Series Datasheet D33883-01.pdf",
+        "image": "assets/images/products/amg-250-2g-2s.webp"
+    },
+    "AMG260B-1G-1S": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260B Series Datasheet D33817-04.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg260m-1g-1s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG260M Series Datasheet D33639-08.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "AMG260M-1G-1S": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG260M Series Datasheet D33639-08.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg260m-1gbt-1s-p90": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG260M Series Datasheet D33639-08.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "AMG260M-1GBT-1S-P90": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG260M Series Datasheet D33639-08.pdf",
+        "image": "assets/images/products/amg-210m-1g-1s.webp"
+    },
+    "AMG260P-1G-1S/IQ": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG260P_IQ Series Datasheet D35266-03.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg265m-1g-1s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG265M Series Datasheet D33722-04.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "AMG265M-1G-1S": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG210C Media Converter Rack Datasheet D39120-07.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG265M Series Datasheet D33722-04.pdf",
         "image": "assets/images/products/amg-210m-1g-1s.webp"
     },
     "amg350-14gat-2s-p300": {
@@ -952,6 +1336,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-4G-1C-1S Series Datasheet D33397-03.pdf",
         "image": "assets/images/products/amg-350-4g-1c-1s.webp"
     },
+    "AMG350-4GAT-1G-2S-P120": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350 7 Port Series Datasheet D33900-03.pdf",
+        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+    },
     "amg350-4gat-1g-p75-pd": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-4GAT-1G-P75-PD Datasheet D33641-01.pdf",
         "image": "assets/images/products/amg-350-4gat-1g-pd.webp"
@@ -968,6 +1356,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-4G-1C-1S Series Datasheet D33397-03.pdf",
         "image": "assets/images/products/amg-350-4g-1c-1s.webp"
     },
+    "AMG350-4GBT-1G-2S-P240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350 7 Port Series Datasheet D33900-03.pdf",
+        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
+    },
     "amg350-5g": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-5G Series Datasheet D33403-03.pdf",
         "image": "assets/images/products/amg-350-5g.webp"
@@ -975,6 +1367,10 @@ const CATALOG_ASSETS = {
     "AMG350-5G": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-5G Series Datasheet D33403-03.pdf",
         "image": "assets/images/products/amg-350-5g.webp"
+    },
+    "AMG350-5G-2S": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350 7 Port Series Datasheet D33900-03.pdf",
+        "image": "assets/images/products/amg-350-4g-1c-1s.webp"
     },
     "amg350-8g": {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-8G Series Datasheet D33404-01.pdf",
@@ -1000,6 +1396,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG350-8G Series Datasheet D33404-01.pdf",
         "image": "assets/images/products/amg-350-8g.webp"
     },
+    "AMG350R-2G-2S": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG350R Series Datasheet D33053-07.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
+    "AMG4600": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG4000 datasheet D14392.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg510-16gat-2c-p290": {
         "datasheetPath": "Datasheets/Network/AMG/AMG510-16G Series Datasheet D39131-06.pdf",
         "image": "assets/images/products/amg-510-16gat-2c.webp"
@@ -1009,27 +1413,27 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-510-16gat-2c.webp"
     },
     "amg510-22gat-2cat-2s-p460": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-22G Series Datasheet D39149-04.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "AMG510-22GAT-2CAT-2S-P460": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-22G Series Datasheet D39149-04.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg510-24g-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G Series Datasheet D39132-06.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "AMG510-24G-4XS": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G Series Datasheet D39132-06.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg510-24gat-4xs-p460": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G Series Datasheet D39132-06.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "AMG510-24GAT-4XS-P460": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G Series Datasheet D39132-06.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg510-24gat-4xs-rp540": {
@@ -1049,11 +1453,11 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-510-48gat-4xs.webp"
     },
     "amg510-4g-24s-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-4G-24S-4XS Datasheet D39123-08.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "AMG510-4G-24S-4XS": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG510-24G RP Series Datasheet D39150-05.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG510-4G-24S-4XS Datasheet D39123-08.pdf",
         "image": "assets/images/products/amg-510-24g-4xs.webp"
     },
     "amg510-8g-2s": {
@@ -1080,6 +1484,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG510-16G Series Datasheet D39131-06.pdf",
         "image": "assets/images/products/amg-510-16gat-2c.webp"
     },
+    "AMG5122": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5122 Datasheet D35084-00.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMG5400": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5400  AMG5500 data sheet (D17359).pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg560-24gat-4s-rp300-ad": {
         "datasheetPath": "Datasheets/Network/AMG/AMG560-24G Series Datasheet D39136-01.pdf",
         "image": "assets/images/products/amg-560-24gat-4xs.webp"
@@ -1097,11 +1509,11 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-560-24gat-4xs.webp"
     },
     "amg560-8g-12s": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG560 20 Port Series Datasheet D39301-02.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "AMG560-8G-12S": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG560 20 Port Series Datasheet D39301-02.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "amg560-8g-4s": {
@@ -1113,11 +1525,11 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "amg560-8g-8s-4xs": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG560 20 Port Series Datasheet D39301-02.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "AMG560-8G-8S-4XS": {
-        "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
+        "datasheetPath": "Datasheets/Network/AMG/AMG560 20 Port Series Datasheet D39301-02.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
     },
     "amg560-8gat-4s-p240": {
@@ -1135,6 +1547,10 @@ const CATALOG_ASSETS = {
     "AMG560-8GAT-4XS-P240": {
         "datasheetPath": "Datasheets/Network/AMG/AMG560-8G Series Datasheet D39245-04.pdf",
         "image": "assets/images/products/amg-560-8g-4s.webp"
+    },
+    "AMG5600": {
+        "datasheetPath": "Datasheets/Network/AMG/ANG5600 5700 Datasheet D14475.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
     },
     "amg570-12gat-4s-p360": {
         "datasheetPath": "Datasheets/Network/AMG/AMG570 12-16 Port Series Datasheet D36352-05.pdf",
@@ -1264,6 +1680,18 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG570 12-16 Port Series Datasheet D36352-05.pdf",
         "image": "assets/images/products/amg-570-8gat-4s.webp"
     },
+    "AMG5800": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5800 datasheet D22158.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
+    "AMG5900": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG5900 datasheet D22014.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
+    "AMG6100": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG6100 datasheet D18098.pdf",
+        "image": "assets/images/products/amg-250r-1g-1s.webp"
+    },
     "amg7111-1s-1c": {
         "datasheetPath": "Datasheets/Network/AMG/AMG140-1GR Series Datasheet D37287-01.pdf",
         "image": "assets/images/products/amg-250-1g-1s.webp"
@@ -1287,6 +1715,10 @@ const CATALOG_ASSETS = {
     "AMG7501-1C-1E": {
         "datasheetPath": "Datasheets/Network/AMG/AMG750 Series Datasheet D39110-10.pdf",
         "image": "assets/images/products/amg-eoc-7501.webp"
+    },
+    "AMG810-1F-PD": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG810 Series Datasheet D35159-01.pdf",
+        "image": "assets/images/products/amg-816-1f-rp-ad.webp"
     },
     "amg816-1f-rp-ad": {
         "datasheetPath": "Datasheets/Network/AMG/AMG816 Series Datasheet D35161-02.pdf",
@@ -1320,9 +1752,117 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMG8870F-WALL Datasheet D26093-00.pdf",
         "image": "assets/images/products/amg8870f_wall.webp"
     },
+    "AMG9050G-H": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9050G Datasheet D24070-07.pdf",
+        "image": "assets/images/products/amg-350-5g.webp"
+    },
+    "AMG9050G-HP-H": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9050G Datasheet D24070-07.pdf",
+        "image": "assets/images/products/amg-350-5g.webp"
+    },
+    "AMG9HM2P-8G-2S": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P Series Datasheet D27066-11.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "AMG9HM2P-8G4H4N-2S-P480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P (PoE 90W) Datasheet D27069-05.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "AMG9HM2P-8GH-2S-4S16C-P240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P_MSES2 Series Datasheet D27046-05.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "AMG9HM2P-8GH-2S-P240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P (PoE) Datasheet D27064-13.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "AMG9HM2P-8GU-2S-P480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HM2P (PoE 60W) Datasheet D27069-07.pdf",
+        "image": "assets/images/products/amg-570-8g-3s.webp"
+    },
+    "AMG9HMEC-1GH-1S-P30": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMEC Series Datasheet D29427-07.pdf",
+        "image": "assets/images/products/amg-250-1g-1s.webp"
+    },
+    "AMG9HMU-8G-2S": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU Series Datasheet D28143-05.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "AMG9HMU-8G4H4N-2S-P480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU (PoE 90W) Datasheet D29198-04.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "AMG9HMU-8GH-2S-P240": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU (PoE) Datasheet D28144-07.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "AMG9HMU-8GU-2S-P480": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG9HMU (PoE 60W) Datasheet D29166-04.pdf",
+        "image": "assets/images/products/amg-350-8g.webp"
+    },
+    "AMGANT-C2-ODA4-1W": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGANT-C2-ODA4 Series Datasheet D39332-00.pdf"
+    },
+    "AMGANT-C2W2-ODA4-1W": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGANT-C2W2-ODA4 Series Datasheet D39333-00.pdf"
+    },
+    "AMGANT-G1-ODA2.5": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGANT-G1-ODA2.5 Series Datasheet D39331-00.pdf"
+    },
+    "AMGANT-G1-ODA5-4": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGANT-G1-ODA5 Series Datasheet D39330-01.pdf"
+    },
     "AMGANT-W1-ODA9": {
         "datasheetPath": "Datasheets/Network/AMG/AMGANT-W1-ODA9 Series Datasheet D39334-00.pdf",
         "image": "assets/images/products/amgant_w1_oda9.webp"
+    },
+    "AMGFIB-1SD-3CC-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1SD-3CC Series Datasheet D31076-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-1VT-1SD-3CC-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1V-1SD-3CC Series Datasheet D31079-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-1VT-3CC-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1V-3CC[-D] Series Datasheet D31078-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-1VT-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-1V Series Datasheet D31077-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-2VT-1SD-3CC-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-2V-1SD-3CC Series Datasheet D31082-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-2VT-3CC-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-2V-3CC[-D] Series Datasheet D31081-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-2VT-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-2V Series Datasheet D31080-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGFIB-3CC-S1A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGFIB-3CC Series Datasheet D31075-02.pdf",
+        "image": "assets/images/products/amg-140-1gr.webp"
+    },
+    "AMGHWK-25-P1": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG Net-Hawk Premium Datasheet D39336-00.pdf"
+    },
+    "AMGHWK-25-P2": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG Net-Hawk Premium Datasheet D39336-00.pdf"
+    },
+    "AMGHWK-25-P3": {
+        "datasheetPath": "Datasheets/Network/AMG/AMG Net-Hawk Premium Datasheet D39336-00.pdf"
+    },
+    "AMGMNT-ANT-01": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGMNT-ANT Series Datasheet D39335-00.pdf"
+    },
+    "AMGMNT-IQ": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGMNT-IQ Bracket Datasheet D35273-01.pdf",
+        "image": "assets/images/products/amg-2035.webp"
     },
     "amgmnt-mag-04": {
         "datasheetPath": "Datasheets/Network/AMG/AMGMNT-MAG Series Datasheet D39361-00.pdf",
@@ -1348,6 +1888,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
         "image": "assets/images/products/amgpsu_i48_p480a.webp"
     },
+    "AMGPSU-I12-P24": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24]-P[24_36] Datasheet D39168-06.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
+    },
     "amgpsu-i12-p24a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I12-P24A Datasheet D39310-03.pdf",
         "image": "assets/images/products/amgpsu_i12_p24a.webp"
@@ -1371,6 +1915,10 @@ const CATALOG_ASSETS = {
     "AMGPSU-I24-P120": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120 Datasheet D39170-03.pdf",
         "image": "assets/images/products/amgpsu_i48_p120.webp"
+    },
+    "AMGPSU-I24-P36": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24]-P[24_36] Datasheet D39168-06.pdf",
+        "image": "assets/images/products/amgpsu_i12_p24a.webp"
     },
     "amgpsu-i24-p60": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
@@ -1404,6 +1952,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120A Datasheet D39312-03.pdf",
         "image": "assets/images/products/amgpsu_i48_p120a.webp"
     },
+    "AMGPSU-I48-P120A-IEC": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P120A-IEC Datasheet D39315-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p120_iec.webp"
+    },
+    "AMGPSU-I48-P145": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P145 Datasheet D39296-04.pdf",
+        "image": "assets/images/products/amgpsu_i48_p120a.webp"
+    },
     "amgpsu-i48-p240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240 Datasheet D39171-03.pdf",
         "image": "assets/images/products/amgpsu_i48_p240.webp"
@@ -1411,6 +1967,10 @@ const CATALOG_ASSETS = {
     "AMGPSU-I48-P240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240 Datasheet D39171-03.pdf",
         "image": "assets/images/products/amgpsu_i48_p240.webp"
+    },
+    "AMGPSU-I48-P240-IEC": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240-IEC Datasheet D39236-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p240a_iec.webp"
     },
     "amgpsu-i48-p240a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P240A Datasheet D39313-03.pdf",
@@ -1444,6 +2004,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480 Datasheet D39172-04.pdf",
         "image": "assets/images/products/amgpsu_i48_p480.webp"
     },
+    "AMGPSU-I48-P480-IEC": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480-IEC Datasheet D39237-04.pdf",
+        "image": "assets/images/products/amgpsu_i48_p480a_iec.webp"
+    },
     "amgpsu-i48-p480a": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P480A Datasheet D39314-04.pdf",
         "image": "assets/images/products/amgpsu_i48_p480a.webp"
@@ -1476,8 +2040,24 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I[12_24_48]-P[54_60] Datasheet D39169-08.pdf",
         "image": "assets/images/products/amgpsu_i48_p60.webp"
     },
+    "AMGPSU-I48-P60A": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48-P60A Datasheet D39311-03.pdf",
+        "image": "assets/images/products/amgpsu_i48_p60.webp"
+    },
+    "AMGPSU-I48L-P120": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-I48L-P120 Datasheet D39173-02.pdf",
+        "image": "assets/images/products/amgpsu_i48_p120.webp"
+    },
+    "AMGPSU-T12-P15": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-T12-P15 Datasheet D39348-03.pdf",
+        "image": "assets/images/products/amgpsu_t24_p24.webp"
+    },
     "AMGPSU-T24-P24": {
         "datasheetPath": "Datasheets/Network/AMG/AMG8870F-06 Datasheet D26090-04.pdf",
+        "image": "assets/images/products/amgpsu_t24_p24.webp"
+    },
+    "AMGPSU-T48-P60": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGPSU-T48-P60 Datasheet D39349-03.pdf",
         "image": "assets/images/products/amgpsu_t24_p24.webp"
     },
     "amgpsu-w12-p25": {
@@ -1487,6 +2067,12 @@ const CATALOG_ASSETS = {
     "AMGPSU-W12-P25": {
         "datasheetPath": "Datasheets/Network/AMG/AMGPSU-W12-P25 Datasheet D39289-02.pdf",
         "image": "assets/images/products/amgpsu_w12_p25.webp"
+    },
+    "AMGSFP-VDSL2-C": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGSFP-VDSL2-C_R Datasheet D39158-03.pdf"
+    },
+    "AMGSFP-VDSL2-R": {
+        "datasheetPath": "Datasheets/Network/AMG/AMGSFP-VDSL2-C_R Datasheet D39158-03.pdf"
     },
     "amgups-i48-p240": {
         "datasheetPath": "Datasheets/Network/AMG/AMGUPS-I48-P240 Datasheet D39268-03.pdf",
@@ -1792,6 +2378,30 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-ar4050s-5g-ds.pdf",
         "image": "assets/images/products/at-ar2050v-10.webp"
     },
+    "at-gs970emx-10": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "at-gs970emx-20": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "at-gs970emx-28": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "at-gs970emx-52": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "AT-GS970EMX/10": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "AT-GS970EMX/20": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "AT-GS970EMX/28": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
+    "AT-GS970EMX/52": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs970emx-series-ds.pdf"
+    },
     "at-gs980em-10h": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-gs980em-series-ds.pdf",
         "image": "assets/images/products/at-gs980em-10h.webp"
@@ -1981,6 +2591,18 @@ const CATALOG_ASSETS = {
     "AT-PWR800-80": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x930series-ds.pdf",
         "image": "assets/images/products/ruckus_rps_poe.webp"
+    },
+    "at-sbx908gen3": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/at-x950-28xsq.webp"
+    },
+    "AT-SBx908GEN3": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/at-x950-28xsq.webp"
+    },
+    "AT-SBxPWRSYS2": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/ruckus_rps_ac.webp"
     },
     "at-x230-10gp": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x230series-ds.pdf",
@@ -2253,6 +2875,22 @@ const CATALOG_ASSETS = {
     "AT-x980-32DQ": {
         "datasheetPath": "Datasheets/Network/Allied Telesis/ati-x980-series-ds.pdf",
         "image": "assets/images/products/at-x980-32cq.webp"
+    },
+    "AT-XEM3-12XTm": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/ruckus_icx_4x10gf.webp"
+    },
+    "AT-XEM3-12YS": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/ruckus_icx7550_4x25gf.webp"
+    },
+    "AT-XEM3-2DQ": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
+    },
+    "AT-XEM3-8CQ": {
+        "datasheetPath": "Datasheets/Network/Allied Telesis/ati-sbx908gen3-ds.pdf",
+        "image": "assets/images/products/ruckus_icx7650_1x100gq.webp"
     },
     "avigilon-5c-h5a-do1": {
         "datasheetPath": "Datasheets/Physical Security/Avigilon/Avigilon H5A Dome Series - Datasheet.pdf",
@@ -2535,6 +3173,7 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/cisco-c9300-48p-m.webp"
     },
     "C9300-NM-2Q": {
+        "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         "image": "assets/images/products/ruckus_icx7650_2x40gq.webp"
     },
     "C9300-NM-2Q-M": {
@@ -3874,6 +4513,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Juniper/ex4650-datasheet.pdf",
         "image": "assets/images/products/juniper-ex4650-48y.webp"
     },
+    "F-POE-G2": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Optical Data Transport - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
     "fan-t2": {
         "datasheetPath": "Datasheets/Network/Cisco/nb-06-cat9300-swit-ser-cte-en.pdf",
         "image": "assets/images/products/unifi_uacc_fan_4020.webp"
@@ -3889,6 +4532,9 @@ const CATALOG_ASSETS = {
     "FAN-T2-M": {
         "datasheetPath": "Datasheets/Network/Cisco/Cisco Catalyst Cloud Managed Accessories Datasheet.pdf",
         "image": "assets/images/products/unifi_uacc_fan_4020.webp"
+    },
+    "FC-SM": {
+        "image": "assets/images/products/unifi_usp_cable.webp"
     },
     "fg-40f": {
         "datasheetPath": "Datasheets/Network/Fortinet/FortiGate 40F Series - Datasheet.pdf",
@@ -8114,9 +8760,57 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
         "image": "assets/images/products/unifi_uacc_om_sfp28_sr.webp"
     },
+    "SFP-AOC-10G-10": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-AOC-10G Series Datasheet D39266-02.pdf"
+    },
+    "SFP-CU-10G": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-10G Series Datasheet D39264-04.pdf"
+    },
+    "SFP-CU-1G": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-1G Series Datasheet D39261-04.pdf"
+    },
+    "SFP-CW-1G-EX40-31": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-CW-1G Series Datasheet D39262-03.pdf"
+    },
+    "SFP-ENC-1G": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-ENC-1G Datasheet D39356-03.pdf"
+    },
     "SFP-H50G-CU1M": {
         "datasheetPath": "Datasheets/Network/Cisco/c9350-series-smart-switches-ds.pdf",
         "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
+    },
+    "SFP-MM-100M-FX2-31": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-100M Series Datasheet D39260-03.pdf"
+    },
+    "SFP-MM-10G-SR": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-10G Series Datasheet D39264-04.pdf"
+    },
+    "SFP-MM-1G-SX05-85": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-1G Series Datasheet D39261-04.pdf"
+    },
+    "SFP-MM-2.5G-SX": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-2.5G Series Datasheet D39263-04.pdf"
+    },
+    "SFP-SM-100M-LX20-31": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-100M Series Datasheet D39260-03.pdf"
+    },
+    "SFP-SM-10G-BX10": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-10G Series Datasheet D39264-04.pdf"
+    },
+    "SFP-SM-10G-ER": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-10G Series Datasheet D39264-04.pdf"
+    },
+    "SFP-SM-10G-LR": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-10G Series Datasheet D39264-04.pdf"
+    },
+    "SFP-SM-1G-BX10": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-1G Series Datasheet D39261-04.pdf"
+    },
+    "SFP-SM-1G-LX20-31": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-1G Series Datasheet D39261-04.pdf"
+    },
+    "SFP-SM-2.5G-LX": {
+        "datasheetPath": "Datasheets/Network/AMG/SFP-2.5G Series Datasheet D39263-04.pdf"
     },
     "siklu-ax-mk-1ft": {
         "datasheetPath": "Datasheets/Network/Siklu/Siklu EtherHaul 8010FX - Tech Specs.pdf",
@@ -8796,6 +9490,12 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Infrastructure/Altronix/Altronix Trove1WP - Datasheet.pdf",
         "image": "assets/images/products/altronix_trove1wp.webp"
     },
+    "U-LTE": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi LTE Backup - Tech Specs.pdf"
+    },
+    "U-LTE-Backup-Pro": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi LTE Backup Pro - Tech Specs.pdf"
+    },
     "u-poe": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE Injector 15W - Tech Specs.pdf",
         "image": "assets/images/products/unifi_u_poe_af.webp"
@@ -8844,6 +9544,12 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Toolless Mini Rack 6U - Tech Specs.pdf",
         "image": "assets/images/products/unifi_toolless_mini_rack.webp"
     },
+    "U5G": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 5G Backup - Tech Specs.pdf"
+    },
+    "U5G-Max-Outdoor": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 5G Max Outdoor - Tech Specs.pdf"
+    },
     "uacc-adapter-210w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
@@ -8868,6 +9574,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
     },
+    "UACC-AE": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Media Converter - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
     "uacc-aoc-sfp10": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G Long-Range Direct Attach Cable - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_aoc_sfp10.webp"
@@ -8883,6 +9593,14 @@ const CATALOG_ASSETS = {
     "UACC-AOC-SFP28": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 25G Long-Range Direct Attach Cable - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_aoc_sfp28.webp"
+    },
+    "UACC-Cable-Extender-C6A": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Easy Cable, 2-Pack - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-Cable-Patch": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
     },
     "uacc-cable-patch-el-0.15m-w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf",
@@ -8956,6 +9674,18 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Etherlighting Patch Cable - Tech Specs.pdf",
         "image": "assets/images/products/unifi_etherlighting_patch_cable.webp"
     },
+    "UACC-Cable-Patch-EL-C6A": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Premium Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-Cable-Patch-Outdoor": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Patch Cable Outdoor - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-Cable-Patch-Outdoor-C6A": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Premium Patch Cable Outdoor - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
     "uacc-cm-rj45": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi SFP to RJ45 Adapter - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_cm_rj45.webp"
@@ -8972,6 +9702,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi SFP+ to RJ45 Adapter - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_cm_rj45_mg.webp"
     },
+    "UACC-CWDM-4": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi CWDM Mux Demux 4 - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_panel_patch_blank_24.webp"
+    },
+    "UACC-CWDM-8": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi CWDM Mux Demux 8 - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_panel_patch_blank_24.webp"
+    },
     "uacc-dac-qsfp28": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G Direct Attach Cable - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
@@ -8979,6 +9717,15 @@ const CATALOG_ASSETS = {
     "UACC-DAC-QSFP28": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G Direct Attach Cable - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_dac_qsfp28.webp"
+    },
+    "UACC-DAC-QSFP28-1M": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G Long-Range Direct Attach Cable - Tech Specs.pdf"
+    },
+    "UACC-DAC-QSFP28-2M": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G Long-Range Direct Attach Cable - Tech Specs.pdf"
+    },
+    "UACC-DAC-QSFP28-3M": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G Long-Range Direct Attach Cable - Tech Specs.pdf"
     },
     "uacc-dac-sfp10": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G Direct Attach Cable - Tech Specs.pdf",
@@ -9052,6 +9799,26 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Long-Range Ethernet Repeater - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_lre.webp"
     },
+    "UACC-OFC-M2-LULU": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi OM4 Duplex LC UPC Fiber Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-OFC-MA-MPMP": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi OM4 MPO-12 UPC Fiber Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-OFC-S1-LULU": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi OS1 Simplex LC UPC Fiber Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-OFC-S2-LULU": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi OS2 Duplex LC UPC Fiber Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
+    "UACC-OFC-SA-MPMP": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi OS2 MPO-12 APC Fiber Patch Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_usp_cable.webp"
+    },
     "uacc-om-mm-10g-d": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G Multi-Mode Optical Module - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_om_mm_10g_d.webp"
@@ -9059,6 +9826,9 @@ const CATALOG_ASSETS = {
     "UACC-OM-MM-10G-D": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G Multi-Mode Optical Module - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_om_mm_10g_d.webp"
+    },
+    "UACC-OM-MM-1G-D": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 1G Multi-Mode Optical Module - Tech Specs.pdf"
     },
     "uacc-om-qsfp28-lr4": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G LR4 Single-Mode Optical Module - Tech Specs.pdf",
@@ -9068,6 +9838,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G LR4 Single-Mode Optical Module - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_om_qsfp28_lr4.webp"
     },
+    "UACC-OM-QSFP28-PSM4": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G PSM4 Single-Mode Optical Module - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_om_qsfp28_lr4.webp"
+    },
     "uacc-om-qsfp28-sr4": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G SR4 Multi-Mode Optical Module - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_om_qsfp28_sr4.webp"
@@ -9075,6 +9849,10 @@ const CATALOG_ASSETS = {
     "UACC-OM-QSFP28-SR4": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 100G SR4 Multi-Mode Optical Module - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_om_qsfp28_sr4.webp"
+    },
+    "UACC-OM-SFP10-1270": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G CWDM Single-Mode Optical Module - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_om_sm_10g_d.webp"
     },
     "uacc-om-sfp28-lr": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 25G Single-Mode Optical Module - Tech Specs.pdf",
@@ -9099,6 +9877,12 @@ const CATALOG_ASSETS = {
     "UACC-OM-SM-10G-D": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G Single-Mode Optical Module - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_om_sm_10g_d.webp"
+    },
+    "UACC-OM-SM-10G-D-BD": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 10G Bidirectional Single-Mode Optical Module - Tech Specs.pdf"
+    },
+    "UACC-OM-SM-1G-D-BD": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 1G Bidirectional Single-Mode Optical Module - Tech Specs.pdf"
     },
     "uacc-poe+++-10g": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE+++ 10G Injector - Tech Specs.pdf",
@@ -9288,6 +10072,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Sliding Rack Shelf - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_rack_shelf_sd.webp"
     },
+    "UACC-RJ45-Coupler-C6A": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi RJ45 Inline Coupler Indoor, 10-Pack - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
+    "UACC-RJ45-Coupler-C6A-Outdoor": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi RJ45 Inline Coupler Outdoor, 2-Pack - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
     "uacc-switch-din": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
         "image": "assets/images/products/unifi_uacc_switch_din.webp"
@@ -9335,6 +10127,10 @@ const CATALOG_ASSETS = {
     "UACC-ULTRA-WM": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
         "image": "assets/images/products/unifi_uacc_switch_fm.webp"
+    },
+    "UACC-Uplink-SFP28": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Uplink Cable - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_dac_sfp28.webp"
     },
     "uacc-uts": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
@@ -9388,6 +10184,10 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/Ubiquiti Ethernet Surge Protector Gen2 - Tech Specs.pdf",
         "image": "assets/images/products/ubnt_eth_sp_g2.webp"
     },
+    "ubnt-f-poe-g2": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Optical Data Transport - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
     "ubnt-lbe-5ac": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/Ubiquiti airMAX LiteBeam 5AC - Tech Specs.pdf",
         "image": "assets/images/products/ubnt-lbe-5ac.webp"
@@ -9433,11 +10233,11 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/ucg-fiber.webp"
     },
     "ucg-industrial": {
-        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Industrial - Tech Specs.pdf",
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Cloud Gateway Industrial - Tech Specs.pdf",
         "image": "assets/images/products/ucg-industrial.webp"
     },
     "UCG-Industrial": {
-        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Industrial - Tech Specs.pdf",
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Cloud Gateway Industrial - Tech Specs.pdf",
         "image": "assets/images/products/ucg-industrial.webp"
     },
     "ucg-max": {
@@ -9449,12 +10249,15 @@ const CATALOG_ASSETS = {
         "image": "assets/images/products/ucg-max.webp"
     },
     "ucg-ultra": {
-        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs.pdf",
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Cloud Gateway Ultra - Tech Specs.pdf",
         "image": "assets/images/products/ucg-ultra.webp"
     },
     "UCG-Ultra": {
-        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs.pdf",
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Cloud Gateway Ultra - Tech Specs.pdf",
         "image": "assets/images/products/ucg-ultra.webp"
+    },
+    "UDB-IoT": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge IoT - Tech Specs.pdf"
     },
     "udb-pro": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Pro - Tech Specs.pdf",
@@ -9463,6 +10266,12 @@ const CATALOG_ASSETS = {
     "UDB-Pro": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Pro - Tech Specs.pdf",
         "image": "assets/images/products/unifi-udb-pro.webp"
+    },
+    "UDB-Pro-Sector": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Pro Sector - Tech Specs.pdf"
+    },
+    "UDB-Switch": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Switch - Tech Specs.pdf"
     },
     "udm-beast": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Dream Machine Beast - Tech Specs.pdf",
@@ -9576,6 +10385,12 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 42U Rack Cabinet 800mm - Tech Specs.pdf",
         "image": "assets/images/products/unifi_rack_42u_800_g.webp"
     },
+    "unifi-u-lte": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi LTE Backup - Tech Specs.pdf"
+    },
+    "unifi-u-lte-backup-pro": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi LTE Backup Pro - Tech Specs.pdf"
+    },
     "unifi-u-poe-af": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi PoE Injector 15W - Tech Specs.pdf",
         "image": "assets/images/products/unifi_u_poe_af.webp"
@@ -9592,6 +10407,12 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Toolless Mini Rack 6U - Tech Specs.pdf",
         "image": "assets/images/products/unifi_toolless_mini_rack.webp"
     },
+    "unifi-u5g-backup": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 5G Backup - Tech Specs.pdf"
+    },
+    "unifi-u5g-max-outdoor": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 5G Max Outdoor - Tech Specs.pdf"
+    },
     "unifi-uacc-adapter-210w": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 210W AC Power Adapter - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_adapter_210w.webp"
@@ -9607,6 +10428,18 @@ const CATALOG_ASSETS = {
     "UNIFI-UACC-ADAPTER-60W": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi 60W AC Power Adapter - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_adapter_60w.webp"
+    },
+    "unifi-uacc-ae": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Media Converter - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
+    "unifi-uacc-cwdm-4": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi CWDM Mux Demux 4 - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_panel_patch_blank_24.webp"
+    },
+    "unifi-uacc-cwdm-8": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi CWDM Mux Demux 8 - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_rack_panel_patch_blank_24.webp"
     },
     "unifi-uacc-din-rail": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Ultra - Tech Specs - Accessories.pdf",
@@ -9752,6 +10585,14 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Sliding Rack Shelf - Tech Specs.pdf",
         "image": "assets/images/products/unifi_uacc_rack_shelf_sd.webp"
     },
+    "unifi-uacc-rj45-coupler-c6a": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi RJ45 Inline Coupler Indoor, 10-Pack - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
+    "unifi-uacc-rj45-coupler-c6a-outdoor": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi RJ45 Inline Coupler Outdoor, 2-Pack - Tech Specs.pdf",
+        "image": "assets/images/products/unifi_uacc_lre.webp"
+    },
     "unifi-ubb": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge - Tech Specs.pdf",
         "image": "assets/images/products/unifi-ubb.webp"
@@ -9768,9 +10609,18 @@ const CATALOG_ASSETS = {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Building Bridge XG - Tech Specs - Accessories.pdf",
         "image": "assets/images/products/unifi_ubb_xg_mount.webp"
     },
+    "unifi-udb-iot": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge IoT - Tech Specs.pdf"
+    },
     "unifi-udb-pro": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Pro - Tech Specs.pdf",
         "image": "assets/images/products/unifi-udb-pro.webp"
+    },
+    "unifi-udb-pro-sector": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Pro Sector - Tech Specs.pdf"
+    },
+    "unifi-udb-switch": {
+        "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Switch - Tech Specs.pdf"
     },
     "unifi-ups-2u-pro": {
         "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi UPS 2U Pro - Tech Specs.pdf",

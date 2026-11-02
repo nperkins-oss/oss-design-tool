@@ -2995,6 +2995,7 @@ const UNIFI_SWITCHES = [
     "id": "unifi-usw-flex-2-5g-5",
     "model": "UniFi Switch Flex Mini 2.5G",
     "sku": "USW-Flex-2.5G-5",
+    "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Flex Mini 2.5G - Tech Specs.pdf",
     "role": "Access",
     "ports": 5,
     "portCategory": "8",
@@ -3433,6 +3434,76 @@ const UNIFI_SWITCHES = [
     "operatingTempMinC": -5,
     "operatingTempMaxC": 40,
     "compatibleAccessories": []
+  }
+,
+  {
+    "id": "unifi-udb-switch",
+    "model": "UniFi Device Bridge Switch",
+    "sku": "UDB-Switch",
+    "role": "Access",
+    "ports": 8,
+    "portCategory": "8",
+    "portSpeed": "mGig",
+    "portFormFactorSummary": "7x 2.5GbE RJ45 (PoE+ 30W) + 1x 10GbE RJ45 (PoE+ 30W) + WiFi 7 Wireless Bridge Uplink",
+    "uplinksSummary": "1x 10GbE RJ45 + Integrated 5GHz/6GHz WiFi 7 Auto-Link Wireless Uplink",
+    "portsBreakdown": {
+      "rj45_2_5g": 7,
+      "rj45_10g": 1
+    },
+    "poeAfPorts": 8,
+    "poeAtPorts": 8,
+    "poeBt60Ports": 0,
+    "poeBt90Ports": 0,
+    "poeBudget": 185,
+    "poeStandardsSupported": [
+      "802.3af",
+      "802.3at"
+    ],
+    "baseWatts": 25,
+    "maxPowerWatts": 210,
+    "heatBtuPerHour": 85,
+    "rackUnits": 0,
+    "weightLbs": 2.38,
+    "depthInches": 5.51,
+    "shallowDepth": true,
+    "fanless": true,
+    "mounting": "Wall / Desktop Mount",
+    "stacking": false,
+    "dualPsu": false,
+    "msrp": 299,
+    "maxBackboneSpeed": "10G",
+    "switchingCapacity": "55 Gbps",
+    "throughputMpps": 41,
+    "packetBufferMb": 2,
+    "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Switch - Tech Specs.pdf",
+    "image": "assets/images/products/unifi_usw_flex_2_5g_8_poe.webp",
+    "keyFeatures": [
+      "8-Port Multi-Gigabit PoE+ switch with integrated 5GHz/6GHz WiFi 7 wireless bridge uplink",
+      "7x 2.5GbE PoE+ RJ45 + 1x 10GbE PoE+ RJ45 ports delivering up to 185W PoE budget (w/ 210W adapter)",
+      "Instant wireless mesh uplink to any UniFi AP for hard-to-wire camera or workstation pods",
+      "2x RP-SMA connectors for external antennas & silent fanless desktop/wall design"
+    ],
+    "vendor": "UniFi",
+    "mgmtTypes": [
+      "free_central"
+    ],
+    "mgmtLabel": "UniFi OS (Free Controller)",
+    "taa": true,
+    "ndaa": true,
+    "evpnVxlan": false,
+    "perpetualPoE": false,
+    "directDc": true,
+    "dryContacts": false,
+    "env": "Commercial",
+    "substationCertified": false,
+    "poePassThrough": false,
+    "isDinMounted": false,
+    "acousticNoiseDb": 0,
+    "operatingTempMinC": -20,
+    "operatingTempMaxC": 45,
+    "compatibleAccessories": [
+      "UACC-Adapter-AC-210W"
+    ]
   }
 ];
 

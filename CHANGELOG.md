@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0-beta.11] - 2026-11-02
+
+### Full Hardware Datasheet Ingestion & Asset Coverage Completion (100% Actionable Device PDFs Linked)
+- **97 New Hardware Devices & Accessories Ingested Across 8 Catalog Databases (`1,641` Indexed IDs / `1,604` SKUs)**:
+  - **Allied Telesis (`data/networking/data_allied.js`)**: Added 5 industrial & campus switches (`AT-IS230-10GP`, `AT-x240-26GHXm`, `AT-x530DP-28GHXm`, `AT-x530L-18GHXm`, `AT-x950-28XSQ`).
+  - **Ubiquiti UniFi (`data/networking/data_unifi.js`, `data/networking/data_firewalls.js`, `data/networking/data_wireless.js`)**: Added `UDB-Switch` (`UniFi Device Bridge Switch`), 4 cellular WAN failover gateways (`U5G-Max-Outdoor`, `U5G`, `U-LTE`, `U-LTE-Backup-Pro`), and 2 indoor/outdoor bridge & Wi-Fi 7 wall units (`UDB`, `U7-IW`), plus linked dedicated datasheets across `USW-Ultra-210W`, `USW-Ultra-60W`, `UDM-SE`, `USG-PRO-4`, `UDB-Pro`, and `UDB-Pro-Sector`.
+  - **AMG Systems (`data/networking/data_amg.js`, `data/infrastructure/data_accessories.js`, `data/networking/data_interconnects.js`)**: Added 15 industrial Ethernet, Layer 3, Railway M12, and 90W PoE++ switches (`AMG250-1G-1S`, `AMG250-2G-1S`, `AMG250-2GBT-1S-P120`, `AMG350-2GAT-1S-P60`, `AMG370-8G-2S`, `AMG510-16GAT-2S-P240`, `AMG510-8GAT-2C-P240`, `AMG560-4G-1S`, `AMG560-8G-2S`, `AMG562-8GM12-P`, `AMG570-12GAT-4S-P360`, `AMG570-16GAT-4S-P240`, `AMG570-8GBT-4S-P360`, `AMG650-8G-2C2S`, `AMG670-8GBT-2C2S-P240`), 48 industrial media converters, surge arrestors, EoC/VDSL2 extenders, rack chassis & fiber video/data multiplexers (`AMG110`, `AMG150`, `AMG155`, `AMG160`, `AMG173`, `AMG210`, `AMG255`, `AMG260`, `AMG265`, `AMG310`, `AMG360`, `AMG9010`, `AMGFIB`, `AMG4600`–`AMG6100`), 5 industrial DIN-rail power supplies (`AMGPSU-I12-P24`, `AMGPSU-I24-P36`, `AMGPSU-I48-P120A-IEC`, `AMGPSU-I48-P240-IEC`, `AMGPSU-I48-P480-IEC`), 5 industrial SFPs/AOCs (`AMGSFP-VDSL2-C/R`, `SFP-MM/SM-100M`, `SFP-AOC-10G-10`), and Net-Hawk management subscriptions (`AMGHWK-25-P1/P2/P3`).
+  - **Ubiquiti Optics, Media Converters, CWDM & Structured Cabling (`data/networking/data_interconnects.js`, `data/infrastructure/data_accessories.js`, `data/infrastructure/data_cabling.js`)**: Added 100G PSM4 & 10G CWDM optics, SFP28 uplink cables (`UACC-OM-QSFP28-PSM4`, `UACC-OM-SFP10-1270`, `UACC-Uplink-SFP28`), CWDM 4/8-channel mux/demux modules (`UACC-CWDM-4`, `UACC-CWDM-8`), media converters (`UACC-AE`, `F-POE-G2`), Cat6A inline couplers (`UACC-RJ45-Coupler-C6A`, `UACC-RJ45-Coupler-C6A-Outdoor`), and 10 copper/fiber patch & trunk cables (`UACC-Cable-Extender-C6A`, `UACC-Cable-Patch-EL-C6A`, `UACC-Cable-Patch`, `UACC-Cable-Patch-Outdoor`, `UACC-Cable-Patch-Outdoor-C6A`, `UACC-OFC-M2-LULU`, `UACC-OFC-MA-MPMP`, `UACC-OFC-S1-LULU`, `UACC-OFC-S2-LULU`, `UACC-OFC-SA-MPMP`).
+  - **Juniper Networks (`data/networking/data_juniper.js`, `data/data_assets.js`)**: Linked all 7 local Juniper product WebP images (`juniper-ex4100-f-24p.webp`, `juniper-ex4100-f-48p.webp`, `juniper-ex4400-24p.webp`, `juniper-ex4400-48p.webp`, `juniper-ex4650-48y.webp`, `juniper-qfx5120-48y.webp`, `juniper-qfx5130-32cd.webp`) and dedicated series datasheets across `JUNIPER_SWITCHES`.
+- **Guide & Duplicate Datasheet Exclusion Filter (`scripts/catalog_pipeline.js`, `data/registry.js`, `data/data_assets.js`)**:
+  - Updated `scripts/catalog_pipeline.js` (`audit` and `auto-link`) to exclude general hardware guides, administrator guides, comparison charts, certification letters, companion `- Accessories.pdf` sheets, and older duplicate revisions (`62` non-device/duplicate PDFs excluded; `0` actionable device PDFs unlinked; `2,988` total `CATALOG_ASSETS` keys synced).
+
+---
+
 ## [0.11.0-beta.10] - 2026-11-02
 
 ### Scalable Batch Datasheet Ingestion Pipeline & `CATALOG_ASSETS` Auto-Linker

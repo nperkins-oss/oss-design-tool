@@ -1364,6 +1364,116 @@ const WIRELESS_DATABASE = [
       "Hitless adaptive coding and modulation prevents disconnects during rain storms",
       "Integrated Gigabit switch with 2x SFP cages and 2x RJ-45 ports"
     ]
+  },
+  {
+    "id": "unifi-udb-iot",
+    "vendor": "UniFi",
+    "model": "UniFi Device Bridge IoT (Industrial DIN-Rail WiFi Bridge)",
+    "sku": "UDB-IoT",
+    "category": "ptp_5g",
+    "type": "Industrial IoT WiFi Bridge",
+    "topology": "PtMP Station",
+    "topologyRole": "station",
+    "ptmpFamily": "unifi_wifi",
+    "maxStations": 0,
+    "architecture": "2x2 MIMO WiFi 4 Auto-Link",
+    "band": "2.4 GHz",
+    "frequency": "2.4 GHz",
+    "frequencyGhz": 2.4,
+    "maxThroughput": "300 Mbps",
+    "throughput": "300 Mbps",
+    "throughputGbps": 0.3,
+    "maxThroughputMbps": 300,
+    "distanceKm": 0.3,
+    "rangeKm": 0.3,
+    "maxRangeKm": 0.3,
+    "distanceMiles": 0.19,
+    "rangeMiles": 0.19,
+    "maxRangeMiles": 0.19,
+    "antennaGainDbi": 3,
+    "interfaces": "1x 10/100 MbE RJ45 + 2-Pin DC Terminal Block (9-30VDC) + USB-C 5V",
+    "poeStandardsSupported": [
+      "Direct DC 9-30V",
+      "USB-C 5V"
+    ],
+    "poeStandard": "Direct DC",
+    "baseWatts": 1.5,
+    "maxPowerWatts": 2.3,
+    "powerWatts": 2.3,
+    "powerConsumptionWatts": 2.3,
+    "powerSource": "dc_terminal",
+    "rackUnits": 0,
+    "weightLbs": 0.15,
+    "depthInches": 1.1,
+    "weatherRating": "Indoor / NEMA Enclosure DIN-Rail (-20°C to 60°C)",
+    "mounting": "DIN-Rail / Wall / Magnetic",
+    "image": "assets/images/products/unifi_udb_pro.webp",
+    "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge IoT - Tech Specs.pdf",
+    "msrp": 79,
+    "ndaa": true,
+    "keyFeatures": [
+      "Ultra-compact DIN-rail wireless Ethernet bridge for PLC, access control, and IoT panels",
+      "Bridges any 10/100 Ethernet controller wirelessly to the nearest UniFi Access Point",
+      "Flexible 9-30V DC terminal block or 5V USB-C power input (2.3W max consumption)",
+      "Includes external magnetic base RP-SMA antenna, DIN-rail clip, and wall mount"
+    ]
+  },
+  {
+    "id": "unifi-udb-pro-sector",
+    "vendor": "UniFi",
+    "model": "UniFi Device Bridge Pro Sector (5 GHz PtMP Base Station)",
+    "sku": "UDB-Pro-Sector",
+    "category": "ptmp_ap",
+    "type": "5 GHz PtMP Sector Base Station",
+    "topology": "PtMP Base Station",
+    "topologyRole": "ap",
+    "ptmpFamily": "unifi_udb",
+    "maxStations": 50,
+    "compatibleClientSkus": [
+      "UDB-Pro"
+    ],
+    "architecture": "UniFi Auto-Link 5 GHz Sector",
+    "band": "5 GHz",
+    "frequency": "5 GHz (5150 - 5875 MHz)",
+    "frequencyGhz": 5,
+    "maxThroughput": "866.7 Mbps (400+ Mbps Real TCP)",
+    "throughput": "400 Mbps",
+    "throughputGbps": 0.4,
+    "maxThroughputMbps": 400,
+    "distanceKm": 5,
+    "rangeKm": 5,
+    "maxRangeKm": 5,
+    "distanceMiles": 3.1,
+    "rangeMiles": 3.1,
+    "maxRangeMiles": 3.1,
+    "antennaGainDbi": 17,
+    "beamwidthDeg": 90,
+    "interfaces": "1x 1GbE RJ45 (Passive PoE 48V / PoE+ In)",
+    "poeStandardsSupported": [
+      "802.3at",
+      "Passive 48V"
+    ],
+    "poeStandard": "802.3at",
+    "baseWatts": 4,
+    "maxPowerWatts": 6,
+    "powerWatts": 6,
+    "powerConsumptionWatts": 6,
+    "powerSource": "poe_switch",
+    "rackUnits": 0,
+    "weightLbs": 2.38,
+    "depthInches": 2.9,
+    "weatherRating": "IPX6 Outdoor UV-Stabilized",
+    "mounting": "Articulating Pole Mount (Included)",
+    "image": "assets/images/products/unifi_udb_pro.webp",
+    "datasheetPath": "Datasheets/Network/Ubiquiti/UniFi Device Bridge Pro Sector - Tech Specs.pdf",
+    "msrp": 299,
+    "ndaa": true,
+    "keyFeatures": [
+      "90° wide-angle 17 dBi sector base station connecting up to 50+ UDB-Pro camera stations",
+      "Up to 5 km (3.1 mi) outdoor PtMP range with zero-touch UniFi Auto-Link adoption",
+      "IPX6 weatherproof enclosure with articulating pole mount and integrated surge protection",
+      "Includes Gigabit PoE injector (48V, 0.32A) and supports standard UniFi PoE switches"
+    ]
   }
 ];
 
@@ -1539,6 +1649,61 @@ const WIRELESS_ACCESSORY_CATALOG = {
     msrp: 1150,
     category: "antenna",
     vendor: "Siklu"
+  },
+  "AMGANT-C2-ODA4-1W": {
+    "sku": "AMGANT-C2-ODA4-1W",
+    "weightLbs": 0.65,
+    "depthInches": 3.2,
+    "name": "AMG Industrial 4G/5G Cellular 2x2 MIMO Omni Antenna (4 dBi, IP67)",
+    "msrp": 145,
+    "category": "antenna",
+    "vendor": "AMG",
+    "datasheetPath": "Datasheets/Network/AMG/AMGANT-C2-ODA4 Series Datasheet D39332-00.pdf",
+    "image": "assets/images/products/amg-ant-w1.webp"
+  },
+  "AMGANT-C2W2-ODA4-1W": {
+    "sku": "AMGANT-C2W2-ODA4-1W",
+    "weightLbs": 0.85,
+    "depthInches": 3.5,
+    "name": "AMG Industrial 4-in-1 Cellular (4G/5G MIMO) + Wi-Fi Dual-Band Omni Antenna (IP67)",
+    "msrp": 195,
+    "category": "antenna",
+    "vendor": "AMG",
+    "datasheetPath": "Datasheets/Network/AMG/AMGANT-C2W2-ODA4 Series Datasheet D39333-00.pdf",
+    "image": "assets/images/products/amg-ant-w1.webp"
+  },
+  "AMGANT-G1-ODA2.5": {
+    "sku": "AMGANT-G1-ODA2.5",
+    "weightLbs": 0.35,
+    "depthInches": 2.5,
+    "name": "AMG Compact Outdoor GNSS (GPS/GLONASS/Galileo) Active Antenna (28 dB LNA)",
+    "msrp": 85,
+    "category": "antenna",
+    "vendor": "AMG",
+    "datasheetPath": "Datasheets/Network/AMG/AMGANT-G1-ODA2.5 Series Datasheet D39331-00.pdf",
+    "image": "assets/images/products/amg-ant-w1.webp"
+  },
+  "AMGANT-G1-ODA5-4": {
+    "sku": "AMGANT-G1-ODA5-4",
+    "weightLbs": 0.55,
+    "depthInches": 3,
+    "name": "AMG Industrial High-Gain GNSS Timing Antenna for AMG810 NTP Servers (5 dBi, IP67)",
+    "msrp": 135,
+    "category": "antenna",
+    "vendor": "AMG",
+    "datasheetPath": "Datasheets/Network/AMG/AMGANT-G1-ODA5 Series Datasheet D39330-01.pdf",
+    "image": "assets/images/products/amg-ant-w1.webp"
+  },
+  "AMGMNT-ANT-01": {
+    "sku": "AMGMNT-ANT-01",
+    "weightLbs": 0.75,
+    "depthInches": 3.8,
+    "name": "AMG Stainless Steel Wall / Pole Mounting Bracket for AMGANT Antennas",
+    "msrp": 45,
+    "category": "mounting",
+    "vendor": "AMG",
+    "datasheetPath": "Datasheets/Network/AMG/AMGMNT-ANT Series Datasheet D39335-00.pdf",
+    "image": "assets/images/products/amg-8870f-wall.webp"
   }
 };
 

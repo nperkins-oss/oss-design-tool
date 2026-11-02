@@ -349,7 +349,24 @@ const CatalogRegistry = {
       allItems.push(...Object.values(this.networking.featureLicenses));
     }
     if (this.networking.mgmtSubscriptions) {
-      allItems.push(...Object.values(this.networking.mgmtSubscriptions));
+      Object.entries(this.networking.mgmtSubscriptions).forEach(([vKey, vPlans]) => {
+        if (!vPlans || typeof vPlans !== "object") return;
+        if (vPlans.sku || vPlans.id) {
+          allItems.push(vPlans);
+          return;
+        }
+        Object.values(vPlans).forEach(plan => {
+          if (plan && plan.terms && typeof plan.terms === "object") {
+            Object.entries(plan.terms).forEach(([termKey, termObj]) => {
+              if (termObj && termObj.sku) {
+                if (!termObj.vendor) termObj.vendor = vKey;
+                if (!termObj.name) termObj.name = `${plan.name || vKey} (${termKey})`;
+                allItems.push(termObj);
+              }
+            });
+          }
+        });
+      });
     }
     if (this.networking.accessories) {
       allItems.push(...this.networking.accessories);
@@ -374,6 +391,8 @@ const CatalogRegistry = {
       for (let i = 0; i < allItems.length; i++) {
         const item = allItems[i];
         if (!item) continue;
+        if (!item.id && item.sku) item.id = item.sku;
+        if (!item.model && item.name) item.model = item.name;
         if (!item.datasheetPath && item.datasheet) item.datasheetPath = item.datasheet;
         const asset = (item.id && CATALOG_ASSETS[item.id]) || (item.sku && CATALOG_ASSETS[item.sku]);
         if (asset) {

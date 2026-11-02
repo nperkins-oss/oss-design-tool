@@ -246,12 +246,49 @@ function validateEntry(item, registry, assetsMap, allowUpdate = false) {
   return { valid: errors.length === 0, errors, warnings, info };
 }
 
+const IGNORED_OLD_OR_GUIDE_PDF_BASENAMES = new Set([
+  'EN.Security Center Administrator Guide 5.14.pdf',
+  'Arcules-Feature-List.pdf',
+  'Husky IVO Comparison Chart.pdf',
+  'Milestone XProtect Comparison Chart 2026 R1 (1).pdf',
+  'AMG A6 Product Guide 2025.pdf',
+  'AMG USA Product Selection Guide.pdf',
+  'AMG Genetec Integration Datasheet D39360-01.pdf',
+  'AMG Net-Hawk Configuration Management Plugin Datasheet D39337-00.pdf',
+  'Genetec API & SDK certification - AMG Systems - Certificate of approval 1.pdf',
+  'Genetec API & SDK certification - AMG Systems - Certification Confirmation letter 1.pdf',
+  'AMG210M Series Datasheet D39119-05.pdf',
+  'AMG350 Series Datasheet D33052-07.pdf',
+  'AMG350R Series Datasheet D33053-06.pdf',
+  'AMG510-24G Series Datasheet D39132-03.pdf',
+  'AMG510-8G Series Datasheet D39130-06.pdf',
+  'AMG570-4G-2S-K Series Datasheet D36307-04.pdf',
+  'AMG570-8G-3S-K Series Datasheet D36306-04.pdf',
+  'ex4650-hardware-guide.pdf',
+  'qfx5130-hardware-guide.pdf',
+  'qfx5210-hardware-guide.pdf',
+  'qfx5220-hardware-guide.pdf',
+  'UniFi Accessories -  Power -- Tech Specs.pdf',
+  'UniFi Accessories - Racks - Tech Specs.pdf',
+  'UniFi Accessories - Tech Specs.pdf'
+]);
+
+function isIgnoredGuideOrDuplicatePdf(relPdfPath) {
+  const base = path.basename(relPdfPath);
+  if (IGNORED_OLD_OR_GUIDE_PDF_BASENAMES.has(base)) return true;
+  if (/-\s*Accessories\.pdf$/i.test(base)) return true;
+  if (/hardware-guide\.pdf$/i.test(base)) return true;
+  if (/Administrator Guide|Comparison Chart|Product Selection Guide|Certificate of approval|Certification Confirmation/i.test(base)) return true;
+  return false;
+}
+
 function computeAutoLinks(registry, assets, diskPdfs, diskWebps) {
   const newAssetUpdates = [];
   const pdfMatches = [];
   const webpMatches = [];
 
   const webpByBase = new Map(diskWebps.map(w => [path.basename(w, '.webp').toLowerCase(), w]));
+  const eligiblePdfs = diskPdfs.filter(p => !isIgnoredGuideOrDuplicatePdf(p));
 
   for (const [id, item] of registry._byId.entries()) {
     if (!item) continue;
@@ -291,7 +328,7 @@ function computeAutoLinks(registry, assets, diskPdfs, diskWebps) {
     // Try matching missing Datasheet PDF on disk by exact SKU/model token
     if (!resolvedDs && itemSku.length >= 5) {
       const skuNorm = itemSku.toLowerCase().replace(/[^a-z0-9]/g, '');
-      for (const pdf of diskPdfs) {
+      for (const pdf of eligiblePdfs) {
         const baseNorm = path.basename(pdf, '.pdf').toLowerCase().replace(/[^a-z0-9]/g, '');
         if (baseNorm.includes(skuNorm)) {
           resolvedDs = pdf;
@@ -435,6 +472,8 @@ function runCommandAudit(asJson = false) {
   }
 
   const unlinkedPdfs = diskPdfs.filter(p => !allLinkedPdfs.has(p));
+  const actionableUnlinkedPdfs = unlinkedPdfs.filter(p => !isIgnoredGuideOrDuplicatePdf(p));
+  const ignoredUnlinkedPdfs = unlinkedPdfs.filter(p => isIgnoredGuideOrDuplicatePdf(p));
   const missingDatasheetDevices = [];
   const missingImageDevices = [];
 
@@ -450,9 +489,9 @@ function runCommandAudit(asJson = false) {
 
   const { newAssetUpdates, pdfMatches, webpMatches } = computeAutoLinks(registry, assets, diskPdfs, diskWebps);
 
-  // Group unlinked PDFs by folder
+  // Group actionable unlinked PDFs by folder
   const unlinkedByFolder = {};
-  for (const pdf of unlinkedPdfs) {
+  for (const pdf of actionableUnlinkedPdfs) {
     const dir = path.dirname(pdf);
     if (!unlinkedByFolder[dir]) unlinkedByFolder[dir] = [];
     unlinkedByFolder[dir].push(path.basename(pdf));
@@ -466,6 +505,8 @@ function runCommandAudit(asJson = false) {
     diskWebpsCount: diskWebps.length,
     linkedUniquePdfsCount: allLinkedPdfs.size,
     unlinkedPdfsCount: unlinkedPdfs.length,
+    actionableUnlinkedPdfsCount: actionableUnlinkedPdfs.length,
+    ignoredGuidesAndDuplicatesCount: ignoredUnlinkedPdfs.length,
     devicesMissingDatasheetCount: missingDatasheetDevices.length,
     devicesMissingImageCount: missingImageDevices.length,
     autoLinkableAssetKeysCount: newAssetUpdates.length,
@@ -485,12 +526,16 @@ function runCommandAudit(asJson = false) {
   console.log(`• Indexed Catalog Devices : ${report.totalCatalogDevices} unique IDs (${report.totalCatalogSkus} SKUs)`);
   console.log(`• CATALOG_ASSETS Registry : ${report.totalCatalogAssetsKeys} keys`);
   console.log(`• Disk Assets             : ${report.diskPdfsCount} PDFs in Datasheets/, ${report.diskWebpsCount} WebPs in assets/images/products/`);
-  console.log(`• Linked Unique PDFs      : ${report.linkedUniquePdfsCount} linked / ${report.unlinkedPdfsCount} unlinked on disk`);
+  console.log(`• Linked Unique PDFs      : ${report.linkedUniquePdfsCount} linked on disk`);
+  console.log(`• Actionable Unlinked PDFs: ${report.actionableUnlinkedPdfsCount} device datasheets unlinked`);
+  console.log(`• Ignored Guides / Dupes  : ${report.ignoredGuidesAndDuplicatesCount} general guides, companion sheets & older revisions excluded`);
   console.log(`• Missing Device Links    : ${report.devicesMissingDatasheetCount} missing datasheetPath, ${report.devicesMissingImageCount} missing image (excl. generic placeholders)`);
   console.log(`• Auto-Linkable Now       : ${report.autoLinkableAssetKeysCount} CATALOG_ASSETS keys ready to sync`);
-  console.log('\nUnlinked PDFs on Disk by Folder:');
-  for (const [folder, files] of Object.entries(unlinkedByFolder)) {
-    console.log(`  - ${folder} (${files.length} PDFs)`);
+  if (Object.keys(unlinkedByFolder).length > 0) {
+    console.log('\nActionable Unlinked PDFs on Disk by Folder:');
+    for (const [folder, files] of Object.entries(unlinkedByFolder)) {
+      console.log(`  - ${folder} (${files.length} PDFs)`);
+    }
   }
 }
 

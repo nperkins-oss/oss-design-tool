@@ -187,7 +187,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-24p.webp",
+    "image": "assets/images/products/juniper-ex2300-24t.webp",
     "keyFeatures": [
       "24x 1G RJ-45 non-PoE ports with shallow 10.2\" depth",
       "4x 10G SFP+ uplinks supporting up to 4-member Virtual Chassis",
@@ -386,7 +386,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 2,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex2300-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex2300-48p.webp",
+    "image": "assets/images/products/juniper-ex2300-48t.webp",
     "keyFeatures": [
       "48x high-density 1G access ports in a shallow 10.2\" chassis",
       "4x 10G SFP+ uplinks supporting 4-member Virtual Chassis",
@@ -586,7 +586,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex3400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex3400-24p.webp",
+    "image": "assets/images/products/juniper-ex3400-24t.webp",
     "keyFeatures": [
       "Dual hot-swappable load-sharing power supplies",
       "2x 40G QSFP+ dedicated Virtual Chassis stacking ports",
@@ -721,7 +721,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "QFX-QSFP-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex3400-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex3400-48p.webp",
+    "image": "assets/images/products/juniper-ex3400-48t.webp",
     "keyFeatures": [
       "48x 1G RJ-45 access ports with redundant dual power",
       "2x 40G QSFP+ ports for 80 Gbps Virtual Chassis stacking",
@@ -1732,7 +1732,7 @@ const JUNIPER_SWITCHES = [
     "packetBufferMb": 4,
     "stackCableSku": "EX-SFP-10GE-DAC-1M",
     "datasheet": "Datasheets/Network/Juniper/ex4100-h-hardware-guide.pdf",
-    "image": "assets/images/products/juniper-ex4100-h-12t.webp",
+    "image": "assets/images/products/juniper-ex4100-h-12mp.webp",
     "keyFeatures": [
       "4x 90W 802.3bt PoE++ ports with Perpetual & Fast PoE",
       "Extreme temperature range (-40°C to +75°C) 100% silent fanless",
@@ -1878,7 +1878,7 @@ const JUNIPER_SWITCHES = [
       ]
     },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-24p.webp",
+    "image": "assets/images/products/juniper-ex4300-24t.webp",
     "keyFeatures": [
       "4x 40G QSFP+ ports configurable as high-speed Virtual Chassis or uplinks",
       "Modular uplink sled bay (supports 4x 10G SFP+ or 1x 40G QSFP+)",
@@ -2051,7 +2051,7 @@ const JUNIPER_SWITCHES = [
       ]
     },
     "datasheet": "Datasheets/Network/Juniper/ex4300-datasheet.pdf",
-    "image": "assets/images/products/juniper-ex4300-48p.webp",
+    "image": "assets/images/products/juniper-ex4300-48t.webp",
     "keyFeatures": [
       "48x high-density copper access ports with redundant power",
       "4x 40G QSFP+ ports + optional 4x 10G uplink module",
