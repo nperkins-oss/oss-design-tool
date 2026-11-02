@@ -89,7 +89,7 @@ for (let s = 1; s <= 5; s++) {
   assert(indexHtml.includes(`id="wizStepPill-${s}"`), `index.html missing #wizStepPill-${s}`);
   assert(indexHtml.includes(`id="wizStepContent-${s}"`), `index.html missing #wizStepContent-${s}`);
 }
-for (const modalId of ['bomModal', 'bomItemAccessoriesModal', 'bomReplaceItemModal', 'changelogModal', 'newProjectModal', 'projectDefaultConfirmModal']) {
+for (const modalId of ['bomModal', 'bomItemAccessoriesModal', 'bomReplaceItemModal', 'changelogModal', 'returningUserModal', 'newProjectModal', 'projectDefaultConfirmModal']) {
   assert(indexHtml.includes(`id="${modalId}"`), `index.html missing required modal #${modalId}`);
 }
 const modalSlice = indexHtml.slice(indexHtml.indexOf('id="newProjectModal"'), indexHtml.indexOf('id="projectDefaultConfirmModal"'));
@@ -140,7 +140,7 @@ function makeEl(id, tag = 'div') {
   return el;
 }
 
-['bomModal', 'bomItemsList', 'bomLocationFilter', 'bomCountBadge', 'bomItemAccessoriesModal', 'bomReplaceItemModal'].forEach(id => makeEl(id));
+['bomModal', 'bomItemsList', 'bomLocationFilter', 'bomCountBadge', 'bomItemAccessoriesModal', 'bomReplaceItemModal', 'returningUserModal', 'returningUserActiveProjectSummary', 'returningUserContinueActiveLabel', 'returningUserSavedCountBadge', 'returningUserSavedProjectsList', 'newProjectModal', 'projectModal'].forEach(id => makeEl(id));
 elementsById.get('bomModal').classList.remove('hidden');
 
 const sandbox = {
@@ -180,19 +180,26 @@ sandbox.window = sandbox;
 sandbox.globalThis = sandbox;
 const ctx = vm.createContext(sandbox);
 
-// Boot data, core, engine, renderer & core engineering tools in exact load order
+// Boot data, core, engine, renderer & core engineering subsystems in exact load order
 const bootScripts = localScripts.filter(s =>
   s.startsWith('data/') ||
+  s === 'js/core/namespace.js' ||
   s === 'js/core/storage.js' ||
   s === 'js/core/facility.js' ||
   s === 'js/engines/device_taxonomy.js' ||
   s === 'js/engines/port_engine.js' ||
   s === 'js/engines/sizer_network.js' ||
+  (s.startsWith('js/sizers/') && !s.startsWith('js/sizers/ui/')) ||
   s === 'js/engines/search_filter.js' ||
   s === 'js/renderers/render_cards.js' ||
   s === 'js/tools/topology.js' ||
+  s.startsWith('js/studios/topology/') ||
   s === 'js/tools/rack.js' ||
-  s === 'js/tools/bom.js'
+  s.startsWith('js/studios/power/') ||
+  s.startsWith('js/studios/rack/') ||
+  s === 'js/tools/bom.js' ||
+  s.startsWith('js/bom/') ||
+  s === 'js/tools/project_wizard.js'
 );
 
 for (const rel of bootScripts) {
@@ -329,6 +336,41 @@ vm.runInContext(`
   assert(swapped.friendlyName === 'IDF-1-Main-Access-Stack', 'In-place swap must preserve custom friendly name');
   const port35 = swapped.physicalPorts.find(p => p.portNumber === 35 && !p.isUplink);
   assert(port35 && port35.connectedDeviceId === 'cam-verify-1', 'In-place swap must preserve connected camera on Port 35');
+
+  // 5E-2. First-Time User vs. Returning User Startup Project Prompt Flow
+  localStorage._s = {};
+  projectBOM.length = 0;
+  StorageService._isReturningUserOnBoot = null;
+  document.getElementById('newProjectModal').classList.add('hidden');
+  document.getElementById('returningUserModal').classList.add('hidden');
+
+  StorageService.restoreStateFromLocalStorage();
+  StorageService.initStartupProjectPrompt();
+  assert(!document.getElementById('newProjectModal').classList.contains('hidden'), 'First-time visit must automatically open #newProjectModal');
+  assert(document.getElementById('returningUserModal').classList.contains('hidden'), 'First-time visit must keep #returningUserModal hidden');
+  assert(localStorage.getItem('netselect_has_visited') === 'true', 'First-time visit must persist netselect_has_visited');
+
+  // Create a saved project and simulate returning user visit
+  StorageService.createNewBlankProject('Campus Expansion Phase 1');
+  closeProjectWizardModal();
+  StorageService._isReturningUserOnBoot = null;
+  StorageService.restoreStateFromLocalStorage();
+  StorageService.initStartupProjectPrompt();
+  assert(!document.getElementById('returningUserModal').classList.contains('hidden'), 'Returning user visit must open #returningUserModal');
+  assert(document.getElementById('newProjectModal').classList.contains('hidden'), 'Returning user visit must not auto-open #newProjectModal before user chooses');
+  assert(document.getElementById('returningUserSavedProjectsList').innerHTML.includes('Campus Expansion Phase 1'), 'Returning user modal must list existing saved projects');
+
+  // Returning user chooses to start a new project
+  StorageService.startNewProjectFromStartup('blank');
+  assert(document.getElementById('returningUserModal').classList.contains('hidden'), 'startNewProjectFromStartup must close #returningUserModal');
+  assert(!document.getElementById('newProjectModal').classList.contains('hidden'), 'startNewProjectFromStartup must open #newProjectModal');
+
+  // Returning user chooses to load an existing project
+  StorageService.openReturningUserModal();
+  const savedIdx = StorageService._getSavedProjectsIndex();
+  StorageService.loadProjectFromStartup(savedIdx[0].id);
+  assert(document.getElementById('returningUserModal').classList.contains('hidden'), 'loadProjectFromStartup must close #returningUserModal');
+  assert(StorageService.getActiveProjectName() === 'Campus Expansion Phase 1', 'loadProjectFromStartup must load the selected project');
 `, ctx);
 
 // 5F. Live Changelog Parser, Unread Version Badge Dot & What's New Modal Verification
@@ -379,7 +421,11 @@ vm.runInContext(`
   appSandbox.window = appSandbox;
   appSandbox.globalThis = appSandbox;
   const appCtx = vm.createContext(appSandbox);
-  vm.runInContext(appJsSrc, appCtx, { filename: 'js/core/app.js' });
+  for (const coreRel of ['js/core/namespace.js', 'js/core/ui_resizers.js', 'js/core/app.js', 'js/core/changelog.js']) {
+    if (existsRel(coreRel)) {
+      vm.runInContext(readUtf8(coreRel), appCtx, { filename: coreRel });
+    }
+  }
 
   // Unseen version must display pulsing cyan indicator dot on #appVersionBadge
   appCtx.renderVersionBadge();

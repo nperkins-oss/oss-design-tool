@@ -1220,6 +1220,8 @@ function openProjectWizardModal(mode = "create", options = {}) {
 
   const modal = document.getElementById("newProjectModal");
   if (!modal) return;
+  const retModal = document.getElementById("returningUserModal");
+  if (retModal) retModal.classList.add("hidden");
 
   // Load existing defaults if in edit mode, or fresh defaults for create
   if (mode === "edit" && typeof StorageService !== "undefined") {
@@ -1242,9 +1244,11 @@ function openProjectWizardModal(mode = "create", options = {}) {
   const subTitleEl = document.getElementById("wizardModalSubtitle");
   const submitBtn = document.getElementById("wizardSubmitBtn");
   const originRow = document.getElementById("wizCreateOriginRow");
+  const switchLoadBtn = document.getElementById("wizardSwitchToLoadBtn");
   const accordion = document.getElementById("wizDeviceCablingAccordion");
   if (accordion) accordion.open = false;
   if (originRow) originRow.classList.toggle("hidden", mode !== "create");
+  if (switchLoadBtn) switchLoadBtn.classList.toggle("hidden", mode !== "create");
 
   if (titleEl) {
     titleEl.textContent = mode === "create" ? "Create New Project — Scope & Technical Defaults" : "Project Scope & Technical Defaults";
@@ -1289,6 +1293,8 @@ function openProjectWizardModal(mode = "create", options = {}) {
 function closeProjectWizardModal() {
   const modal = document.getElementById("newProjectModal");
   if (!modal) return;
+  const retModal = document.getElementById("returningUserModal");
+  if (retModal) retModal.classList.add("hidden");
   modal.classList.add("hidden");
 }
 
@@ -1889,6 +1895,10 @@ function executeWizardSubmission() {
     if (projModal && !projModal.classList.contains("hidden")) {
       projModal.classList.add("hidden");
     }
+    const retModal = document.getElementById("returningUserModal");
+    if (retModal && !retModal.classList.contains("hidden")) {
+      retModal.classList.add("hidden");
+    }
   } else {
     if (typeof StorageService !== "undefined") {
       StorageService.setProjectDefaults(defaults, null, { skipEngineSync: true });
@@ -2293,8 +2303,15 @@ function resolveProjectDefaultConfirm(choice) {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && _pendingProjectDefaultConfirm) {
-    resolveProjectDefaultConfirm("cancel");
+  if (e.key === "Escape") {
+    if (_pendingProjectDefaultConfirm) {
+      resolveProjectDefaultConfirm("cancel");
+      return;
+    }
+    const retModal = document.getElementById("returningUserModal");
+    if (retModal && !retModal.classList.contains("hidden") && typeof StorageService !== "undefined") {
+      StorageService.closeReturningUserModal();
+    }
   }
 });
 

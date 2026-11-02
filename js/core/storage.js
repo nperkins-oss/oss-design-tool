@@ -200,9 +200,33 @@ NetSelectIDB.preloadAllToCache();
 
 const StorageService = {
   AUTO_SAVE_DEBOUNCE_MS: 300,
+  VISITED_STORAGE_KEY: "netselect_has_visited",
   _autoSaveTimer: null,
   _pendingDeleteProjectId: null,
   _pendingClearAllProjects: false,
+  _isReturningUserOnBoot: null,
+
+  /**
+   * Checks whether this browser has prior user visit state or saved/active project data.
+   * Returns false on a user's very first visit to the site, and true on subsequent visits.
+   */
+  hasExistingUserState() {
+    try {
+      if (localStorage.getItem(this.VISITED_STORAGE_KEY) === "true") return true;
+      const saved = this._getSavedProjectsIndex();
+      if (saved.length > 0) return true;
+      const activeId = localStorage.getItem("netselect_active_project_id");
+      if (activeId && activeId !== "default") return true;
+      const rawState = localStorage.getItem(`netselect_active_state_${activeId || "default"}`) || localStorage.getItem("netselect_active_state_v1");
+      if (rawState) {
+        const parsed = JSON.parse(rawState);
+        if (parsed && ((Array.isArray(parsed.projectBOM) && parsed.projectBOM.length > 0) || (parsed.projectName && parsed.projectName !== "Default Project"))) {
+          return true;
+        }
+      }
+    } catch (e) {}
+    return false;
+  },
 
   /**
    * Offloads heavy base64 floorplan images into IndexedDB + BlueprintCache,
@@ -351,6 +375,9 @@ const StorageService = {
    */
   restoreStateFromLocalStorage() {
     try {
+      if (this._isReturningUserOnBoot === null) {
+        this._isReturningUserOnBoot = this.hasExistingUserState();
+      }
       const projId = localStorage.getItem("netselect_active_project_id") || "default";
       const projName = localStorage.getItem("netselect_active_project_name") || "Default Project";
 
@@ -393,6 +420,7 @@ const StorageService = {
     if (!modal) return;
     modal.classList.toggle("hidden");
     if (!modal.classList.contains("hidden")) {
+      this.closeReturningUserModal();
       this._pendingDeleteProjectId = null;
       this._pendingClearAllProjects = false;
       this.renderSavedProjectsList();
@@ -400,6 +428,182 @@ const StorageService = {
         renderProjectDefaultsSummary();
       }
     }
+  },
+
+  /**
+   * Startup project prompt orchestrator:
+   * 1) When a user accesses the site for the first time, starts the New Project Wizard dialog.
+   * 2) When a user returns, opens the Returning User dialog asking whether to load an existing project or start a new one.
+   */
+  initStartupProjectPrompt() {
+    const isReturning = this._isReturningUserOnBoot !== null
+      ? this._isReturningUserOnBoot
+      : this.hasExistingUserState();
+
+    this.safeSetItem(this.VISITED_STORAGE_KEY, "true");
+    this._isReturningUserOnBoot = true;
+
+    if (!isReturning) {
+      this.closeReturningUserModal();
+      if (typeof openProjectWizardModal === "function") {
+        openProjectWizardModal("create");
+      }
+    } else {
+      this.openReturningUserModal();
+    }
+  },
+
+  /**
+   * Opens the Returning User startup modal asking whether to load an existing project or start a new one
+   */
+  openReturningUserModal() {
+    const modal = document.getElementById("returningUserModal");
+    if (!modal) return;
+    const wizModal = document.getElementById("newProjectModal");
+    if (wizModal) wizModal.classList.add("hidden");
+    this.renderReturningUserModal();
+    modal.classList.remove("hidden");
+    safeCreateIcons(modal);
+  },
+
+  /**
+   * Closes the Returning User startup modal
+   */
+  closeReturningUserModal() {
+    const modal = document.getElementById("returningUserModal");
+    if (modal) modal.classList.add("hidden");
+  },
+
+  /**
+   * Continues with the currently restored active project from the Returning User startup modal
+   */
+  continueActiveProjectFromStartup() {
+    this.closeReturningUserModal();
+    const activeName = this.getActiveProjectName();
+    if (typeof showToast === "function") {
+      showToast(`Loaded active project: ${activeName}`);
+    }
+  },
+
+  /**
+   * Loads a specific saved project snapshot directly from the Returning User startup modal
+   */
+  loadProjectFromStartup(idOrIdx) {
+    this.loadProjectSnapshot(idOrIdx);
+    this.closeReturningUserModal();
+  },
+
+  /**
+   * Launches the New Project Wizard from the Returning User startup modal
+   */
+  startNewProjectFromStartup(originMode = "blank") {
+    this.closeReturningUserModal();
+    if (typeof openProjectWizardModal === "function") {
+      openProjectWizardModal("create", { originMode: originMode === "revision" ? "revision" : "blank" });
+    }
+  },
+
+  /**
+   * Renders the active workspace summary and saved projects list inside #returningUserModal
+   */
+  renderReturningUserModal() {
+    const activeId = this.getActiveProjectId();
+    const activeName = this.getActiveProjectName();
+    const saved = this._getSavedProjectsIndex();
+
+    const activeItemsCount = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.reduce((acc, i) => acc + (parseInt(i.qty, 10) || 1), 0)
+      : 0;
+    const activeTotalMsrp = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
+      ? projectBOM.reduce((acc, i) => acc + ((parseFloat(i.msrp) || 0) * (parseInt(i.qty, 10) || 1)), 0)
+      : 0;
+
+    const summaryEl = document.getElementById("returningUserActiveProjectSummary");
+    if (summaryEl) {
+      const safeActiveName = escapeHTML(activeName);
+      summaryEl.innerHTML = `
+        <div class="p-2.5 rounded-xl bg-slate-900/90 border border-indigo-500/30 flex items-center justify-between gap-2 text-xs">
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+              <span class="font-bold text-white truncate">${safeActiveName}</span>
+            </div>
+            <div class="text-[10px] font-mono text-slate-400 mt-0.5">
+              ${activeItemsCount} item${activeItemsCount === 1 ? "" : "s"} &bull; <span class="text-emerald-400 font-semibold">$${activeTotalMsrp.toLocaleString()}</span>
+            </div>
+          </div>
+          <span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0">CURRENT</span>
+        </div>
+      `;
+    }
+
+    const contLabelEl = document.getElementById("returningUserContinueActiveLabel");
+    if (contLabelEl) {
+      contLabelEl.textContent = `Continue "${activeName.length > 26 ? activeName.slice(0, 26) + "..." : activeName}"`;
+    }
+
+    const badgeEl = document.getElementById("returningUserSavedCountBadge");
+    if (badgeEl) {
+      badgeEl.textContent = `${saved.length} Saved`;
+    }
+
+    const listEl = document.getElementById("returningUserSavedProjectsList");
+    if (!listEl) return;
+
+    if (saved.length === 0) {
+      listEl.innerHTML = `
+        <div class="text-center py-4 px-4 border border-dashed border-slate-800 rounded-xl bg-slate-950/50 text-xs text-slate-400">
+          No saved snapshots in browser storage yet. Use <strong class="text-indigo-300">Continue</strong> or <strong class="text-indigo-300">Import JSON</strong> above, or click <strong class="text-emerald-300">Start New Project Wizard</strong>.
+        </div>
+      `;
+      return;
+    }
+
+    listEl.innerHTML = saved.map((proj) => {
+      const safeName = escapeHTML(proj.name || "Untitled Project");
+      const safeDate = escapeHTML(proj.date || "");
+      const safeIdAttr = escapeJSAttr(proj.id);
+      const itemsCount = parseInt(proj.itemsCount, 10) || 0;
+      const totalMsrp = parseFloat(proj.totalMsrp) || 0;
+      const isActive = (proj.id === activeId);
+      const defs = this.getProjectDefaults(proj.id);
+      const jobNum = defs?.metadata?.jobOpportunityNumber ? escapeHTML(defs.metadata.jobOpportunityNumber) : "";
+
+      return `
+        <div class="p-2.5 rounded-xl border transition-all ${
+          isActive
+            ? "bg-indigo-950/30 border-indigo-500/50 ring-1 ring-indigo-500/30"
+            : "bg-slate-950/70 border-slate-800/80 hover:border-slate-700"
+        } flex items-center justify-between gap-3 text-xs">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-bold text-white truncate">${safeName}</span>
+              ${jobNum ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-mono bg-slate-800 text-slate-300 border border-slate-700 shrink-0">${jobNum}</span>` : ""}
+              ${isActive ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0">ACTIVE</span>' : ""}
+            </div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
+              <span>${safeDate}</span>
+              <span>&bull;</span>
+              <span>${itemsCount} item${itemsCount === 1 ? "" : "s"}</span>
+              <span>&bull;</span>
+              <span class="text-emerald-400 font-semibold">$${totalMsrp.toLocaleString()}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button type="button" onclick="StorageService.loadProjectFromStartup('${safeIdAttr}')" class="px-3 py-1.5 ${
+              isActive
+                ? "bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm"
+                : "bg-slate-800 hover:bg-indigo-600 text-slate-200 hover:text-white border border-slate-700 hover:border-transparent"
+            } font-bold rounded-lg text-[11px] transition-all flex items-center gap-1 cursor-pointer">
+              <i data-lucide="folder-open" class="w-3 h-3"></i>
+              <span>${isActive ? "Load / Resume" : "Load Project"}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    safeCreateIcons(listEl);
   },
 
   /**
@@ -1358,7 +1562,9 @@ const StorageService = {
         renderProjectDefaultsSummary();
       }
     } else {
-      this.toggleProjectModal();
+      const projModal = document.getElementById("projectModal");
+      if (projModal) projModal.classList.add("hidden");
+      this.closeReturningUserModal();
     }
 
     if (!opts.suppressToast && typeof showToast === "function") {
@@ -1636,7 +1842,9 @@ const StorageService = {
         this._upsertSavedQuote(newProjId, safeProjectName, importedBundle);
 
         this.renderSavedProjectsList();
-        this.toggleProjectModal();
+        const projModal = document.getElementById("projectModal");
+        if (projModal) projModal.classList.add("hidden");
+        this.closeReturningUserModal();
         if (typeof showToast === "function") showToast(`Imported project: ${safeProjectName}`);
       } catch (err) {
         console.error("[StorageService] JSON Import failed:", err);
@@ -1789,3 +1997,6 @@ window.exportCurrentProjectJSON = () => StorageService.exportCurrentProjectJSON(
 window.importProjectJSON = (event) => StorageService.importProjectJSON(event);
 window.createNewBlankProject = (customDefaults) => StorageService.createNewBlankProject(customDefaults);
 window.renameActiveProject = () => StorageService.renameActiveProject();
+window.initStartupProjectPrompt = () => StorageService.initStartupProjectPrompt();
+window.openReturningUserModal = () => StorageService.openReturningUserModal();
+window.closeReturningUserModal = () => StorageService.closeReturningUserModal();

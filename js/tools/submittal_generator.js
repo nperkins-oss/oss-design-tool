@@ -1098,6 +1098,7 @@ function printSubmittalPackage() {
 if (typeof window !== "undefined") {
   window.SubmittalGenerator = SubmittalGenerator;
   window.openSubmittalModal = openSubmittalModal;
+window.openEngineeringSubmittalModal = openSubmittalModal;
   window.closeSubmittalModal = closeSubmittalModal;
   window.renderSubmittalPreview = renderSubmittalPreview;
   window.printSubmittalPackage = printSubmittalPackage;

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0-beta.9] - 2026-11-02
+
+### First-Time User New Project Wizard Launch & Returning User Project Selection Prompt
+- **First-Time Site Access Auto-Launch (`js/core/storage.js`, `js/core/app.js`, `js/tools/project_wizard.js`, `index.html`)**:
+  - Added `StorageService.hasExistingUserState()` and `StorageService.initStartupProjectPrompt()` invoked on page initialization (`DOMContentLoaded`).
+  - When a user accesses the site for the first time (no prior visit or saved/active project state in `localStorage`), automatically launches the 5-step **New Project Wizard** (`#newProjectModal`) and persists `netselect_has_visited`.
+  - Added a quick **Load Existing Project** button in `#newProjectModal` header (`#wizardSwitchToLoadBtn`) so first-time users on a new browser can also immediately switch to importing a `.json` project file if needed.
+- **Returning User Project Selection Dialog (`#returningUserModal` in `index.html`, `js/core/storage.js`, `scripts/verify_app.js`)**:
+  - When a returning user accesses the site, automatically opens `#returningUserModal` asking whether they want to **Load an Existing Project** or **Start a New Project**.
+  - **Load Existing Project**: Displays a live summary of the active workspace with 1-click **Continue Active Project**, an inline **Saved Projects in Browser Storage** list with 1-click **Load Project** buttons, **Import JSON** file upload, and **Project Manager** shortcut.
+  - **Start a New Project**: Launches the 5-step **New Project Wizard** (`startNewProjectFromStartup('blank')`) or branches a new revision from an existing project (`startNewProjectFromStartup('revision')`).
+  - Added automated headless regression assertions in `scripts/verify_app.js` verifying both first-time and returning user startup workflows.
+
+---
+
 ## [0.11.0-beta.8] - 2026-10-30
 
 ### Interactive Version Badge, In-App Release Notes Modal & Automated Changelog Gate
