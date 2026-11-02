@@ -28,7 +28,9 @@ This skill ensures deterministic specification extraction, automated hero-image 
 | **Firewalls & Security Appliances** | `data/networking/data_firewalls.js` | `FIREWALL_DATABASE` |
 | **Wireless PtP / PtMP Bridges** | `data/networking/data_wireless.js` | `WIRELESS_DATABASE` |
 | **Compute (NVRs, Servers, Workstations)** | `data/compute_storage/data_servers.js` | `SERVERS_DATABASE`, `WORKSTATIONS_DATABASE` |
-| **Power, Racks, Enclosures & Accessories** | `data/infrastructure/data_accessories.js` | `ACCESSORY_DATABASE` |
+| **Power (UPS, EBP, PDU, Power Cords & Cards)** | `data/infrastructure/data_ups_pdu.js` | `UPS_PDU_DATABASE` |
+| **Racks, NEMA Enclosures, Cabinets & Mounts** | `data/infrastructure/data_racks_mounts.js` | `RACKS_MOUNTS_DATABASE` |
+| **Media Converters, PoE Injectors & Surge** | `data/infrastructure/data_media_poe.js` | `MEDIA_POE_DATABASE` |
 | **Structured Cabling** | `data/infrastructure/data_cabling.js` | `CABLING_CATALOG` |
 
 ---
