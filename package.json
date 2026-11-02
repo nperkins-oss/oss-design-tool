@@ -1,11 +1,15 @@
 {
   "name": "oss-design-tool",
-  "version": "0.11.0-beta.9",
+  "version": "0.11.0-beta.10",
   "private": true,
   "description": "Orion Security Solutions — Enterprise Network, Physical Security & Infrastructure Design Tool",
   "scripts": {
     "verify": "node scripts/verify_app.js",
     "test": "node scripts/verify_app.js",
+    "catalog:audit": "node scripts/catalog_pipeline.js audit",
+    "catalog:link": "node scripts/catalog_pipeline.js auto-link --apply",
+    "catalog:validate": "node scripts/catalog_pipeline.js validate",
+    "catalog:ingest": "node scripts/catalog_pipeline.js ingest",
     "css": "npx tailwindcss -i ./assets/css/tailwind-input.css -o ./assets/css/tailwind.min.css --minify",
     "bump:patch": "node scripts/bump_version.js --patch",
     "bump:minor": "node scripts/bump_version.js --minor",

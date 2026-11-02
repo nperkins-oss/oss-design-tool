@@ -1,7 +1,7 @@
 """
 Catalog Entry & DRC Pre-Flight Validator
 Validates schema compliance, asset linkage, and Design Rule Checker (DRC) compatibility
-for devices across all categories (Physical Security, Networking, Infrastructure, Accessories).
+for single devices or batch manifests across all categories.
 Usage:
     python validate_entry.py <device_json_file_or_string>
 """
@@ -9,7 +9,6 @@ Usage:
 import sys
 import os
 import json
-import re
 import argparse
 
 # Force UTF-8 stdout encoding on Windows
@@ -19,10 +18,18 @@ if sys.stdout.encoding != 'utf-8':
     except AttributeError:
         pass
 
-def validate_catalog_entry(item):
+
+def get_workspace_root():
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+
+
+def validate_catalog_entry(item, assets_content=None, workspace_root=None):
     errors = []
     warnings = []
     info = []
+
+    if workspace_root is None:
+        workspace_root = get_workspace_root()
 
     # 1. Universal Base Fields
     required_base = ["id", "vendor", "model", "sku", "role", "category", "msrp"]
@@ -35,7 +42,6 @@ def validate_catalog_entry(item):
     model = item.get("model") or ""
 
     # 2. Domain-Specific & DRC Checks
-
     # --- CAMERAS ---
     if category == "cameras" or role == "camera" or "camera" in model.lower():
         if "poeStandard" not in item:
@@ -46,7 +52,7 @@ def validate_catalog_entry(item):
         watts = item.get("powerConsumptionWatts") or item.get("baseWatts") or 0
         if watts <= 0:
             warnings.append("Camera power consumption (powerConsumptionWatts) not specified or zero")
-        
+
         max_watts = item.get("maxPowerWatts") or watts
         is_outdoor = item.get("outdoor") is True or item.get("isOutdoor") is True or "ip66" in str(item.get("ipRating", "")).lower() or "outdoor" in model.lower()
 
@@ -66,7 +72,7 @@ def validate_catalog_entry(item):
         sec_level = item.get("securityLevel")
         if sec_level not in [1, 2, 3]:
             warnings.append(f"Access hardware recommended to specify 'securityLevel' (1=Public, 2=Restricted, 3=SCIF/Vault). Got: {sec_level}")
-        
+
         is_maglock = "maglock" in model.lower() or item.get("lockType") == "maglock"
         if sec_level == 3 and is_maglock:
             errors.append("DRC Rule 11 & NFPA 101 Violation: Maglocks are STRICTLY PROHIBITED on Security Level 3 openings (maglocks cannot fail secure on power loss/FAI drop)")
@@ -87,7 +93,7 @@ def validate_catalog_entry(item):
 
     # --- INFRASTRUCTURE & POWER (UPS, PDU, CABLING) ---
     elif category in ["infrastructure", "power", "cabling", "ups", "pdu"]:
-        if role == "UPS" or "ups" in model.lower():
+        if role == "ups" or "ups" in model.lower():
             va = item.get("va") or 0
             if va >= 3000:
                 info.append(f"DRC Rule 8A Check: High-capacity UPS ({va}VA) requires dedicated 30A locking branch circuit (NEMA L5-30P / L6-30P)")
@@ -97,26 +103,26 @@ def validate_catalog_entry(item):
                 info.append("DRC Rule 9 Check: Indoor-rated cable must not be deployed in wet locations or exterior conduit")
 
     # 3. Asset & Datasheet Verification
-    workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
-    data_assets_path = os.path.join(workspace_root, "data", "data_assets.js")
-
     item_id = item.get("id") or ""
     item_sku = item.get("sku") or ""
 
-    if os.path.exists(data_assets_path):
-        with open(data_assets_path, "r", encoding="utf-8") as f:
-            assets_content = f.read()
+    if assets_content is None:
+        data_assets_path = os.path.join(workspace_root, "data", "data_assets.js")
+        if os.path.exists(data_assets_path):
+            with open(data_assets_path, "r", encoding="utf-8") as f:
+                assets_content = f.read()
+        else:
+            assets_content = ""
 
+    if assets_content:
         has_asset_id = f'"{item_id}"' in assets_content
         has_asset_sku = f'"{item_sku}"' in assets_content
-
-        if not has_asset_id and not has_asset_sku:
+        if not has_asset_id and not has_asset_sku and not item.get("datasheetPath"):
             warnings.append(f"Asset is not registered in data/data_assets.js under ID '{item_id}' or SKU '{item_sku}'")
         else:
-            info.append(f"Confirmed registration in data/data_assets.js")
+            info.append("Confirmed registration in data/data_assets.js or inline datasheetPath")
 
-    # Image file check
-    expected_image = f"assets/images/products/{item_id}.webp"
+    expected_image = item.get("image") or f"assets/images/products/{item_id}.webp"
     full_image_path = os.path.join(workspace_root, expected_image.replace("/", os.sep))
     if not os.path.exists(full_image_path):
         warnings.append(f"Product image does not exist on disk at: {expected_image}")
@@ -147,9 +153,10 @@ def validate_catalog_entry(item):
 
     return len(errors) == 0
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Validate catalog entry against schemas and DRC rules")
-    parser.add_argument("input", help="Path to JSON file or raw JSON string of the device entry")
+    parser = argparse.ArgumentParser(description="Validate catalog entry or batch manifest against schemas and DRC rules")
+    parser.add_argument("input", help="Path to JSON file or raw JSON string of the device entry / batch array")
     args = parser.parse_args()
 
     data = None
@@ -163,5 +170,16 @@ if __name__ == "__main__":
             print(f"Error parsing input as JSON or file: {e}", file=sys.stderr)
             sys.exit(1)
 
-    success = validate_catalog_entry(data)
-    sys.exit(0 if success else 1)
+    items = data.get("items", [data]) if isinstance(data, dict) and "items" in data else (data if isinstance(data, list) else [data])
+    ws_root = get_workspace_root()
+    da_path = os.path.join(ws_root, "data", "data_assets.js")
+    da_content = open(da_path, "r", encoding="utf-8").read() if os.path.exists(da_path) else ""
+
+    passed = 0
+    for entry in items:
+        if validate_catalog_entry(entry, assets_content=da_content, workspace_root=ws_root):
+            passed += 1
+
+    if len(items) > 1:
+        print(f"\nBatch Validation Summary: {passed}/{len(items)} items passed pre-flight checks.")
+    sys.exit(0 if passed == len(items) else 1)

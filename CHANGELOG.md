@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0-beta.10] - 2026-11-02
+
+### Scalable Batch Datasheet Ingestion Pipeline & `CATALOG_ASSETS` Auto-Linker
+- **Unified Catalog & Datasheet CLI (`scripts/catalog_pipeline.js`, `package.json`)**:
+  - Added `audit`, `auto-link`, `validate`, and `ingest` commands (`npm run catalog:audit`, `npm run catalog:link`, `npm run catalog:validate`, `npm run catalog:ingest`).
+  - Supports atomic batch ingestion of 1..N devices (e.g., multi-SKU product series datasheets) with automatic routing to the target `data/**/*.js` database array, DRC pre-flight validation, duplicate ID/SKU collision detection against `CatalogRegistry`, and sorted registration in `data/data_assets.js` without loading 300KB+ catalog files into context.
+- **Smart PDF Hero-Image Auto-Selection & Python Ingestion Scripts (`.agents/skills/catalog-datasheet-ingestion/`)**:
+  - Fixed `workspace_root` path resolution in `register_asset.py` and `validate_entry.py` and added batch manifest support (`--batch`).
+  - Enhanced `extract_pdf.py` to filter out small vendor logos/icons, score candidate product photos (`heroCandidateImages`), support folder batch extraction, and auto-convert the top-ranked hero image to a 600×600 transparent WebP (`--auto-webp <device_id>`).
+- **Master Asset Registry Synchronization (`data/data_assets.js`, `data/registry.js`)**:
+  - Indexed `WIRELESS_ACCESSORY_CATALOG` and `WIRELESS_LICENSE_CATALOG` in `CatalogRegistry.init()` and normalized `item.datasheet` fallbacks.
+  - Synchronized 403 inline device datasheet/image mappings across compute, storage, and software catalogs into `CATALOG_ASSETS` (`2,761` total verified asset keys).
+
+---
+
 ## [0.11.0-beta.9] - 2026-11-02
 
 ### First-Time User New Project Wizard Launch & Returning User Project Selection Prompt

@@ -1,69 +1,71 @@
 ---
 name: catalog-datasheet-ingestion
 description: >-
-  Standardized ingestion pipeline for device datasheets across all hardware domains
-  (Physical Security, Networking, Infrastructure, Power, Cabling, Accessories).
-  Parses technical specifications, generates standard transparent WebP images,
-  organizes and links datasheets, registers assets in CATALOG_ASSETS, and enforces
+  Standardized single-item and batch ingestion pipeline for device datasheets across all hardware domains
+  (Physical Security, Networking, Infrastructure, Power, Cabling, Compute, Accessories).
+  Parses technical specifications, auto-selects and converts product hero photos to transparent WebP,
+  links datasheets, batch-upserts catalog databases, registers assets in CATALOG_ASSETS, and enforces
   Design Rule Checker (DRC) and National Code / Orion TOW standards.
 ---
 
-# Universal Hardware Datasheet Ingestion Pipeline
+# Universal Hardware Datasheet & Batch Ingestion Pipeline
 
-Use this skill when importing new products, spec sheets, cutsheets, or device catalogs into NetSelect Enterprise across **any** hardware domain.
+Use this skill when importing new products, spec sheets, cutsheets, product series families, or device catalogs into NetSelect Enterprise across **any** hardware domain.
 
-This skill ensures deterministic specification extraction, standard asset linking in `data/data_assets.js`, product photography normalization (`assets/images/products/*.webp`), and 100% compliance with the Design Rule Checker (DRC) and National Codes / Orion Standards.
-
----
-
-## 1. Supported Hardware Domains & Target Databases
-
-Category / Domain | Target JavaScript Database | Example Devices
-:--- | :--- | :---
-**Surveillance (Cameras & Video)** | `data/physical_security/data_cameras.js` | Fixed Domes, Bullets, PTZs, 360 Fisheye, Multi-Sensor, Thermals
-**Access Control (ACS & Locks)** | `data/physical_security/data_access.js` | Intelligent Controllers, Sub-controllers, Card Readers, Electric Strikes, Mortise Locks, Maglocks, Trove Subplates
-**Networking (Switches & Routers)** | `data/networking/data_<vendor>.js` or `data_wireless.js` | Access Switches, Aggregation/Core, Routers, Firewalls, Wireless PtP/PtMP Bridges
-**Power & Infrastructure** | `data/infrastructure/data_accessories.js` or `data/registry.js` | 2-Post/4-Post Racks, Wall Cabinets, NEMA 4X Enclosures, 120V/208V UPS, External Battery Packs (EBP), Metered/Switched PDUs
-**Structured Cabling** | `data/infrastructure/data_cabling.js` | Bulk Spools (CMP, CMR, CMX, OSP Gel-Filled), Cat6, Cat6A, OS2/OM4 Fiber, Modular Patch Panels
-**Hardware Accessories & Mounts** | `data/infrastructure/data_accessories.js` | 802.3bt Surge Protectors, Camera Wall/Pole Brackets, Building Entrance Terminals (BET), PoE Injectors
+This skill ensures deterministic specification extraction, automated hero-image normalization (`assets/images/products/*.webp`), atomic batch upsert into `data/**/*.js`, standard asset linking in `data/data_assets.js`, and 100% compliance with the Design Rule Checker (DRC) and National Codes / Orion Standards.
 
 ---
 
-## 2. Ingestion Workflow (Step-by-Step)
+## 1. Supported Hardware Domains & Auto-Routed Target Databases
+
+`scripts/catalog_pipeline.js` automatically routes devices to their target database based on `category`, `role`, and `vendor` (or via explicit `targetFile` / `targetVar` in a batch manifest):
+
+| Category / Domain | Target JavaScript Database | Exported Array / Object |
+| :--- | :--- | :--- |
+| **Surveillance (Cameras & Video)** | `data/physical_security/data_cameras.js` | `CAMERAS_DATABASE` |
+| **Access Control (ACS & Locks)** | `data/physical_security/data_access.js` | `ACCESS_CONTROL_DATABASE` |
+| **Networking Switches** | `data/networking/data_<vendor>.js` | `UNIFI_SWITCHES`, `CISCO_SWITCHES`, `MERAKI_SWITCHES`, `JUNIPER_SWITCHES`, `RUCKUS_SWITCHES`, `AMG_SWITCHES`, `ALLIED_SWITCHES` |
+| **Firewalls & Security Appliances** | `data/networking/data_firewalls.js` | `FIREWALL_DATABASE` |
+| **Wireless PtP / PtMP Bridges** | `data/networking/data_wireless.js` | `WIRELESS_DATABASE` |
+| **Compute (NVRs, Servers, Workstations)** | `data/compute_storage/data_servers.js` | `SERVERS_DATABASE`, `WORKSTATIONS_DATABASE` |
+| **Power, Racks, Enclosures & Accessories** | `data/infrastructure/data_accessories.js` | `ACCESSORY_DATABASE` |
+| **Structured Cabling** | `data/infrastructure/data_cabling.js` | `CABLING_CATALOG` |
+
+---
+
+## 2. Fast Batch Ingestion Workflow (Recommended)
 
 ```mermaid
 flowchart TD
-    A["Manufacturer PDF Datasheet & Photo"] --> B["1. Place PDF in Datasheets/Category/Vendor/"]
-    B --> C["2. Run extract_pdf.py to extract text & specs"]
-    C --> D["3. Format Device Object using Domain Schema"]
-    D --> E["4. Run process_image.py to generate transparent WebP"]
-    E --> F["5. Run register_asset.py to update CATALOG_ASSETS"]
-    F --> G["6. Run validate_entry.py for Schema & DRC Pre-Flight"]
-    G --> H["7. Append to Target Database File"]
-    H --> I["8. Auto-Commit and Push to Staging"]
+    A["1..N Manufacturer PDF Datasheets"] --> B["1. Place PDFs in Datasheets/Category/Vendor/"]
+    B --> C["2. Extract Specs + Auto-Generate WebP Hero Image (extract_pdf.py --auto-webp)"]
+    C --> D["3. Build Batch JSON Array (1..N SKUs from Series Datasheet)"]
+    D --> E["4. Run node scripts/catalog_pipeline.js ingest <batch.json>"]
+    E --> F["5. Run node scripts/verify_app.js & Deploy to Staging"]
 ```
 
-### Step 1: Place Datasheet PDF in Standard Directory
-Place the PDF under the corresponding category and vendor subfolder:
-- `Datasheets/Cameras/<Vendor>/<Model> - Datasheet.pdf`
-- `Datasheets/Access Control/<Vendor>/<Model> - Datasheet.pdf`
-- `Datasheets/Network/<Vendor>/<Model> - Tech Specs.pdf`
-- `Datasheets/Infrastructure/<Vendor>/<Model> - Datasheet.pdf`
-
-### Step 2: Extract Text and Specs from PDF
-Run the bundled extraction script to retrieve clean text and technical tables from the PDF:
+### Step 1: Audit Unlinked PDFs & Coverage (Optional)
+To see which PDFs in `Datasheets/` are not yet linked in `CATALOG_ASSETS` or which catalog devices are missing datasheets/images:
 ```powershell
-python .agents/skills/catalog-datasheet-ingestion/scripts/extract_pdf.py "Datasheets/Cameras/Axis/Axis P3265-LVE - Datasheet.pdf"
+node scripts/catalog_pipeline.js audit
 ```
-*Tip: To extract raster product photos embedded inside the PDF, append `--extract-images --out-dir scratch/extracted_images/`.*
+To automatically sync inline `datasheetPath`/`image` properties and match existing SKUs to PDFs/WebPs on disk:
+```powershell
+node scripts/catalog_pipeline.js auto-link --apply
+```
 
-### Step 3: Map Technical Specifications to Domain Schema
-Review the extracted text and map fields according to the domain JSON schemas in `schemas/`:
-- [`schemas/camera_schema.json`](./schemas/camera_schema.json)
-- [`schemas/access_control_schema.json`](./schemas/access_control_schema.json)
-- [`schemas/networking_schema.json`](./schemas/networking_schema.json)
-- [`schemas/power_infra_schema.json`](./schemas/power_infra_schema.json)
-- [`schemas/cabling_accessory_schema.json`](./schemas/cabling_accessory_schema.json)
+### Step 2: Extract Text & Auto-Generate Transparent WebP Hero Photo
+Extract text and automatically filter/rank embedded raster images (ignoring tiny vendor logos/icons) to convert the top-ranked product photo directly into a 600×600 transparent WebP (`assets/images/products/<device_id>.webp`):
+```powershell
+python .agents/skills/catalog-datasheet-ingestion/scripts/extract_pdf.py "Datasheets/Cameras/Axis/Axis P3265-LVE - Datasheet.pdf" --auto-webp "axis-p3265-lve"
+```
+*Batch Folder Extraction*: Pass a directory path to extract text and hero image candidates for an entire folder of PDFs at once:
+```powershell
+python .agents/skills/catalog-datasheet-ingestion/scripts/extract_pdf.py "Datasheets/Network/AMG" --extract-images --json > scratch/amg_extracted.json
+```
+
+### Step 3: Build Single or Multi-SKU Batch JSON Manifest
+When a datasheet covers a **product family / series** (e.g., 4–12 SKUs in one PDF), put all SKUs into a single JSON array (`scratch/batch_ingest.json`) instead of importing them one by one.
 
 #### Critical DRC & Code Tags Checklist:
 * [ ] **PoE Delivery Class** (`poeStandard`): Must be `"802.3af"`, `"802.3at"`, or `"802.3bt"`.
@@ -74,138 +76,35 @@ Review the extracted text and map fields according to the domain JSON schemas in
 * [ ] **Dual Power Supply** (`dualPowerSupply`): For switches, routers, and servers, set to `true` if redundant PSUs are present (DRC Rule 14 mandates A/B dual feeds).
 * [ ] **Uplink Speeds** (`uplinkSpeed`): For 10G+ copper ports, Orion Standards mandate Cat6A (Cat6 prohibited per DRC Rule 13).
 
-### Step 4: Normalize & Optimize Product Photo
-Process the manufacturer photo (PNG, JPG, or extracted PDF rendering) into a standard, centered, square 600x600 transparent WebP:
-```powershell
-python .agents/skills/catalog-datasheet-ingestion/scripts/process_image.py "path/to/raw_photo.png" "<device_id>" --transparent-bg --size 600
-```
-*Output: `assets/images/products/<device_id>.webp`*
+### Step 4: Atomic Batch Validation, Database Upsert & `CATALOG_ASSETS` Registration
+Run `scripts/catalog_pipeline.js ingest` on your JSON file. In a single command—without needing to read or manually edit 300KB+ JavaScript catalog files—it:
+1. Validates every item against domain schemas, DRC rules, and `CatalogRegistry` duplicate IDs/SKUs.
+2. Appends the items into the appropriate `data/**/*.js` array(s).
+3. Registers both `id`, `sku`, and any `altKeys` in `data/data_assets.js` (`CATALOG_ASSETS`) in alphabetical order.
 
-### Step 5: Register in `CATALOG_ASSETS` (`data/data_assets.js`)
-Link the new device ID and SKU to its local PDF and WebP image:
 ```powershell
-python .agents/skills/catalog-datasheet-ingestion/scripts/register_asset.py "<device_id>" "Datasheets/<Category>/<Vendor>/<Model> - Datasheet.pdf" "assets/images/products/<device_id>.webp" --alt-key "<orderable_sku>"
-```
-
-### Step 6: DRC & Schema Pre-Flight Validation
-Validate that the structured device entry satisfies all schema rules and DRC constraints:
-```powershell
-python .agents/skills/catalog-datasheet-ingestion/scripts/validate_entry.py "scratch/candidate_entry.json"
+# Preview with --dry-run first, then apply:
+node scripts/catalog_pipeline.js ingest scratch/batch_ingest.json --dry-run
+node scripts/catalog_pipeline.js ingest scratch/batch_ingest.json
 ```
 
-### Step 7: Append to Target Database File
-Append the validated JavaScript object into the array in the appropriate file (e.g. `CAMERAS_DATABASE` in `data_cameras.js`, `ACCESS_CONTROL_DATABASE` in `data_access.js`, etc.).
-
-### Step 8: Automatic Staging Deployment
-Per `.agents/rules/deployment.md`, commit the new hardware and assets to the feature branch, merge into `staging`, and push to trigger the Azure Static Web Apps build:
+### Step 5: Verify & Deploy to Staging
+Run the full pre-deploy verification suite and push to `staging` per `.agents/rules/deployment.md`:
 ```powershell
-git add .
-git commit -m "feat(catalog): ingest <Vendor> <Model> with datasheet linking and DRC tags"
-git push origin feature/modular-architecture
-git checkout staging
-git merge feature/modular-architecture -m "chore(staging): merge <Vendor> <Model> catalog ingestion"
-git push origin staging
-git checkout feature/modular-architecture
+node scripts/verify_app.js
 ```
 
 ---
 
-## 3. Reference JSON Snippets by Domain
+## 3. Standalone Helper Scripts Reference
 
-### Camera Example (`data_cameras.js`)
-```javascript
-{
-  id: "axis-q3538-lve-4k-dome",
-  vendor: "Axis Communications",
-  model: "Axis Q3538-LVE 4K AI Dome Camera",
-  sku: "02131-001",
-  role: "Camera",
-  category: "cameras",
-  formFactor: "Dome (Ultra High-Res)",
-  resolution: "4K (8MP @ 60fps)",
-  sensorMegapixels: 8,
-  compression: "H.265 / H.264 / Zipstream",
-  streamBitrateMbps: 8.5,
-  poeStandard: "802.3at",
-  poeClass: "Class 4",
-  powerConsumptionWatts: 14.2,
-  maxPowerWatts: 25.5,
-  irIllumination: true,
-  irRangeMeters: 50,
-  lensType: "Varifocal 4.3-8.6mm i-CS Lens",
-  fieldOfViewDeg: 103,
-  ipRating: "IP66 / IP67 / NEMA 4X",
-  ikRating: "IK10+ Vandal-Proof",
-  outdoor: true,
-  operatingTempMinC: -50,
-  operatingTempMaxC: 60,
-  weightLbs: 4.4,
-  msrp: 1499,
-  taa: true,
-  deepLearningAnalytics: true,
-  keyFeatures: [
-    "Lightfinder 2.0 and Forensic WDR with 4K resolution at up to 60 fps",
-    "Deep learning processing unit (DLPU) powering advanced metadata object analytics",
-    "OptimizedIR up to 50 meters (164 ft) in complete darkness",
-    "Extreme weather and vandal protection with IP66, IP67, NEMA 4X, and IK10+ ratings"
-  ]
-}
-```
-
-### Access Control Example (`data_access.js`)
-```javascript
-{
-  id: "hes-9600-strike",
-  vendor: "HES / ASSA ABLOY",
-  model: "HES 9600 Series Heavy-Duty Surface Electric Strike",
-  sku: "9600-630-12/24D",
-  role: "Lock Hardware",
-  category: "access_control",
-  hardwareSubtype: "electric_strike",
-  securityLevel: 3,
-  lockType: "fail_secure_strike",
-  failSecure: true,
-  powerSource: "external_dc",
-  voltageVdc: "12/24VDC Field Selectable",
-  powerConsumptionWatts: 5.5,
-  holdingForceLbs: 2000,
-  mounting: "Surface-Mounted Rim Exit Device",
-  msrp: 485,
-  taa: true,
-  keyFeatures: [
-    "Windstorm and fire-rated heavy-duty stainless steel electric strike (ANSI/BHMA A156.31 Grade 1)",
-    "Fail-secure configuration maintains perimeter integrity during power outage and fire alarm activation",
-    "2,000 lbs static holding force for high-security Level 3 vault and SCIF openings"
-  ]
-}
-```
-
-### Switch Example (`data_juniper.js`)
-```javascript
-{
-  id: "juniper-ex4100-24p",
-  vendor: "Juniper Networks",
-  model: "Juniper EX4100 24-Port PoE+ Gigabit Ethernet Switch",
-  sku: "EX4100-24P",
-  role: "Access",
-  category: "networking",
-  ports: 24,
-  poeBudget: 740,
-  poeStandard: "802.3at",
-  poeMaxPortWatts: 30,
-  uplinkPorts: 4,
-  uplinkSpeed: "10G SFP+",
-  dualPowerSupply: true,
-  stackingSupported: true,
-  maxStackUnits: 10,
-  throughputGbps: 168,
-  msrp: 4200,
-  taa: true,
-  keyFeatures: [
-    "24x 10/100/1000BASE-T PoE+ ports delivering up to 740W total PoE budget",
-    "4x 1/10GbE SFP/SFP+ uplink ports and 2x 40GbE Virtual Chassis stacking ports",
-    "Dual redundant hot-swappable AC power supplies supporting Circuit A/B feeds",
-    "Cloud-ready switch powered by Mist AI for automated operations and telemetry"
-  ]
-}
-```
+- **`scripts/catalog_pipeline.js`** (`npm run catalog:audit`, `npm run catalog:link`, `npm run catalog:validate`, `npm run catalog:ingest`):
+  - Unified Node.js CLI for catalog auditing, auto-linking, DRC validation, and batch JS database upsert.
+- **`.agents/skills/catalog-datasheet-ingestion/scripts/extract_pdf.py`**:
+  - Extracts PDF text, metadata, and scored hero-image candidates; supports `--auto-webp <device_id>` and directory batch mode.
+- **`.agents/skills/catalog-datasheet-ingestion/scripts/process_image.py`**:
+  - Normalizes standalone PNG/JPG product photos into centered 600×600 transparent WebP (`assets/images/products/<id>.webp`).
+- **`.agents/skills/catalog-datasheet-ingestion/scripts/register_asset.py`**:
+  - Registers single keys or `--batch <json>` manifests into `data/data_assets.js`.
+- **`.agents/skills/catalog-datasheet-ingestion/scripts/validate_entry.py`**:
+  - Validates single JSON objects or batch JSON arrays against DRC rules and disk assets.

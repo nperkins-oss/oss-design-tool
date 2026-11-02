@@ -1,81 +1,149 @@
 """
 Catalog Asset Registration Helper
-Registers a product's image and datasheet PDF path into data/data_assets.js.
+Registers one or more products' image and datasheet PDF paths into data/data_assets.js.
 Validates file existence on disk before updating.
 Usage:
     python register_asset.py <key> <datasheet_rel_path> <image_rel_path> [--alt-key <key2>]
+    python register_asset.py --batch <batch_json_file>
 """
 
 import sys
 import os
 import re
+import json
 import argparse
 
-def register_asset(key, datasheet_path, image_path, alt_keys=None):
-    workspace_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+# Force UTF-8 stdout encoding on Windows
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except AttributeError:
+        pass
+
+
+def get_workspace_root():
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", ".."))
+
+
+def parse_catalog_assets(content):
+    match = re.search(r"const\s+CATALOG_ASSETS\s*=\s*(\{[\s\S]*?\n\});?", content)
+    if not match:
+        return None, None
+    obj_text = match.group(1)
+    try:
+        return json.loads(obj_text), match.span(1)
+    except Exception:
+        return None, match.span(1)
+
+
+def save_catalog_assets(data_assets_path, content, assets_dict, span):
+    sorted_keys = sorted(assets_dict.keys(), key=lambda k: (k.lower(), k))
+    lines = ["{"]
+    for idx, k in enumerate(sorted_keys):
+        entry = assets_dict[k]
+        comma = "," if idx < len(sorted_keys) - 1 else ""
+        lines.append(f'    {json.dumps(k)}: {{')
+        inner_keys = []
+        if entry.get("datasheetPath"):
+            inner_keys.append(f'        "datasheetPath": {json.dumps(entry["datasheetPath"])}')
+        if entry.get("image"):
+            inner_keys.append(f'        "image": {json.dumps(entry["image"])}')
+        lines.append(",\n".join(inner_keys))
+        lines.append(f'    }}{comma}')
+    lines.append("}")
+    new_obj_text = "\n".join(lines)
+    new_content = content[:span[0]] + new_obj_text + content[span[1]:]
+    with open(data_assets_path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(new_content)
+
+
+def register_assets_batch(entries):
+    workspace_root = get_workspace_root()
     data_assets_path = os.path.join(workspace_root, "data", "data_assets.js")
 
     if not os.path.exists(data_assets_path):
         print(f"Error: data_assets.js not found at {data_assets_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Validate physical existence of referenced assets (warn if missing)
-    full_ds_path = os.path.join(workspace_root, datasheet_path.replace("/", os.sep))
-    full_img_path = os.path.join(workspace_root, image_path.replace("/", os.sep))
-
-    if not os.path.exists(full_ds_path):
-        print(f"Warning: Datasheet PDF not found on disk at: {full_ds_path}", file=sys.stderr)
-    else:
-        print(f"Verified: Datasheet PDF exists ({os.path.getsize(full_ds_path) / 1024:.1f} KB)")
-
-    if not os.path.exists(full_img_path):
-        print(f"Warning: Product image not found on disk at: {full_img_path}", file=sys.stderr)
-    else:
-        print(f"Verified: Product image exists ({os.path.getsize(full_img_path) / 1024:.1f} KB)")
-
     with open(data_assets_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Find CATALOG_ASSETS declaration
-    match = re.search(r"const\s+CATALOG_ASSETS\s*=\s*\{", content)
-    if not match:
-        print("Error: Could not find 'const CATALOG_ASSETS = {' in data_assets.js", file=sys.stderr)
+    assets_dict, span = parse_catalog_assets(content)
+    if assets_dict is None:
+        print("Error: Could not parse CATALOG_ASSETS in data/data_assets.js", file=sys.stderr)
         sys.exit(1)
 
-    insert_pos = match.end()
+    registered_count = 0
+    for item in entries:
+        keys = []
+        if item.get("key"):
+            keys.append(item["key"])
+        if item.get("id"):
+            keys.append(item["id"])
+        if item.get("sku"):
+            keys.append(item["sku"])
+        for ak in (item.get("altKeys") or item.get("alt_keys") or []):
+            if ak:
+                keys.append(ak)
+        # Deduplicate while preserving order
+        seen = set()
+        unique_keys = [k for k in keys if k and not (k in seen or seen.add(k))]
 
-    all_keys = [key]
-    if alt_keys:
-        all_keys.extend(alt_keys)
+        ds_path = item.get("datasheetPath") or item.get("datasheet") or ""
+        img_path = item.get("image") or ""
+        if not ds_path and not img_path:
+            continue
 
-    # Format entries
-    formatted_entries = ""
-    for k in all_keys:
-        # Check if key already exists
-        escaped_k = re.escape(k)
-        if re.search(rf'"{escaped_k}"\s*:\s*\{{', content):
-            print(f"Notice: Asset key '{k}' already exists in CATALOG_ASSETS. Updating existing entry...")
-            pattern = rf'"{escaped_k}"\s*:\s*\{{[^}}]*\}}'
-            replacement = f'"{k}": {{\n    "datasheetPath": "{datasheet_path}",\n    "image": "{image_path}"\n  }}'
-            content = re.sub(pattern, replacement, content, count=1)
-        else:
-            entry_text = f'\n  "{k}": {{\n    "datasheetPath": "{datasheet_path}",\n    "image": "{image_path}"\n  }},'
-            formatted_entries += entry_text
+        if ds_path:
+            full_ds = os.path.join(workspace_root, ds_path.replace("/", os.sep))
+            if not os.path.exists(full_ds):
+                print(f"Warning: Datasheet PDF not found on disk at: {full_ds}", file=sys.stderr)
+        if img_path:
+            full_img = os.path.join(workspace_root, img_path.replace("/", os.sep))
+            if not os.path.exists(full_img):
+                print(f"Warning: Product image not found on disk at: {full_img}", file=sys.stderr)
 
-    if formatted_entries:
-        content = content[:insert_pos] + formatted_entries + content[insert_pos:]
+        for k in unique_keys:
+            existing = assets_dict.get(k, {})
+            updated = {}
+            if ds_path or existing.get("datasheetPath"):
+                updated["datasheetPath"] = ds_path or existing.get("datasheetPath")
+            if img_path or existing.get("image"):
+                updated["image"] = img_path or existing.get("image")
+            assets_dict[k] = updated
+            registered_count += 1
 
-    with open(data_assets_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    save_catalog_assets(data_assets_path, content, assets_dict, span)
+    print(f"Success: Registered/updated {registered_count} key(s) in data/data_assets.js (Total keys: {len(assets_dict)})")
 
-    print(f"Success: Registered {len(all_keys)} key(s) in data/data_assets.js")
+
+def register_asset(key, datasheet_path, image_path, alt_keys=None):
+    register_assets_batch([{
+        "key": key,
+        "datasheetPath": datasheet_path,
+        "image": image_path,
+        "altKeys": alt_keys or []
+    }])
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Register asset in data/data_assets.js")
-    parser.add_argument("key", help="Primary SKU or Model ID (e.g. 'axis-p3265-lve' or '02327-001')")
-    parser.add_argument("datasheet", help="Relative path to datasheet PDF (e.g. 'Datasheets/Cameras/Axis/...')")
-    parser.add_argument("image", help="Relative path to product image (e.g. 'assets/images/products/...')")
+    parser = argparse.ArgumentParser(description="Register asset(s) in data/data_assets.js")
+    parser.add_argument("key", nargs="?", help="Primary SKU or Model ID (e.g. 'axis-p3265-lve' or '02327-001')")
+    parser.add_argument("datasheet", nargs="?", help="Relative path to datasheet PDF")
+    parser.add_argument("image", nargs="?", help="Relative path to product image")
     parser.add_argument("--alt-key", action="append", help="Alternative SKU/lookup key to also register")
+    parser.add_argument("--batch", help="Path to JSON file containing an array of items to register")
     args = parser.parse_args()
 
-    register_asset(args.key, args.datasheet, args.image, alt_keys=args.alt_key)
+    if args.batch:
+        with open(args.batch, "r", encoding="utf-8") as f:
+            payload = json.load(f)
+        items = payload.get("items", payload) if isinstance(payload, dict) else payload
+        if not isinstance(items, list):
+            items = [items]
+        register_assets_batch(items)
+    elif args.key and (args.datasheet or args.image):
+        register_asset(args.key, args.datasheet or "", args.image or "", alt_keys=args.alt_key)
+    else:
+        parser.print_help()
+        sys.exit(1)

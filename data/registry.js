@@ -354,12 +354,27 @@ const CatalogRegistry = {
     if (this.networking.accessories) {
       allItems.push(...this.networking.accessories);
     }
+    if (typeof WIRELESS_ACCESSORY_CATALOG !== "undefined") {
+      Object.values(WIRELESS_ACCESSORY_CATALOG).forEach(wAcc => {
+        if (!wAcc.id && wAcc.sku) wAcc.id = wAcc.sku;
+        if (!wAcc.model && wAcc.name) wAcc.model = wAcc.name;
+        allItems.push(wAcc);
+      });
+    }
+    if (typeof WIRELESS_LICENSE_CATALOG !== "undefined") {
+      Object.values(WIRELESS_LICENSE_CATALOG).forEach(wLic => {
+        if (!wLic.id && wLic.sku) wLic.id = wLic.sku;
+        if (!wLic.model && wLic.name) wLic.model = wLic.name;
+        allItems.push(wLic);
+      });
+    }
 
     // Enrich with Datasheet and Product Image Assets if available
     if (typeof CATALOG_ASSETS !== "undefined") {
       for (let i = 0; i < allItems.length; i++) {
         const item = allItems[i];
         if (!item) continue;
+        if (!item.datasheetPath && item.datasheet) item.datasheetPath = item.datasheet;
         const asset = (item.id && CATALOG_ASSETS[item.id]) || (item.sku && CATALOG_ASSETS[item.sku]);
         if (asset) {
           if (!item.datasheetPath && asset.datasheetPath) item.datasheetPath = asset.datasheetPath;
