@@ -100,13 +100,27 @@ assert(!modalSlice.includes('peer-checked:bg-indigo-600') && !modalSlice.include
 console.log('✓ [2/5] HTML Structure Verified: 5-Step Project Wizard & BOM Configurator / Swap modals present.');
 
 // ---------------------------------------------------------------------------
-// 3. JavaScript Syntax Check Across Every Script in index.html
+// 3. JavaScript Syntax & Cross-Module Symbol Integrity Check
 // ---------------------------------------------------------------------------
 for (const relScript of localScripts) {
   const code = readUtf8(relScript);
   new vm.Script(code, { filename: relScript });
 }
-console.log(`✓ [3/5] JS Syntax Verified: All ${localScripts.length} local data, core, engine, renderer & tool scripts parse cleanly.`);
+const { runCrossModuleAudit } = require('./code_index');
+const moduleAudit = runCrossModuleAudit();
+assert.strictEqual(
+  moduleAudit.duplicateFns.length,
+  0,
+  `Duplicate top-level functions across browser scripts:\n  ` +
+    moduleAudit.duplicateFns.map(d => `${d.name}: ${d.first} vs ${d.second}`).join('\n  ')
+);
+assert.strictEqual(
+  moduleAudit.missingHandlers.length,
+  0,
+  `Unresolved HTML inline event handlers in index.html:\n  ` +
+    moduleAudit.missingHandlers.map(m => `L${m.line}: ${m.identifier} in "${m.handler}"`).join('\n  ')
+);
+console.log(`✓ [3/5] JS Syntax & Cross-Module Integrity Verified: ${localScripts.length} scripts, ${moduleAudit.uniqueTopLevelFunctions} unique top-level functions (0 collisions, 100% HTML handlers resolved).`);
 
 // ---------------------------------------------------------------------------
 // 4. Headless VM Boot, CatalogRegistry & Asset File Existence Audit

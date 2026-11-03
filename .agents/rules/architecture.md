@@ -6,13 +6,15 @@ trigger: always_on
 
 Use this index to immediately locate files, global objects, UI modals, and CLI tools without scanning unrelated files.
 
-## 1. Fast Symbol & Modal Lookup CLI
-To locate any function, store method, global variable, or HTML `#id` with its exact line number in <50ms:
+## 1. Fast Symbol, Line-Range & Call-Site Lookup CLI
+To locate any function, store method, global variable, or HTML `#id` with its exact `#Lstart-Lend` line range or all cross-file call sites in <50ms:
 ```powershell
-$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" scripts/code_index.js lookup <symbol_or_id>
-$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" scripts/code_index.js file <relative_file_path>
+$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" scripts/code_index.js lookup <symbol_or_id> 2>&1 | Out-String
+$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" scripts/code_index.js refs <symbol_or_id> 2>&1 | Out-String
+$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" scripts/code_index.js file <relative_file_path> 2>&1 | Out-String
+$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" scripts/code_index.js audit 2>&1 | Out-String
 ```
-*(Note: Inside the Windows sandbox, invoke Node scripts via `$env:ELECTRON_RUN_AS_NODE = "1"; & "C:\Users\nperkins\AppData\Local\Programs\antigravity\Antigravity.exe" <script.js>`).*
+*(Note: Always append `2>&1 | Out-String` when invoking `Antigravity.exe` in PowerShell so GUI-subsystem stdout flushes back to the terminal immediately).*
 
 ---
 

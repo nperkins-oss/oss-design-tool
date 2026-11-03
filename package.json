@@ -8,6 +8,8 @@
     "test": "node scripts/verify_app.js",
     "code:index": "node scripts/code_index.js summary",
     "code:lookup": "node scripts/code_index.js lookup",
+    "code:refs": "node scripts/code_index.js refs",
+    "code:audit": "node scripts/code_index.js audit",
     "catalog:audit": "node scripts/catalog_pipeline.js audit",
     "catalog:link": "node scripts/catalog_pipeline.js auto-link --apply",
     "catalog:validate": "node scripts/catalog_pipeline.js validate",
