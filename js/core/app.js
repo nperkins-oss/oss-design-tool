@@ -5,8 +5,8 @@
 // =========================================================================
 
 // Version & Build Information (Single Source of Truth — synced via scripts/bump_version.py)
-const APP_VERSION = "0.11.0-beta.12";
-const BUILD_NUMBER = "2026.11.02.0958";
+const APP_VERSION = "0.11.0-beta.13";
+const BUILD_NUMBER = "2026.11.06.1540";
 const SCHEMA_VERSION = "2.1.0";
 
 function getAppEnvironment() {

@@ -213,7 +213,8 @@ const StorageService = {
   hasExistingUserState() {
     try {
       if (localStorage.getItem(this.VISITED_STORAGE_KEY) === "true") return true;
-      const saved = this._getSavedProjectsIndex();
+      const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
       if (saved.length > 0) return true;
       const activeId = localStorage.getItem("netselect_active_project_id");
       if (activeId && activeId !== "default") return true;
@@ -509,7 +510,8 @@ const StorageService = {
   renderReturningUserModal() {
     const activeId = this.getActiveProjectId();
     const activeName = this.getActiveProjectName();
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
 
     const activeItemsCount = (typeof projectBOM !== "undefined" && Array.isArray(projectBOM))
       ? projectBOM.reduce((acc, i) => acc + (parseInt(i.qty, 10) || 1), 0)
@@ -694,6 +696,573 @@ const StorageService = {
   },
 
   /**
+   * Returns the canonical default permissions block for a new project (Private by default)
+   */
+  getDefaultProjectPermissions(ownerOverride = null) {
+    const ownerEmail = String(
+      ownerOverride ||
+      (typeof AuthManager !== "undefined" && typeof AuthManager.getUserEmail === "function"
+        ? AuthManager.getUserEmail()
+        : "nperkins@orionsecuritysolutions.com")
+    ).trim().toLowerCase();
+
+    return {
+      ownerEmail,
+      visibility: "private", // "private" (default) | "org_view" | "org_edit"
+      sharedWith: {},        // { "user@orionsecuritysolutions.com": "editor" | "viewer" }
+      submittalLocked: false,
+      lockedBy: null,
+      updatedAt: Date.now()
+    };
+  },
+
+  /**
+   * Retrieves the project-level permissions & ACL configuration for a given project ID
+   */
+  getProjectPermissions(projId = null) {
+    const pId = projId || this.getActiveProjectId();
+    try {
+      const raw = localStorage.getItem(`netselect_project_permissions_${pId}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          return {
+            ownerEmail: String(parsed.ownerEmail || "nperkins@orionsecuritysolutions.com").trim().toLowerCase(),
+            visibility: ["private", "org_view", "org_edit"].includes(parsed.visibility) ? parsed.visibility : "private",
+            sharedWith: (parsed.sharedWith && typeof parsed.sharedWith === "object") ? parsed.sharedWith : {},
+            submittalLocked: Boolean(parsed.submittalLocked),
+            lockedBy: parsed.lockedBy ? String(parsed.lockedBy).trim().toLowerCase() : null,
+            updatedAt: parsed.updatedAt || Date.now()
+          };
+        }
+      }
+    } catch (e) {}
+    return this.getDefaultProjectPermissions();
+  },
+
+  /**
+   * Persists project-level permissions & synchronizes index metadata and header indicators
+   */
+  setProjectPermissions(permissions, projId = null) {
+    if (!permissions || typeof permissions !== "object") return null;
+    const pId = projId || this.getActiveProjectId();
+    const normalized = {
+      ownerEmail: String(permissions.ownerEmail || "nperkins@orionsecuritysolutions.com").trim().toLowerCase(),
+      visibility: ["private", "org_view", "org_edit"].includes(permissions.visibility) ? permissions.visibility : "private",
+      sharedWith: (permissions.sharedWith && typeof permissions.sharedWith === "object") ? permissions.sharedWith : {},
+      submittalLocked: Boolean(permissions.submittalLocked),
+      lockedBy: permissions.lockedBy ? String(permissions.lockedBy).trim().toLowerCase() : null,
+      updatedAt: Date.now()
+    };
+    this.safeSetItem(`netselect_project_permissions_${pId}`, JSON.stringify(normalized));
+
+    // Also update bundle & saved quotes index if this project is saved
+    try {
+      const rawBundle = localStorage.getItem(`netselect_bundle_${pId}`);
+      if (rawBundle) {
+        const parsedBundle = JSON.parse(rawBundle);
+        if (parsedBundle && typeof parsedBundle === "object") {
+          parsedBundle.permissions = normalized;
+          this.safeSetItem(`netselect_bundle_${pId}`, JSON.stringify(parsedBundle));
+        }
+      }
+      const allSaved = this._getSavedProjectsIndex();
+      const idx = allSaved.findIndex(s => s.id === pId);
+      if (idx >= 0) {
+        allSaved[idx].permissions = normalized;
+        this.safeSetItem("netselect_saved_quotes", JSON.stringify(allSaved));
+      }
+    } catch (e) {}
+
+    this.refreshProjectPermissionIndicators();
+    return normalized;
+  },
+
+  getActiveProjectPermissions() {
+    return this.getProjectPermissions(this.getActiveProjectId());
+  },
+
+  getEffectiveProjectAccess(projId = null) {
+    const perms = this.getProjectPermissions(projId || this.getActiveProjectId());
+    if (typeof AuthManager !== "undefined" && typeof AuthManager.getEffectiveProjectPermission === "function") {
+      return AuthManager.getEffectiveProjectPermission(perms);
+    }
+    return {
+      level: "owner",
+      label: "Project Owner",
+      canView: true,
+      canEdit: true,
+      canManageSharing: true,
+      canLockSubmittal: true,
+      canTransferOwnership: true,
+      isReadOnly: false,
+      isOwner: true,
+      visibility: perms.visibility || "private",
+      ownerEmail: perms.ownerEmail
+    };
+  },
+
+  isActiveProjectReadOnly() {
+    return Boolean(this.getEffectiveProjectAccess().isReadOnly);
+  },
+
+  /**
+   * Updates the visibility badge next to the active project name and toggles the Read-Only banner
+   */
+  refreshProjectPermissionIndicators() {
+    const perms = this.getActiveProjectPermissions();
+    const access = this.getEffectiveProjectAccess();
+
+    const visBadge = document.getElementById("activeProjectVisibilityBadge");
+    if (visBadge) {
+      let icon = "lock";
+      let text = "Private";
+      let cls = "bg-slate-800/90 hover:bg-slate-700 text-slate-300 border-slate-700";
+
+      if (perms.submittalLocked) {
+        icon = "shield-check";
+        text = "Submittal Locked";
+        cls = "bg-amber-950/70 hover:bg-amber-900/80 text-amber-300 border-amber-500/40";
+      } else if (perms.visibility === "org_edit") {
+        icon = "globe";
+        text = "Team Edit";
+        cls = "bg-emerald-950/70 hover:bg-emerald-900/80 text-emerald-300 border-emerald-500/40";
+      } else if (perms.visibility === "org_view") {
+        icon = "users";
+        text = "Team View";
+        cls = "bg-sky-950/70 hover:bg-sky-900/80 text-sky-300 border-sky-500/40";
+      } else if (perms.sharedWith && Object.keys(perms.sharedWith).length > 0) {
+        const count = Object.keys(perms.sharedWith).length;
+        icon = "user-check";
+        text = `Shared (${count})`;
+        cls = "bg-indigo-950/70 hover:bg-indigo-900/80 text-indigo-300 border-indigo-500/40";
+      }
+
+      visBadge.className = `px-1.5 py-0.5 rounded-md border text-[10px] font-bold inline-flex items-center gap-1 cursor-pointer transition-all ${cls}`;
+      visBadge.title = `Project Permissions: ${text} • Owner: ${perms.ownerEmail} • Your Access: ${access.label}`;
+      visBadge.innerHTML = `<i data-lucide="${icon}" class="w-2.5 h-2.5"></i><span>${escapeHTML(text)}</span>`;
+      safeCreateIcons(visBadge);
+    }
+
+    const banner = document.getElementById("projectReadOnlyBanner");
+    if (banner) {
+      if (access.isReadOnly) {
+        banner.classList.remove("hidden");
+        banner.classList.add("flex");
+        const unlockBtnHtml = (access.isSubmittalLocked && access.canLockSubmittal)
+          ? `<button type="button" onclick="StorageService.toggleProjectSubmittalLock()" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-200 hover:text-slate-950 border border-amber-500/40 text-[11px] font-bold transition-colors cursor-pointer">Unlock Submittal</button>`
+          : (access.isCheckedOutByOther && access.canTakeOverLock)
+            ? `<button type="button" onclick="StorageService.takeOverProjectLock()" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500 text-amber-200 hover:text-slate-950 border border-amber-500/40 text-[11px] font-bold transition-colors cursor-pointer">Take Over Lock</button>`
+            : "";
+
+        banner.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono text-[10px] font-bold shrink-0">
+              ${access.isSubmittalLocked ? "SUBMITTAL LOCKED" : "READ-ONLY MODE"}
+            </span>
+            <span class="text-xs text-amber-100 truncate">
+              ${escapeHTML(access.reason)}
+            </span>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            ${unlockBtnHtml}
+            <button type="button" onclick="StorageService.cloneActiveProjectAsPrivateCopy()" class="px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold flex items-center gap-1 transition-colors shadow-sm cursor-pointer">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+              <span>Clone as My Private Copy</span>
+            </button>
+          </div>
+        `;
+        safeCreateIcons(banner);
+      } else {
+        banner.classList.add("hidden");
+        banner.classList.remove("flex");
+      }
+    }
+  },
+
+  /**
+   * Clones the currently open project into a brand-new Private project owned by the current user
+   */
+  cloneActiveProjectAsPrivateCopy() {
+    if (typeof AuthManager !== "undefined" && !AuthManager.getOrgRoleMeta().canCreateProjects) {
+      if (typeof showToast === "function") {
+        showToast("Your Entra ID role (OSS.Viewer) is Read-Only and cannot create cloud projects.");
+      }
+      return null;
+    }
+    const baseName = this.getActiveProjectName();
+    const copyName = `${baseName} (Private Copy)`.slice(0, 80);
+    const bundle = this.bundleCurrentProject(copyName);
+    const newId = `proj-${Date.now()}`;
+    bundle.projectId = newId;
+    bundle.projectName = copyName;
+    bundle.createdAt = new Date().toISOString();
+    bundle.updatedAt = Date.now();
+    bundle.permissions = this.getDefaultProjectPermissions();
+
+    this.applyProjectBundle(bundle);
+    this._upsertSavedQuote(newId, copyName, bundle);
+    if (typeof showToast === "function") {
+      showToast(`Created editable private copy: ${copyName}`);
+    }
+    return newId;
+  },
+
+  /**
+   * Opens the Project Permissions & Sharing modal (#projectPermissionsModal)
+   */
+  openProjectPermissionsModal(projId = null) {
+    this._permissionsModalTargetId = projId || this.getActiveProjectId();
+    const modal = document.getElementById("projectPermissionsModal");
+    if (!modal) return;
+    this.renderProjectPermissionsModal(this._permissionsModalTargetId);
+    modal.classList.remove("hidden");
+    safeCreateIcons(modal);
+  },
+
+  closeProjectPermissionsModal() {
+    const modal = document.getElementById("projectPermissionsModal");
+    if (modal) modal.classList.add("hidden");
+  },
+
+  setProjectVisibility(visibility, projId = null) {
+    const targetId = projId || this._permissionsModalTargetId || this.getActiveProjectId();
+    const access = this.getEffectiveProjectAccess(targetId);
+    if (!access.canManageSharing) {
+      if (typeof showToast === "function") showToast("Only the Project Owner or an OSS Admin can change project visibility.");
+      return;
+    }
+    const perms = this.getProjectPermissions(targetId);
+    perms.visibility = ["private", "org_view", "org_edit"].includes(visibility) ? visibility : "private";
+    this.setProjectPermissions(perms, targetId);
+    this.renderProjectPermissionsModal(targetId);
+    this.renderSavedProjectsList();
+    if (typeof showToast === "function") {
+      const labels = { private: "Private (Owner & Invited Only)", org_view: "Organization — Team Can View", org_edit: "Organization — Team Can Edit" };
+      showToast(`Project visibility updated: ${labels[perms.visibility]}`);
+    }
+  },
+
+  shareProjectWithUser(emailInput = null, roleInput = null, projId = null) {
+    const targetId = projId || this._permissionsModalTargetId || this.getActiveProjectId();
+    const access = this.getEffectiveProjectAccess(targetId);
+    if (!access.canManageSharing) {
+      if (typeof showToast === "function") showToast("Only the Project Owner or an OSS Admin can manage project collaborators.");
+      return false;
+    }
+
+    const emailEl = document.getElementById("permInviteEmailInput");
+    const roleEl = document.getElementById("permInviteRoleSelect");
+    const email = String(emailInput !== null ? emailInput : (emailEl ? emailEl.value : "")).trim().toLowerCase();
+    const role = String(roleInput !== null ? roleInput : (roleEl ? roleEl.value : "viewer")).trim().toLowerCase();
+
+    if (!email || !email.includes("@")) {
+      if (typeof showToast === "function") showToast("Please enter a valid @orionsecuritysolutions.com email address.");
+      return false;
+    }
+    if (typeof AuthManager !== "undefined" && typeof AuthManager.isAllowedCorporateEmail === "function" && !AuthManager.isAllowedCorporateEmail(email)) {
+      if (typeof showToast === "function") showToast("Collaborators must have an @orionsecuritysolutions.com or @orionsecurity.com email.");
+      return false;
+    }
+
+    const perms = this.getProjectPermissions(targetId);
+    if (email === perms.ownerEmail) {
+      if (typeof showToast === "function") showToast(`${email} is already the Project Owner.`);
+      return false;
+    }
+
+    perms.sharedWith = perms.sharedWith || {};
+    perms.sharedWith[email] = (role === "editor") ? "editor" : "viewer";
+    this.setProjectPermissions(perms, targetId);
+
+    if (emailEl && emailInput === null) emailEl.value = "";
+    this.renderProjectPermissionsModal(targetId);
+    this.renderSavedProjectsList();
+    if (typeof showToast === "function") {
+      showToast(`Granted ${perms.sharedWith[email] === "editor" ? "Co-Editor" : "Read-Only Viewer"} access to ${email}`);
+    }
+    return true;
+  },
+
+  removeProjectCollaborator(email, projId = null) {
+    const targetId = projId || this._permissionsModalTargetId || this.getActiveProjectId();
+    const access = this.getEffectiveProjectAccess(targetId);
+    if (!access.canManageSharing) return;
+    const clean = String(email || "").trim().toLowerCase();
+    const perms = this.getProjectPermissions(targetId);
+    if (perms.sharedWith && perms.sharedWith[clean]) {
+      delete perms.sharedWith[clean];
+      this.setProjectPermissions(perms, targetId);
+      this.renderProjectPermissionsModal(targetId);
+      this.renderSavedProjectsList();
+      if (typeof showToast === "function") showToast(`Revoked access for ${clean}`);
+    }
+  },
+
+  toggleProjectSubmittalLock(projId = null) {
+    const targetId = projId || this._permissionsModalTargetId || this.getActiveProjectId();
+    const access = this.getEffectiveProjectAccess(targetId);
+    if (!access.canLockSubmittal) {
+      if (typeof showToast === "function") showToast("Only Project Owners, Lead Engineers (OSS.LeadEngineer), or Admins can toggle Submittal Lock.");
+      return;
+    }
+    const perms = this.getProjectPermissions(targetId);
+    perms.submittalLocked = !perms.submittalLocked;
+    this.setProjectPermissions(perms, targetId);
+    this.renderProjectPermissionsModal(targetId);
+    this.renderSavedProjectsList();
+    if (typeof showToast === "function") {
+      showToast(perms.submittalLocked ? "Submittal Lock enabled — Project is now frozen in Read-Only mode." : "Submittal Lock released — Project is now editable.");
+    }
+  },
+
+  transferProjectOwnership(newOwnerInput = null, projId = null) {
+    const targetId = projId || this._permissionsModalTargetId || this.getActiveProjectId();
+    const access = this.getEffectiveProjectAccess(targetId);
+    if (!access.canTransferOwnership) {
+      if (typeof showToast === "function") showToast("Only the Project Owner or an OSS Admin can transfer project ownership.");
+      return false;
+    }
+    const inputEl = document.getElementById("permTransferOwnerInput");
+    const newOwner = String(newOwnerInput !== null ? newOwnerInput : (inputEl ? inputEl.value : "")).trim().toLowerCase();
+    if (!newOwner || !newOwner.includes("@")) {
+      if (typeof showToast === "function") showToast("Enter a valid @orionsecuritysolutions.com email to transfer ownership.");
+      return false;
+    }
+    if (typeof AuthManager !== "undefined" && typeof AuthManager.isAllowedCorporateEmail === "function" && !AuthManager.isAllowedCorporateEmail(newOwner)) {
+      if (typeof showToast === "function") showToast("New owner must be an @orionsecuritysolutions.com or @orionsecurity.com account.");
+      return false;
+    }
+    const perms = this.getProjectPermissions(targetId);
+    const prevOwner = perms.ownerEmail;
+    perms.ownerEmail = newOwner;
+    perms.sharedWith = perms.sharedWith || {};
+    if (prevOwner && prevOwner !== newOwner) {
+      perms.sharedWith[prevOwner] = "editor";
+    }
+    delete perms.sharedWith[newOwner];
+    this.setProjectPermissions(perms, targetId);
+    this.renderProjectPermissionsModal(targetId);
+    this.renderSavedProjectsList();
+    if (typeof showToast === "function") {
+      showToast(`Transferred project ownership to ${newOwner}`);
+    }
+    return true;
+  },
+
+  takeOverProjectLock(projId = null) {
+    const targetId = projId || this.getActiveProjectId();
+    const perms = this.getProjectPermissions(targetId);
+    const myEmail = (typeof AuthManager !== "undefined" && typeof AuthManager.getUserEmail === "function")
+      ? AuthManager.getUserEmail()
+      : "nperkins@orionsecuritysolutions.com";
+    perms.lockedBy = myEmail;
+    this.setProjectPermissions(perms, targetId);
+    this.renderProjectPermissionsModal(targetId);
+    if (typeof showToast === "function") {
+      showToast(`Checked out edit lock for ${myEmail}`);
+    }
+  },
+
+  renderProjectPermissionsModal(projId = null) {
+    const bodyEl = document.getElementById("projectPermissionsModalBody");
+    if (!bodyEl) return;
+    const targetId = projId || this._permissionsModalTargetId || this.getActiveProjectId();
+    const perms = this.getProjectPermissions(targetId);
+    const access = this.getEffectiveProjectAccess(targetId);
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
+    const entry = saved.find(s => s.id === targetId);
+    const projName = (targetId === this.getActiveProjectId())
+      ? this.getActiveProjectName()
+      : (entry ? entry.name : "Project");
+
+    const titleEl = document.getElementById("projectPermissionsModalTitle");
+    if (titleEl) titleEl.textContent = projName;
+
+    const roleMeta = (typeof AuthManager !== "undefined" && typeof AuthManager.getOrgRoleMeta === "function")
+      ? AuthManager.getOrgRoleMeta()
+      : { entraValue: "OSS.Designer", label: "Designer", badgeClass: "bg-indigo-500/20 text-indigo-300 border-indigo-500/40" };
+    const currentEmail = (typeof AuthManager !== "undefined" && typeof AuthManager.getUserEmail === "function")
+      ? AuthManager.getUserEmail()
+      : "nperkins@orionsecuritysolutions.com";
+
+    const sharedEntries = Object.entries(perms.sharedWith || {});
+    const disabledAttr = access.canManageSharing ? "" : "disabled";
+
+    const visOptions = [
+      {
+        id: "private",
+        icon: "lock",
+        title: "Private (Default)",
+        desc: "Visible only to Project Owner, explicitly invited teammates below, and OSS.Admin."
+      },
+      {
+        id: "org_view",
+        icon: "users",
+        title: "Organization — Team Can View (Read-Only)",
+        desc: "All @orionsecuritysolutions.com users can open in Read-Only mode or clone a private copy."
+      },
+      {
+        id: "org_edit",
+        icon: "globe",
+        title: "Organization — Team Can Edit",
+        desc: "All @orionsecuritysolutions.com Designers & Lead Engineers can check out and edit."
+      }
+    ];
+
+    bodyEl.innerHTML = `
+      <!-- Top Identity & Access Summary Card -->
+      <div class="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div class="space-y-0.5">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Project Owner</div>
+          <div class="text-xs font-mono font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="crown" class="w-3.5 h-3.5 text-amber-400"></i>
+            <span>${escapeHTML(perms.ownerEmail)}</span>
+          </div>
+        </div>
+        <div class="space-y-0.5 text-right">
+          <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Your Effective Access (${escapeHTML(currentEmail)})</div>
+          <div class="flex items-center justify-end gap-1.5">
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold border ${roleMeta.badgeClass}">
+              ${escapeHTML(roleMeta.entraValue)}
+            </span>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${access.isReadOnly ? "bg-amber-500/20 text-amber-300 border border-amber-500/40" : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"}">
+              ${escapeHTML(access.label)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visibility Selection -->
+      <div class="space-y-2">
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+          1. Project Visibility (Default: Private)
+        </label>
+        <div class="grid grid-cols-1 gap-2">
+          ${visOptions.map(opt => {
+            const active = perms.visibility === opt.id;
+            return `
+              <button type="button" ${disabledAttr} onclick="StorageService.setProjectVisibility('${opt.id}', '${escapeJSAttr(targetId)}')" class="w-full text-left p-3 rounded-xl border transition-all flex items-start gap-3 ${
+                active
+                  ? "bg-indigo-950/40 border-indigo-500/60 ring-1 ring-indigo-500/30"
+                  : "bg-slate-950/60 border-slate-800/90 hover:border-slate-700"
+              } ${access.canManageSharing ? "cursor-pointer" : "opacity-60 cursor-not-allowed"}">
+                <div class="p-1.5 rounded-lg ${active ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40" : "bg-slate-900 text-slate-400 border border-slate-800"} shrink-0 mt-0.5">
+                  <i data-lucide="${opt.icon}" class="w-4 h-4"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-white">${escapeHTML(opt.title)}</span>
+                    ${active ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">ACTIVE</span>' : ""}
+                  </div>
+                  <div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(opt.desc)}</div>
+                </div>
+              </button>
+            `;
+          }).join("")}
+        </div>
+      </div>
+
+      <!-- Collaborator Access List (sharedWith) -->
+      <div class="space-y-2 pt-1">
+        <div class="flex items-center justify-between">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-300">
+            2. Invited Collaborators (${sharedEntries.length})
+          </label>
+          <span class="text-[10px] text-slate-400">Works even when project visibility is Private</span>
+        </div>
+
+        ${access.canManageSharing ? `
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2.5 rounded-xl bg-slate-950/80 border border-slate-800">
+            <input type="email" id="permInviteEmailInput" placeholder="engineer@orionsecuritysolutions.com" class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-indigo-500" />
+            <select id="permInviteRoleSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 font-semibold focus:outline-none focus:border-indigo-500">
+              <option value="editor">Co-Editor (Can Edit)</option>
+              <option value="viewer">Reviewer (Read-Only)</option>
+            </select>
+            <button type="button" onclick="StorageService.shareProjectWithUser(null, null, '${escapeJSAttr(targetId)}')" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shrink-0">
+              <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+              <span>Add / Update</span>
+            </button>
+          </div>
+        ` : ""}
+
+        <div class="space-y-1.5 max-h-40 overflow-y-auto">
+          ${sharedEntries.length === 0 ? `
+            <div class="text-center py-3 px-4 rounded-xl border border-dashed border-slate-800 bg-slate-950/40 text-xs text-slate-400">
+              No individual collaborators invited yet.
+            </div>
+          ` : sharedEntries.map(([email, role]) => `
+            <div class="px-3 py-2 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between gap-2 text-xs">
+              <div class="flex items-center gap-2 min-w-0">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                <span class="font-mono text-slate-200 truncate">${escapeHTML(email)}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                ${access.canManageSharing ? `
+                  <select onchange="StorageService.shareProjectWithUser('${escapeJSAttr(email)}', this.value, '${escapeJSAttr(targetId)}')" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-0.5 text-[11px] text-slate-200 font-semibold">
+                    <option value="editor" ${role === "editor" ? "selected" : ""}>Co-Editor</option>
+                    <option value="viewer" ${role === "viewer" ? "selected" : ""}>Reviewer (Read-Only)</option>
+                  </select>
+                  <button type="button" onclick="StorageService.removeProjectCollaborator('${escapeJSAttr(email)}', '${escapeJSAttr(targetId)}')" class="p-1 text-slate-400 hover:text-rose-400 rounded transition-colors cursor-pointer" title="Revoke access">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  </button>
+                ` : `
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${role === "editor" ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/40" : "bg-slate-800 text-slate-300 border border-slate-700"}">
+                    ${role === "editor" ? "Co-Editor" : "Reviewer (Read-Only)"}
+                  </span>
+                `}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      </div>
+
+      <!-- Submittal Freeze & Ownership Controls -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-800">
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between gap-2">
+          <div>
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>Submittal Baseline Freeze</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">
+              Locks the project in Read-Only mode so quoted BOMs &amp; drawings cannot be accidentally altered.
+            </div>
+          </div>
+          <button type="button" ${access.canLockSubmittal ? "" : "disabled"} onclick="StorageService.toggleProjectSubmittalLock('${escapeJSAttr(targetId)}')" class="w-full px-3 py-1.5 rounded-lg text-xs font-bold transition-colors ${
+            perms.submittalLocked
+              ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40"
+              : "bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+          } ${access.canLockSubmittal ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}">
+            ${perms.submittalLocked ? "Unlock Submittal Freeze" : "Freeze as Locked Submittal"}
+          </button>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between gap-2">
+          <div>
+            <div class="text-xs font-bold text-white flex items-center gap-1.5">
+              <i data-lucide="user-Check" class="w-3.5 h-3.5 text-sky-400"></i>
+              <span>Transfer Ownership</span>
+            </div>
+            <div class="text-[10px] text-slate-400 mt-0.5">
+              Reassign project owner to another Orion engineer (current owner remains a Co-Editor).
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <input type="email" id="permTransferOwnerInput" ${access.canTransferOwnership ? "" : "disabled"} placeholder="new.owner@orionsecuritysolutions.com" class="flex-1 min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-white font-mono focus:outline-none focus:border-indigo-500" />
+            <button type="button" ${access.canTransferOwnership ? "" : "disabled"} onclick="StorageService.transferProjectOwnership(null, '${escapeJSAttr(targetId)}')" class="px-2.5 py-1 bg-slate-800 hover:bg-sky-600 text-slate-200 hover:text-white border border-slate-700 rounded-lg text-[11px] font-bold transition-colors ${access.canTransferOwnership ? "cursor-pointer" : "opacity-50 cursor-not-allowed"}">
+              Transfer
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    safeCreateIcons(bodyEl);
+  },
+
+  /**
    * Gathers all subsystem data for the active project into a complete, portable bundle
    */
   bundleCurrentProject(nameOverride = null) {
@@ -780,7 +1349,8 @@ const StorageService = {
       },
       projectFiberType: (typeof getProjectFiberType === "function") ? getProjectFiberType() : "mmf",
       linkInterconnectOverrides: (typeof getLinkInterconnectOverrides === "function") ? getLinkInterconnectOverrides() : {},
-      projectDefaults: this.getProjectDefaults(projId)
+      projectDefaults: this.getProjectDefaults(projId),
+      permissions: this.getProjectPermissions(projId)
     };
   },
 
@@ -947,6 +1517,10 @@ const StorageService = {
           }
     };
     this.setProjectDefaults(resolvedDefaults, projId, { skipEngineSync: true });
+
+    // 8d. Restore or initialize Private-by-Default Project Permissions
+    const resolvedPerms = bundle.permissions || this.getProjectPermissions(projId);
+    this.setProjectPermissions(resolvedPerms, projId);
 
     // 9. Persist active state cache
     this.saveStateToLocalStorage();
@@ -1132,7 +1706,8 @@ const StorageService = {
       `netselect_fiber_type_${deletedId}`,
       `netselect_link_overrides_${deletedId}`,
       `netselect_project_revisions_${deletedId}`,
-      `netselect_walk_audit_${deletedId}`
+      `netselect_walk_audit_${deletedId}`,
+      `netselect_project_permissions_${deletedId}`
     ];
     directKeys.forEach((k) => {
       try { localStorage.removeItem(k); } catch (e) {}
@@ -1222,7 +1797,8 @@ const StorageService = {
       },
       projectFiberType: mergedDefaults.cabling?.fiberType || "mmf",
       linkInterconnectOverrides: {},
-      projectDefaults: mergedDefaults
+      projectDefaults: mergedDefaults,
+      permissions: this.getDefaultProjectPermissions()
     };
   },
 
@@ -1257,6 +1833,11 @@ const StorageService = {
       compactBundle.physicalCanvas.facilityFloors = this.offloadFloorBlueprints(compactBundle.physicalCanvas.facilityFloors);
     }
 
+    // Save permissions for this project
+    const perms = bundle.permissions || this.getProjectPermissions(cleanId);
+    compactBundle.permissions = perms;
+    this.safeSetItem(`netselect_project_permissions_${cleanId}`, JSON.stringify(perms));
+
     // Write ONLY this project's bundle (O(1), never re-serializes other projects!)
     this.safeSetItem(`netselect_bundle_${cleanId}`, JSON.stringify(compactBundle));
 
@@ -1266,7 +1847,8 @@ const StorageService = {
       date: new Date().toLocaleDateString(),
       updatedAt: Date.now(),
       itemsCount,
-      totalMsrp
+      totalMsrp,
+      permissions: perms
     };
 
     const existingIdx = saved.findIndex(p => p.id === cleanId);
@@ -1283,6 +1865,14 @@ const StorageService = {
    * Saves or updates the currently active project snapshot in place
    */
   saveCurrentProject(showNotification = true) {
+    const access = this.getEffectiveProjectAccess();
+    if (access && access.isReadOnly) {
+      if (showNotification && typeof showToast === "function") {
+        showToast(`Read-Only Mode (${access.label}): Use "Clone as My Private Copy" to save modifications.`);
+      }
+      return false;
+    }
+
     const projId = this.getActiveProjectId();
     const projName = this.getActiveProjectName();
     const bundle = this.bundleCurrentProject(projName);
@@ -1296,6 +1886,7 @@ const StorageService = {
     if (showNotification && typeof showToast === "function") {
       showToast(`Saved changes to project: ${projName}`);
     }
+    return true;
   },
 
   /**
@@ -1320,6 +1911,7 @@ const StorageService = {
     currentBundle.projectName = safeName;
     currentBundle.createdAt = new Date().toISOString();
     currentBundle.updatedAt = Date.now();
+    currentBundle.permissions = this.getDefaultProjectPermissions();
 
     // 3. Apply this bundle under the NEW project ID
     this.applyProjectBundle(currentBundle);
@@ -1380,7 +1972,8 @@ const StorageService = {
   getAvailableProjectsForCloning() {
     const activeId = this.getActiveProjectId();
     const activeName = this.getActiveProjectName();
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
     const list = saved.map(p => {
       const defs = this.getProjectDefaults(p.id);
       return {
@@ -1417,7 +2010,8 @@ const StorageService = {
     if (projId === this.getActiveProjectId()) {
       return JSON.parse(JSON.stringify(this.bundleCurrentProject(this.getActiveProjectName())));
     }
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
     const entry = saved.find(p => p.id === projId);
     if (!entry) return null;
     const bundle = this._getStoredBundleForEntry(entry);
@@ -1535,9 +2129,18 @@ const StorageService = {
    * Loads a saved snapshot into the active workspace with seamless backward-compatibility
    */
   loadProjectSnapshot(idOrIdx, opts = {}) {
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
     const { proj } = this._resolveProjectEntry(saved, idOrIdx);
-    if (!proj) return;
+    if (!proj) return false;
+
+    const access = this.getEffectiveProjectAccess(proj.id);
+    if (access && !access.canView) {
+      if (typeof showToast === "function") {
+        showToast(`Access Denied: "${proj.name}" is Private to ${access.ownerEmail}.`);
+      }
+      return false;
+    }
 
     // 1. Auto-save outgoing work ONLY if not switching away from a just-deleted project
     if (!opts.skipSaveOutgoing) {
@@ -1576,7 +2179,8 @@ const StorageService = {
    * Arms inline two-click deletion confirmation on a specific project card
    */
   requestDeleteProjectSnapshot(idOrIdx) {
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
     const { proj } = this._resolveProjectEntry(saved, idOrIdx);
     if (!proj) return;
     this._pendingClearAllProjects = false;
@@ -1665,7 +2269,8 @@ const StorageService = {
    * Deletes all saved project snapshots and resets to a fresh blank workspace
    */
   clearAllSavedProjects() {
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
     const count = saved.length;
     saved.forEach((p) => {
       if (p && p.id) this._purgeProjectStorageKeys(p.id);
@@ -1719,7 +2324,8 @@ const StorageService = {
    * Exports an arbitrary project snapshot directly from the list without activating it
    */
   exportProjectSnapshot(idOrIdx) {
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
     const { proj } = this._resolveProjectEntry(saved, idOrIdx);
     if (!proj) return;
 
@@ -1869,7 +2475,8 @@ const StorageService = {
     const modalActiveTitle = document.getElementById("modalActiveProjectTitle");
     if (modalActiveTitle) modalActiveTitle.innerText = activeName;
 
-    const saved = this._getSavedProjectsIndex();
+    const allSaved = this._getSavedProjectsIndex();
+    const saved = allSaved.filter(p => this.getEffectiveProjectAccess(p.id).canView);
 
     if (saved.length === 0) {
       container.innerHTML = `
@@ -1914,6 +2521,17 @@ const StorageService = {
       const totalMsrp = parseFloat(proj.totalMsrp) || 0;
       const isActive = (proj.id === activeId);
       const isPendingDelete = (this._pendingDeleteProjectId === proj.id);
+      const projPerms = this.getProjectPermissions(proj.id);
+      const projAccess = this.getEffectiveProjectAccess(proj.id);
+      const visBadgeHtml = projPerms.submittalLocked
+        ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">LOCKED</span>'
+        : projPerms.visibility === "org_edit"
+          ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shrink-0">TEAM EDIT</span>'
+          : projPerms.visibility === "org_view"
+            ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 shrink-0">TEAM VIEW</span>'
+            : (projPerms.sharedWith && Object.keys(projPerms.sharedWith).length > 0)
+              ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0">SHARED (${Object.keys(projPerms.sharedWith).length})</span>`
+              : '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-300 border border-slate-700 shrink-0">PRIVATE</span>';
 
       if (isPendingDelete) {
         return `
@@ -1946,16 +2564,20 @@ const StorageService = {
             : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
         } flex items-center justify-between gap-3 text-xs">
           <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 flex-wrap">
               <span class="font-bold text-white truncate text-xs">${safeName}</span>
+              ${visBadgeHtml}
+              ${projAccess.isReadOnly ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">READ-ONLY</span>' : ''}
               ${isActive ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0">ACTIVE</span>' : ''}
             </div>
-            <div class="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-2">
+            <div class="text-[11px] text-slate-400 font-mono mt-0.5 flex items-center gap-2 flex-wrap">
               <span>${safeDate}</span>
               <span>&bull;</span>
               <span>${itemsCount} item${itemsCount === 1 ? '' : 's'}</span>
               <span>&bull;</span>
               <span class="text-emerald-400 font-semibold">$${totalMsrp.toLocaleString()}</span>
+              <span>&bull;</span>
+              <span class="text-[10px] text-slate-500 truncate max-w-[160px]" title="Owner: ${escapeHTML(projPerms.ownerEmail)}">${escapeHTML(projPerms.ownerEmail)}</span>
             </div>
           </div>
           <div class="flex items-center gap-1.5 shrink-0">
@@ -1964,6 +2586,9 @@ const StorageService = {
                 ? '<button type="button" onclick="saveCurrentProject()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg text-[11px] transition-all flex items-center gap-1 shadow-sm cursor-pointer"><i data-lucide="check" class="w-3 h-3"></i> Saved</button>' 
                 : `<button type="button" onclick="StorageService.loadProjectSnapshot('${safeIdAttr}')" class="px-2.5 py-1 bg-slate-800 hover:bg-brand-600 text-slate-200 hover:text-white font-semibold rounded-lg text-[11px] border border-slate-700 hover:border-transparent transition-all cursor-pointer">Load</button>`
             }
+            <button type="button" onclick="StorageService.openProjectPermissionsModal('${safeIdAttr}')" class="p-1.5 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="Project Permissions &amp; Sharing">
+              <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+            </button>
             <button type="button" onclick="StorageService.exportProjectSnapshot('${safeIdAttr}')" class="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer" title="Export this Project JSON">
               <i data-lucide="download" class="w-3.5 h-3.5"></i>
             </button>
@@ -2000,3 +2625,5 @@ window.renameActiveProject = () => StorageService.renameActiveProject();
 window.initStartupProjectPrompt = () => StorageService.initStartupProjectPrompt();
 window.openReturningUserModal = () => StorageService.openReturningUserModal();
 window.closeReturningUserModal = () => StorageService.closeReturningUserModal();
+window.openProjectPermissionsModal = (projId) => StorageService.openProjectPermissionsModal(projId);
+window.closeProjectPermissionsModal = () => StorageService.closeProjectPermissionsModal();

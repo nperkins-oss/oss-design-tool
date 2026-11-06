@@ -1,0 +1,7 @@
+{
+  "name": "oss-design-tool-api",
+  "version": "1.0.0",
+  "description": "Azure Static Web Apps Managed API for Entra ID RBAC Role Mapping & Central Project Storage",
+  "main": "index.js",
+  "private": true
+}

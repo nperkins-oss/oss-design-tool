@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.11.0-beta.13] - 2026-11-06
+
+### Microsoft Entra ID Role-Based Access Control (RBAC) & Private-by-Default Project Permissions
+- **Microsoft Entra ID App Role Claims Engine (`js/core/auth.js`, `api/GetRoles/index.js`)**:
+  - Upgraded `AuthManager` and added the Azure Static Web Apps `/api/GetRoles` role-mapping endpoint to evaluate Microsoft Entra ID App Role claims (`OSS.Admin`, `OSS.LeadEngineer`, `OSS.Designer`, `OSS.Viewer`) for Tenant `222c6535-b279-4f54-b835-30d1a15e8c05`.
+  - Added highest-privilege resolution when users belong to multiple Entra Security Groups, hard Read-Only ceiling enforcement for `OSS.Viewer` accounts, and an interactive **Identity, Entra Role & Collaborator Simulator Popover** in the top header (`#authUserWrapper`).
+- **Private-by-Default Project ACLs & Sharing Studio (`js/core/storage.js`, `index.html`)**:
+  - All new projects now default to **`visibility: "private"`** (accessible only to the Project Owner, explicitly invited `@orionsecuritysolutions.com` collaborators, and `OSS.Admin` accounts).
+  - Added the **Project Permissions & Sharing Modal (`#projectPermissionsModal`)** and top header visibility badge (`#activeProjectVisibilityBadge`) to toggle visibility (`Private`, `Organization — Team Can View`, `Organization — Team Can Edit`), invite Co-Editors (`editor`) or Reviewers (`viewer`), transfer project ownership, and freeze **Submittal Lock** baselines.
+  - Added the **Read-Only / Submittal Locked Guard Banner (`#projectReadOnlyBanner`)** with one-click **Clone as My Private Copy** when viewing a read-only or frozen project.
+
+---
+
 ## [0.11.0-beta.12] - 2026-11-02
 
 ### Phase 2 Codebase Modularization (Tools, Core UI, Infrastructure Catalogs & Stylesheet)

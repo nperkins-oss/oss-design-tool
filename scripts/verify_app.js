@@ -217,7 +217,8 @@ const bootScripts = localScripts.filter(s =>
   s.startsWith('js/studios/rack/') ||
   s.startsWith('js/tools/bom') ||
   s.startsWith('js/bom/') ||
-  s === 'js/tools/project_wizard.js'
+  s === 'js/tools/project_wizard.js' ||
+  s === 'js/core/auth.js'
 );
 
 for (const rel of bootScripts) {
@@ -389,6 +390,37 @@ vm.runInContext(`
   StorageService.loadProjectFromStartup(savedIdx[0].id);
   assert(document.getElementById('returningUserModal').classList.contains('hidden'), 'loadProjectFromStartup must close #returningUserModal');
   assert(StorageService.getActiveProjectName() === 'Campus Expansion Phase 1', 'loadProjectFromStartup must load the selected project');
+
+  // 5E-3. Entra ID App Role Claims & Private-by-Default Project Permissions
+  assert(AuthManager.extractOrgRoleFromPrincipal({ claims: [{ typ: 'roles', val: 'OSS.LeadEngineer' }] }, 'jsmith@orionsecuritysolutions.com') === 'lead_engineer', 'Entra OSS.LeadEngineer claim must resolve to lead_engineer');
+  assert(AuthManager.extractOrgRoleFromPrincipal({ claims: [{ typ: 'roles', val: 'OSS.Viewer' }] }, 'tech@orionsecuritysolutions.com') === 'viewer', 'Entra OSS.Viewer claim must resolve to viewer');
+  assert(AuthManager.extractOrgRoleFromPrincipal({ claims: [{ typ: 'roles', val: 'OSS.Designer' }, { typ: 'roles', val: 'OSS.Admin' }] }, 'admin@orionsecuritysolutions.com') === 'admin', 'Multiple Entra role claims must resolve to highest privilege (admin)');
+
+  const activePerms = StorageService.getActiveProjectPermissions();
+  assert(activePerms.visibility === 'private', 'New projects must default to visibility === "private"');
+  assert(activePerms.ownerEmail === 'nperkins@orionsecuritysolutions.com', 'Project ownerEmail must default to creator email');
+
+  // Simulate another Designer who has NOT been invited to the private project
+  const uninvitedCheck = AuthManager.getEffectiveProjectPermission(activePerms, 'jsmith@orionsecuritysolutions.com', 'designer');
+  assert(uninvitedCheck.canView === false && uninvitedCheck.level === 'none', 'Private project must deny view access to uninvited Designer');
+
+  // Admin can view private projects for continuity
+  const adminCheck = AuthManager.getEffectiveProjectPermission(activePerms, 'itadmin@orionsecuritysolutions.com', 'admin');
+  assert(adminCheck.canView === true && adminCheck.canEdit === true, 'OSS.Admin must have continuity access to private projects');
+
+  // Share private project with jsmith@ as Reviewer (viewer) -> canView: true, isReadOnly: true
+  StorageService.shareProjectWithUser('jsmith@orionsecuritysolutions.com', 'viewer');
+  const updatedPerms = StorageService.getActiveProjectPermissions();
+  const reviewerCheck = AuthManager.getEffectiveProjectPermission(updatedPerms, 'jsmith@orionsecuritysolutions.com', 'designer');
+  assert(reviewerCheck.canView === true && reviewerCheck.isReadOnly === true && reviewerCheck.canEdit === false, 'Invited viewer collaborator must open in Read-Only mode');
+
+  // Upgrade jsmith@ to Co-Editor -> canEdit: true, unless jsmith@ has OSS.Viewer Entra role (hard Read-Only cap)
+  StorageService.shareProjectWithUser('jsmith@orionsecuritysolutions.com', 'editor');
+  const editorPerms = StorageService.getActiveProjectPermissions();
+  const coEditorCheck = AuthManager.getEffectiveProjectPermission(editorPerms, 'jsmith@orionsecuritysolutions.com', 'designer');
+  assert(coEditorCheck.canView === true && coEditorCheck.canEdit === true && coEditorCheck.isReadOnly === false, 'Invited editor collaborator with Designer Entra role must have full edit access');
+  const cappedViewerCheck = AuthManager.getEffectiveProjectPermission(editorPerms, 'jsmith@orionsecuritysolutions.com', 'viewer');
+  assert(cappedViewerCheck.canView === true && cappedViewerCheck.isReadOnly === true && cappedViewerCheck.canEdit === false, 'Entra OSS.Viewer role must enforce hard Read-Only ceiling even when shared as editor');
 `, ctx);
 
 // 5F. Live Changelog Parser, Unread Version Badge Dot & What's New Modal Verification
